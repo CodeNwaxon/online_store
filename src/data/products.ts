@@ -11,6 +11,7 @@ export interface Product {
   images: string[]; // Add array for multiple images
   manufacturer: string; // Add manufacturer field
   isPromo?: boolean;
+  oldPrice?: number;
 }
 
 export const products: Product[] = [
@@ -29,7 +30,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/tv3/800/600'
     ],
     manufacturer: 'LG Electronics',
-    isPromo: true
+    isPromo: true,
+    oldPrice: 550
   },
   {
     id: 'e2',
@@ -44,7 +46,9 @@ export const products: Product[] = [
       'https://picsum.photos/seed/fridge2/800/600',
       'https://picsum.photos/seed/fridge3/800/600'
     ],
-    manufacturer: 'Samsung'
+    manufacturer: 'Samsung',
+    isPromo: true,
+    oldPrice: 850
   },
   {
     id: 'e3',
@@ -60,7 +64,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/washing3/800/600'
     ],
     manufacturer: 'Haier Thermocool',
-    isPromo: true
+    isPromo: true,
+    oldPrice: 650
   },
   {
     id: 'e4',
@@ -75,7 +80,9 @@ export const products: Product[] = [
       'https://picsum.photos/seed/fan2/800/600',
       'https://picsum.photos/seed/fan3/800/600'
     ],
-    manufacturer: 'Binatone'
+    manufacturer: 'Binatone',
+    isPromo: true,
+    oldPrice: 60
   },
   {
     id: 'e5',
@@ -106,7 +113,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/generator3/800/600'
     ],
     manufacturer: 'Honda',
-    isPromo: true
+    isPromo: true,
+    oldPrice: 950
   },
   {
     id: 'e7',
@@ -154,7 +162,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/dining3/800/600'
     ],
     manufacturer: 'Lagos Artisans',
-    isPromo: true
+    isPromo: true,
+    oldPrice: 1500
   },
   {
     id: 'f2',
@@ -184,6 +193,10 @@ export const products: Product[] = [
       'https://picsum.photos/seed/coffee2/800/600',
       'https://picsum.photos/seed/coffee3/800/600'
     ],
-    manufacturer: 'WoodMasters'
+    manufacturer: 'WoodMasters',
+    isPromo: true,
+    oldPrice: 350
   }
+
+
 ];

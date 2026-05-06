@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter } from 'react-icons/fa6';
+import FooterInstall from './FooterInstall';
 
 export default function Footer() {
   return (
@@ -12,13 +14,27 @@ export default function Footer() {
       <div className="container">
         <div className="grid grid-4">
           <div>
-            <h3 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>Online Store</h3>
-            <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
-              Premium African-inspired online store bringing you the best in electronics, furniture, and more.
-            </p>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <Image
+                src="/logo.png"
+                alt="Quick Choice Logo"
+                width={40}
+                height={40}
+                style={{
+                  objectFit: 'contain',
+                  flexShrink: 0,
+                  border: '2px solid var(--primary)',
+                  borderRadius: '4px',
+                  padding: '2px'
+                }}
+              />
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem', margin: 0 }}>
+                Premium African-inspired store bringing you the best in electronics, furniture, and more with <span style={{ color: '#646668ff', fontWeight: 'bold' }}>Quick Choice&reg;</span>.
+              </p>
+            </div>
           </div>
           <div>
-            <h4 style={{ marginBottom: '1.5rem' }}>Quick Links</h4>
+            <h4 style={{ marginBottom: '1.5rem', color: '#007bff' }}>Quick Choice</h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <li><Link href="/" style={{ color: 'var(--muted-foreground)' }}>Home</Link></li>
               <li><Link href="/shop" style={{ color: 'var(--muted-foreground)' }}>Shop</Link></li>
@@ -32,6 +48,7 @@ export default function Footer() {
               <li><Link href="/about#faq" style={{ color: 'var(--muted-foreground)' }}>FAQ</Link></li>
               <li><Link href="/about#privacy" style={{ color: 'var(--muted-foreground)' }}>Privacy Policy</Link></li>
               <li><Link href="/contact" style={{ color: 'var(--muted-foreground)' }}>Customer Care</Link></li>
+              <FooterInstall />
             </ul>
           </div>
           <div>
@@ -52,7 +69,7 @@ export default function Footer() {
           color: 'var(--muted-foreground)',
           fontSize: '0.875rem'
         }}>
-          &copy; {new Date().getFullYear()} Online Store. All rights reserved. Designed with passion.
+          &copy; {new Date().getFullYear()} Quick Choice. All rights reserved. Designed with passion.
         </div>
       </div>
     </footer>

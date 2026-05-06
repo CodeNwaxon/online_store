@@ -6,6 +6,7 @@ import { FaShoppingCart, FaEye, FaEllipsisV } from 'react-icons/fa';
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import LikeButton from './LikeButton';
 
 interface ProductCardProps {
   product: Product;
@@ -67,11 +68,23 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
       
-      <div style={{ padding: '1.25rem' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-          {product.category}
+      <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', textTransform: 'uppercase' }}>
+            {product.category}
+          </div>
+          <LikeButton productId={product.id} />
         </div>
-        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', fontWeight: '600' }}>{product.name}</h3>
+        <h3 style={{ 
+          fontSize: '1.1rem', 
+          marginBottom: '0.25rem', 
+          fontWeight: '600',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }} title={product.name}>
+          {product.name}
+        </h3>
         <div style={{ fontSize: '0.85rem', color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>
           By {product.manufacturer}
         </div>
@@ -79,19 +92,30 @@ export default function ProductCard({ product }: ProductCardProps) {
           fontSize: '0.875rem', 
           color: 'var(--muted-foreground)', 
           marginBottom: '1rem',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          minHeight: '2.5rem'
-        }}>
+          height: '60px',
+          overflowY: 'auto',
+          paddingRight: '4px',
+          lineHeight: '1.4'
+        }} className="custom-scrollbar">
           {product.description}
         </p>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-            ₦{product.price.toLocaleString()}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {product.oldPrice && (
+              <span style={{ 
+                fontSize: '0.85rem', 
+                color: 'var(--muted-foreground)', 
+                textDecoration: 'line-through',
+                marginBottom: '-4px'
+              }}>
+                ₦{product.oldPrice.toLocaleString()}
+              </span>
+            )}
+            <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+              ₦{product.price.toLocaleString()}
+            </span>
+          </div>
           <button 
             className="btn btn-primary" 
             style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
@@ -101,6 +125,18 @@ export default function ProductCard({ product }: ProductCardProps) {
           </button>
         </div>
       </div>
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: var(--border);
+          border-radius: 10px;
+        }
+      `}</style>
     </div>
   );
 }

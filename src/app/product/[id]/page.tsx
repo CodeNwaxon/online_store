@@ -3,10 +3,11 @@
 import { useParams } from 'next/navigation';
 import { products } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import ProductCard from '@/components/ProductCard';
 
 export default function ProductDetail() {
   const params = useParams();
@@ -89,13 +90,13 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'nowrap' }}>
               <button 
                 className="btn btn-primary" 
-                style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}
+                style={{ flex: 2, padding: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 onClick={() => addItem(product)}
               >
-                <FaShoppingCart size={20} /> Purchase & Add to Cart
+                <FaShoppingCart size={18} /> Buy Now
               </button>
               
               <a 
@@ -104,25 +105,64 @@ export default function ProductDetail() {
                 rel="noopener noreferrer"
                 className="btn" 
                 style={{ 
-                  width: '100%', 
-                  padding: '1rem', 
-                  fontSize: '1.1rem', 
+                  flex: 1,
+                  padding: '0.75rem', 
                   backgroundColor: '#25D366', 
                   color: 'white',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="WhatsApp"
+              >
+                <FaWhatsapp size={22} />
+              </a>
+
+              <Link 
+                href={`/installments?search=${encodeURIComponent(product.name)}`}
+                className="btn" 
+                style={{ 
+                  flex: 2,
+                  padding: '0.75rem', 
+                  backgroundColor: 'var(--foreground)', 
+                  color: 'var(--background)',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.75rem'
+                  gap: '0.5rem',
+                  fontSize: '0.75rem', // xs
+                  fontWeight: '600'
                 }}
               >
-                <FaWhatsapp size={24} /> Contact us on WhatsApp
-              </a>
+                <FaCreditCard size={18} /> Installment Payment
+              </Link>
             </div>
             
             <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'var(--muted)', borderRadius: 'var(--radius)', fontSize: '0.9rem' }}>
               <div style={{ marginBottom: '0.5rem' }}><strong>Category:</strong> {product.category} {product.subcategory && `/ ${product.subcategory}`}</div>
               <div><strong>Product ID:</strong> {product.id}</div>
             </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '6rem' }}>
+          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2.5rem' }}>You May Also Like</h2>
+          <div className="grid grid-4">
+            {products
+              .filter(p => p.id !== product.id)
+              .sort((a, b) => {
+                // Priority 1: Same subcategory
+                if (a.subcategory === product.subcategory && b.subcategory !== product.subcategory) return -1;
+                if (b.subcategory === product.subcategory && a.subcategory !== product.subcategory) return 1;
+                // Priority 2: Same category
+                if (a.category === product.category && b.category !== product.category) return -1;
+                if (b.category === product.category && a.category !== product.category) return 1;
+                return 0;
+              })
+              .slice(0, 4)
+              .map(relatedProduct => (
+                <ProductCard key={relatedProduct.id} product={relatedProduct} />
+              ))}
           </div>
         </div>
       </div>

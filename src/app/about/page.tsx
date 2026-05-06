@@ -17,7 +17,7 @@ export default function About() {
           <div style={{ maxWidth: '800px' }}>
             <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Our Story</h1>
             <p style={{ fontSize: '1.2rem', opacity: 0.9 }}>
-              Founded with a vision to bring premium quality goods to every home, Online Store combines modern convenience with the vibrant spirit of African design. We partner with the best manufacturers and artisans to ensure every item in our collection meets the highest standards of excellence.
+              Founded with a vision to bring premium quality goods to every home, Quick Choice combines modern convenience with the vibrant spirit of African design. We partner with the best manufacturers and artisans to ensure every item in our collection meets the highest standards of excellence.
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function About() {
             <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>Privacy & Policy</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: 'var(--muted-foreground)' }}>
               <p>
-                At Online Store, we take your privacy seriously. This policy outlines how we collect, use, and protect your personal information when you use our website.
+                At Quick Choice, we take your privacy seriously. This policy outlines how we collect, use, and protect your personal information when you use our website.
               </p>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <FaCheckCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />

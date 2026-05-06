@@ -8,6 +8,9 @@ import ProductCard from '@/components/ProductCard';
 import { FaArrowRight, FaStar, FaShieldAlt, FaBolt, FaCreditCard, } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import PromoCarousel from '@/components/PromoCarousel';
+import ReviewSection from '@/components/ReviewSection';
+import InstallPrompt from '@/components/InstallPrompt';
 
 const heroSlides = [
   {
@@ -20,7 +23,8 @@ const heroSlides = [
     category: 'Furniture' as Category,
     manufacturer: 'Lagos Artisans',
     link: '/shop?category=Furniture',
-    isPromo: true
+    isPromo: true,
+    oldPrice: 1500000
   },
   {
     id: 'h2',
@@ -32,7 +36,20 @@ const heroSlides = [
     category: 'Electronics' as Category,
     manufacturer: 'LG Electronics',
     link: '/shop?category=Electronics',
-    isPromo: true
+    isPromo: true,
+  },
+  {
+    id: 'h3',
+    name: 'Royal Sofa Set',
+    price: 1850000,
+    description: 'Ultimate luxury and comfort for your living room.',
+    image: 'https://picsum.photos/seed/hero3/1600/900',
+    images: ['https://picsum.photos/seed/hero3/1600/900'],
+    category: 'Furniture' as Category,
+    manufacturer: 'Royal Designs',
+    link: '/shop?category=Furniture',
+    isPromo: true,
+    oldPrice: 2200000
   }
 ];
 
@@ -40,7 +57,7 @@ export default function Home() {
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const promoProducts = products.filter(p => p.isPromo).slice(0, 4);
+  const promoProducts = products.filter(p => p.isPromo).slice(0, 8);
 
   const handleBuyNow = (slide: typeof heroSlides[0]) => {
     const product = {
@@ -65,7 +82,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      <InstallPrompt />
       {/* Hero Section */}
       <section style={{ position: 'relative', height: '650px', overflow: 'hidden' }}>
         {heroSlides.map((slide, index) => (
@@ -73,18 +91,21 @@ export default function Home() {
             key={index}
             style={{
               position: 'absolute',
-              inset: 0,
-              opacity: index === currentSlide ? 1 : 0,
-              transition: 'opacity 1s ease-in-out',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: currentSlide === index ? 1 : 0,
+              transition: 'opacity 0.8s ease-in-out',
+              backgroundImage: `url(${slide.image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              zIndex: currentSlide === index ? 1 : 0,
+              pointerEvents: currentSlide === index ? 'auto' : 'none',
+              cursor: 'pointer'
             }}
+            onClick={() => router.push(slide.link)}
           >
-            <Image
-              src={slide.image}
-              alt={slide.name}
-              fill
-              style={{ objectFit: 'cover' }}
-              priority={index === 0}
-            />
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -113,8 +134,24 @@ export default function Home() {
                   <h1 style={{ fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1rem', lineHeight: '1.1' }}>
                     {slide.name}
                   </h1>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--primary)' }}>
-                    ₦{slide.price.toLocaleString()}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                      ₦{slide.price.toLocaleString()}
+                    </span>
+                    {slide.oldPrice && (
+                      <span style={{ 
+                        fontSize: '1.25rem', 
+                        textDecoration: 'line-through', 
+                        color: 'white',
+                        opacity: 0.6,
+                        fontWeight: 'bold',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        ₦{slide.oldPrice.toLocaleString()}
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize: '1.1rem', marginBottom: '2.5rem', opacity: 0.9, lineHeight: '1.6' }}>
                     {slide.description}
@@ -168,7 +205,7 @@ export default function Home() {
 
       {/* Promo Products */}
       <section className="section">
-        <div className="container">
+        <div className="container" style={{ maxWidth: '1440px', padding: '0 2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
             <div>
               <h2 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Promotional Offers</h2>
@@ -178,11 +215,7 @@ export default function Home() {
               View All <FaArrowRight size={16} />
             </Link>
           </div>
-          <div className="grid grid-4">
-            {promoProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <PromoCarousel products={promoProducts} />
         </div>
       </section>
 
@@ -201,7 +234,7 @@ export default function Home() {
               We believe everyone deserves the best. That's why we offer flexible payment plans that fit your budget.
               Get your dream items today and spread the cost over 3, 6, or 12 months.
             </p>
-            <Link href="/contact" className="btn" style={{ backgroundColor: 'white', color: 'var(--secondary)' }}>
+            <Link href="/installments" className="btn" style={{ backgroundColor: 'white', color: 'var(--secondary)' }}>
               Learn More About Plans
             </Link>
           </div>
@@ -209,25 +242,7 @@ export default function Home() {
       </section>
 
       {/* Reviews Section */}
-      <section className="section">
-        <div className="container">
-          <h2 style={{ textAlign: 'center', fontSize: '2rem', fontWeight: 'bold', marginBottom: '3rem' }}>What Our Customers Say</h2>
-          <div className="grid grid-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', color: '#FFD700', marginBottom: '1rem' }}>
-                  {[1, 2, 3, 4, 5].map(s => <FaStar key={s} size={16} fill="#FFD700" />)}
-                </div>
-                <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', color: 'var(--muted-foreground)' }}>
-                  "The quality of the mahogany dining set exceeded my expectations. Delivery was smooth and the customer service was top-notch!"
-                </p>
-                <div style={{ fontWeight: 'bold' }}>Chidi K.</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>Verified Buyer</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ReviewSection />
     </div>
   );
 }

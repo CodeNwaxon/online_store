@@ -1,15 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    address: ''
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFormData(prev => ({
+          ...prev,
+          email: user.email || '',
+          fullName: user.displayName || ''
+        }));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
 
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,21 +107,21 @@ export default function Checkout() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
                   <label htmlFor="fullName" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Full Name</label>
-                  <input type="text" id="fullName" required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                  <input type="text" id="fullName" value={formData.fullName} onChange={handleInputChange} required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
                 </div>
                 <div className="grid grid-2" style={{ gap: '1rem' }}>
                   <div>
                     <label htmlFor="phone" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Phone Number</label>
-                    <input type="tel" id="phone" required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <input type="tel" id="phone" value={formData.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
                   </div>
                   <div>
                     <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Email (Optional)</label>
-                    <input type="email" id="email" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <input type="email" id="email" value={formData.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
                   </div>
                 </div>
                 <div>
                   <label htmlFor="address" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>House Address</label>
-                  <textarea id="address" required rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', resize: 'none' }}></textarea>
+                  <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', resize: 'none' }}></textarea>
                 </div>
               </div>
             </div>
@@ -160,7 +188,7 @@ export default function Checkout() {
               {loading ? 'Processing...' : `Pay ₦${getTotalPrice().toLocaleString()}`}
             </button>
             <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: '1rem' }}>
-              Secure payment powered by Online Store Demo.
+              Secure payment powered by Quick Choice.
             </p>
           </div>
         </form>

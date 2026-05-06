@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -7,9 +7,14 @@ const outfit = Outfit({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#D48806",
+};
+
 export const metadata: Metadata = {
-  title: "Online Store | Premium African Inspired Goods",
-  description: "Shop the best electronics, furniture, and more with our vibrant African-inspired online store.",
+  title: "Quick Choice | Premium African Inspired Goods",
+  description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
+  manifest: "/manifest.json",
 };
 
 import Navbar from "@/components/Navbar";

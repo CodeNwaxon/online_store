@@ -4,7 +4,8 @@ import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } from 'react-icons/fa';
+import Link from 'next/link';
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -13,6 +14,15 @@ function ShopContent() {
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>(initialCategory || 'All');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(20);
+  const [showLikedOnly, setShowLikedOnly] = useState(false);
+  const [showPromoOnly, setShowPromoOnly] = useState(false);
+  const [userLikes, setUserLikes] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('user_likes') || '{}');
+    setUserLikes(stored);
+  }, []);
   
   // Reset subcategory when category changes
   useEffect(() => {
@@ -35,15 +45,24 @@ function ShopContent() {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSubcategory && matchesSearch;
+    const matchesLiked = !showLikedOnly || userLikes[product.id];
+    const matchesPromo = !showPromoOnly || product.isPromo;
+    return matchesCategory && matchesSubcategory && matchesSearch && matchesLiked && matchesPromo;
   });
+
+  const displayedProducts = filteredProducts.slice(0, visibleCount);
 
   return (
     <div className="section">
-      <div className="container">
-        <header style={{ marginBottom: '3rem' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Our Collection</h1>
-          <p style={{ color: 'var(--muted-foreground)' }}>Explore our range of premium African-inspired goods.</p>
+      <div className="container" style={{ maxWidth: '1440px' }}>
+        <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Our Collection</h1>
+            <p style={{ color: 'var(--muted-foreground)' }}>Explore our range of premium African-inspired goods.</p>
+          </div>
+          <Link href="/installments" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FaCreditCard /> Installmental Payment
+          </Link>
         </header>
 
         <div style={{ 
@@ -81,6 +100,41 @@ function ShopContent() {
                   {category}
                 </button>
               ))}
+              
+              <button
+                onClick={() => setShowLikedOnly(!showLikedOnly)}
+                className="btn"
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: showLikedOnly ? '#ff4d4f' : 'transparent',
+                  color: showLikedOnly ? 'white' : 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
+                {showLikedOnly ? 'Showing Favorites' : 'Favorites'}
+              </button>
+
+              <button
+                onClick={() => setShowPromoOnly(!showPromoOnly)}
+                className="btn"
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  backgroundColor: showPromoOnly ? 'var(--secondary)' : 'transparent',
+                  color: showPromoOnly ? 'white' : 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {showPromoOnly ? 'Showing Promos' : 'Promos'}
+              </button>
             </div>
 
             <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
@@ -154,7 +208,7 @@ function ShopContent() {
 
         {filteredProducts.length > 0 ? (
           <div className="grid grid-4">
-            {filteredProducts.map(product => (
+            {displayedProducts.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -165,9 +219,21 @@ function ShopContent() {
             <button 
               className="btn btn-outline" 
               style={{ marginTop: '1.5rem' }}
-              onClick={() => { setSelectedCategory('All'); setSelectedSubcategory('All'); setSearchQuery(''); }}
+              onClick={() => { setSelectedCategory('All'); setSelectedSubcategory('All'); setSearchQuery(''); setVisibleCount(20); }}
             >
               Reset All Filters
+            </button>
+          </div>
+        )}
+
+        {filteredProducts.length > visibleCount && (
+          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+            <button 
+              className="btn btn-outline" 
+              onClick={() => setVisibleCount(prev => prev + 20)}
+              style={{ padding: '0.75rem 2rem' }}
+            >
+              Load More Products
             </button>
           </div>
         )}
