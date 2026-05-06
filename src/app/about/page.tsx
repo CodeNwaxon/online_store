@@ -72,7 +72,16 @@ export default function About() {
             </div>
             <div style={{ textAlign: 'center', padding: '2rem' }}>
               <h3 style={{ marginBottom: '1rem' }}>Office Address</h3>
-              <p style={{ color: 'var(--muted-foreground)' }}>123 Commerce Avenue, Lagos, Nigeria</p>
+              <p style={{ color: 'var(--muted-foreground)', marginBottom: '1rem' }}>168, Akarigbo Road, Sabo Sagamu, Ogun State</p>
+              <a 
+                href="https://www.google.com/maps/search/?api=1&query=168,+Akarigbo+Road,+Sabo+Sagamu,+Ogun+State" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn btn-outline"
+                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+              >
+                Get Navigation
+              </a>
             </div>
           </div>
         </div>

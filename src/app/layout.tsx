@@ -15,6 +15,28 @@ export const metadata: Metadata = {
   title: "Quick Choice | Premium African Inspired Goods",
   description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Quick Choice | Premium African Inspired Goods",
+    description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
+    url: "https://quick-choice-store.vercel.app/",
+    siteName: "Quick Choice",
+    images: [
+      {
+        url: "https://res-console.cloudinary.com/dfwpxohxg/thumbnails/v1/image/upload/v1778079956/ZW52aXJvbm1lbnRfemxyeXp1/as_is",
+        width: 800,
+        height: 600,
+        alt: "Quick Choice Logo",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Quick Choice | Premium African Inspired Goods",
+    description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
+    images: ["https://res-console.cloudinary.com/dfwpxohxg/thumbnails/v1/image/upload/v1778079956/ZW52aXJvbm1lbnRfemxyeXp1/as_is"],
+  },
 };
 
 import Navbar from "@/components/Navbar";
