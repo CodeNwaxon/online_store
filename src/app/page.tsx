@@ -139,9 +139,9 @@ export default function Home() {
                       ₦{slide.price.toLocaleString()}
                     </span>
                     {slide.oldPrice && (
-                      <span style={{ 
-                        fontSize: '1.25rem', 
-                        textDecoration: 'line-through', 
+                      <span style={{
+                        fontSize: '1.25rem',
+                        textDecoration: 'line-through',
                         color: 'white',
                         opacity: 0.6,
                         fontWeight: 'bold',
@@ -225,7 +225,8 @@ export default function Home() {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         color: 'white',
-        textAlign: 'center'
+        textAlign: 'center',
+        padding: '8rem 0', // Increased height
       }}>
         <div className="container">
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
