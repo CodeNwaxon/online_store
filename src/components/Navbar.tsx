@@ -78,13 +78,13 @@ export default function Navbar() {
           gap: '0.5rem'
         }}>
           <Image
-            src="/logo.png"
+            src="/logos.png"
             alt="Quick Choice Logo"
             width={40}
             height={40}
-            style={{ 
-              objectFit: 'contain', 
-              border: '2px solid var(--primary)', 
+            style={{
+              objectFit: 'contain',
+              border: '2px solid var(--primary)',
               borderRadius: '4px',
               padding: '2px'
             }}

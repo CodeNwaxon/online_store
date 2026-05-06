@@ -16,7 +16,7 @@ export default function Footer() {
           <div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <Image
-                src="/logo.png"
+                src="/logos.png"
                 alt="Quick Choice Logo"
                 width={40}
                 height={40}
