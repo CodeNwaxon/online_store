@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Quick Choice | Premium African Inspired Goods",
     description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
-    url: "https://quick-choice-store.vercel.app/",
+    url: "https://quick-choice",
     siteName: "Quick Choice",
     images: [
       {
-        url: "https://res-console.cloudinary.com/dfwpxohxg/thumbnails/v1/image/upload/v1778079956/ZW52aXJvbm1lbnRfemxyeXp1/as_is",
+        url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1778079956/environment_zlryzu.jpg",
         width: 800,
         height: 600,
         alt: "Quick Choice Logo",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Quick Choice | Premium African Inspired Goods",
     description: "Shop the best electronics, furniture, and more with Quick Choice, our vibrant African-inspired online store.",
-    images: ["https://res-console.cloudinary.com/dfwpxohxg/thumbnails/v1/image/upload/v1778079956/ZW52aXJvbm1lbnRfemxyeXp1/as_is"],
+    images: ["https://res.cloudinary.com/dfwpxohxg/image/upload/v1778079956/environment_zlryzu.jpg"],
   },
 };
 
