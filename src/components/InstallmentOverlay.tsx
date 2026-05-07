@@ -224,7 +224,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-1">
       <div className="bg-background rounded-[var(--radius)] w-full max-w-[1000px] max-h-[90vh] overflow-y-auto relative grid grid-cols-1 md:grid-cols-2 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <button
           onClick={onClose}
@@ -234,7 +234,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         </button>
 
         {/* Left: Image Section */}
-        <div className="p-8 border-b md:border-b-0 md:border-r border-border">
+        <div className="p-4 md:p-8 border-b md:border-b-0 md:border-r border-border">
           <div
             className="w-full aspect-square bg-muted rounded-[var(--radius)] overflow-hidden cursor-zoom-in mb-4 relative"
             onClick={() => setIsFullImageOpen(true)}
@@ -256,7 +256,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         </div>
 
         {/* Right: Details Section */}
-        <div className="p-8 flex flex-col">
+        <div className="p-4 md:p-8 flex flex-col">
           <h2 className="text-2xl font-bold mb-2">{product.name}</h2>
           <p className="text-muted-foreground mb-6">{product.description}</p>
 
