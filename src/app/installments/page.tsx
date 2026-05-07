@@ -3,12 +3,12 @@
 import { Suspense, useState, useEffect } from 'react';
 import { products, Product, Category } from '@/data/products';
 import { installmentSettings } from '@/data/installmentSettings';
-import { FaSearch, FaInfoCircle, FaCreditCard } from 'react-icons/fa';
+import { FaSearch, FaInfoCircle, FaCreditCard, FaTimes, FaGoogle } from 'react-icons/fa';
 import { Toaster, toast } from 'react-hot-toast';
 import InstallmentOverlay from '@/components/InstallmentOverlay';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 import { useSearchParams } from 'next/navigation';
@@ -34,6 +34,8 @@ function InstallmentsContent() {
   const [user, setUser] = useState<User | null>(null);
   const [activeLoan, setActiveLoan] = useState<any | null>(null);
   const [visibleCount, setVisibleCount] = useState(20);
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false);
+  const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: 3 | 4} | null>(null);
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -71,9 +73,30 @@ function InstallmentsContent() {
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
   const handleSelectPlan = (product: Product, plan: 3 | 4) => {
+    if (!user) {
+      setPendingPlanSelection({ product, plan });
+      setShowAuthOverlay(true);
+      return;
+    }
     setSelectedProduct(product);
     setSelectedPlan(plan);
     setIsOverlayOpen(true);
+  };
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      toast.success('Signed in successfully!');
+      setShowAuthOverlay(false);
+      if (pendingPlanSelection) {
+        setSelectedProduct(pendingPlanSelection.product);
+        setSelectedPlan(pendingPlanSelection.plan);
+        setIsOverlayOpen(true);
+        setPendingPlanSelection(null);
+      }
+    } catch {
+      toast.error('Sign in failed. Please try again.');
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -254,6 +277,30 @@ function InstallmentsContent() {
           plan={selectedPlan}
           onClose={() => setIsOverlayOpen(false)}
         />
+      )}
+
+      {/* Auth Overlay */}
+      {showAuthOverlay && (
+        <div className="fixed inset-0 z-[1000] bg-black/60 flex flex-col items-center justify-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-[var(--radius)] shadow-lg overflow-hidden relative p-8 text-center">
+            <button 
+              onClick={() => { setShowAuthOverlay(false); setPendingPlanSelection(null); }}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <FaTimes size={20} />
+            </button>
+            <h2 className="text-2xl font-bold mb-2">Sign in Required</h2>
+            <p className="text-muted-foreground text-sm mb-6">
+              You must be signed in to apply for an installment plan.
+            </p>
+            <button 
+              onClick={handleSignIn}
+              className="w-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-3 p-3 rounded-md font-bold transition-colors"
+            >
+              <FaGoogle size={20} /> Sign in with Google
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
