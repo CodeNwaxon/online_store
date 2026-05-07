@@ -16,11 +16,11 @@ import { useSearchParams } from 'next/navigation';
 function InstallmentsContent() {
   const searchParams = useSearchParams();
   const querySearch = searchParams.get('search');
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | 'All'>('All');
-  
+
   useEffect(() => {
     if (querySearch) {
       setSearchQuery(querySearch);
@@ -87,7 +87,7 @@ function InstallmentsContent() {
 
   return (
     <div className="py-16">
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+      <div className="max-w-[1200px] mx-auto px-3 md:px-6">
         <Toaster position="top-center" />
 
         {/* Header & Pay Loan Button */}
@@ -102,7 +102,7 @@ function InstallmentsContent() {
         </div>
 
         {/* Info Card */}
-        <div className="bg-card border border-border rounded-[var(--radius)] p-8 mb-12 shadow-md">
+        <div className="bg-card border border-border rounded-[var(--radius)] p-6 md:p-8 mb-12 shadow-md">
           <div className="flex items-center gap-4 mb-6">
             <FaInfoCircle size={24} className="text-primary" />
             <h2 className="text-2xl font-bold">How it Works</h2>
@@ -139,7 +139,7 @@ function InstallmentsContent() {
 
         {/* Search & Filters */}
         <div className="flex flex-col gap-6 mb-12">
-          <div className="flex flex-wrap gap-6 items-center justify-between p-6 bg-card border border-border rounded-[var(--radius)]">
+          <div className="flex flex-wrap gap-6 items-center justify-between p-2 md:p-6 bg-card border border-border rounded-sm md:rounded-lg">
             <div className="flex gap-3 flex-wrap">
               {categories.map(category => (
                 <button
@@ -186,9 +186,9 @@ function InstallmentsContent() {
                 onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(20); }}
                 className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background font-sans outline-none focus:border-primary"
               />
-              <FaSearch 
-                size={18} 
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+              <FaSearch
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
             </div>
           </div>
@@ -232,8 +232,8 @@ function InstallmentsContent() {
 
         {filteredProducts.length > visibleCount && (
           <div className="text-center mt-12">
-            <button 
-              className="border border-border text-foreground hover:bg-muted px-8 py-3 rounded-md font-semibold transition-colors" 
+            <button
+              className="border border-border text-foreground hover:bg-muted px-8 py-3 rounded-md font-semibold transition-colors"
               onClick={() => setVisibleCount(prev => prev + 20)}
             >
               Load More Products
