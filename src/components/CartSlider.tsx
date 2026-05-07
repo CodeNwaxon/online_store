@@ -4,6 +4,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { FaTimes, FaPlus, FaMinus, FaTrashAlt, FaShoppingBag } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 interface CartSliderProps {
   isOpen: boolean;
@@ -12,79 +13,75 @@ interface CartSliderProps {
 
 export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   const { items, updateQuantity, removeItem, getTotalPrice } = useCartStore();
+  const [shouldRender, setShouldRender] = useState(false);
 
-  if (!isOpen) return null;
+  // Handle animation timing
+  useEffect(() => {
+    if (isOpen) setShouldRender(true);
+  }, [isOpen]);
+
+  const handleAnimationEnd = () => {
+    if (!isOpen) setShouldRender(false);
+  };
+
+  if (!shouldRender) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 200,
-      display: 'flex',
-      justifyContent: 'flex-end'
-    }}>
+    <div className="fixed inset-0 z-[200] flex justify-end">
       {/* Backdrop */}
       <div 
-        style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', cursor: 'pointer' }} 
+        className={`absolute inset-0 bg-black/50 cursor-pointer transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
         onClick={onClose}
       />
       
       {/* Content */}
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '400px',
-        height: '100%',
-        backgroundColor: 'var(--card)',
-        boxShadow: '-4px 0 15px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'slideIn 0.3s ease-out'
-      }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Your Cart</h2>
-          <button onClick={onClose} aria-label="Close cart"><FaTimes size={24} /></button>
+      <div 
+        className={`relative w-full max-w-[400px] h-full bg-card shadow-[-4px_0_15px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        onTransitionEnd={handleAnimationEnd}
+      >
+        <div className="p-6 border-b border-border flex justify-between items-center">
+          <h2 className="text-xl font-bold">Your Cart</h2>
+          <button onClick={onClose} aria-label="Close cart" className="text-foreground hover:text-primary transition-colors"><FaTimes size={24} /></button>
         </div>
         
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+        <div className="flex-1 overflow-y-auto p-6">
           {items.length === 0 ? (
-            <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-              <FaShoppingBag size={64} style={{ color: 'var(--muted-foreground)', marginBottom: '1rem', opacity: 0.5 }} />
-              <p style={{ color: 'var(--muted-foreground)' }}>Your cart is empty.</p>
+            <div className="text-center mt-16 flex flex-col items-center">
+              <FaShoppingBag size={64} className="text-muted-foreground mb-4 opacity-50" />
+              <p className="text-muted-foreground">Your cart is empty.</p>
               <Link 
                 href="/shop" 
                 onClick={onClose}
-                className="btn btn-outline" 
-                style={{ marginTop: '1.5rem' }}
+                className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold mt-6 inline-block transition-colors" 
               >
                 Start Shopping
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="flex flex-col gap-6">
               {items.map((item) => (
-                <div key={item.id} style={{ display: 'flex', gap: '1rem' }}>
-                  <div style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '4px', overflow: 'hidden' }}>
-                    <Image src={item.image} alt={item.name} fill style={{ objectFit: 'cover' }} />
+                <div key={item.id} className="flex gap-4">
+                  <div className="relative w-[80px] h-[80px] rounded shrink-0 overflow-hidden">
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: '600' }}>{item.name}</h4>
-                      <button onClick={() => removeItem(item.id)} style={{ color: 'var(--secondary)' }}><FaTrashAlt size={16} /></button>
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <h4 className="text-[0.9rem] font-semibold text-foreground">{item.name}</h4>
+                      <button onClick={() => removeItem(item.id)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                    <div className="text-sm text-primary font-bold mb-2">
                       ₦{item.price.toLocaleString()}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="flex items-center gap-3">
                       <button 
-                        style={{ border: '1px solid var(--border)', padding: '2px', borderRadius: '4px' }}
+                        className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                       >
                         <FaMinus size={14} />
                       </button>
-                      <span style={{ fontSize: '0.875rem' }}>{item.quantity}</span>
+                      <span className="text-sm font-medium">{item.quantity}</span>
                       <button 
-                        style={{ border: '1px solid var(--border)', padding: '2px', borderRadius: '4px' }}
+                        className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                       >
                         <FaPlus size={14} />
@@ -98,29 +95,21 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         </div>
         
         {items.length > 0 && (
-          <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', backgroundColor: 'var(--muted)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 'bold' }}>
-              <span>Total Amount:</span>
-              <span style={{ color: 'var(--primary)' }}>₦{getTotalPrice().toLocaleString()}</span>
+          <div className="p-6 border-t border-border bg-muted">
+            <div className="flex justify-between mb-6 text-[1.1rem] font-bold">
+              <span className="text-foreground">Total Amount:</span>
+              <span className="text-primary">₦{getTotalPrice().toLocaleString()}</span>
             </div>
             <Link 
               href="/checkout" 
               onClick={onClose}
-              className="btn btn-primary" 
-              style={{ width: '100%' }}
+              className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center rounded-md font-semibold px-6 py-3 w-full text-center transition-colors" 
             >
               Proceed to Checkout
             </Link>
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-      `}</style>
     </div>
   );
 }

@@ -53,49 +53,27 @@ function ShopContent() {
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
   return (
-    <div className="section">
-      <div className="container" style={{ maxWidth: '1440px' }}>
-        <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="py-16">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-6">
+        <header className="mb-12 flex justify-between items-center flex-wrap gap-4">
           <div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Our Collection</h1>
-            <p style={{ color: 'var(--muted-foreground)' }}>Explore our range of premium African-inspired goods.</p>
+            <h1 className="text-4xl font-bold mb-4">Our Collection</h1>
+            <p className="text-muted-foreground">Explore our range of premium African-inspired goods.</p>
           </div>
-          <Link href="/installments" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link href="/installments" className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
             <FaCreditCard /> Installmental Payment
           </Link>
         </header>
 
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '1.5rem',
-          marginBottom: '3rem'
-        }}>
+        <div className="flex flex-col gap-6 mb-12">
           {/* Main Filters Bar */}
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '1.5rem', 
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1.5rem',
-            backgroundColor: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)'
-          }}>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-6 items-center justify-between p-6 bg-card border border-border rounded-[var(--radius)]">
+            <div className="flex gap-3 flex-wrap">
               {categories.map(category => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className="btn"
-                  style={{
-                    padding: '0.5rem 1.25rem',
-                    fontSize: '0.875rem',
-                    backgroundColor: selectedCategory === category ? 'var(--primary)' : 'transparent',
-                    color: selectedCategory === category ? 'white' : 'var(--foreground)',
-                    border: selectedCategory === category ? 'none' : '1px solid var(--border)'
-                  }}
+                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedCategory === category ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {category}
                 </button>
@@ -103,17 +81,7 @@ function ShopContent() {
               
               <button
                 onClick={() => setShowLikedOnly(!showLikedOnly)}
-                className="btn"
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: showLikedOnly ? '#ff4d4f' : 'transparent',
-                  color: showLikedOnly ? 'white' : 'var(--foreground)',
-                  border: '1px solid var(--border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
+                className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
                 {showLikedOnly ? 'Showing Favorites' : 'Favorites'}
@@ -121,67 +89,33 @@ function ShopContent() {
 
               <button
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
-                className="btn"
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: showPromoOnly ? 'var(--secondary)' : 'transparent',
-                  color: showPromoOnly ? 'white' : 'var(--foreground)',
-                  border: '1px solid var(--border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
+                className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showPromoOnly ? 'Showing Promos' : 'Promos'}
               </button>
             </div>
 
-            <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+            <div className="relative flex-1 min-w-[250px]">
               <input
                 type="text"
                 placeholder="Search by name, brand (LG, TCL, etc.) or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.625rem 1rem 0.625rem 2.5rem',
-                  borderRadius: 'var(--radius)',
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'var(--background)',
-                  fontFamily: 'inherit'
-                }}
+                className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
               />
               <FaSearch 
                 size={18} 
-                style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} 
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
               />
             </div>
           </div>
 
           {/* Subcategories Bar - Only shown when a specific category is selected and has subcategories */}
           {selectedCategory !== 'All' && availableSubcategories.length > 0 && (
-            <div style={{ 
-              display: 'flex', 
-              gap: '0.75rem', 
-              flexWrap: 'wrap',
-              padding: '1rem',
-              backgroundColor: 'var(--muted)',
-              borderRadius: 'var(--radius)',
-              border: '1px solid var(--border)',
-              animation: 'fadeIn 0.3s ease-out'
-            }}>
+            <div className="flex gap-3 flex-wrap p-4 bg-muted rounded-[var(--radius)] border border-border animate-[fadeIn_0.3s_ease-out]">
               <button
                 onClick={() => setSelectedSubcategory('All')}
-                className="btn"
-                style={{
-                  padding: '0.4rem 1rem',
-                  fontSize: '0.8rem',
-                  backgroundColor: selectedSubcategory === 'All' ? 'var(--secondary)' : 'white',
-                  color: selectedSubcategory === 'All' ? 'white' : 'var(--foreground)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '20px'
-                }}
+                className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
               >
                 All {selectedCategory}
               </button>
@@ -189,15 +123,7 @@ function ShopContent() {
                 <button
                   key={sub}
                   onClick={() => setSelectedSubcategory(sub)}
-                  className="btn"
-                  style={{
-                    padding: '0.4rem 1rem',
-                    fontSize: '0.8rem',
-                    backgroundColor: selectedSubcategory === sub ? 'var(--secondary)' : 'white',
-                    color: selectedSubcategory === sub ? 'white' : 'var(--foreground)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '20px'
-                  }}
+                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === sub ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
                   {sub}
                 </button>
@@ -207,18 +133,17 @@ function ShopContent() {
         </div>
 
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {displayedProducts.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>No products found</h3>
-            <p style={{ color: 'var(--muted-foreground)' }}>Try adjusting your filters or search terms.</p>
+          <div className="text-center py-16">
+            <h3 className="text-2xl mb-4">No products found</h3>
+            <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
             <button 
-              className="btn btn-outline" 
-              style={{ marginTop: '1.5rem' }}
+              className="border border-border hover:bg-muted text-foreground px-4 py-2 rounded-md font-semibold mt-6 inline-block transition-colors"
               onClick={() => { setSelectedCategory('All'); setSelectedSubcategory('All'); setSearchQuery(''); setVisibleCount(20); }}
             >
               Reset All Filters
@@ -227,30 +152,23 @@ function ShopContent() {
         )}
 
         {filteredProducts.length > visibleCount && (
-          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+          <div className="text-center mt-12">
             <button 
-              className="btn btn-outline" 
+              className="border border-border hover:bg-muted text-foreground px-8 py-3 rounded-md font-semibold transition-colors"
               onClick={() => setVisibleCount(prev => prev + 20)}
-              style={{ padding: '0.75rem 2rem' }}
             >
               Load More Products
             </button>
           </div>
         )}
       </div>
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
 
 export default function Shop() {
   return (
-    <Suspense fallback={<div className="container" style={{ padding: '4rem 0' }}>Loading products...</div>}>
+    <Suspense fallback={<div className="max-w-[1440px] mx-auto px-4 md:px-6 py-16">Loading products...</div>}>
       <ShopContent />
     </Suspense>
   );

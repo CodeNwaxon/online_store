@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaEnvelope, FaPhone, FaCheckCircle } from 'react-icons/fa';
 
 export default function About() {
   const faqs = [
@@ -12,11 +12,11 @@ export default function About() {
   return (
     <div>
       {/* Hero Section */}
-      <section className="section" style={{ backgroundColor: 'var(--primary)', color: 'white' }}>
-        <div className="container">
-          <div style={{ maxWidth: '800px' }}>
-            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Our Story</h1>
-            <p style={{ fontSize: '1.2rem', opacity: 0.9 }}>
+      <section className="py-16 max-md:py-8 bg-primary text-white">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="max-w-[800px]">
+            <h1 className="text-5xl max-md:text-4xl font-bold mb-6">Our Story</h1>
+            <p className="text-lg max-md:text-base opacity-90 leading-relaxed">
               Founded with a vision to bring premium quality goods to every home, Quick Choice combines modern convenience with the vibrant spirit of African design. We partner with the best manufacturers and artisans to ensure every item in our collection meets the highest standards of excellence.
             </p>
           </div>
@@ -24,30 +24,30 @@ export default function About() {
       </section>
 
       {/* CEO & Leadership */}
-      <section className="section">
-        <div className="container">
-          <div className="grid grid-2" style={{ alignItems: 'center' }}>
-            <div style={{ position: 'relative', height: '500px', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <section className="py-16 max-md:py-8">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="relative h-[500px] max-md:h-[350px] rounded-[var(--radius)] overflow-hidden">
               <Image 
                 src="https://picsum.photos/seed/ceo/800/1000" 
                 alt="CEO" 
                 fill 
-                style={{ objectFit: 'cover' }}
+                className="object-cover"
               />
             </div>
-            <div style={{ padding: '2rem' }}>
-              <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>Message from our CEO</h2>
-              <p style={{ color: 'var(--muted-foreground)', marginBottom: '1.5rem' }}>
+            <div className="p-8 max-md:p-0">
+              <h2 className="text-3xl font-bold mb-4">Message from our CEO</h2>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
                 "Our mission is more than just selling products; it's about enhancing the lifestyle of our customers through quality and design. We are committed to sustainability, fair trade, and providing an exceptional shopping experience."
               </p>
-              <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>Kofi Mensah</div>
-              <div style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>Founder & CEO</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <a href="mailto:ceo@onlinestore.com" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FaEnvelope size={18} color="var(--primary)" /> ceo@onlinestore.com
+              <div className="font-bold text-lg">Kofi Mensah</div>
+              <div className="text-primary mb-6">Founder & CEO</div>
+              <div className="flex flex-col gap-3">
+                <a href="mailto:ceo@onlinestore.com" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <FaEnvelope size={18} className="text-primary" /> ceo@onlinestore.com
                 </a>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FaPhone size={18} color="var(--primary)" /> +234 800 123 4567
+                <div className="flex items-center gap-2">
+                  <FaPhone size={18} className="text-primary" /> +234 800 123 4567
                 </div>
               </div>
             </div>
@@ -56,29 +56,28 @@ export default function About() {
       </section>
 
       {/* Customer Care */}
-      <section className="section" style={{ backgroundColor: 'var(--muted)' }}>
-        <div className="container">
-          <h2 style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '2rem', fontWeight: 'bold' }}>Customer Care</h2>
-          <div className="grid grid-3">
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>Support Email</h3>
-              <p style={{ color: 'var(--muted-foreground)' }}>support@onlinestore.com</p>
-              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Response within 24 hours</p>
+      <section className="py-16 max-md:py-8 bg-muted">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <h2 className="text-center mb-12 text-3xl font-bold">Customer Care</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center p-8 bg-card rounded-[var(--radius)] shadow-sm">
+              <h3 className="mb-4 font-bold text-xl">Support Email</h3>
+              <p className="text-muted-foreground">support@onlinestore.com</p>
+              <p className="text-sm mt-2">Response within 24 hours</p>
             </div>
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>Hotline</h3>
-              <p style={{ color: 'var(--muted-foreground)' }}>+234 800 999 8888</p>
-              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Mon-Sat, 8am - 6pm</p>
+            <div className="text-center p-8 bg-card rounded-[var(--radius)] shadow-sm">
+              <h3 className="mb-4 font-bold text-xl">Hotline</h3>
+              <p className="text-muted-foreground">+234 800 999 8888</p>
+              <p className="text-sm mt-2">Mon-Sat, 8am - 6pm</p>
             </div>
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <h3 style={{ marginBottom: '1rem' }}>Office Address</h3>
-              <p style={{ color: 'var(--muted-foreground)', marginBottom: '1rem' }}>168, Akarigbo Road, Sabo Sagamu, Ogun State</p>
+            <div className="text-center p-8 bg-card rounded-[var(--radius)] shadow-sm flex flex-col items-center">
+              <h3 className="mb-4 font-bold text-xl">Office Address</h3>
+              <p className="text-muted-foreground mb-4">168, Akarigbo Road, Sabo Sagamu, Ogun State</p>
               <a 
                 href="https://www.google.com/maps/search/?api=1&query=168,+Akarigbo+Road,+Sabo+Sagamu,+Ogun+State" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="btn btn-outline"
-                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                className="border border-border text-foreground hover:bg-muted text-sm px-4 py-2 rounded-md font-semibold mt-auto inline-block transition-colors"
               >
                 Get Navigation
               </a>
@@ -88,14 +87,14 @@ export default function About() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="section">
-        <div className="container">
-          <h2 style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '2rem', fontWeight: 'bold' }}>Frequently Asked Questions</h2>
-          <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <section id="faq" className="py-16 max-md:py-8">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <h2 className="text-center mb-12 text-3xl font-bold">Frequently Asked Questions</h2>
+          <div className="max-w-[800px] mx-auto flex flex-col gap-6">
             {faqs.map((faq, index) => (
-              <div key={index} style={{ padding: '1.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', fontWeight: 'bold' }}>{faq.q}</h4>
-                <p style={{ color: 'var(--muted-foreground)' }}>{faq.a}</p>
+              <div key={index} className="p-6 border border-border rounded-[var(--radius)] bg-card">
+                <h4 className="text-lg font-bold mb-3">{faq.q}</h4>
+                <p className="text-muted-foreground leading-relaxed">{faq.a}</p>
               </div>
             ))}
           </div>
@@ -103,24 +102,24 @@ export default function About() {
       </section>
 
       {/* Privacy Policy */}
-      <section id="privacy" className="section" style={{ backgroundColor: 'var(--card)' }}>
-        <div className="container">
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>Privacy & Policy</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: 'var(--muted-foreground)' }}>
+      <section id="privacy" className="py-16 max-md:py-8 bg-card border-t border-border">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="max-w-[800px] mx-auto">
+            <h2 className="text-3xl font-bold mb-8">Privacy & Policy</h2>
+            <div className="flex flex-col gap-6 text-muted-foreground">
               <p>
                 At Quick Choice, we take your privacy seriously. This policy outlines how we collect, use, and protect your personal information when you use our website.
               </p>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <FaCheckCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div className="flex gap-4 items-start">
+                <FaCheckCircle size={20} className="shrink-0 mt-1 text-primary" />
                 <p><strong>Data Collection:</strong> We collect necessary information like your name, address, and contact details to process your orders and provide better service.</p>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <FaCheckCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div className="flex gap-4 items-start">
+                <FaCheckCircle size={20} className="shrink-0 mt-1 text-primary" />
                 <p><strong>Security:</strong> All payments are processed through secure, encrypted gateways. We never store your credit card information on our servers.</p>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <FaCheckCircle size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div className="flex gap-4 items-start">
+                <FaCheckCircle size={20} className="shrink-0 mt-1 text-primary" />
                 <p><strong>Third Parties:</strong> We do not sell or share your personal data with third parties for marketing purposes. Your data is only shared with partners necessary for fulfillment (e.g., shipping companies).</p>
               </div>
             </div>

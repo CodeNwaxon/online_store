@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { products, Product, Category } from '@/data/products';
 import { installmentSettings } from '@/data/installmentSettings';
-import { FaSearch, FaInfoCircle, FaCalendarAlt, FaCreditCard } from 'react-icons/fa';
+import { FaSearch, FaInfoCircle, FaCreditCard } from 'react-icons/fa';
 import { Toaster, toast } from 'react-hot-toast';
 import InstallmentOverlay from '@/components/InstallmentOverlay';
 import Link from 'next/link';
@@ -86,64 +86,51 @@ function InstallmentsContent() {
   const categories: (Category | 'All')[] = ['All', 'Electronics', 'Furniture'];
 
   return (
-    <div className="section">
-      <div className="container">
+    <div className="py-16">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <Toaster position="top-center" />
 
         {/* Header & Pay Loan Button */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-
+        <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
           <div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Installmental Payments</h1>
-            <p style={{ color: 'var(--muted-foreground)' }}>Pay small-small for the things you love.</p>
+            <h1 className="text-4xl font-bold">Installmental Payments</h1>
+            <p className="text-muted-foreground mt-2">Pay small-small for the things you love.</p>
           </div>
-          <Link href="/installments/pay-loan" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link href="/installments/pay-loan" className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
             <FaCreditCard /> Pay Loan
           </Link>
         </div>
 
         {/* Info Card */}
-        <div style={{
-          backgroundColor: 'var(--card)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '2rem',
-          marginBottom: '3rem',
-          boxShadow: 'var(--shadow-md)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <FaInfoCircle size={24} color="var(--primary)" />
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>How it Works</h2>
+        <div className="bg-card border border-border rounded-[var(--radius)] p-8 mb-12 shadow-md">
+          <div className="flex items-center gap-4 mb-6">
+            <FaInfoCircle size={24} className="text-primary" />
+            <h2 className="text-2xl font-bold">How it Works</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
-              <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Flexible Plans</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted-foreground)' }}>
+              <h3 className="font-bold mb-2">Flexible Plans</h3>
+              <p className="text-sm text-muted-foreground">
                 Choose between <strong>3 months</strong> ({installmentSettings.threeMonthIncrease * 100}% increase)
                 or <strong>4 months</strong> ({installmentSettings.fourMonthIncrease * 100}% increase).
               </p>
             </div>
             <div>
-              <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Delivery Policy</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted-foreground)' }}>
+              <h3 className="font-bold mb-2">Delivery Policy</h3>
+              <p className="text-sm text-muted-foreground">
                 Goods are only delivered at the <strong>completion of payment</strong>.
               </p>
             </div>
             <div>
-              <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Late Payment & Grace</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted-foreground)' }}>
+              <h3 className="font-bold mb-2">Late Payment & Grace</h3>
+              <p className="text-sm text-muted-foreground">
                 Each month has a <strong>{installmentSettings.gracePeriodDays}-day grace period</strong>.
                 After that, a <strong>{installmentSettings.latePaymentFee * 100}% increase</strong> is added.
               </p>
             </div>
             <div>
-              <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Cancellation</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--muted-foreground)' }}>
+              <h3 className="font-bold mb-2">Cancellation</h3>
+              <p className="text-sm text-muted-foreground">
                 Withdrawing payments attracts a <strong>{installmentSettings.cancellationFee * 100}% charge</strong> from the total amount paid.
               </p>
             </div>
@@ -151,36 +138,14 @@ function InstallmentsContent() {
         </div>
 
         {/* Search & Filters */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '1.5rem',
-          marginBottom: '3rem'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '1.5rem', 
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '1.5rem',
-            backgroundColor: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)'
-          }}>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="flex flex-col gap-6 mb-12">
+          <div className="flex flex-wrap gap-6 items-center justify-between p-6 bg-card border border-border rounded-[var(--radius)]">
+            <div className="flex gap-3 flex-wrap">
               {categories.map(category => (
                 <button
                   key={category}
                   onClick={() => { setSelectedCategory(category); setVisibleCount(20); }}
-                  className="btn"
-                  style={{
-                    padding: '0.5rem 1.25rem',
-                    fontSize: '0.875rem',
-                    backgroundColor: selectedCategory === category ? 'var(--primary)' : 'transparent',
-                    color: selectedCategory === category ? 'white' : 'var(--foreground)',
-                    border: selectedCategory === category ? 'none' : '1px solid var(--border)'
-                  }}
+                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedCategory === category ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {category}
                 </button>
@@ -189,28 +154,10 @@ function InstallmentsContent() {
 
             {/* Subcategories Bar - Only shown when a specific category is selected */}
             {selectedCategory !== 'All' && (
-              <div style={{ 
-                display: 'flex', 
-                gap: '0.75rem', 
-                flexWrap: 'wrap',
-                marginTop: '1rem',
-                width: '100%',
-                padding: '1rem',
-                backgroundColor: 'var(--muted)',
-                borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)'
-              }}>
+              <div className="flex gap-3 flex-wrap mt-4 w-full p-4 bg-muted rounded-[var(--radius)] border border-border">
                 <button
                   onClick={() => setSelectedSubcategory('All')}
-                  className="btn"
-                  style={{
-                    padding: '0.4rem 1rem',
-                    fontSize: '0.8rem',
-                    backgroundColor: selectedSubcategory === 'All' ? 'var(--secondary)' : 'white',
-                    color: selectedSubcategory === 'All' ? 'white' : 'var(--foreground)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '20px'
-                  }}
+                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
                   All {selectedCategory}
                 </button>
@@ -223,15 +170,7 @@ function InstallmentsContent() {
                   <button
                     key={sub}
                     onClick={() => setSelectedSubcategory(sub)}
-                    className="btn"
-                    style={{
-                      padding: '0.4rem 1rem',
-                      fontSize: '0.8rem',
-                      backgroundColor: selectedSubcategory === sub ? 'var(--secondary)' : 'white',
-                      color: selectedSubcategory === sub ? 'white' : 'var(--foreground)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '20px'
-                    }}
+                    className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === sub ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                   >
                     {sub}
                   </button>
@@ -239,67 +178,49 @@ function InstallmentsContent() {
               </div>
             )}
 
-            <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+            <div className="relative flex-1 min-w-[250px]">
               <input
                 type="text"
                 placeholder="Search for an item to start a plan..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(20); }}
-                style={{
-                  width: '100%',
-                  padding: '0.625rem 1rem 0.625rem 2.5rem',
-                  borderRadius: 'var(--radius)',
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'var(--background)',
-                  fontFamily: 'inherit'
-                }}
+                className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background font-sans outline-none focus:border-primary"
               />
               <FaSearch 
                 size={18} 
-                style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} 
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
               />
             </div>
           </div>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {displayedProducts.map(product => (
-            <div key={product.id} style={{
-              backgroundColor: 'var(--card)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              overflow: 'hidden',
-              transition: 'transform 0.2s',
-              cursor: 'pointer'
-            }}
-              className="card-hover"
-            >
-              <div style={{ height: '200px', backgroundColor: 'var(--muted)', position: 'relative' }}>
+            <div key={product.id} className="bg-card border border-border rounded-[var(--radius)] overflow-hidden transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col h-full">
+              <div className="h-[200px] bg-muted relative">
                 <img
                   src={product.image}
                   alt={product.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{product.name}</h3>
-                <p style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '1rem' }}>
+              <div className="p-6 flex flex-col flex-1">
+                <h3 className="font-bold mb-2">{product.name}</h3>
+                <p className="text-primary font-bold text-xl mb-4 mt-auto">
                   {formatCurrency(product.price)}
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-2 gap-3 mt-auto">
                   <button
                     onClick={() => handleSelectPlan(product, 3)}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem' }}
+                    className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
                   >
                     3 Months Plan
                   </button>
                   <button
                     onClick={() => handleSelectPlan(product, 4)}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem' }}
+                    className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
                   >
                     4 Months Plan
                   </button>
@@ -310,11 +231,10 @@ function InstallmentsContent() {
         </div>
 
         {filteredProducts.length > visibleCount && (
-          <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+          <div className="text-center mt-12">
             <button 
-              className="btn btn-outline" 
+              className="border border-border text-foreground hover:bg-muted px-8 py-3 rounded-md font-semibold transition-colors" 
               onClick={() => setVisibleCount(prev => prev + 20)}
-              style={{ padding: '0.75rem 2rem' }}
             >
               Load More Products
             </button>
@@ -322,8 +242,8 @@ function InstallmentsContent() {
         )}
 
         {filteredProducts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <p style={{ color: 'var(--muted-foreground)' }}>No products found matching your search.</p>
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">No products found matching your search.</p>
           </div>
         )}
       </div>
@@ -335,20 +255,13 @@ function InstallmentsContent() {
           onClose={() => setIsOverlayOpen(false)}
         />
       )}
-
-      <style jsx>{`
-        .card-hover:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-lg);
-        }
-      `}</style>
     </div>
   );
 }
 
 export default function InstallmentsPage() {
   return (
-    <Suspense fallback={<div className="container" style={{ padding: '4rem 0' }}>Loading installments...</div>}>
+    <Suspense fallback={<div className="max-w-[1200px] mx-auto px-4 md:px-6 py-16">Loading installments...</div>}>
       <InstallmentsContent />
     </Suspense>
   );

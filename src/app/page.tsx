@@ -1,11 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { products, Category } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import ProductCard from '@/components/ProductCard';
-import { FaArrowRight, FaStar, FaShieldAlt, FaBolt, FaCreditCard, } from 'react-icons/fa';
+import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
@@ -24,7 +22,8 @@ const heroSlides = [
     manufacturer: 'Lagos Artisans',
     link: '/shop?category=Furniture',
     isPromo: true,
-    oldPrice: 1500000
+    oldPrice: 1500000,
+    shipping: 50
   },
   {
     id: 'h2',
@@ -37,6 +36,7 @@ const heroSlides = [
     manufacturer: 'LG Electronics',
     link: '/shop?category=Electronics',
     isPromo: true,
+    shipping: 35
   },
   {
     id: 'h3',
@@ -49,7 +49,8 @@ const heroSlides = [
     manufacturer: 'Royal Designs',
     link: '/shop?category=Furniture',
     isPromo: true,
-    oldPrice: 2200000
+    oldPrice: 2200000,
+    shipping: 60
   }
 ];
 
@@ -68,7 +69,8 @@ export default function Home() {
       image: slide.image,
       images: slide.images,
       category: slide.category,
-      manufacturer: slide.manufacturer
+      manufacturer: slide.manufacturer,
+      shipping: slide.shipping
     };
     addItem(product);
     router.push('/checkout');
@@ -82,93 +84,51 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section style={{ position: 'relative', height: '650px', overflow: 'hidden' }}>
+      <section className="relative h-[650px] overflow-hidden">
         {heroSlides.map((slide, index) => (
           <div
             key={index}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              opacity: currentSlide === index ? 1 : 0,
-              transition: 'opacity 0.8s ease-in-out',
-              backgroundImage: `url(${slide.image})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              zIndex: currentSlide === index ? 1 : 0,
-              pointerEvents: currentSlide === index ? 'auto' : 'none',
-              cursor: 'pointer'
-            }}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-cover bg-center cursor-pointer ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+            style={{ backgroundImage: `url(${slide.image})` }}
             onClick={() => router.push(slide.link)}
           >
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to right, rgba(0,0,0,0.8), transparent)',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <div className="container">
-                <div style={{ maxWidth: '650px', color: 'white' }}>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center">
+              <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full">
+                <div className="max-w-[650px] text-white">
                   {slide.isPromo && (
-                    <span style={{
-                      backgroundColor: 'var(--secondary)',
-                      padding: '4px 12px',
-                      borderRadius: '4px',
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold',
-                      marginBottom: '1rem',
-                      display: 'inline-block'
-                    }}>
+                    <span className="bg-secondary px-3 py-1 rounded text-sm font-bold mb-4 inline-block">
                       SPECIAL PROMO
                     </span>
                   )}
-                  <div style={{ fontSize: '1.1rem', color: 'var(--primary)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <div className="text-lg text-primary font-semibold mb-2">
                     {slide.manufacturer}
                   </div>
-                  <h1 style={{ fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1rem', lineHeight: '1.1' }}>
+                  <h1 className="text-5xl max-md:text-4xl font-bold mb-4 leading-[1.1]">
                     {slide.name}
                   </h1>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+                  <div className="flex items-center gap-4 mb-6">
+                    <span className="text-3xl max-md:text-2xl font-bold text-primary">
                       ₦{slide.price.toLocaleString()}
                     </span>
                     {slide.oldPrice && (
-                      <span style={{
-                        fontSize: '1.25rem',
-                        textDecoration: 'line-through',
-                        color: 'white',
-                        opacity: 0.6,
-                        fontWeight: 'bold',
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        padding: '2px 8px',
-                        borderRadius: '4px'
-                      }}>
+                      <span className="text-xl max-md:text-lg line-through text-white/60 font-bold bg-white/10 px-2 py-0.5 rounded">
                         ₦{slide.oldPrice.toLocaleString()}
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: '1.1rem', marginBottom: '2.5rem', opacity: 0.9, lineHeight: '1.6' }}>
+                  <p className="text-lg mb-10 opacity-90 leading-relaxed max-md:text-base">
                     {slide.description}
                   </p>
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <Link href={slide.link} className="btn btn-primary" style={{ padding: '0.8rem 1.5rem' }}>
+                  <div className="flex gap-4 flex-wrap">
+                    <Link href={slide.link} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3">
                       Shop Collection <FaArrowRight size={18} />
                     </Link>
                     <button
-                      onClick={() => handleBuyNow(slide)}
-                      className="btn"
-                      style={{
-                        padding: '0.8rem 1.5rem',
-                        border: '2px solid white',
-                        color: 'white',
-                        backgroundColor: 'transparent'
-                      }}
+                      onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
+                      className="border-2 border-white text-white hover:bg-white/10 rounded-md font-semibold transition-colors px-6 py-3"
                     >
                       Buy Now
                     </button>
@@ -181,37 +141,43 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="section" style={{ backgroundColor: 'var(--muted)' }}>
-        <div className="container">
-          <div className="grid grid-3">
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ color: 'var(--primary)', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}><FaBolt size={40} /></div>
-              <h3 style={{ marginBottom: '0.5rem' }}>Fast Delivery</h3>
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Prompt and secure delivery across the continent.</p>
+      <section className="py-16 max-md:py-5 bg-muted">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 max-md:grid-cols-3 gap-8 max-md:gap-1">
+            <div className="text-center p-8 max-md:p-3">
+              <div className="text-primary mb-4 max-md:mb-1.5 flex justify-center">
+                <FaBolt size={40} className="max-md:w-[22px] max-md:h-[22px]" />
+              </div>
+              <h3 className="mb-2 max-md:text-[0.72rem] max-md:mb-1 max-md:font-bold font-bold text-xl">Fast Delivery</h3>
+              <p className="text-muted-foreground text-[0.9rem] max-md:text-[0.65rem] max-md:leading-[1.35] max-md:line-clamp-3">Prompt and secure delivery across the continent.</p>
             </div>
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ color: 'var(--primary)', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}><FaShieldAlt size={40} /></div>
-              <h3 style={{ marginBottom: '0.5rem' }}>Quality Assurance</h3>
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Every product is vetted for durability and excellence.</p>
+            <div className="text-center p-8 max-md:p-3">
+              <div className="text-primary mb-4 max-md:mb-1.5 flex justify-center">
+                <FaShieldAlt size={40} className="max-md:w-[22px] max-md:h-[22px]" />
+              </div>
+              <h3 className="mb-2 max-md:text-[0.72rem] max-md:mb-1 max-md:font-bold font-bold text-xl">Quality Assurance</h3>
+              <p className="text-muted-foreground text-[0.9rem] max-md:text-[0.65rem] max-md:leading-[1.35] max-md:line-clamp-3">Every product is vetted for durability and excellence.</p>
             </div>
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ color: 'var(--primary)', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}><FaCreditCard size={40} /></div>
-              <h3 style={{ marginBottom: '0.5rem' }}>Flexible Payments</h3>
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Buy now and pay later with our installment plans.</p>
+            <div className="text-center p-8 max-md:p-3">
+              <div className="text-primary mb-4 max-md:mb-1.5 flex justify-center">
+                <FaCreditCard size={40} className="max-md:w-[22px] max-md:h-[22px]" />
+              </div>
+              <h3 className="mb-2 max-md:text-[0.72rem] max-md:mb-1 max-md:font-bold font-bold text-xl">Flexible Payments</h3>
+              <p className="text-muted-foreground text-[0.9rem] max-md:text-[0.65rem] max-md:leading-[1.35] max-md:line-clamp-3">Buy now and pay later with our installment plans.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Promo Products */}
-      <section className="section">
-        <div className="container" style={{ maxWidth: '1440px', padding: '0 2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
+      <section className="py-16 max-md:py-8 max-md:px-0">
+        <div className="max-w-[1440px] mx-auto md:px-8">
+          <div className="px-4 flex justify-between items-end mb-12 max-md:flex-col max-md:items-start max-md:gap-3 max-md:mb-6">
             <div>
-              <h2 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Promotional Offers</h2>
-              <p style={{ color: 'var(--muted-foreground)' }}>Grab these amazing deals before they are gone!</p>
+              <h2 className="text-3xl font-bold max-md:text-2xl">Promotional Offers</h2>
+              <p className="text-muted-foreground max-md:text-[0.85rem]">Grab these amazing deals before they are gone!</p>
             </div>
-            <Link href="/shop" style={{ color: 'var(--primary)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Link href="/shop" className="flex items-center gap-2 text-primary font-semibold max-md:text-[0.9rem] justify-end">
               View All <FaArrowRight size={16} />
             </Link>
           </div>
@@ -220,22 +186,18 @@ export default function Home() {
       </section>
 
       {/* Installment Section */}
-      <section className="section" style={{
-        background: 'linear-gradient(rgba(139, 38, 53, 0.9), rgba(139, 38, 53, 0.9)), url(https://picsum.photos/seed/payment/1600/900)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        color: 'white',
-        textAlign: 'center',
-        padding: '8rem 0', // Increased height
-      }}>
-        <div className="container">
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Pay in Easy Installments</h2>
-            <p style={{ fontSize: '1.1rem', marginBottom: '2.5rem', opacity: 0.9 }}>
+      <section
+        className="py-32 bg-cover bg-center text-white text-center"
+        style={{ backgroundImage: 'linear-gradient(rgba(139, 38, 53, 0.9), rgba(139, 38, 53, 0.9)), url(https://picsum.photos/seed/payment/1600/900)' }}
+      >
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="max-w-[800px] mx-auto">
+            <h2 className="text-4xl max-md:text-3xl font-bold mb-6">Pay in Easy Installments</h2>
+            <p className="text-lg mb-10 opacity-90 max-md:text-base max-md:mb-8">
               We believe everyone deserves the best. That's why we offer flexible payment plans that fit your budget.
               Get your dream items today and spread the cost over 3, 6, or 12 months.
             </p>
-            <Link href="/installments" className="btn" style={{ backgroundColor: 'white', color: 'var(--secondary)' }}>
+            <Link href="/installments" className="bg-white text-secondary hover:bg-gray-100 rounded-md font-semibold transition-colors px-6 py-3 inline-block">
               Learn More About Plans
             </Link>
           </div>

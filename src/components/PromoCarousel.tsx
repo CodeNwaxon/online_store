@@ -25,10 +25,10 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
   const displayedProducts = products.slice(startIndex, startIndex + itemsToShow);
 
   return (
-    <div style={{ position: 'relative', width: '100%' }} className="promo-carousel-container">
+    <div className="relative w-full px-2 md:px-8">
       {/* Desktop Slider View */}
-      <div className="desktop-carousel-view">
-        <div className="grid grid-4" style={{ transition: 'all 0.5s ease-in-out' }}>
+      <div className="hidden md:block">
+        <div className="grid grid-cols-4 gap-8 transition-all duration-500 ease-in-out">
           {displayedProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -36,48 +36,16 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
 
         {totalItems > itemsToShow && (
           <>
-            <button 
+            <button
               onClick={prevSlide}
-              style={{
-                position: 'absolute',
-                left: '-1.5rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                backgroundColor: 'transparent',
-                color: 'var(--primary)',
-                opacity: 0.4,
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                zIndex: 10,
-                transition: 'opacity 0.2s'
-              }}
-              className="carousel-arrow"
+              className="absolute -left-6 top-1/2 -translate-y-1/2 bg-transparent text-primary opacity-40 hover:opacity-100 border-none flex items-center justify-center cursor-pointer z-10 transition-opacity duration-200"
               title="Previous"
             >
               <FaChevronLeft size={44} />
             </button>
-            <button 
+            <button
               onClick={nextSlide}
-              style={{
-                position: 'absolute',
-                right: '-1.5rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                backgroundColor: 'transparent',
-                color: 'var(--primary)',
-                opacity: 0.4,
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                zIndex: 10,
-                transition: 'opacity 0.2s'
-              }}
-              className="carousel-arrow"
+              className="absolute -right-6 top-1/2 -translate-y-1/2 bg-transparent text-primary opacity-40 hover:opacity-100 border-none flex items-center justify-center cursor-pointer z-10 transition-opacity duration-200"
               title="Next"
             >
               <FaChevronRight size={44} />
@@ -87,42 +55,15 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
       </div>
 
       {/* Mobile Swipe View */}
-      <div className="mobile-carousel-view">
-        <div style={{ 
-          display: 'flex', 
-          overflowX: 'auto', 
-          gap: '1rem', 
-          scrollSnapType: 'x mandatory',
-          paddingBottom: '1rem',
-          msOverflowStyle: 'none',
-          scrollbarWidth: 'none'
-        }} className="hide-scrollbar">
+      <div className="block md:hidden">
+        <div className="flex overflow-x-auto gap-1 md:gap-[0.6rem] snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {products.map(product => (
-            <div key={product.id} style={{ minWidth: 'calc(50% - 0.5rem)', scrollSnapAlign: 'start' }}>
+            <div key={product.id} className="min-w-[10.5rem] w-[10.5rem] shrink-0 snap-start">
               <ProductCard product={product} />
             </div>
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .carousel-arrow:hover {
-          opacity: 1 !important;
-        }
-        @media (min-width: 769px) {
-          .desktop-carousel-view { display: block; }
-          .mobile-carousel-view { display: none; }
-          .promo-carousel-container { padding: 0 2rem; }
-        }
-        @media (max-width: 768px) {
-          .desktop-carousel-view { display: none; }
-          .mobile-carousel-view { display: block; }
-          .promo-carousel-container { padding: 0 1rem; }
-        }
-      `}</style>
     </div>
   );
 }

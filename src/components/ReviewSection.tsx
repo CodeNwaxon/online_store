@@ -59,7 +59,7 @@ export default function ReviewSection() {
       // Check if user already has a review
       const q = query(collection(db, 'reviews'), where('userEmail', '==', currentUser.email));
       const existingReviews = await getDocs(q);
-      
+
       if (!existingReviews.empty) {
         toast.error('You have already posted a review. Delete your existing one to post a new one.');
         setLoading(false);
@@ -79,7 +79,6 @@ export default function ReviewSection() {
       toast.success('Review posted successfully!');
       setComment('');
       setShowForm(false);
-      // fetchReviews(); // No longer needed with onSnapshot
     } catch (error) {
       console.error(error);
       toast.error('Failed to post review.');
@@ -97,74 +96,57 @@ export default function ReviewSection() {
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete review.');
-      setDeletingId(null); // Reset even on error
+      setDeletingId(null);
     }
   };
 
   const hasReviewed = user && reviews.some(r => r.userEmail === user.email);
 
   return (
-    <section className="section">
-      <div className="container">
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>What Our Customers Say</h2>
+    <section className="py-16">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold mb-2">What Our Customers Say</h2>
           {!hasReviewed && (
-            <button 
-              className="btn btn-primary" 
+            <button
+              className="bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius)] px-6 py-3 transition-colors"
               onClick={() => setShowForm(!showForm)}
             >
               {showForm ? 'Cancel Feedback' : 'Send us your feedback'}
             </button>
           )}
           {hasReviewed && (
-            <div style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
+            <div className="text-xs md:text-[0.9rem] text-muted-foreground">
               You have already shared your experience. Thank you!
             </div>
           )}
         </div>
 
         {showForm && (
-          <div style={{ 
-            maxWidth: '600px', 
-            margin: '0 auto 3rem auto', 
-            padding: '2rem', 
-            backgroundColor: 'var(--card)', 
-            border: '1px solid var(--border)', 
-            borderRadius: 'var(--radius)' 
-          }}>
-            <h3 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Share your experience</h3>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <div className="max-w-[600px] mx-auto mb-12 p-8 bg-card border border-border rounded-[var(--radius)] shadow-sm">
+            <h3 className="mb-6 text-center text-xl font-semibold">Share your experience</h3>
+
+            <div className="flex justify-center gap-2 mb-6">
               {[1, 2, 3, 4, 5].map((s) => (
-                <FaStar 
-                  key={s} 
-                  size={24} 
-                  color={s <= rating ? '#FFD700' : 'var(--border)'} 
-                  style={{ cursor: 'pointer' }}
+                <FaStar
+                  key={s}
+                  size={24}
+                  color={s <= rating ? '#FFD700' : 'var(--border)'}
+                  className="cursor-pointer transition-transform hover:scale-110"
                   onClick={() => setRating(s)}
                 />
               ))}
             </div>
 
-            <textarea 
+            <textarea
               placeholder="Tell us what you think..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: '120px',
-                padding: '1rem',
-                borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)',
-                backgroundColor: 'var(--background)',
-                marginBottom: '1.5rem',
-                fontFamily: 'inherit'
-              }}
+              className="w-full min-h-[120px] p-4 rounded-[var(--radius)] border border-border bg-background mb-6 font-sans outline-none focus:border-primary resize-y"
             />
 
-            <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            <button
+              className="w-full bg-primary hover:bg-primary-hover text-white font-semibold flex items-center justify-center gap-2 rounded-[var(--radius)] p-3 transition-colors disabled:opacity-50"
               onClick={handlePostReview}
               disabled={loading}
             >
@@ -173,90 +155,61 @@ export default function ReviewSection() {
           </div>
         )}
 
-        <div className="reviews-container">
+        <div className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[500px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
           {reviews.length > 0 ? (
             reviews.map((review) => (
-              <div key={review.id} className="card review-card" style={{ padding: '2rem', textAlign: 'center', position: 'relative' }}>
+              <div key={review.id} className="shrink-0 flex-none w-full md:w-[350px] md:snap-start bg-card border border-border rounded-[var(--radius)] p-8 text-center relative shadow-sm">
                 {user && (user.email === review.userEmail || user.uid === "MRAnZKmiEDcg5xVOjMOtbULMOtb2") && (
-                  <button 
+                  <button
                     onClick={() => setDeletingId(review.id)}
-                    style={{ 
-                      position: 'absolute', 
-                      top: '1rem', 
-                      right: '1rem', 
-                      background: 'none', 
-                      border: 'none', 
-                      color: 'red', 
-                      cursor: 'pointer' 
-                    }}
+                    className="absolute top-4 right-4 bg-transparent border-none text-red-500 cursor-pointer hover:text-red-700 transition-colors p-2"
                   >
                     <FaTrash size={14} />
                   </button>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', color: '#FFD700', marginBottom: '1rem' }}>
+                <div className="flex justify-center gap-1 text-[#FFD700] mb-4">
                   {[1, 2, 3, 4, 5].map(s => (
                     <FaStar key={s} size={16} fill={s <= review.rating ? "#FFD700" : "var(--border)"} />
                   ))}
                 </div>
-                <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', color: 'var(--muted-foreground)' }}>
+                <p className="italic mb-6 text-muted-foreground leading-relaxed">
                   "{review.comment}"
                 </p>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="flex flex-col items-center gap-2">
                   {review.userImage && (
-                    <img 
-                      src={review.userImage} 
-                      alt={review.userName} 
-                      style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} 
+                    <img
+                      src={review.userImage}
+                      alt={review.userName}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-primary"
                     />
                   )}
-                  <div style={{ fontWeight: 'bold' }}>{review.userName}</div>
+                  <div className="font-bold">{review.userName}</div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)', marginTop: '0.25rem' }}>Verified Buyer</div>
+                <div className="text-xs text-muted-foreground mt-1">Verified Buyer</div>
               </div>
             ))
           ) : (
-            <p style={{ textAlign: 'center', width: '100%', color: 'var(--muted-foreground)' }}>No reviews yet. Be the first to share your experience!</p>
+            <p className="text-center w-full text-muted-foreground">No reviews yet. Be the first to share your experience!</p>
           )}
         </div>
 
         {/* Delete Confirmation Overlay */}
         {deletingId && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            padding: '1rem'
-          }}>
-            <div className="card" style={{ 
-              padding: '1.5rem', 
-              maxWidth: '320px', 
-              width: '100%', 
-              height: 'auto', // Override global height: 100%
-              textAlign: 'center',
-              display: 'block' // Override global flex
-            }}>
-              <h3 style={{ marginBottom: '0.75rem', fontSize: '1.25rem' }}>Delete Review?</h3>
-              <p style={{ color: 'var(--muted-foreground)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000] p-4">
+            <div className="bg-card border border-border rounded-[var(--radius)] p-6 max-w-[320px] w-full text-center shadow-xl">
+              <h3 className="mb-3 text-xl font-bold">Delete Review?</h3>
+              <p className="text-muted-foreground mb-6 text-sm">
                 Are you sure? This cannot be undone.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, border: '1px solid var(--border)', fontSize: '0.875rem', padding: '0.5rem' }}
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 border border-border rounded-md text-sm p-2 hover:bg-muted transition-colors text-foreground font-medium"
                   onClick={() => setDeletingId(null)}
                 >
                   Cancel
                 </button>
-                <button 
-                  className="btn" 
-                  style={{ flex: 1, backgroundColor: '#ff4d4f', color: 'white', fontSize: '0.875rem', padding: '0.5rem' }}
+                <button
+                  className="flex-1 bg-[#ff4d4f] hover:bg-[#e04345] text-white rounded-md text-sm p-2 transition-colors font-medium"
                   onClick={handleDeleteReview}
                 >
                   Delete
@@ -265,46 +218,6 @@ export default function ReviewSection() {
             </div>
           </div>
         )}
-
-        <style jsx>{`
-          .reviews-container {
-            display: flex;
-            gap: 2rem;
-            overflow-x: auto;
-            padding: 1rem 0 2rem 0;
-            scroll-snap-type: x mandatory;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .reviews-container::-webkit-scrollbar {
-            display: none;
-          }
-          .review-card {
-            flex: 0 0 350px;
-            scroll-snap-align: start;
-          }
-          @media (max-width: 768px) {
-            .reviews-container {
-              flex-direction: column;
-              overflow-x: hidden;
-              overflow-y: auto;
-              max-height: 500px; /* Adjust height to show ~2 cards */
-              padding-right: 0.5rem;
-            }
-            .reviews-container::-webkit-scrollbar {
-              display: block;
-              width: 4px;
-            }
-            .reviews-container::-webkit-scrollbar-thumb {
-              background: var(--border);
-              border-radius: 10px;
-            }
-            .review-card {
-              flex: 0 0 auto;
-              width: 100%;
-            }
-          }
-        `}</style>
       </div>
     </section>
   );

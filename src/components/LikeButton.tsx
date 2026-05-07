@@ -66,21 +66,14 @@ export default function LikeButton({ productId }: LikeButtonProps) {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+    <div className="flex items-center gap-[0.4rem]">
       <button 
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLike(); }}
-        style={{ 
-          color: isLiked ? '#ff4d4f' : 'var(--muted-foreground)',
-          display: 'flex',
-          alignItems: 'center',
-          transition: 'transform 0.2s ease'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        className={`flex items-center transition-transform duration-200 hover:scale-125 ${isLiked ? 'text-[#ff4d4f]' : 'text-muted-foreground'}`}
       >
         {isLiked ? <FaHeart size={18} /> : <FaRegHeart size={18} />}
       </button>
-      <span style={{ fontSize: '0.85rem', color: 'var(--muted-foreground)', fontWeight: '600' }}>
+      <span className="text-[0.85rem] text-muted-foreground font-semibold">
         {likes}
       </span>
     </div>

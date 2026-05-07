@@ -60,61 +60,28 @@ export default function InstallPrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      backgroundColor: 'var(--card)',
-      border: '1px solid var(--primary)',
-      borderRadius: 'var(--radius)',
-      padding: '1.25rem',
-      boxShadow: 'var(--shadow)',
-      zIndex: 1000,
-      maxWidth: '300px',
-      animation: 'slideIn 0.5s ease-out',
-      overflow: 'hidden'
-    }}>
+    <div className="fixed top-5 right-5 bg-card border border-primary rounded-[var(--radius)] p-5 shadow-md z-[1000] max-w-[300px] animate-[slideIn_0.5s_ease-out] overflow-hidden">
       <button 
         onClick={() => setShowPrompt(false)}
-        style={{ position: 'absolute', top: '10px', right: '10px', color: 'var(--muted-foreground)', zIndex: 1 }}
+        className="absolute top-2.5 right-2.5 text-muted-foreground z-10 hover:text-foreground transition-colors"
       >
         <FaTimes />
       </button>
-      <h4 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <FaDownload color="var(--primary)" /> Install App
+      <h4 className="mb-2 flex items-center gap-2 font-bold">
+        <FaDownload className="text-primary" /> Install App
       </h4>
-      <p style={{ fontSize: '0.85rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
+      <p className="text-[0.85rem] text-muted-foreground mb-4">
         Install our app for a faster shopping experience and offline access.
       </p>
       <button 
         onClick={handleInstallClick}
-        className="btn btn-primary"
-        style={{ width: '100%', padding: '0.5rem' }}
+        className="w-full bg-primary hover:bg-primary-hover text-white font-semibold rounded-md p-2 transition-colors"
       >
         Install Now
       </button>
 
       {/* Countdown Progress Bar */}
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        height: '4px',
-        backgroundColor: 'var(--primary)',
-        width: '100%',
-        animation: 'shrink 10s linear forwards'
-      }} />
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
+      <div className="absolute bottom-0 left-0 h-1 bg-primary w-full animate-[shrink_10s_linear_forwards]" />
     </div>
   );
 }

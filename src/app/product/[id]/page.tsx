@@ -18,9 +18,11 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="section container" style={{ textAlign: 'center' }}>
-        <h2>Product not found</h2>
-        <Link href="/shop" className="btn btn-primary" style={{ marginTop: '1rem' }}>Back to Shop</Link>
+      <div className="py-16 max-w-[1200px] mx-auto px-4 md:px-6 text-center">
+        <h2 className="text-2xl font-bold mb-4">Product not found</h2>
+        <Link href="/shop" className="bg-primary hover:bg-primary-hover text-white font-semibold rounded-md px-6 py-3 inline-block transition-colors">
+          Back to Shop
+        </Link>
       </div>
     );
   }
@@ -29,41 +31,33 @@ export default function ProductDetail() {
   const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
-    <div className="section">
-      <div className="container">
-        <Link href="/shop" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted-foreground)', marginBottom: '2rem' }}>
+    <div className="py-16 max-md:py-8">
+      <div className="max-w-[1200px] mx-auto px-3 md:px-6">
+        <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
           <FaArrowLeft size={16} /> Back to Shop
         </Link>
 
-        <div className="grid grid-2" style={{ gap: '4rem', alignItems: 'flex-start' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">
           {/* Left Side: Images */}
           <div>
-            <div style={{ position: 'relative', height: '500px', width: '100%', borderRadius: 'var(--radius)', overflow: 'hidden', backgroundColor: 'var(--muted)' }}>
-              <Image 
-                src={product.images[activeImageIndex]} 
+            <div className="relative h-[500px] max-md:h-[300px] w-full rounded-[var(--radius)] overflow-hidden bg-muted">
+              <Image
+                src={product.images[activeImageIndex]}
                 alt={product.name}
                 fill
-                style={{ objectFit: 'contain' }}
+                className="object-contain"
                 priority
               />
             </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+
+            <div className="flex gap-4 mt-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded">
               {product.images.map((img, index) => (
-                <button 
+                <button
                   key={index}
                   onClick={() => setActiveImageIndex(index)}
-                  style={{ 
-                    position: 'relative', 
-                    width: '80px', 
-                    height: '80px', 
-                    borderRadius: '4px', 
-                    overflow: 'hidden',
-                    border: activeImageIndex === index ? '2px solid var(--primary)' : '1px solid var(--border)',
-                    flexShrink: 0
-                  }}
+                  className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
                 >
-                  <Image src={img} alt={`${product.name} ${index}`} fill style={{ objectFit: 'cover' }} />
+                  <Image src={img} alt={`${product.name} ${index}`} fill className="object-cover" />
                 </button>
               ))}
             </div>
@@ -71,83 +65,61 @@ export default function ProductDetail() {
 
           {/* Right Side: Details */}
           <div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: '600', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+            <div className="text-sm text-primary font-semibold uppercase mb-2">
               {product.category}
             </div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{product.name}</h1>
-            <div style={{ fontSize: '1.1rem', color: 'var(--muted-foreground)', marginBottom: '1.5rem' }}>
-              Manufactured by <span style={{ fontWeight: '600', color: 'var(--foreground)' }}>{product.manufacturer}</span>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name}</h1>
+            <div className="text-lg text-muted-foreground mb-6">
+              Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
             </div>
-            
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '2rem' }}>
+
+            <div className="text-3xl font-bold text-primary mb-8">
               ₦{product.price.toLocaleString()}
             </div>
 
-            <div style={{ marginBottom: '2.5rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>Description</h3>
-              <p style={{ color: 'var(--muted-foreground)', lineHeight: '1.6' }}>
+            <div className="mb-10">
+              <h3 className="text-lg font-bold mb-3">Description</h3>
+              <p className="text-muted-foreground leading-relaxed">
                 {product.description}
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'nowrap' }}>
-              <button 
-                className="btn btn-primary" 
-                style={{ flex: 2, padding: '0.75rem', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
+              <button
+                className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 text-sm max-md:text-xs rounded-md font-semibold transition-colors"
                 onClick={() => addItem(product)}
               >
-                <FaShoppingCart size={18} /> Buy Now
+                <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
               </button>
-              
-              <a 
+
+              <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn" 
-                style={{ 
-                  flex: 1,
-                  padding: '0.75rem', 
-                  backgroundColor: '#25D366', 
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="col-span-2 md:flex-[1] order-3 md:order-2 bg-[#25D366] hover:bg-[#1DA851] text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded-md transition-colors font-semibold"
                 title="WhatsApp"
               >
-                <FaWhatsapp size={22} />
+                <FaWhatsapp size={18} /> <span className="md:hidden">Contact via WhatsApp</span>
               </a>
 
-              <Link 
+              <Link
                 href={`/installments?search=${encodeURIComponent(product.name)}`}
-                className="btn" 
-                style={{ 
-                  flex: 2,
-                  padding: '0.75rem', 
-                  backgroundColor: 'var(--foreground)', 
-                  color: 'var(--background)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.75rem', // xs
-                  fontWeight: '600'
-                }}
+                className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs max-md:text-[0.7rem] font-semibold rounded-md transition-opacity text-center"
               >
-                <FaCreditCard size={18} /> Installment Payment
+                <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
               </Link>
             </div>
-            
-            <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'var(--muted)', borderRadius: 'var(--radius)', fontSize: '0.9rem' }}>
-              <div style={{ marginBottom: '0.5rem' }}><strong>Category:</strong> {product.category} {product.subcategory && `/ ${product.subcategory}`}</div>
+
+            <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm">
+              <div className="mb-2"><strong>Category:</strong> {product.category} {product.subcategory && `/ ${product.subcategory}`}</div>
               <div><strong>Product ID:</strong> {product.id}</div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: '6rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2.5rem' }}>You May Also Like</h2>
-          <div className="grid grid-4">
+        <div className="mt-24 max-md:mt-16">
+          <h2 className="text-2xl md:text-3xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-8">
             {products
               .filter(p => p.id !== product.id)
               .sort((a, b) => {
@@ -166,12 +138,6 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
-      
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .grid-2 { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }

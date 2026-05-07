@@ -39,14 +39,7 @@ export default function FooterInstall() {
     <li>
       <button 
         onClick={handleInstallClick}
-        style={{ 
-          color: 'var(--primary)', 
-          fontWeight: 'bold', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.5rem',
-          fontSize: '0.9rem'
-        }}
+        className="text-primary font-bold flex items-center gap-2 text-[0.9rem]"
       >
         <FaDownload /> Install App
       </button>

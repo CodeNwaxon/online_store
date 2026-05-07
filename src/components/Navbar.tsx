@@ -2,239 +2,169 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaShoppingCart, FaBars, FaTimes, FaWhatsapp } from 'react-icons/fa';
-import { useState } from 'react';
+import { FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore, FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaCreditCard } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
 import { usePathname, useParams } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import { products } from '@/data/products';
 import CartSlider from './CartSlider';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+
+const navLinks = [
+  { href: '/', label: 'Home', icon: <FaHome /> },
+  { href: '/shop', label: 'Shop', icon: <FaStore /> },
+  { href: '/installments', label: 'Installments', icon: <FaCreditCard /> },
+  { href: '/about', label: 'About', icon: <FaInfoCircle /> },
+  { href: '/contact', label: 'Contact', icon: <FaPhone /> },
+];
 
 export default function Navbar() {
   const pathname = usePathname();
   const params = useParams();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const totalItems = useCartStore((state) => state.getTotalItems());
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
+    const unsub = onAuthStateChanged(auth, setUser);
+    return () => unsub();
   }, []);
 
+  // Close drawer on route change
+  useEffect(() => { setIsMenuOpen(false); }, [pathname]);
+
   const handleSignIn = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast.success('Signed in successfully!');
-    } catch (error) {
-      toast.error('Failed to sign in.');
-    }
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); toast.success('Signed in!'); setIsMenuOpen(false); }
+    catch { toast.error('Sign in failed.'); }
   };
-
   const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      toast.success('Signed out.');
-    } catch (error) {
-      toast.error('Failed to sign out.');
-    }
+    try { await signOut(auth); toast.success('Signed out.'); setIsMenuOpen(false); }
+    catch { toast.error('Sign out failed.'); }
   };
 
-  // Dynamic WhatsApp message
   let whatsappMsg = "Hello, I'd like to make an enquiry.";
   if (pathname.startsWith('/product/')) {
-    const productId = params.id as string;
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      whatsappMsg = `I want to make enquiries about ${product.name}, by ${product.manufacturer}, for ₦${product.price.toLocaleString()}.`;
-    }
+    const p = products.find(p => p.id === params.id as string);
+    if (p) whatsappMsg = `I want to make enquiries about ${p.name} for ₦${p.price.toLocaleString()}.`;
   }
   const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMsg)}`;
 
   return (
-    <nav style={{
-      backgroundColor: 'var(--card)',
-      borderBottom: '1px solid var(--border)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      padding: '1rem 0'
-    }}>
-      <div className="container" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <Link href="/" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <Image
-            src="/logos.png"
-            alt="Quick Choice Logo"
-            width={40}
-            height={40}
-            style={{
-              objectFit: 'contain',
-              border: '2px solid var(--primary)',
-              borderRadius: '4px',
-              padding: '2px'
-            }}
-          />
-          <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>Quick Choice&reg;</span>
-        </Link>
+    <>
+      {/* ─── NAV BAR ─────────────────────────────────────── */}
+      <nav className="bg-card border-b border-border sticky top-0 z-[200] py-[0.875rem]">
+        <div className="container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px]">
 
-        {/* Desktop Links */}
-        <div style={{
-          display: 'none',
-          gap: '1.5rem',
-          alignItems: 'center'
-        }} className="desktop-menu">
-          <Link href="/">Home</Link>
-          <Link href="/shop">Shop</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Contact</Link>
+          {/* Logo — always visible */}
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logos.png" alt="Quick Choice" width={38} height={38}
+              className="object-contain border-2 border-primary rounded p-0.5" />
+            <span className="text-[1.2rem] font-bold text-primary">Quick Choice&reg;</span>
+          </Link>
+
+          {/* Desktop centre links — hidden on mobile via CSS */}
+          <div className="hidden md:flex gap-7 items-center">
+            {navLinks.map(l => (
+              <Link key={l.href} href={l.href} className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === l.href ? 'font-bold text-primary border-primary' : 'font-medium text-foreground border-transparent'}`}>
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop right actions — hidden on mobile via CSS */}
+          <div className="hidden md:flex items-center gap-3">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-[0.4rem] text-[0.85rem] font-bold border-2 border-current px-[0.9rem] py-[0.45rem] rounded-md">
+              <FaWhatsapp size={16} /> Contact Us
+            </a>
+            {user ? (
+              <div className="flex items-center gap-[0.6rem]">
+                <img src={user.photoURL || ''} alt="avatar" className="w-[30px] h-[30px] rounded-full border-2 border-primary object-cover" />
+                <button onClick={handleSignOut} className="text-[0.78rem] text-muted-foreground underline">Sign Out</button>
+              </div>
+            ) : (
+              <button onClick={handleSignIn} className="border border-border text-foreground hover:bg-muted px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200">
+                Sign In
+              </button>
+            )}
+          </div>
+
+          {/* RIGHT ICONS — Cart always visible, hamburger only on mobile */}
+          <div className="flex items-center gap-3">
+            {/* Cart */}
+            <button onClick={() => setIsCartOpen(true)} className="relative flex items-center p-1">
+              <FaShoppingCart size={22} />
+              {totalItems > 0 && (
+                <span className="absolute -top-2 -right-2 bg-secondary text-white rounded-full w-[18px] h-[18px] text-[0.65rem] flex items-center justify-center font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+
+            {/* Hamburger — only on mobile */}
+            <button className="flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
+              <FaBars size={24} />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ─── DRAWER BACKDROP ─────────────────────────────── */}
+      <div onClick={() => setIsMenuOpen(false)} className={`fixed inset-0 z-[300] bg-black/60 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
+
+      {/* ─── DRAWER PANEL (slides right → left) ──────────── */}
+      <div className={`fixed top-0 right-0 h-full w-[min(290px,82vw)] bg-card z-[400] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col shadow-[-6px_0_30px_rgba(0,0,0,0.15)] overflow-y-auto ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        {/* Drawer header */}
+        <div className="flex justify-between items-center px-[1.25rem] py-[1.1rem] border-b border-border">
+          <div className="flex items-center gap-2">
+            <Image src="/logos.png" alt="logo" width={28} height={28} className="rounded border-[1.5px] border-primary p-0.5" />
+            <span className="font-bold text-primary text-[0.95rem]">Quick Choice&reg;</span>
+          </div>
+          <button onClick={() => setIsMenuOpen(false)} className="text-foreground p-1"><FaTimes size={22} /></button>
         </div>
 
-        {/* Right Actions (Cart & Toggle) */}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button
-            style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
-            onClick={() => setIsCartOpen(true)}
-          >
-            <FaShoppingCart size={22} />
-            {totalItems > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                backgroundColor: 'var(--secondary)',
-                color: 'white',
-                borderRadius: '50%',
-                width: '18px',
-                height: '18px',
-                fontSize: '0.7rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {totalItems}
-              </span>
-            )}
-          </button>
-
-          {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }} className="user-profile">
-              <img
-                src={user.photoURL || ''}
-                alt="Profile"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  border: '2px solid var(--primary)',
-                  objectFit: 'cover'
-                }}
-              />
-              <button
-                onClick={handleSignOut}
-                style={{
-                  fontSize: '0.7rem',
-                  color: 'var(--muted-foreground)',
-                  textDecoration: 'underline',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                Sign Out
-              </button>
+        {/* User strip */}
+        {user && (
+          <div className="flex items-center gap-3 px-[1.25rem] py-[0.9rem] bg-muted border-b border-border">
+            <img src={user.photoURL || ''} alt="avatar" className="w-[36px] h-[36px] rounded-full border-2 border-primary object-cover" />
+            <div>
+              <div className="font-semibold text-[0.88rem]">{user.displayName}</div>
+              <div className="text-[0.72rem] text-muted-foreground break-all">{user.email}</div>
             </div>
-          ) : (
-            <button
-              onClick={handleSignIn}
-              className="btn btn-outline"
-              style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', marginRight: '1rem' }}
-            >
-              Sign In
-            </button>
-          )}
+          </div>
+        )}
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.85rem',
-              fontWeight: 'bold',
-              color: 'black',
-              border: '2px solid black',
-              padding: '0.5rem 1rem',
-              borderRadius: '0.375rem'
-            }}
-            className="contact-btn"
-          >
-            <FaWhatsapp size={18} /> <span className="contact-text">Contact Us</span>
+        {/* Nav links */}
+        <nav className="flex-1 pt-2">
+          {navLinks.map(l => (
+            <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-[0.85rem] px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+              <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom actions */}
+        <div className="px-[1.25rem] py-4 border-t border-border flex flex-col gap-[0.65rem]">
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2 p-[0.7rem] rounded-lg bg-[#25D366] text-white font-bold text-[0.88rem] no-underline">
+            <FaWhatsapp size={18} /> WhatsApp Us
           </a>
 
-          <button
-            className="mobile-toggle"
-            onClick={() => setIsOpen(!isOpen)}
-            style={{ display: 'none' }}
-          >
-            {isOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
-          </button>
+          {user ? (
+            <button onClick={handleSignOut} className="flex items-center justify-center gap-2 p-[0.7rem] rounded-lg border border-border bg-transparent font-semibold text-[0.88rem] text-foreground cursor-pointer">
+              <FaSignOutAlt /> Sign Out
+            </button>
+          ) : (
+            <button onClick={handleSignIn} className="flex items-center justify-center gap-2 p-[0.7rem] rounded-lg bg-primary text-white font-bold text-[0.88rem] cursor-pointer border-none">
+              <FaSignInAlt /> Sign In with Google
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          width: '100%',
-          backgroundColor: 'var(--card)',
-          padding: '1rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          borderBottom: '1px solid var(--border)'
-        }}>
-          <Link href="/" onClick={() => setIsOpen(false)}>Home</Link>
-          <Link href="/shop" onClick={() => setIsOpen(false)}>Shop</Link>
-          <Link href="/about" onClick={() => setIsOpen(false)}>About</Link>
-          <Link href="/contact" onClick={() => setIsOpen(false)}>Contact</Link>
-        </div>
-      )}
-
       <CartSlider isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-
-      <style jsx>{`
-        @media (min-width: 768px) {
-          .desktop-menu { display: flex !important; }
-          .mobile-toggle { display: none !important; }
-          .user-profile { margin-right: 3rem !important; }
-        }
-        @media (max-width: 767px) {
-          .desktop-menu { display: none !important; }
-          .mobile-toggle { display: block !important; }
-          .contact-text { display: none !important; }
-          .contact-btn { padding: 0.5rem !important; }
-        }
-      `}</style>
-    </nav>
+    </>
   );
 }

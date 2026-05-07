@@ -12,6 +12,7 @@ export interface Product {
   manufacturer: string; // Add manufacturer field
   isPromo?: boolean;
   oldPrice?: number;
+  shipping: number; // Shipping cost
 }
 
 export const products: Product[] = [
@@ -31,7 +32,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'LG Electronics',
     isPromo: true,
-    oldPrice: 550
+    oldPrice: 550,
+    shipping: 15
   },
   {
     id: 'e2',
@@ -48,7 +50,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'Samsung',
     isPromo: true,
-    oldPrice: 850
+    oldPrice: 850,
+    shipping: 25
   },
   {
     id: 'e3',
@@ -65,7 +68,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'Haier Thermocool',
     isPromo: true,
-    oldPrice: 650
+    oldPrice: 650,
+    shipping: 20
   },
   {
     id: 'e4',
@@ -82,7 +86,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'Binatone',
     isPromo: true,
-    oldPrice: 60
+    oldPrice: 60,
+    shipping: 5
   },
   {
     id: 'e5',
@@ -97,7 +102,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/oven2/800/600',
       'https://picsum.photos/seed/oven3/800/600'
     ],
-    manufacturer: 'Panasonic'
+    manufacturer: 'Panasonic',
+    shipping: 8
   },
   {
     id: 'e6',
@@ -114,7 +120,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'Honda',
     isPromo: true,
-    oldPrice: 950
+    oldPrice: 950,
+    shipping: 30
   },
   {
     id: 'e7',
@@ -129,7 +136,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/aircon2/800/600',
       'https://picsum.photos/seed/aircon3/800/600'
     ],
-    manufacturer: 'Hisense'
+    manufacturer: 'Hisense',
+    shipping: 18
   },
   {
     id: 'e8',
@@ -144,7 +152,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/powerbank2/800/600',
       'https://picsum.photos/seed/powerbank3/800/600'
     ],
-    manufacturer: 'Oraimo'
+    manufacturer: 'Oraimo',
+    shipping: 3
   },
   
   // Furniture
@@ -163,7 +172,8 @@ export const products: Product[] = [
     ],
     manufacturer: 'Lagos Artisans',
     isPromo: true,
-    oldPrice: 1500
+    oldPrice: 1500,
+    shipping: 45
   },
   {
     id: 'f2',
@@ -178,7 +188,8 @@ export const products: Product[] = [
       'https://picsum.photos/seed/sofa2/800/600',
       'https://picsum.photos/seed/sofa3/800/600'
     ],
-    manufacturer: 'Premium Living'
+    manufacturer: 'Premium Living',
+    shipping: 35
   },
   {
     id: 'f3',
@@ -195,8 +206,7 @@ export const products: Product[] = [
     ],
     manufacturer: 'WoodMasters',
     isPromo: true,
-    oldPrice: 350
+    oldPrice: 350,
+    shipping: 12
   }
-
-
 ];

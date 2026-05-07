@@ -53,12 +53,12 @@ export default function Checkout() {
 
   if (items.length === 0 && !isSuccess) {
     return (
-      <div className="section" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <FaShoppingBag size={64} style={{ color: 'var(--muted-foreground)', marginBottom: '1.5rem', opacity: 0.5 }} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Your cart is empty</h2>
-          <p style={{ color: 'var(--muted-foreground)', marginBottom: '2rem' }}>Add some items to your cart before checking out.</p>
-          <Link href="/shop" className="btn btn-primary">Go to Shop</Link>
+      <div className="py-16 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <FaShoppingBag size={64} className="text-muted-foreground mb-6 opacity-50 mx-auto" />
+          <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+          <p className="text-muted-foreground mb-8">Add some items to your cart before checking out.</p>
+          <Link href="/shop" className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors inline-block">Go to Shop</Link>
         </div>
       </div>
     );
@@ -66,21 +66,18 @@ export default function Checkout() {
 
   if (isSuccess) {
     return (
-      <div className="section" style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', maxWidth: '500px', padding: '3rem', backgroundColor: 'var(--card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-          <div style={{ 
-            width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#DEF7EC', color: '#03543F', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' 
-          }}>
+      <div className="py-16 min-h-[70vh] flex items-center justify-center">
+        <div className="text-center max-w-[500px] p-12 bg-card rounded-[var(--radius)] border border-border shadow-sm mx-4">
+          <div className="w-20 h-20 rounded-full bg-[#DEF7EC] text-[#03543F] flex items-center justify-center mx-auto mb-6">
             <FaCheckCircle size={40} />
           </div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Payment Successful!</h1>
-          <p style={{ color: 'var(--muted-foreground)', marginBottom: '2rem', fontSize: '1.1rem' }}>
+          <h1 className="text-4xl font-bold mb-4">Payment Successful!</h1>
+          <p className="text-muted-foreground mb-8 text-lg">
             Thank you for your purchase. Your order is being processed and will be shipped shortly. Check your email for the receipt.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <Link href="/" className="btn btn-primary">Back to Home</Link>
-            <Link href="/shop" className="btn btn-outline">Continue Shopping</Link>
+          <div className="flex gap-4 justify-center">
+            <Link href="/" className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors">Back to Home</Link>
+            <Link href="/shop" className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold transition-colors">Continue Shopping</Link>
           </div>
         </div>
       </div>
@@ -88,61 +85,61 @@ export default function Checkout() {
   }
 
   return (
-    <div className="section">
-      <div className="container">
-        <div style={{ marginBottom: '3rem' }}>
-          <Link href="/shop" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
+    <div className="py-16">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div className="mb-12">
+          <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-4 hover:text-foreground transition-colors w-fit">
             <FaArrowLeft size={16} /> Back to Shop
           </Link>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Checkout</h1>
+          <h1 className="text-4xl font-bold">Checkout</h1>
         </div>
 
-        <form onSubmit={handleCheckout} className="grid grid-2" style={{ gap: '3rem', alignItems: 'flex-start' }}>
+        <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12 items-start">
           {/* Shipping & Payment Form */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-            <div style={{ backgroundColor: 'var(--card)', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <FaShieldAlt size={24} color="var(--primary)" /> Shipping Information
+          <div className="flex flex-col gap-10">
+            <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                <FaShieldAlt size={24} className="text-primary" /> Shipping Information
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="flex flex-col gap-5">
                 <div>
-                  <label htmlFor="fullName" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Full Name</label>
-                  <input type="text" id="fullName" value={formData.fullName} onChange={handleInputChange} required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                  <label htmlFor="fullName" className="block mb-2 text-sm font-semibold">Full Name</label>
+                  <input type="text" id="fullName" value={formData.fullName} onChange={handleInputChange} required className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                 </div>
-                <div className="grid grid-2" style={{ gap: '1rem' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="phone" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Phone Number</label>
-                    <input type="tel" id="phone" value={formData.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <label htmlFor="phone" className="block mb-2 text-sm font-semibold">Phone Number</label>
+                    <input type="tel" id="phone" value={formData.phone} onChange={handleInputChange} required className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                   </div>
                   <div>
-                    <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Email (Optional)</label>
-                    <input type="email" id="email" value={formData.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <label htmlFor="email" className="block mb-2 text-sm font-semibold">Email (Optional)</label>
+                    <input type="email" id="email" value={formData.email} onChange={handleInputChange} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="address" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>House Address</label>
-                  <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', resize: 'none' }}></textarea>
+                  <label htmlFor="address" className="block mb-2 text-sm font-semibold">House Address</label>
+                  <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-none"></textarea>
                 </div>
               </div>
             </div>
 
-            <div style={{ backgroundColor: 'var(--card)', padding: '2rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <FaCreditCard size={24} color="var(--primary)" /> Payment Details (Demo)
+            <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                <FaCreditCard size={24} className="text-primary" /> Payment Details (Demo)
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="flex flex-col gap-5">
                 <div>
-                  <label htmlFor="cardNum" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Card Number</label>
-                  <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                  <label htmlFor="cardNum" className="block mb-2 text-sm font-semibold">Card Number</label>
+                  <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                 </div>
-                <div className="grid grid-2" style={{ gap: '1rem' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="expiry" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>Expiry Date</label>
-                    <input type="text" id="expiry" required placeholder="MM/YY" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <label htmlFor="expiry" className="block mb-2 text-sm font-semibold">Expiry Date</label>
+                    <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                   </div>
                   <div>
-                    <label htmlFor="cvv" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>CVV</label>
-                    <input type="text" id="cvv" required placeholder="123" style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }} />
+                    <label htmlFor="cvv" className="block mb-2 text-sm font-semibold">CVV</label>
+                    <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                   </div>
                 </div>
               </div>
@@ -150,44 +147,43 @@ export default function Checkout() {
           </div>
 
           {/* Order Summary */}
-          <div style={{ backgroundColor: 'var(--muted)', padding: '2rem', borderRadius: 'var(--radius)', position: 'sticky', top: '100px' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Order Summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="bg-muted p-8 rounded-[var(--radius)] sticky top-[100px] border border-border">
+            <h3 className="text-xl font-bold mb-6">Order Summary</h3>
+            <div className="flex flex-col gap-4 mb-6">
               {items.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ position: 'relative', width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
-                      <Image src={item.image} alt={item.name} fill style={{ objectFit: 'cover' }} />
+                <div key={item.id} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded shrink-0 overflow-hidden">
+                      <Image src={item.image} alt={item.name} fill className="object-cover" />
                     </div>
-                    <span style={{ color: 'var(--muted-foreground)' }}>{item.name} x {item.quantity}</span>
+                    <span className="text-muted-foreground">{item.name} x {item.quantity}</span>
                   </div>
-                  <span style={{ fontWeight: '600' }}>₦{(item.price * item.quantity).toLocaleString()}</span>
+                  <span className="font-semibold">₦{(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div className="border-t border-border pt-6">
+              <div className="flex justify-between mb-3">
                 <span>Subtotal</span>
                 <span>₦{getTotalPrice().toLocaleString()}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div className="flex justify-between mb-6">
                 <span>Shipping</span>
-                <span style={{ color: '#059669', fontWeight: '600' }}>FREE</span>
+                <span className="text-[#059669] font-semibold">FREE</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: 'bold', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+              <div className="flex justify-between text-xl font-bold border-t border-border pt-6">
                 <span>Total Amount</span>
-                <span style={{ color: 'var(--primary)' }}>₦{getTotalPrice().toLocaleString()}</span>
+                <span className="text-primary">₦{getTotalPrice().toLocaleString()}</span>
               </div>
             </div>
             <button 
               type="submit" 
               disabled={loading}
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: '2rem', padding: '1rem', opacity: loading ? 0.7 : 1 }}
+              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Processing...' : `Pay ₦${getTotalPrice().toLocaleString()}`}
             </button>
-            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: '1rem' }}>
+            <p className="text-center text-xs text-muted-foreground mt-4">
               Secure payment powered by Quick Choice.
             </p>
           </div>

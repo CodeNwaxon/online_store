@@ -5,70 +5,52 @@ import FooterInstall from './FooterInstall';
 
 export default function Footer() {
   return (
-    <footer style={{
-      backgroundColor: 'var(--card)',
-      borderTop: '1px solid var(--border)',
-      padding: '4rem 0 2rem',
-      marginTop: 'auto'
-    }}>
-      <div className="container">
-        <div className="grid grid-4">
+    <footer className="bg-card border-t border-border pt-16 pb-8 mt-auto">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <div className="flex gap-4 items-start">
               <Image
                 src="/logos.png"
                 alt="Quick Choice Logo"
                 width={40}
                 height={40}
-                style={{
-                  objectFit: 'contain',
-                  flexShrink: 0,
-                  border: '2px solid var(--primary)',
-                  borderRadius: '4px',
-                  padding: '2px'
-                }}
+                className="object-contain shrink-0 border-2 border-primary rounded p-0.5"
               />
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem', margin: 0 }}>
-                Premium African-inspired store bringing you the best in electronics, furniture, and more with <span style={{ color: '#646668ff', fontWeight: 'bold' }}>Quick Choice&reg;</span>.
+              <p className="text-muted-foreground text-[0.9rem] m-0">
+                Premium African-inspired store bringing you the best in electronics, furniture, and more with <span className="text-[#646668ff] font-bold">Quick Choice&reg;</span>.
               </p>
             </div>
           </div>
           <div>
-            <h4 style={{ marginBottom: '1.5rem', color: '#007bff' }}>Quick Choice</h4>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <li><Link href="/" style={{ color: 'var(--muted-foreground)' }}>Home</Link></li>
-              <li><Link href="/shop" style={{ color: 'var(--muted-foreground)' }}>Shop</Link></li>
-              <li><Link href="/about" style={{ color: 'var(--muted-foreground)' }}>About Us</Link></li>
-              <li><Link href="/contact" style={{ color: 'var(--muted-foreground)' }}>Contact</Link></li>
+            <h4 className="mb-6 text-[#007bff] font-bold">Quick Choice</h4>
+            <ul className="list-none flex flex-col gap-3">
+              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
+              <li><Link href="/shop" className="text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
+              <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
+              <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact</Link></li>
             </ul>
           </div>
           <div>
-            <h4 style={{ marginBottom: '1.5rem' }}>Support</h4>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <li><Link href="/about#faq" style={{ color: 'var(--muted-foreground)' }}>FAQ</Link></li>
-              <li><Link href="/about#privacy" style={{ color: 'var(--muted-foreground)' }}>Privacy Policy</Link></li>
-              <li><Link href="/contact" style={{ color: 'var(--muted-foreground)' }}>Customer Care</Link></li>
+            <h4 className="mb-6 font-bold">Support</h4>
+            <ul className="list-none flex flex-col gap-3">
+              <li><Link href="/about#faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link href="/about#privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
               <FooterInstall />
             </ul>
           </div>
           <div>
-            <h4 style={{ marginBottom: '1.5rem' }}>Connect With Us</h4>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <a href="#" style={{ color: 'var(--primary)' }} aria-label="Facebook"><FaFacebookF size={20} /></a>
-              <a href="#" style={{ color: 'var(--primary)' }} aria-label="X"><FaXTwitter size={20} /></a>
-              <a href="#" style={{ color: 'var(--primary)' }} aria-label="Instagram"><FaInstagram size={20} /></a>
-              <a href="#" style={{ color: 'var(--primary)' }} aria-label="LinkedIn"><FaLinkedinIn size={20} /></a>
+            <h4 className="mb-6 font-bold">Connect With Us</h4>
+            <div className="flex gap-4">
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="Facebook"><FaFacebookF size={20} /></a>
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="X"><FaXTwitter size={20} /></a>
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="Instagram"><FaInstagram size={20} /></a>
+              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="LinkedIn"><FaLinkedinIn size={20} /></a>
             </div>
           </div>
         </div>
-        <div style={{
-          marginTop: '3rem',
-          paddingTop: '2rem',
-          borderTop: '1px solid var(--border)',
-          textAlign: 'center',
-          color: 'var(--muted-foreground)',
-          fontSize: '0.875rem'
-        }}>
+        <div className="mt-12 pt-8 border-t border-border text-center text-muted-foreground text-sm">
           &copy; {new Date().getFullYear()} Quick Choice. All rights reserved. Designed with passion.
         </div>
       </div>

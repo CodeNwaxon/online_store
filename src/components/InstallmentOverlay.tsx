@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/data/products';
 import { installmentSettings } from '@/data/installmentSettings';
-import { FaTimes, FaCreditCard, } from 'react-icons/fa';
+import { FaTimes, FaCreditCard } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -22,18 +22,36 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [isProcessing, setIsProcessing] = useState(false);
   const [downPaymentInput, setDownPaymentInput] = useState<number | string>('');
   const [userEmail, setUserEmail] = useState('');
+  const [loanStatus, setLoanStatus] = useState<'checking' | 'none' | 'active' | 'cancelling'>('checking');
   const router = useRouter();
 
   useEffect(() => {
     if (auth.currentUser?.email) {
       setUserEmail(auth.currentUser.email);
+      checkExistingLoan(auth.currentUser.email);
+    } else {
+      setLoanStatus('none');
     }
   }, []);
+
+  const checkExistingLoan = async (email: string) => {
+    const q = query(
+      collection(db, 'installments'),
+      where('userEmail', '==', email),
+      where('status', 'in', ['active', 'cancelling'])
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      setLoanStatus('none');
+    } else {
+      const status = snap.docs[0].data().status;
+      setLoanStatus(status === 'active' ? 'active' : 'cancelling');
+    }
+  };
 
   const increaseRate = plan === 3 ? installmentSettings.threeMonthIncrease : installmentSettings.fourMonthIncrease;
   const increaseAmount = product.price * increaseRate;
   const totalAmount = product.price + increaseAmount;
-  const monthlyAmount = totalAmount / plan;
 
   // Down payment rules
   const downPaymentRate = product.price >= installmentSettings.oneMillionThreshold
@@ -73,48 +91,72 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       }
 
       if (currentUser) {
-        // Check for existing active loan
         const q = query(
           collection(db, 'installments'),
           where('userEmail', '==', currentUser.email),
-          where('status', '==', 'active')
+          where('status', 'in', ['active', 'cancelling'])
         );
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          toast.error('You already have an active installment session. Please complete or cancel it first.');
+          const existingStatus = querySnapshot.docs[0].data().status;
+          if (existingStatus === 'active') {
+            router.push('/installments/pay-loan');
+          } else {
+            setLoanStatus('cancelling');
+          }
           setIsProcessing(false);
           return;
         }
 
-        // Recalculate future monthly payments if user paid more than minimum
         const remainingBalance = totalAmount - amountToPay;
-        const recalculatedMonthlyAmount = remainingBalance / (plan - 1);
+        const recalculatedMonthlyAmount = remainingBalance / plan;
 
-        // Create the installment session in Firestore
-        await addDoc(collection(db, 'installments'), {
+        const receiptRef = await addDoc(collection(db, 'receipts'), {
+          userId: currentUser.uid,
+          userEmail: userEmail || currentUser.email,
+          productName: product.name,
+          paymentName: 'Initial Deposit',
+          amount: amountToPay,
+          createdAt: serverTimestamp(),
+          installmentId: '',
+        });
+
+        const installmentRef = await addDoc(collection(db, 'installments'), {
           userId: currentUser.uid,
           userEmail: userEmail || currentUser.email,
           productId: product.id,
           productName: product.name,
+          productCategory: product.category,
           productImage: product.image,
+          shippingFee: product.shipping,
           totalAmount: totalAmount,
-          monthlyAmount: recalculatedMonthlyAmount, // Use the reduced amount
+          monthlyAmount: recalculatedMonthlyAmount,
           planMonths: plan,
           downPaymentPaid: amountToPay,
+          totalAmountPaid: amountToPay,
           monthsPaid: 1,
           payments: [
-            { month: 1, amount: amountToPay, status: 'paid', paidAt: new Date(), deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-            ...Array.from({ length: plan - 1 }).map((_, i) => ({
+            {
+              month: 1,
+              amount: amountToPay,
+              status: 'paid',
+              paidAt: new Date(),
+              deadline: new Date(),
+              receiptId: receiptRef.id
+            },
+            ...Array.from({ length: plan }).map((_, i) => ({
               month: i + 2,
-              amount: recalculatedMonthlyAmount, // Use the reduced amount
+              amount: recalculatedMonthlyAmount,
               status: 'pending',
-              deadline: new Date(Date.now() + (i + 2) * 30 * 24 * 60 * 60 * 1000)
+              deadline: new Date(Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000)
             }))
           ],
           status: 'active',
           createdAt: serverTimestamp(),
         });
+
+        await updateDoc(receiptRef, { installmentId: installmentRef.id });
 
         toast.success('Initial payment successful! Loan session created.');
         router.push('/installments/pay-loan');
@@ -127,203 +169,193 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     }
   };
 
+  const Backdrop = ({ children }: { children: React.ReactNode }) => (
+    <div className="fixed inset-0 bg-black/85 z-[1000] flex items-center justify-center p-4">
+      {children}
+    </div>
+  );
+
+  if (loanStatus === 'checking') return (
+    <Backdrop>
+      <div className="text-center text-white">
+        <div className="w-[50px] h-[50px] border-4 border-white/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-white/70">Checking your account status...</p>
+      </div>
+    </Backdrop>
+  );
+
+  if (loanStatus === 'active') return (
+    <Backdrop>
+      <div className="bg-background rounded-[var(--radius)] p-10 max-w-[420px] text-center w-full">
+        <div className="text-5xl mb-4">📋</div>
+        <h2 className="font-bold text-2xl mb-3">Active Plan Detected</h2>
+        <p className="text-muted-foreground mb-8 leading-relaxed">
+          You already have an active installment plan running. You must complete or cancel your current plan before starting a new one.
+        </p>
+        <div className="flex gap-4">
+          <button onClick={onClose} className="border border-border text-foreground hover:bg-muted font-semibold px-4 py-2 rounded flex-1 transition-colors">Close</button>
+          <button onClick={() => router.push('/installments/pay-loan')} className="bg-primary text-white hover:bg-primary-hover font-semibold px-4 py-2 rounded flex-1 transition-colors">Go to My Plan</button>
+        </div>
+      </div>
+    </Backdrop>
+  );
+
+  if (loanStatus === 'cancelling') return (
+    <Backdrop>
+      <div className="bg-background rounded-[var(--radius)] p-10 max-w-[420px] text-center w-full">
+        <div className="w-[60px] h-[60px] relative mx-auto mb-6">
+          <div className="absolute inset-0 border-4 border-muted rounded-full" />
+          <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin" />
+          <img src="/logos.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28px] h-[28px]" />
+        </div>
+        <h2 className="font-bold text-2xl mb-3">Refund Pending Clearance</h2>
+        <p className="text-muted-foreground mb-3 leading-relaxed">
+          Your previous plan cancellation is being processed by our admin team. You can only start a new plan once your refund has been fully cleared.
+        </p>
+        <p className="text-xs text-muted-foreground mb-8">
+          Please check back shortly or visit the office for assistance.
+        </p>
+        <div className="flex gap-4">
+          <button onClick={onClose} className="border border-border text-foreground hover:bg-muted font-semibold px-4 py-2 rounded flex-1 transition-colors">Close</button>
+          <button onClick={() => router.push('/installments/pay-loan')} className="bg-primary text-white hover:bg-primary-hover font-semibold px-4 py-2 rounded flex-1 transition-colors">Track Refund</button>
+        </div>
+      </div>
+    </Backdrop>
+  );
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      zIndex: 1000,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem'
-    }}>
-      <div style={{
-        backgroundColor: 'var(--background)',
-        borderRadius: 'var(--radius)',
-        width: '100%',
-        maxWidth: '1000px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        position: 'relative',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-      }}>
+    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4">
+      <div className="bg-background rounded-[var(--radius)] w-full max-w-[1000px] max-h-[90vh] overflow-y-auto relative grid grid-cols-1 md:grid-cols-2 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <button
           onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--foreground)',
-            zIndex: 10
-          }}
+          className="absolute top-4 right-4 bg-none border-none cursor-pointer text-foreground z-10 p-1"
         >
           <FaTimes size={24} />
         </button>
 
         {/* Left: Image Section */}
-        <div style={{ padding: '2rem', borderRight: '1px solid var(--border)' }}>
+        <div className="p-8 border-b md:border-b-0 md:border-r border-border">
           <div
-            style={{
-              width: '100%',
-              aspectRatio: '1',
-              backgroundColor: 'var(--muted)',
-              borderRadius: 'var(--radius)',
-              overflow: 'hidden',
-              cursor: 'zoom-in',
-              marginBottom: '1rem'
-            }}
+            className="w-full aspect-square bg-muted rounded-[var(--radius)] overflow-hidden cursor-zoom-in mb-4 relative"
             onClick={() => setIsFullImageOpen(true)}
           >
-            <img src={mainImage} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={mainImage} alt={product.name} className="w-full h-full object-cover" />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto' }}>
+          <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded">
             {product.images?.map((img, idx) => (
               <div
                 key={idx}
                 onClick={() => setMainImage(img)}
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '0.5rem',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: mainImage === img ? '2px solid var(--primary)' : '1px solid var(--border)'
-                }}
+                className={`w-[60px] h-[60px] rounded-lg overflow-hidden shrink-0 cursor-pointer border ${mainImage === img ? 'border-2 border-primary' : 'border-border'}`}
               >
-                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={img} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
         </div>
 
         {/* Right: Details Section */}
-        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{product.name}</h2>
-          <p style={{ color: 'var(--muted-foreground)', marginBottom: '1.5rem' }}>{product.description}</p>
+        <div className="p-8 flex flex-col">
+          <h2 className="text-2xl font-bold mb-2">{product.name}</h2>
+          <p className="text-muted-foreground mb-6">{product.description}</p>
 
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <div className="mb-8">
+            <div className="flex justify-between mb-2">
               <span>Base Price</span>
-              <span style={{ fontWeight: 'bold' }}>{formatCurrency(product.price)}</span>
+              <span className="font-bold">{formatCurrency(product.price)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: 'var(--primary)' }}>
+            <div className="flex justify-between mb-2 text-primary">
               <span>Plan Interest ({increaseRate * 100}%)</span>
-              <span style={{ fontWeight: 'bold' }}>+ {formatCurrency(increaseAmount)}</span>
+              <span className="font-bold">+ {formatCurrency(increaseAmount)}</span>
             </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              paddingTop: '0.5rem',
-              borderTop: '1px solid var(--border)',
-              fontSize: '1.25rem',
-              fontWeight: 'bold'
-            }}>
+            <div className="flex justify-between pt-2 border-t border-border text-xl font-bold">
               <span>Total Plan Cost</span>
               <span>{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '1rem' }}>Monthly Breakdown</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {Array.from({ length: plan }).map((_, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1rem',
-                  backgroundColor: 'var(--muted)',
-                  borderRadius: 'var(--radius)',
-                  border: '1px solid var(--border)'
-                }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: i === 0 ? 'var(--primary)' : 'var(--border)',
-                    color: i === 0 ? 'white' : 'var(--muted-foreground)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '0.8rem'
-                  }}>
-                    {i + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>Month {i + 1}</div>
-                    <div style={{ fontWeight: 'bold' }}>{formatCurrency(i === 0 ? requiredDownPayment : monthlyAmount)}</div>
-                  </div>
-                  {i === 0 && <span style={{ fontSize: '0.7rem', backgroundColor: 'var(--primary)', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '1rem' }}>Down Payment</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '0.75rem' }}>Email for Payment Receipt</h3>
+          {/* Email Section */}
+          <div className="mb-6">
+            <h3 className="font-bold mb-3">Account Email (Linked to Account)</h3>
             <input
               type="email"
-              placeholder="Your email address"
+              readOnly
               value={userEmail}
-              onChange={(e) => setUserEmail(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--border)',
-                fontSize: '1rem'
-              }}
+              className="w-full p-4 rounded-lg border border-border text-base bg-muted text-muted-foreground cursor-not-allowed outline-none"
             />
+            <p className="text-[0.7rem] text-muted-foreground mt-1.5">
+              * This email is used for your loan tracking and receipts.
+            </p>
           </div>
 
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '1rem' }}>Down Payment</h3>
-            <div style={{ position: 'relative' }}>
+          {/* Down Payment Section */}
+          <div className="mb-8">
+            <h3 className="font-bold mb-4">Enter Down Payment</h3>
+
+            {downPaymentInput && Number(downPaymentInput) < requiredDownPayment && (
+              <p className="text-red-500 text-[0.85rem] mb-2 font-bold animate-[shake_0.3s]">
+                ⚠️ Amount is too low. Minimum: {formatCurrency(requiredDownPayment)}
+              </p>
+            )}
+
+            <div className="relative">
               <input
                 type="number"
                 placeholder={`Minimum ${formatCurrency(requiredDownPayment)}`}
                 value={downPaymentInput}
                 onChange={(e) => setDownPaymentInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '1rem 1rem 1rem 3rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--border)',
-                  fontSize: '1rem'
-                }}
+                className={`w-full py-4 pr-4 pl-12 rounded-lg border text-base font-bold outline-none ${downPaymentInput && Number(downPaymentInput) < requiredDownPayment ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
               />
-              <FaCreditCard style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)' }} />
+              <FaCreditCard className={`absolute left-4 top-1/2 -translate-y-1/2 ${downPaymentInput && Number(downPaymentInput) < requiredDownPayment ? 'text-red-500' : 'text-primary'}`} />
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: '0.5rem' }}>
-              * You can pay more than the minimum to reduce your monthly installments.
+            <p className="text-[0.75rem] text-muted-foreground mt-2">
+              * You can pay more than the minimum to reduce your future monthly payments.
             </p>
+          </div>
+
+          {/* Monthly Breakdown */}
+          <div className="mb-8">
+            <h3 className="font-bold mb-4">Payment Breakdown</h3>
+            <div className="flex flex-col gap-3">
+              {/* Actual Down Payment Block */}
+              <div className="flex items-center gap-4 p-4 bg-primary text-white rounded-[var(--radius)] border border-primary">
+                <div className="w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                  P
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs opacity-90">Pay Now (Deposit)</div>
+                  <div className="font-bold">{formatCurrency(Number(downPaymentInput) || requiredDownPayment)}</div>
+                </div>
+                <span className="text-[0.7rem] bg-white/20 px-2 py-1 rounded-full">Immediate</span>
+              </div>
+
+              {/* Installments List */}
+              {Array.from({ length: plan }).map((_, i) => {
+                const currentPaid = Number(downPaymentInput) || requiredDownPayment;
+                const remaining = totalAmount - currentPaid;
+                const dynamicMonthly = remaining / plan;
+
+                return (
+                  <div key={i} className="flex items-center gap-4 p-4 bg-muted rounded-[var(--radius)] border border-border">
+                    <div className="w-8 h-8 rounded-full bg-border text-muted-foreground flex items-center justify-center font-bold text-sm shrink-0">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs text-muted-foreground">Month {i + 1} Payment</div>
+                      <div className="font-bold">{formatCurrency(dynamicMonthly)}</div>
+                    </div>
+                    <span className="text-[0.7rem] text-muted-foreground">Scheduled</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <button
             disabled={isProcessing}
             onClick={handleProceed}
-            className="btn btn-primary"
-            style={{
-              marginTop: 'auto',
-              width: '100%',
-              padding: '1rem',
-              fontSize: '1.1rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem'
-            }}
+            className="bg-primary hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-auto w-full p-4 text-lg flex items-center justify-center gap-3 rounded-lg font-bold transition-colors"
           >
             {isProcessing ? 'Processing...' : (
               <>
@@ -331,7 +363,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
               </>
             )}
           </button>
-          <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--muted-foreground)', marginTop: '1rem' }}>
+          <p className="text-center text-xs text-muted-foreground mt-4">
             Secure payment via Paystack
           </p>
         </div>
@@ -341,21 +373,9 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       {isFullImageOpen && (
         <div
           onClick={() => setIsFullImageOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.95)',
-            zIndex: 1100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'zoom-out'
-          }}
+          className="fixed inset-0 bg-black/95 z-[1100] flex items-center justify-center cursor-zoom-out p-4"
         >
-          <img src={mainImage} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+          <img src={mainImage} alt="" className="max-w-full max-h-full object-contain" />
         </div>
       )}
     </div>

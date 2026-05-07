@@ -49,9 +49,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={outfit.className} style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <body className={`${outfit.className} flex flex-col min-h-screen bg-background text-foreground antialiased`}>
         <Navbar />
-        <main style={{ flex: 1 }}>{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>

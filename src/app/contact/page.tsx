@@ -12,79 +12,66 @@ export default function Contact() {
   };
 
   return (
-    <div className="section">
-      <div className="container">
-        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Get In Touch</h1>
-          <p style={{ color: 'var(--muted-foreground)', maxWidth: '600px', margin: '0 auto' }}>
+    <div className="py-16 max-md:py-8">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl max-md:text-3xl font-bold mb-4">Get In Touch</h1>
+          <p className="text-muted-foreground max-w-[600px] mx-auto leading-relaxed">
             Have questions about our products or installment plans? We are here to help. Send us a message and we'll get back to you within 24 hours.
           </p>
         </div>
 
-        <div className="grid grid-2" style={{ gap: '4rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8">
           {/* Contact Info */}
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '2rem' }}>Contact Information</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ 
-                  width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'var(--muted)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' 
-                }}>
+            <h2 className="text-2xl font-bold mb-8">Contact Information</h2>
+            <div className="flex flex-col gap-8">
+              <div className="flex gap-6">
+                <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
                   <FaPhone size={24} />
                 </div>
                 <div>
-                  <h4 style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Phone</h4>
-                  <p style={{ color: 'var(--muted-foreground)' }}>+234 800 123 4567</p>
-                  <p style={{ color: 'var(--muted-foreground)' }}>+234 800 999 8888</p>
+                  <h4 className="font-bold mb-1">Phone</h4>
+                  <p className="text-muted-foreground">+234 800 123 4567</p>
+                  <p className="text-muted-foreground">+234 800 999 8888</p>
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ 
-                  width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'var(--muted)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' 
-                }}>
+              <div className="flex gap-6">
+                <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
                   <FaEnvelope size={24} />
                 </div>
                 <div>
-                  <h4 style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Email</h4>
-                  <p style={{ color: 'var(--muted-foreground)' }}>hello@onlinestore.com</p>
-                  <p style={{ color: 'var(--muted-foreground)' }}>support@onlinestore.com</p>
+                  <h4 className="font-bold mb-1">Email</h4>
+                  <p className="text-muted-foreground">hello@onlinestore.com</p>
+                  <p className="text-muted-foreground">support@onlinestore.com</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ 
-                  width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'var(--muted)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' 
-                }}>
+              <div className="flex gap-6">
+                <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
                   <FaMapMarkerAlt size={24} />
                 </div>
                 <div>
-                  <h4 style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>Our Office</h4>
-                  <p style={{ color: 'var(--muted-foreground)' }}>123 Commerce Avenue, Ikeja</p>
-                  <p style={{ color: 'var(--muted-foreground)' }}>Lagos, Nigeria</p>
+                  <h4 className="font-bold mb-1">Our Office</h4>
+                  <p className="text-muted-foreground">123 Commerce Avenue, Ikeja</p>
+                  <p className="text-muted-foreground">Lagos, Nigeria</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Contact Form */}
-          <div style={{ backgroundColor: 'var(--card)', padding: '2.5rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+          <div className="bg-card p-10 max-md:p-6 rounded-[var(--radius)] border border-border shadow-sm">
             {submitted ? (
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <div style={{ 
-                  width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#DEF7EC', color: '#03543F', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' 
-                }}>
+              <div className="text-center p-8">
+                <div className="w-20 h-20 rounded-full bg-[#DEF7EC] text-[#03543F] flex items-center justify-center mx-auto mb-6">
                   <FaPaperPlane size={40} />
                 </div>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Message Sent!</h3>
-                <p style={{ color: 'var(--muted-foreground)' }}>Thank you for reaching out. We will get back to you shortly.</p>
+                <h3 className="text-2xl font-bold mb-4">Message Sent!</h3>
+                <p className="text-muted-foreground">Thank you for reaching out. We will get back to you shortly.</p>
                 <button 
-                  className="btn btn-outline" 
-                  style={{ marginTop: '2rem' }}
+                  className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold mt-8 transition-colors"
                   onClick={() => setSubmitted(false)}
                 >
                   Send Another Message
@@ -92,61 +79,48 @@ export default function Contact() {
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div className="flex flex-col gap-6">
                   <div>
-                    <label htmlFor="name" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Full Name</label>
+                    <label htmlFor="name" className="block mb-2 font-semibold text-sm">Full Name</label>
                     <input 
                       type="text" 
                       id="name" 
                       required 
                       placeholder="Your Name"
-                      style={{ 
-                        width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', 
-                        border: '1px solid var(--border)', backgroundColor: 'var(--background)' 
-                      }}
+                      className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Email Address</label>
+                    <label htmlFor="email" className="block mb-2 font-semibold text-sm">Email Address</label>
                     <input 
                       type="email" 
                       id="email" 
                       required 
                       placeholder="email@example.com"
-                      style={{ 
-                        width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', 
-                        border: '1px solid var(--border)', backgroundColor: 'var(--background)' 
-                      }}
+                      className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
-                    <label htmlFor="phone" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Phone Number</label>
+                    <label htmlFor="phone" className="block mb-2 font-semibold text-sm">Phone Number</label>
                     <input 
                       type="tel" 
                       id="phone" 
                       required 
                       placeholder="+234 ..."
-                      style={{ 
-                        width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', 
-                        border: '1px solid var(--border)', backgroundColor: 'var(--background)' 
-                      }}
+                      className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
-                    <label htmlFor="message" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Message</label>
+                    <label htmlFor="message" className="block mb-2 font-semibold text-sm">Message</label>
                     <textarea 
                       id="message" 
                       required 
                       placeholder="How can we help you?"
                       rows={5}
-                      style={{ 
-                        width: '100%', padding: '0.75rem', borderRadius: 'var(--radius)', 
-                        border: '1px solid var(--border)', backgroundColor: 'var(--background)',
-                        resize: 'vertical'
-                      }}
+                      className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-y"
                     ></textarea>
                   </div>
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem' }}>
+                  <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white p-4 flex items-center justify-center gap-2 rounded-md font-semibold transition-colors mt-2">
                     Send Message <FaPaperPlane size={18} />
                   </button>
                 </div>
