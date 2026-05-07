@@ -234,7 +234,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         </button>
 
         {/* Left: Image Section */}
-        <div className="p-4 md:p-8 border-b md:border-b-0 md:border-r border-border">
+        <div className="p-5 md:p-8 border-b md:border-b-0 md:border-r border-border">
           <div
             className="w-full aspect-square bg-muted rounded-[var(--radius)] overflow-hidden cursor-zoom-in mb-4 relative"
             onClick={() => setIsFullImageOpen(true)}
