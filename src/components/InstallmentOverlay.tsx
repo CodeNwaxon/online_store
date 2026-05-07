@@ -256,7 +256,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         </div>
 
         {/* Right: Details Section */}
-        <div className="p-4 md:p-8 flex flex-col">
+        <div className="p-5 md:p-8 flex flex-col">
           <h2 className="text-2xl font-bold mb-2">{product.name}</h2>
           <p className="text-muted-foreground mb-6">{product.description}</p>
 
