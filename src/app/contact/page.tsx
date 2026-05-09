@@ -76,8 +76,8 @@ export default function Contact() {
                 </div>
                 <div>
                   <h4 className="font-bold mb-1">Phone</h4>
-                  <p className="text-muted-foreground"><span className='text-sm font-semibold text-gray-400'>Head Office:</span> +234 800 123 4567</p>
-                  <p className="text-muted-foreground"><span className='text-sm font-semibold text-gray-400'>Sagamu Branch:</span> +234 800 999 8888</p>
+                  <p className="text-muted-foreground"><span className='text-xs font-semibold text-gray-400'>Head Office:</span> +234 800 123 4567</p>
+                  <p className="text-muted-foreground"><span className='text-xs font-semibold text-gray-400'>Sagamu Branch:</span> +234 800 999 8888</p>
                 </div>
               </div>
 
