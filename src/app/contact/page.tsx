@@ -1,18 +1,62 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaPaperPlane, FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, addDoc } from 'firebase/firestore';
+import { toast, Toaster } from 'react-hot-toast';
 
 export default function Contact() {
+  const [user, setUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setFormData(prev => ({
+          ...prev,
+          email: prev.email || currentUser.email || '',
+          name: prev.name || currentUser.displayName || ''
+        }));
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (user) {
+      setLoading(true);
+      try {
+        await addDoc(collection(db, 'compliants'), {
+          userId: user.uid,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message,
+          createdAt: new Date()
+        });
+        setSubmitted(true);
+        setFormData({ name: '', email: user.email || '', phone: '', message: '' });
+      } catch (error) {
+        toast.error('Failed to send message.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Non-auth users mock success
+      setSubmitted(true);
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    }
   };
 
   return (
     <div className="py-16 max-md:py-8">
+      <Toaster position="top-center" />
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h1 className="text-4xl max-md:text-3xl font-bold mb-4">Get In Touch</h1>
@@ -86,6 +130,8 @@ export default function Contact() {
                       type="text" 
                       id="name" 
                       required 
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="Your Name"
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
@@ -96,6 +142,8 @@ export default function Contact() {
                       type="email" 
                       id="email" 
                       required 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
                       placeholder="email@example.com"
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
@@ -106,6 +154,8 @@ export default function Contact() {
                       type="tel" 
                       id="phone" 
                       required 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       placeholder="+234 ..."
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
@@ -115,13 +165,15 @@ export default function Contact() {
                     <textarea 
                       id="message" 
                       required 
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
                       placeholder="How can we help you?"
                       rows={5}
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-y"
                     ></textarea>
                   </div>
-                  <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white p-4 flex items-center justify-center gap-2 rounded-md font-semibold transition-colors mt-2">
-                    Send Message <FaPaperPlane size={18} />
+                  <button disabled={loading} type="submit" className="w-full bg-primary hover:bg-primary-hover text-white p-4 flex items-center justify-center gap-2 rounded-md font-semibold transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                    {loading ? 'Sending...' : 'Send Message'} <FaPaperPlane size={18} />
                   </button>
                 </div>
               </form>

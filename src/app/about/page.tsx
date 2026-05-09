@@ -126,6 +126,25 @@ export default function About() {
           </div>
         </div>
       </section>
+      {/* Our Location */}
+      <section className="py-16 max-md:py-8">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="max-w-[800px] mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-6">Our Location</h2>
+            <p className="text-muted-foreground mb-8 text-lg">
+              168, Akarigbo Road, Sabo, Sagamu, Ogun State, Nigeria
+            </p>
+            <a 
+              href="https://www.google.com/maps/search/?api=1&query=168,+Akarigbo+Road,+Sabo,+Sagamu,+Ogun+State,+Nigeria" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-primary hover:bg-primary-hover text-white font-semibold px-8 py-3 rounded-md transition-colors inline-block"
+            >
+              Navigation
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
