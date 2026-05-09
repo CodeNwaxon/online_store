@@ -76,11 +76,11 @@ export default function Contact() {
                 </div>
                 <div>
                   <h4 className="font-bold mb-1">Phone</h4>
-                  <p className="text-muted-foreground">+234 800 123 4567</p>
-                  <p className="text-muted-foreground">+234 800 999 8888</p>
+                  <p className="text-muted-foreground"><span className='text-sm font-semibold text-gray-400'>Head Office:</span> +234 800 123 4567</p>
+                  <p className="text-muted-foreground"><span className='text-sm font-semibold text-gray-400'>Sagamu Branch:</span> +234 800 999 8888</p>
                 </div>
               </div>
-              
+
               <div className="flex gap-6">
                 <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
                   <FaEnvelope size={24} />
@@ -114,7 +114,7 @@ export default function Contact() {
                 </div>
                 <h3 className="text-2xl font-bold mb-4">Message Sent!</h3>
                 <p className="text-muted-foreground">Thank you for reaching out. We will get back to you shortly.</p>
-                <button 
+                <button
                   className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold mt-8 transition-colors"
                   onClick={() => setSubmitted(false)}
                 >
@@ -126,47 +126,47 @@ export default function Contact() {
                 <div className="flex flex-col gap-6">
                   <div>
                     <label htmlFor="name" className="block mb-2 font-semibold text-sm">Full Name</label>
-                    <input 
-                      type="text" 
-                      id="name" 
-                      required 
+                    <input
+                      type="text"
+                      id="name"
+                      required
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Your Name"
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
                     <label htmlFor="email" className="block mb-2 font-semibold text-sm">Email Address</label>
-                    <input 
-                      type="email" 
-                      id="email" 
-                      required 
+                    <input
+                      type="email"
+                      id="email"
+                      required
                       value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="email@example.com"
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
                     <label htmlFor="phone" className="block mb-2 font-semibold text-sm">Phone Number</label>
-                    <input 
-                      type="tel" 
-                      id="phone" 
-                      required 
+                    <input
+                      type="tel"
+                      id="phone"
+                      required
                       value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="+234 ..."
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
                     />
                   </div>
                   <div>
                     <label htmlFor="message" className="block mb-2 font-semibold text-sm">Message</label>
-                    <textarea 
-                      id="message" 
-                      required 
+                    <textarea
+                      id="message"
+                      required
                       value={formData.message}
-                      onChange={(e) => setFormData({...formData, message: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder="How can we help you?"
                       rows={5}
                       className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-y"
