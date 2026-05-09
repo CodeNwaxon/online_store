@@ -70,9 +70,9 @@ export default function Contact() {
           <div>
             <h2 className="text-2xl font-bold mb-8">Contact Information</h2>
             <div className="flex flex-col gap-8">
-              <div className="flex gap-6">
+              <div className="flex gap-3">
                 <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
-                  <FaPhone size={24} />
+                  <FaPhone size={22} />
                 </div>
                 <div>
                   <h4 className="font-bold mb-1">Phone</h4>
@@ -81,9 +81,9 @@ export default function Contact() {
                 </div>
               </div>
 
-              <div className="flex gap-6">
+              <div className="flex gap-3">
                 <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
-                  <FaEnvelope size={24} />
+                  <FaEnvelope size={22} />
                 </div>
                 <div>
                   <h4 className="font-bold mb-1">Email</h4>
@@ -92,9 +92,9 @@ export default function Contact() {
                 </div>
               </div>
 
-              <div className="flex gap-6">
+              <div className="flex gap-3">
                 <div className="w-[50px] h-[50px] rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
-                  <FaMapMarkerAlt size={24} />
+                  <FaMapMarkerAlt size={22} />
                 </div>
                 <div>
                   <h4 className="font-bold mb-1">Our Office</h4>
