@@ -155,10 +155,10 @@ export default function ReviewSection() {
           </div>
         )}
 
-        <div className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[500px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[600px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
           {reviews.length > 0 ? (
             reviews.map((review) => (
-              <div key={review.id} className="shrink-0 flex-none w-full md:w-[350px] md:snap-start bg-card border border-border rounded-[var(--radius)] p-8 text-center relative shadow-sm max-h-[400px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
+              <div key={review.id} className="shrink-0 flex-none w-full md:w-[250px] md:snap-start bg-card border border-border rounded-[var(--radius)] p-8 text-center relative shadow-sm max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
                 {user && (user.email === review.userEmail || user.uid === "MRAnZKmiEDcg5xVOjMOtbULMOtb2") && (
                   <button
                     onClick={() => setDeletingId(review.id)}
