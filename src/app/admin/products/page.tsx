@@ -11,10 +11,12 @@ import {
   getDocs, 
   query, 
   where,
-  onSnapshot
+  onSnapshot,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaCheck, FaStar, FaSave } from 'react-icons/fa';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 
@@ -29,7 +31,11 @@ const formatStructure = (str: string) => {
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
+  // Hero Slides State
+  const [heroSlides, setHeroSlides] = useState<string[]>([]);
+  const [heroSaving, setHeroSaving] = useState(false);
+
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -84,6 +90,39 @@ export default function AdminProducts() {
 
     return () => unsub();
   }, []);
+
+  // Load hero slides from Firestore
+  useEffect(() => {
+    const loadHero = async () => {
+      const snap = await getDoc(doc(db, 'settings', 'hero'));
+      if (snap.exists()) setHeroSlides(snap.data().productIds || []);
+    };
+    loadHero();
+  }, []);
+
+  const handleToggleHero = (productId: string) => {
+    if (heroSlides.includes(productId)) {
+      setHeroSlides(heroSlides.filter(id => id !== productId));
+    } else {
+      if (heroSlides.length >= 8) {
+        toast.error('Maximum 8 hero slides allowed.');
+        return;
+      }
+      setHeroSlides([...heroSlides, productId]);
+    }
+  };
+
+  const handleSaveHero = async () => {
+    setHeroSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'hero'), { productIds: heroSlides });
+      toast.success('Hero slides saved!');
+    } catch {
+      toast.error('Failed to save hero slides.');
+    } finally {
+      setHeroSaving(false);
+    }
+  };
 
   const handleAddImageUrl = () => {
     if (!imageUrlInput) return;
@@ -415,6 +454,89 @@ export default function AdminProducts() {
             )}
           </div>
         </form>
+      </section>
+
+      {/* HOME HERO SLIDES */}
+      <section className="bg-card md:rounded-[var(--radius)] border border-border shadow-sm overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
+              <FaStar className="text-primary" /> Home Hero Slides
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">Select up to 8 products to feature on the home page carousel. <span className="font-bold text-primary">{heroSlides.length}/8 selected</span></p>
+          </div>
+          <button
+            onClick={handleSaveHero}
+            disabled={heroSaving}
+            className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
+          >
+            <FaSave />
+            {heroSaving ? 'Saving...' : 'Save Hero Slides'}
+          </button>
+        </div>
+
+        <div className="p-4 md:p-8">
+          {products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FaBox className="text-muted-foreground mb-4" size={40} />
+              <p className="text-muted-foreground font-bold">No products found</p>
+              <p className="text-xs text-muted-foreground mt-1">Add products above to select them for the hero carousel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {products.map(product => {
+                const isSelected = heroSlides.includes(product.id);
+                const selectionIndex = heroSlides.indexOf(product.id);
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => handleToggleHero(product.id)}
+                    className={`relative rounded-[var(--radius)] border-2 overflow-hidden transition-all text-left group ${
+                      isSelected
+                        ? 'border-primary shadow-lg shadow-primary/20'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative aspect-square bg-muted">
+                      {product.image && (
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                        />
+                      )}
+                      {/* Selection badge */}
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow">
+                          {selectionIndex + 1}
+                        </div>
+                      )}
+                      {/* Overlay */}
+                      <div className={`absolute inset-0 flex items-center justify-center transition-all ${
+                        isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
+                      }`}>
+                        {isSelected && (
+                          <div className="bg-primary text-white rounded-full p-2">
+                            <FaCheck size={14} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="p-2 bg-background">
+                      <p className="text-xs font-bold truncate">{product.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{product.category}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* PRODUCT LIST & FILTERS */}

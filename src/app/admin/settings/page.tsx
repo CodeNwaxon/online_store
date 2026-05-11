@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt } from 'react-icons/fa';
+import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt, FaImage, FaTimes, FaLink } from 'react-icons/fa';
 
 const SOCIAL_PLATFORMS = [
   { name: 'WhatsApp', icon: 'FaWhatsapp', placeholder: 'https://wa.me/234...' },
@@ -16,6 +16,9 @@ const SOCIAL_PLATFORMS = [
 export default function AdminSettings() {
   const [siteName, setSiteName] = useState('Quick Choice');
   const [footerMessage, setFooterMessage] = useState('');
+  const [installmentBg, setInstallmentBg] = useState('');
+  const [installmentBgUrlInput, setInstallmentBgUrlInput] = useState('');
+  const [installmentBgUploading, setInstallmentBgUploading] = useState(false);
 
   const [phones, setPhones] = useState<{ position: string, number: string }[]>([]);
   const [emails, setEmails] = useState<{ position: string, email: string }[]>([]);
@@ -30,6 +33,7 @@ export default function AdminSettings() {
         const data = docSnap.data();
         setSiteName(data.siteName || 'Quick Choice');
         setFooterMessage(data.footerMessage || '');
+        setInstallmentBg(data.installmentBg || '');
         setPhones(data.phones || []);
         setEmails(data.emails || []);
         setAddresses(data.addresses || []);
@@ -44,6 +48,7 @@ export default function AdminSettings() {
       await setDoc(doc(db, 'settings', 'general'), {
         siteName,
         footerMessage,
+        installmentBg,
         phones,
         emails,
         addresses,
@@ -90,6 +95,106 @@ export default function AdminSettings() {
               placeholder="e.g. Premium African-inspired store..."
             />
           </div>
+        </div>
+      </section>
+
+      {/* INSTALLMENT BACKGROUND IMAGE */}
+      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">
+        <h2 className="text-lg md:text-xl font-bold border-b border-border pb-4 flex items-center gap-2">
+          <FaImage className="text-primary" /> Installment Background Image
+        </h2>
+        <p className="text-xs text-muted-foreground">This image appears in the 'Pay in Easy Installments' section on the home page. Defaults to <code className="bg-muted px-1 rounded">/images/environment.jpeg</code> if not set.</p>
+
+        {/* Preview */}
+        {(installmentBg || true) && (
+          <div className="relative w-full h-40 rounded-md overflow-hidden border border-border bg-muted">
+            <img
+              src={installmentBg || '/images/environment.jpeg'}
+              alt="Installment background preview"
+              className="w-full h-full object-cover"
+            />
+            {installmentBg && (
+              <button
+                type="button"
+                onClick={() => setInstallmentBg('')}
+                className="absolute top-2 right-2 bg-secondary text-white p-1.5 rounded-full hover:bg-secondary-hover transition-colors"
+                title="Reset to default"
+              >
+                <FaTimes size={12} />
+              </button>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2 text-center">
+              {installmentBg ? 'Custom Image' : 'Default: /images/environment.jpeg'}
+            </div>
+          </div>
+        )}
+
+        {/* URL Input */}
+        <div>
+          <label className="block text-sm font-bold mb-2">Image URL</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Paste image URL here..."
+              className="flex-1 p-3 rounded-md border border-border bg-background text-sm"
+              value={installmentBgUrlInput}
+              onChange={(e) => setInstallmentBgUrlInput(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (installmentBgUrlInput.trim()) {
+                  setInstallmentBg(installmentBgUrlInput.trim());
+                  setInstallmentBgUrlInput('');
+                  toast.success('URL applied!');
+                }
+              }}
+              className="bg-muted px-4 py-2 rounded-md border border-border text-sm font-bold hover:bg-muted/80 flex items-center gap-2"
+            >
+              <FaLink /> Apply
+            </button>
+          </div>
+        </div>
+
+        {/* File Upload */}
+        <div>
+          <label className="block text-sm font-bold mb-2">Upload File</label>
+          <label className={`flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed cursor-pointer transition-colors ${
+            installmentBgUploading ? 'border-primary/50 bg-primary/5 opacity-70' : 'border-primary bg-primary/5 hover:bg-primary/10'
+          }`}>
+            <FaImage className="text-primary" />
+            <span className="text-sm font-bold text-primary">
+              {installmentBgUploading ? 'Uploading...' : 'Choose Image File'}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={installmentBgUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setInstallmentBgUploading(true);
+                try {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+                  const res = await fetch(
+                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+                    { method: 'POST', body: formData }
+                  );
+                  const data = await res.json();
+                  setInstallmentBg(data.secure_url);
+                  toast.success('Image uploaded!');
+                } catch {
+                  toast.error('Upload failed. Try URL instead.');
+                } finally {
+                  setInstallmentBgUploading(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+          </label>
         </div>
       </section>
 

@@ -42,23 +42,23 @@ export default function AdminAboutEditor() {
 
   return (
     <div className="max-w-[1000px] mx-auto space-y-12 pb-20">
-      <header className="flex justify-between items-center">
+      <header className="flex flex-col md:flex-row gap-3 justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">About Page Editor</h1>
           <p className="text-muted-foreground mt-1">Manage sections for your About page.</p>
         </div>
-        <button onClick={handleSave} className="bg-primary text-white px-8 py-3 rounded-md font-bold flex items-center gap-2">
+        <button onClick={handleSave} className="bg-primary text-white px-4 md:px-8 md:py-3 py-2 rounded-md font-bold flex items-center gap-2">
           <FaSave /> Save Sections
         </button>
       </header>
 
-      <section className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm space-y-6">
+      <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm space-y-6">
         <h2 className="text-xl font-bold flex items-center gap-2"><FaInfoCircle className="text-primary" /> Main Content</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-bold mb-2">Hero Section Text</label>
-            <textarea 
-              rows={3} 
+            <textarea
+              rows={3}
               className="w-full p-3 rounded-md border border-border bg-background"
               value={heroText}
               onChange={(e) => setHeroText(e.target.value)}
@@ -67,8 +67,8 @@ export default function AdminAboutEditor() {
           </div>
           <div>
             <label className="block text-sm font-bold mb-2">Our Mission / Story</label>
-            <textarea 
-              rows={6} 
+            <textarea
+              rows={6}
               className="w-full p-3 rounded-md border border-border bg-background"
               value={missionStatement}
               onChange={(e) => setMissionStatement(e.target.value)}
@@ -79,7 +79,7 @@ export default function AdminAboutEditor() {
       </section>
 
       {/* FAQ SECTION */}
-      <section className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+      <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2"><FaQuestionCircle className="text-primary" /> FAQ</h2>
           <button onClick={() => setFaqs([...faqs, { question: '', answer: '' }])} className="bg-primary/10 text-primary p-2 rounded-full hover:bg-primary/20 transition-colors">
@@ -93,8 +93,8 @@ export default function AdminAboutEditor() {
                 <FaTrash size={14} />
               </button>
               <div className="space-y-3">
-                <input 
-                  placeholder="Question" 
+                <input
+                  placeholder="Question"
                   className="w-full p-2 rounded border border-border bg-background font-bold"
                   value={faq.question}
                   onChange={(e) => {
@@ -103,8 +103,8 @@ export default function AdminAboutEditor() {
                     setFaqs(newFaqs);
                   }}
                 />
-                <textarea 
-                  placeholder="Answer" 
+                <textarea
+                  placeholder="Answer"
                   className="w-full p-2 rounded border border-border bg-background text-sm"
                   rows={2}
                   value={faq.answer}
@@ -121,7 +121,7 @@ export default function AdminAboutEditor() {
       </section>
 
       {/* POLICIES SECTION */}
-      <section className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+      <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2"><FaShieldAlt className="text-primary" /> Store Policies</h2>
           <button onClick={() => setPolicies([...policies, { title: '', content: '' }])} className="bg-primary/10 text-primary p-2 rounded-full hover:bg-primary/20 transition-colors">
@@ -135,8 +135,8 @@ export default function AdminAboutEditor() {
                 <FaTrash size={14} />
               </button>
               <div className="space-y-3">
-                <input 
-                  placeholder="Policy Title (e.g. Return Policy)" 
+                <input
+                  placeholder="Policy Title (e.g. Return Policy)"
                   className="w-full p-2 rounded border border-border bg-background font-bold"
                   value={policy.title}
                   onChange={(e) => {
@@ -145,8 +145,8 @@ export default function AdminAboutEditor() {
                     setPolicies(newPolicies);
                   }}
                 />
-                <textarea 
-                  placeholder="Policy Details" 
+                <textarea
+                  placeholder="Policy Details"
                   className="w-full p-2 rounded border border-border bg-background text-sm"
                   rows={4}
                   value={policy.content}

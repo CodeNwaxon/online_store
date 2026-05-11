@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { products, Category } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
 import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
@@ -9,68 +8,56 @@ import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
 import ReviewSection from '@/components/ReviewSection';
 import InstallPrompt from '@/components/InstallPrompt';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
-const heroSlides = [
-  {
-    id: 'h1',
-    name: 'Mahogany Furniture Set',
-    price: 1250000,
-    description: 'Premium handcrafted mahogany set for modern African homes.',
-    image: 'https://picsum.photos/seed/hero1/1600/900',
-    images: ['https://picsum.photos/seed/hero1/1600/900'],
-    category: 'Furniture' as Category,
-    manufacturer: 'Lagos Artisans',
-    link: '/shop?category=Furniture',
-    isPromo: true,
-    oldPrice: 1500000,
-    shipping: 50
-  },
-  {
-    id: 'h2',
-    name: 'Smart Home Electronics Bundle',
-    price: 850000,
-    description: 'The complete set for your smart home upgrade.',
-    image: 'https://picsum.photos/seed/hero2/1600/900',
-    images: ['https://picsum.photos/seed/hero2/1600/900'],
-    category: 'Electronics' as Category,
-    manufacturer: 'LG Electronics',
-    link: '/shop?category=Electronics',
-    isPromo: true,
-    shipping: 35
-  },
-  {
-    id: 'h3',
-    name: 'Royal Sofa Set',
-    price: 1850000,
-    description: 'Ultimate luxury and comfort for your living room.',
-    image: 'https://picsum.photos/seed/hero3/1600/900',
-    images: ['https://picsum.photos/seed/hero3/1600/900'],
-    category: 'Furniture' as Category,
-    manufacturer: 'Royal Designs',
-    link: '/shop?category=Furniture',
-    isPromo: true,
-    oldPrice: 2200000,
-    shipping: 60
-  }
-];
 
 export default function Home() {
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const promoProducts = products.filter(p => p.isPromo).slice(0, 8);
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [promoProducts, setPromoProducts] = useState<any[]>([]);
+  const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
 
-  const handleBuyNow = (slide: typeof heroSlides[0]) => {
+  // Load hero slides and promo products from Firestore
+  useEffect(() => {
+    const loadData = async () => {
+      // Fetch all products
+      const prodSnap = await getDocs(collection(db, 'products'));
+      const allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
+      // Fetch hero config
+      const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+      if (heroSnap.exists()) {
+        const ids: string[] = heroSnap.data().productIds || [];
+        const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
+        setHeroSlides(slides);
+      }
+
+      // Fetch general settings (installment bg)
+      const generalSnap = await getDoc(doc(db, 'settings', 'general'));
+      if (generalSnap.exists() && generalSnap.data().installmentBg) {
+        setInstallmentBg(generalSnap.data().installmentBg);
+      }
+
+      // Promo products for carousel
+      setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 8));
+    };
+    loadData();
+  }, []);
+
+  const handleBuyNow = (slide: any) => {
     const product = {
       id: slide.id,
       name: slide.name,
       price: slide.price,
       description: slide.description,
       image: slide.image,
-      images: slide.images,
+      images: slide.images || [slide.image],
       category: slide.category,
-      manufacturer: slide.manufacturer,
-      shipping: slide.shipping
+      manufacturer: slide.manufacturer || 'Quick Choice',
+      shipping: slide.shipping || 0
     };
     addItem(product);
     router.push('/checkout');
@@ -87,69 +74,77 @@ export default function Home() {
     <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section className="relative h-[650px] overflow-hidden">
-        {heroSlides.map((slide, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-cover bg-center cursor-pointer ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
-            style={{ backgroundImage: `url(${slide.image})` }}
-            onClick={() => router.push(slide.link)}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center">
-              <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full">
-                <div className="max-w-[650px] text-white">
-                  {slide.isPromo && (
-                    <span className="bg-secondary px-3 py-1 rounded text-sm font-bold mb-4 inline-block">
-                      SPECIAL PROMO
-                    </span>
-                  )}
-                  <div className="text-lg text-primary font-semibold mb-2">
-                    {slide.manufacturer}
-                  </div>
-                  <h1 className="text-5xl max-md:text-4xl font-bold mb-4 leading-[1.1]">
-                    {slide.name}
-                  </h1>
-                  <div className="flex items-center gap-4 mb-6">
-                    <span className="text-3xl max-md:text-2xl font-bold text-primary">
-                      ₦{slide.price.toLocaleString()}
-                    </span>
-                    {slide.oldPrice && (
-                      <span className="text-xl max-md:text-lg line-through text-white/60 font-bold bg-white/10 px-2 py-0.5 rounded">
-                        ₦{slide.oldPrice.toLocaleString()}
+      <section className="relative h-[650px] overflow-hidden bg-foreground">
+        {heroSlides.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-white/40">
+            <p className="text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
+          </div>
+        ) : (
+          heroSlides.map((slide, index) => (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-cover bg-center cursor-pointer ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+              style={{ backgroundImage: `url(${slide.image})` }}
+              onClick={() => router.push(`/product/${slide.id}`)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center">
+                <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full">
+                  <div className="max-w-[650px] text-white">
+                    {slide.isPromo && (
+                      <span className="bg-secondary px-3 py-1 rounded text-sm font-bold mb-4 inline-block">
+                        SPECIAL PROMO
                       </span>
                     )}
-                  </div>
-                  <p className="text-lg mb-10 opacity-90 leading-relaxed max-md:text-base">
-                    {slide.description}
-                  </p>
-                  <div className="flex gap-4 flex-wrap">
-                    <Link href={slide.link} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3">
-                      Shop Collection <FaArrowRight size={18} />
-                    </Link>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
-                      className="border-2 border-white text-white hover:bg-white/10 rounded-md font-semibold transition-colors px-6 py-3"
-                    >
-                      Buy Now
-                    </button>
+                    <div className="text-lg text-primary font-semibold mb-2">
+                      {slide.manufacturer || slide.group}
+                    </div>
+                    <h1 className="text-5xl max-md:text-4xl font-bold mb-4 leading-[1.1]">
+                      {slide.name}
+                    </h1>
+                    <div className="flex items-center gap-4 mb-6">
+                      <span className="text-3xl max-md:text-2xl font-bold text-primary">
+                        ₦{slide.price?.toLocaleString()}
+                      </span>
+                      {slide.oldPrice && (
+                        <span className="text-xl max-md:text-lg line-through text-white/60 font-bold bg-white/10 px-2 py-0.5 rounded">
+                          ₦{slide.oldPrice?.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-lg mb-10 opacity-90 leading-relaxed max-md:text-base">
+                      {slide.description}
+                    </p>
+                    <div className="flex gap-4 flex-wrap">
+                      <Link href={`/product/${slide.id}`} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3">
+                        View Product <FaArrowRight size={18} />
+                      </Link>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
+                        className="border-2 border-white text-white hover:bg-white/10 rounded-md font-semibold transition-colors px-6 py-3"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
         
         {/* Hero Dots */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-          {heroSlides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-white/40 w-4 hover:bg-white/60'}`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
-        </div>
+        {heroSlides.length > 1 && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+            {heroSlides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-white/40 w-4 hover:bg-white/60'}`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Features Section */}
@@ -200,7 +195,7 @@ export default function Home() {
       {/* Installment Section */}
       <section
         className="py-32 bg-cover bg-center text-white text-center"
-        style={{ backgroundImage: 'linear-gradient(rgba(139, 38, 53, 0.9), rgba(139, 38, 53, 0.9)), url(https://picsum.photos/seed/payment/1600/900)' }}
+        style={{ backgroundImage: `linear-gradient(rgba(139, 38, 53, 0.9), rgba(139, 38, 53, 0.9)), url(${installmentBg})` }}
       >
         <div className="max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="max-w-[800px] mx-auto">
