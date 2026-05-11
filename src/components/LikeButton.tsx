@@ -27,6 +27,8 @@ export default function LikeButton({ productId }: LikeButtonProps) {
       } else {
         setLikes(0);
       }
+    }, (error) => {
+      console.warn("Likes listener error:", error);
     });
 
     return () => unsubscribe();

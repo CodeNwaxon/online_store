@@ -68,6 +68,8 @@ export default function AdminManagement() {
     // Fetch current admins
     const unsubAdmins = onSnapshot(collection(db, 'admins'), (snap) => {
       setAdmins(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Management admins listener error:", error);
     });
 
     // Fetch site settings (including CEO info and URLs)
@@ -110,6 +112,8 @@ export default function AdminManagement() {
     const unsubSearch = onSnapshot(q, (snap) => {
       const users = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setSearchResults(users);
+    }, (error) => {
+      console.warn("Management search listener error:", error);
     });
 
     return () => unsubSearch();

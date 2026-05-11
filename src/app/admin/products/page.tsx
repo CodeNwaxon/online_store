@@ -86,6 +86,8 @@ export default function AdminProducts() {
 
       setGroups(Array.from(new Set([...groups, ...uniqueGroups.map((g:any) => g.toUpperCase())])));
       setCategoriesByGroup(newMap);
+    }, (error) => {
+      console.warn("Products listener error:", error);
     });
 
     return () => unsub();

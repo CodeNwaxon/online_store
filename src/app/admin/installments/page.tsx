@@ -43,9 +43,13 @@ export default function AdminInstallments() {
   useEffect(() => {
     const unsubInst = onSnapshot(query(collection(db, 'installments'), orderBy('createdAt', 'desc')), (snap) => {
       setInstallments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Installments listener error:", error);
     });
     const unsubComp = onSnapshot(query(collection(db, 'complaints'), orderBy('createdAt', 'desc')), (snap) => {
       setComplaints(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Complaints listener error:", error);
     });
     return () => { unsubInst(); unsubComp(); };
   }, []);

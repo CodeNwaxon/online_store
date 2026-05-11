@@ -15,10 +15,14 @@ export default function AdminStats() {
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
       setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats products listener error:", error);
     });
     // Assuming a 'sales' or 'orders' collection exists or we derive from completed installments
     const unsubSales = onSnapshot(collection(db, 'installments'), (snap) => {
       setSales(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((s: any) => s.status === 'completed' || s.status === 'cleared'));
+    }, (error) => {
+      console.warn("Stats sales listener error:", error);
     });
     return () => { unsubProds(); unsubSales(); };
   }, []);

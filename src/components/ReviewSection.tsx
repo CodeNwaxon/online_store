@@ -27,7 +27,9 @@ export default function ReviewSection() {
       const reviewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setReviews(reviewsData);
     }, (error) => {
-      console.error("Firestore Error:", error);
+      if (error.code !== 'permission-denied') {
+        console.warn("Firestore Listener Error:", error);
+      }
       // Simple fallback without ordering
       getDocs(collection(db, 'reviews')).then(snap => {
         setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));

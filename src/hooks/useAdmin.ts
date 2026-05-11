@@ -57,13 +57,20 @@ export function useAdmin() {
             setAdminData(null);
           }
           setLoading(false);
+        }, (error) => {
+          console.warn("Admin record listener error:", error);
+          setLoading(false);
         });
 
       } else {
+        unsubAdmin(); // Stop the listener if user signs out
         setUser(null);
         setAdminData(null);
         setLoading(false);
       }
+    }, (error) => {
+      console.error("Auth state change error:", error);
+      setLoading(false);
     });
 
     return () => {
