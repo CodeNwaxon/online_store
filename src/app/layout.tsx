@@ -41,6 +41,7 @@ export const metadata: Metadata = {
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Toaster } from "react-hot-toast";
 
 export default function RootLayout({
   children,
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.className} flex flex-col min-h-screen bg-background text-foreground antialiased`}>
+        <Toaster position="top-center" reverseOrder={false} />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
