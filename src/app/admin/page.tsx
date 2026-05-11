@@ -2,17 +2,18 @@
 
 import { useAdmin } from '@/hooks/useAdmin';
 import Link from 'next/link';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaUserTie } from 'react-icons/fa';
 
 export default function AdminDashboard() {
   const { adminData, isCEO } = useAdmin();
 
   const routeCards = [
-    { label: 'Admin Management', href: '/admin/management', icon: <FaUserShield size={40} />, id: 'management', description: 'Add or remove admin staff and assign routes.', ceoOnly: true },
-    { label: 'Products', href: '/admin/products', icon: <FaBoxes size={40} />, id: 'products', description: 'Manage your product inventory, categories, and groups.' },
-    { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard size={40} />, id: 'installments', description: 'Track installment payments and customer complaints.' },
-    { label: 'Site Settings', href: '/admin/settings', icon: <FaCog size={40} />, id: 'settings', description: 'Update site name, contacts, and social links.' },
-    { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar size={40} />, id: 'stats', description: 'View sales data, revenue, and product statistics.' },
+    { label: 'Admin Management', href: '/admin/management', icon: <FaUserShield size={40} />, id: '/ADMIN/MANAGEMENT', description: 'Add or remove admin staff and assign routes.', ceoOnly: true },
+    { label: 'Products', href: '/admin/products', icon: <FaBoxes size={40} />, id: '/ADMIN/PRODUCTS', description: 'Manage your product inventory, categories, and groups.' },
+    { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard size={40} />, id: '/ADMIN/INSTALLMENTS', description: 'Track installment payments and customer complaints.' },
+    { label: 'Site Settings', href: '/admin/settings', icon: <FaCog size={40} />, id: '/ADMIN/SETTINGS', description: 'Update site name, contacts, and social links.' },
+    { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar size={40} />, id: '/ADMIN/STATS', description: 'View sales data, revenue, and product statistics.' },
+    { label: 'CEO Profile', href: '/admin/about', icon: <FaUserTie size={40} />, id: '/ADMIN/ABOUT', description: 'Update CEO contact info, image, and shop message.' },
   ];
 
   const visibleCards = routeCards.filter(card => {

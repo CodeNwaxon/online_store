@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react';
 import AdminGuard from '@/components/AdminGuard';
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  setDoc,
+  deleteDoc,
   onSnapshot,
   getDoc
 } from 'firebase/firestore';
@@ -18,11 +18,12 @@ import { toast } from 'react-hot-toast';
 import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield } from 'react-icons/fa';
 import Image from 'next/image';
 
-const AVAILABLE_ROUTES = [
-  { id: 'products', label: 'Products' },
-  { id: 'installments', label: 'Installments' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'stats', label: 'Statistics' },
+const DEFAULT_INTERNAL_ROUTES = [
+  '/ADMIN/PRODUCTS',
+  '/ADMIN/INSTALLMENTS',
+  '/ADMIN/SETTINGS',
+  '/ADMIN/STATS',
+  '/ADMIN/ABOUT'
 ];
 
 export default function AdminManagement() {
@@ -61,6 +62,7 @@ export default function AdminManagement() {
   const [removePasskeyInput, setRemovePasskeyInput] = useState('');
   const [removePasskeyError, setRemovePasskeyError] = useState('');
   const [removeLoading, setRemoveLoading] = useState(false);
+  const [showDuplicateAdminOverlay, setShowDuplicateAdminOverlay] = useState(false);
 
   useEffect(() => {
     // Fetch current admins
@@ -74,7 +76,12 @@ export default function AdminManagement() {
       if (settingsDoc.exists()) {
         const data = settingsDoc.data();
         if (data.ceoInfo) setCeoInfo(data.ceoInfo);
-        if (data.savedUrls) setSavedUrls(data.savedUrls);
+
+        // Ensure defaults are present and all are uppercase
+        const existingUrls = (data.savedUrls || []).map((u: string) => u.toUpperCase());
+        const merged = Array.from(new Set([...DEFAULT_INTERNAL_ROUTES, ...existingUrls]));
+        setSavedUrls(merged);
+
         setSecurityStats({
           attempts: data.passkeyAttempts || 0,
           lockoutUntil: data.lockoutUntil || 0
@@ -95,7 +102,7 @@ export default function AdminManagement() {
     }
 
     const q = query(
-      collection(db, 'users'), 
+      collection(db, 'users'),
       where('email', '>=', cleanSearch),
       where('email', '<=', cleanSearch + '\uf8ff')
     );
@@ -119,6 +126,11 @@ export default function AdminManagement() {
     if (selectedRoutes.length === 0) {
       setRouteError(true);
       toast.error('Incomplete Setup: You cannot add an admin staff without assigning at least one route link. Please select the routes this staff should operate on.');
+      return;
+    }
+
+    if (admins.some(a => a.id === foundUser.id)) {
+      setShowDuplicateAdminOverlay(true);
       return;
     }
 
@@ -175,19 +187,46 @@ export default function AdminManagement() {
 
   const handleAddUrl = async () => {
     if (!urlLink) return;
-    let formattedUrl = urlLink.toLowerCase();
-    if (!formattedUrl.startsWith('admin/')) {
-      formattedUrl = `admin/${formattedUrl}`;
+
+    // Clean input: remove leading/trailing slashes and the 'admin/' prefix if already typed
+    let cleanInput = urlLink.trim().toUpperCase()
+      .replace(/^\/+/, '')           // Remove leading slashes
+      .replace(/^ADMIN\//i, '')      // Remove 'ADMIN/' if typed
+      .replace(/^\/+/, '');          // Remove any slashes that were after 'ADMIN/'
+
+    if (!cleanInput) return;
+
+    const formattedUrl = `/ADMIN/${cleanInput}`;
+
+    if (savedUrls.includes(formattedUrl)) {
+      toast.error('This route already exists.');
+      return;
     }
-    
+
     const newUrls = [...savedUrls, formattedUrl];
     try {
       await setDoc(doc(db, 'settings', 'general'), { savedUrls: newUrls }, { merge: true });
       setSavedUrls(newUrls);
       setUrlLink('');
-      toast.success('URL link saved!');
+      toast.success('Route link saved and synced to cloud!');
     } catch (error) {
-      toast.error('Failed to save URL.');
+      toast.error('Failed to save route to database.');
+    }
+  };
+
+  const handleDeleteUrl = async (urlToDelete: string) => {
+    const isDefault = DEFAULT_INTERNAL_ROUTES.includes(urlToDelete);
+    if (isDefault && !confirm(`Warning: "${urlToDelete}" is a core system route. Removing it from this list will prevent you from assigning it to staff. Are you sure?`)) {
+      return;
+    }
+
+    const newUrls = savedUrls.filter(u => u !== urlToDelete);
+    try {
+      await setDoc(doc(db, 'settings', 'general'), { savedUrls: newUrls }, { merge: true });
+      setSavedUrls(newUrls);
+      toast.success('Route removed from database.');
+    } catch (error) {
+      toast.error('Failed to sync removal to database.');
     }
   };
 
@@ -202,12 +241,12 @@ export default function AdminManagement() {
   const handleSaveCeoProfile = async () => {
     try {
       let imageUrl = ceoInfo.image;
-      
+
       if (imageFile) {
         const formData = new FormData();
         formData.append('file', imageFile);
         formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-        
+
         const res = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
           { method: 'POST', body: formData }
@@ -219,7 +258,7 @@ export default function AdminManagement() {
       await setDoc(doc(db, 'settings', 'general'), {
         ceoInfo: { ...ceoInfo, image: imageUrl }
       }, { merge: true });
-      
+
       toast.success('CEO Profile updated!');
     } catch (error) {
       toast.error('Failed to update profile.');
@@ -250,18 +289,18 @@ export default function AdminManagement() {
         toast.error(`Security Lockout: Too many failed attempts. Try again in ${hours}h ${minutes}m.`);
         return;
       }
-      
+
       // Validation: at least 8 chars, letters and numbers
       const passkeyRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
       if (!passkeyRegex.test(newPasskey)) {
         toast.error('Passkey must be at least 8 characters long and contain both letters and numbers.');
         return;
       }
-      
+
       if (oldPasskey !== currentPasskey) {
         const newAttempts = attempts + 1;
         let updateData: any = { passkeyAttempts: newAttempts };
-        
+
         if (newAttempts >= 10) {
           const lockUntil = Date.now() + 24 * 60 * 60 * 1000;
           updateData.lockoutUntil = lockUntil;
@@ -277,7 +316,7 @@ export default function AdminManagement() {
         return;
       }
 
-      await setDoc(doc(db, 'settings', 'general'), { 
+      await setDoc(doc(db, 'settings', 'general'), {
         passkey: newPasskey,
         passkeyAttempts: 0,
         lockoutUntil: 0
@@ -336,6 +375,25 @@ export default function AdminManagement() {
           </div>
         </div>
       )}
+
+      {/* ── DUPLICATE ADMIN OVERLAY ── */}
+      {showDuplicateAdminOverlay && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 px-4">
+          <div className="bg-card border border-border rounded-[var(--radius)] shadow-2xl w-full max-w-sm p-8 text-center animate-[slideIn_0.2s_ease]">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h3 className="font-bold text-xl mb-2">Staff Already Exists</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              The user <span className="text-primary font-bold">{foundUser?.email}</span> is already an admin staff member. You cannot add them twice.
+            </p>
+            <button
+              onClick={() => { setShowDuplicateAdminOverlay(false); setFoundUser(null); setSearchEmail(''); }}
+              className="w-full py-3 rounded-md bg-primary text-white font-bold hover:opacity-90 transition-opacity"
+            >
+              Got it, Close
+            </button>
+          </div>
+        </div>
+      )}
       <div className="max-w-[1000px] mx-auto space-y-8 md:space-y-12 pb-20 px-2 md:px-0">
         <header className="px-4 md:px-0">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -347,21 +405,31 @@ export default function AdminManagement() {
         {/* URL MANAGER SECTION */}
         <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
           <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaLink /> URL Manager</h2>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <input 
-              type="text" 
-              placeholder="e.g. staff-reports" 
-              className="flex-1 p-3 rounded-md border border-border bg-background text-sm"
-              value={urlLink}
-              onChange={(e) => setUrlLink(e.target.value)}
-            />
+          <div className="flex flex-col md:flex-row gap-2 mb-6">
+            <div className="flex-1 flex items-center bg-background border border-border rounded-md overflow-hidden focus-within:border-primary transition-colors">
+              <span className="pl-3 py-3 text-muted-foreground text-sm font-bold bg-muted/30 border-r border-border">/admin/</span>
+              <input 
+                type="text" 
+                placeholder="management" 
+                className="flex-1 p-3 bg-transparent text-sm focus:outline-none"
+                value={urlLink}
+                onChange={(e) => setUrlLink(e.target.value)}
+              />
+            </div>
             <button onClick={handleAddUrl} className="bg-primary text-white px-6 py-3 rounded-md font-bold text-sm">Save Link</button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3 max-h-[180px] md:max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
             {savedUrls.map(url => (
-              <span key={url} className="bg-muted px-3 py-1 rounded-full text-[0.7rem] font-semibold border border-border">
-                {url}
-              </span>
+              <div key={url} className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-2 border border-border rounded-md bg-muted/50 text-[0.6rem] md:text-[0.7rem] font-bold shadow-sm animate-in fade-in zoom-in duration-300">
+                <span className="tracking-tight text-primary/80">🔗 {url.replace(/^\/ADMIN\//, '')}</span>
+                <button
+                  onClick={() => handleDeleteUrl(url)}
+                  className="ml-2 p-1.5 rounded-full hover:bg-red-50 text-secondary transition-all hover:text-red-700"
+                  title="Remove this route"
+                >
+                  <FaTrash size={12} />
+                </button>
+              </div>
             ))}
           </div>
         </section>
@@ -369,18 +437,18 @@ export default function AdminManagement() {
         {/* ADMIN STAFF SECTION */}
         <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
           <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaUserPlus /> Manage Admin Staff</h2>
-          
+
           <div className="flex flex-col gap-4 mb-8">
             <div className="relative flex-1">
-              <input 
-                type="text" 
-                placeholder="Type name or email to search..." 
+              <input
+                type="text"
+                placeholder="Type name or email to search..."
                 className="w-full p-3 pl-10 rounded-md border border-border bg-background text-sm"
                 value={searchEmail}
                 onChange={(e) => setSearchEmail(e.target.value)}
               />
               <FaSearch className="absolute left-3 top-4 text-muted-foreground" />
-              
+
               {/* DYNAMIC RESULTS DROPDOWN */}
               {searchEmail.trim().length >= 2 && searchResults.length === 0 && (
                 <div className="absolute top-full left-0 w-full bg-card border border-border rounded-md shadow-xl mt-1 z-50 p-4 text-center text-xs text-muted-foreground">
@@ -390,7 +458,7 @@ export default function AdminManagement() {
               {searchResults.length > 0 && (
                 <div className="absolute top-full left-0 w-full bg-card border border-border rounded-md shadow-xl mt-1 z-50 overflow-hidden">
                   {searchResults.map(u => (
-                    <button 
+                    <button
                       key={u.id}
                       onClick={() => selectUser(u)}
                       className="w-full p-3 text-left hover:bg-muted border-b border-border last:border-0 flex flex-col"
@@ -414,24 +482,25 @@ export default function AdminManagement() {
                 </div>
                 <button onClick={handleAddAdmin} className="w-full md:w-auto bg-primary text-white px-6 py-2 rounded-md font-bold text-sm">Add as Admin</button>
               </div>
-              
+
               <div className="space-y-3">
                 <p className="text-sm font-bold">Assign Routes:</p>
-                <div className="flex flex-wrap gap-x-6 gap-y-3">
-                  {AVAILABLE_ROUTES.map(route => (
-                    <label key={route.id} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedRoutes.includes(route.id)}
+                <div className="flex flex-wrap gap-3">
+                  {savedUrls.map(route => (
+                    <label key={route} className="flex items-center gap-1.5 px-2 py-1.5 md:px-3 md:py-2 border border-border rounded-md hover:bg-primary/5 transition-colors cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedRoutes.includes(route)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedRoutes([...selectedRoutes, route.id]);
+                            setSelectedRoutes([...selectedRoutes, route]);
                             setRouteError(false);
                           }
-                          else setSelectedRoutes(selectedRoutes.filter(r => r !== route.id));
+                          else setSelectedRoutes(selectedRoutes.filter(r => r !== route));
                         }}
+                        className="accent-primary w-3 h-3 md:w-4 md:h-4"
                       />
-                      <span className="text-sm">{route.label}</span>
+                      <span className="text-[0.65rem] md:text-xs font-bold uppercase tracking-tight">{route.replace(/^\/ADMIN\//, '')}</span>
                     </label>
                   ))}
                 </div>
@@ -447,13 +516,13 @@ export default function AdminManagement() {
           <div className="space-y-4">
             <h3 className="font-bold text-[0.7rem] text-muted-foreground uppercase tracking-wider">Current Admin Staff</h3>
             {admins.filter(a => a.role !== 'CEO').map(admin => (
-              <div key={admin.id} className="flex justify-between items-center p-3 md:p-4 border border-border rounded-md hover:bg-muted/50 transition-colors">
-                <div className="min-w-0 pr-4">
+              <div key={admin.id} className="flex justify-between items-center p-2 md:p-4 border border-border rounded-md hover:bg-muted/50 transition-colors">
+                <div className="min-w-0 pr-2 md:pr-4">
                   <p className="font-bold text-sm truncate">{admin.email}</p>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     {admin.assignedRoutes?.map((route: string) => (
                       <span key={route} className="text-[#065f46] font-semibold text-[0.65rem] md:text-[0.7rem] bg-green-50 px-2 py-0.5 rounded-md border border-green-200 uppercase tracking-wider">
-                        {route}
+                        {route.replace(/^\/ADMIN\//, '')}
                       </span>
                     ))}
                   </div>
@@ -476,43 +545,43 @@ export default function AdminManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">Full Name</label>
-              <input 
-                type="text" 
-                className="w-full p-3 rounded-md border border-border bg-background text-sm" 
+              <input
+                type="text"
+                className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 value={ceoInfo.name}
-                onChange={(e) => setCeoInfo({...ceoInfo, name: e.target.value})}
+                onChange={(e) => setCeoInfo({ ...ceoInfo, name: e.target.value })}
               />
             </div>
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">Phone Number</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 value={ceoInfo.phone}
-                onChange={(e) => setCeoInfo({...ceoInfo, phone: e.target.value})}
+                onChange={(e) => setCeoInfo({ ...ceoInfo, phone: e.target.value })}
               />
             </div>
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">Email Address</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 value={ceoInfo.email}
-                onChange={(e) => setCeoInfo({...ceoInfo, email: e.target.value})}
+                onChange={(e) => setCeoInfo({ ...ceoInfo, email: e.target.value })}
               />
             </div>
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">Image URL (Optional)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 placeholder="https://..."
                 value={ceoInfo.image}
-                onChange={(e) => setCeoInfo({...ceoInfo, image: e.target.value})}
+                onChange={(e) => setCeoInfo({ ...ceoInfo, image: e.target.value })}
               />
             </div>
           </div>
-          
+
           <div className="mb-6">
             <label className="block text-xs md:text-sm font-bold mb-2">Or Upload Image</label>
             <input type="file" accept="image/*" onChange={handleImageChange} className="text-xs w-full" />
@@ -525,11 +594,11 @@ export default function AdminManagement() {
 
           <div className="mb-8">
             <label className="block text-xs md:text-sm font-bold mb-2">CEO Message (For About Page)</label>
-            <textarea 
-              rows={4} 
+            <textarea
+              rows={4}
               className="w-full p-3 rounded-md border border-border bg-background text-sm"
               value={ceoInfo.message}
-              onChange={(e) => setCeoInfo({...ceoInfo, message: e.target.value})}
+              onChange={(e) => setCeoInfo({ ...ceoInfo, message: e.target.value })}
             />
           </div>
 
@@ -544,8 +613,8 @@ export default function AdminManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">Old Passkey</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 className={`w-full p-3 rounded-md border bg-background text-sm ${oldPasskeyError ? 'border-secondary' : 'border-border'}`}
                 value={oldPasskey}
                 onChange={(e) => {
@@ -556,8 +625,8 @@ export default function AdminManagement() {
             </div>
             <div>
               <label className="block text-xs md:text-sm font-bold mb-2">New Passkey</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 placeholder="8+ chars (A-z, 0-9)"
                 className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 value={newPasskey}
@@ -566,14 +635,14 @@ export default function AdminManagement() {
             </div>
           </div>
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <button 
-              onClick={handleChangePasskey} 
+            <button
+              onClick={handleChangePasskey}
               disabled={securityStats.lockoutUntil > Date.now()}
               className="w-full md:w-auto bg-secondary text-white px-8 py-3 rounded-md font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {securityStats.lockoutUntil > Date.now() ? 'Locked Out' : 'Update Passcode'}
             </button>
-            
+
             {securityStats.attempts > 0 && securityStats.lockoutUntil <= Date.now() && (
               <span className="text-[0.7rem] text-muted-foreground font-medium">
                 {10 - securityStats.attempts} attempts remaining before 24h lockout.

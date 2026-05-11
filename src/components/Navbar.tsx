@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { 
   FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore, 
   FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaUserShield,
-  FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft
+  FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { usePathname, useParams } from 'next/navigation';
@@ -26,11 +26,12 @@ const navLinks = [
 
 const adminLinks = [
   { href: '/admin', label: 'Dashboard', icon: <FaHome />, id: 'dashboard' },
-  { href: '/admin/management', label: 'Management', icon: <FaUserShield />, id: 'management', ceoOnly: true },
-  { href: '/admin/products', label: 'Products', icon: <FaBoxes />, id: 'products' },
-  { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: 'installments' },
-  { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: 'settings' },
-  { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: 'stats' },
+  { href: '/admin/management', label: 'Management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
+  { href: '/admin/products', label: 'Products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
+  { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
+  { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
+  { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
+  { href: '/admin/about', label: 'CEO Profile', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
 ];
 
 export default function Navbar() {
