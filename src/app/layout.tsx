@@ -1,11 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   themeColor: "#D48806",
@@ -50,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.className} flex flex-col min-h-screen bg-background text-foreground antialiased`}>
+      <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <Toaster position="top-center" reverseOrder={false} />
         <Navbar />
         <main className="flex-1">{children}</main>

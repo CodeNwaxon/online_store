@@ -31,7 +31,7 @@ const adminLinks = [
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
   { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
-  { href: '/admin/about', label: 'CEO Profile', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
+  { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
 ];
 
 export default function Navbar() {
@@ -60,9 +60,9 @@ export default function Navbar() {
 
   const handleSignIn = async () => {
     try {
-      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
       const u = result.user;
-      // Save user profile to Firestore so CEO can search them in admin management
       await setDoc(doc(db, 'users', u.uid), {
         uid: u.uid,
         email: u.email,
@@ -72,8 +72,13 @@ export default function Navbar() {
       }, { merge: true });
       toast.success('Signed in!');
       setIsMenuOpen(false);
-    } catch {
-      toast.error('Sign in failed.');
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') return;
+      if (err?.code === 'auth/network-request-failed') {
+        toast.error('No internet connection. Please try again.');
+      } else {
+        toast.error('Sign in failed. Please try again.');
+      }
     }
   };
   const handleSignOut = async () => {

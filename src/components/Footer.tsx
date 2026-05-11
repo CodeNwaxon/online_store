@@ -5,8 +5,10 @@ import Image from 'next/image';
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaWhatsapp, FaYoutube, FaTiktok, FaShareAlt } from 'react-icons/fa';
 import FooterInstall from './FooterInstall';
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { toast } from 'react-hot-toast';
 
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -22,7 +24,17 @@ const ICON_MAP: any = {
 
 export default function Footer() {
   const [settings, setSettings] = useState<any>(null);
-  const { isAdmin, isCEO } = useAdmin();
+  const { isAdmin, isCEO, user } = useAdmin();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast.success('Signed out successfully!');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out.');
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -81,6 +93,16 @@ export default function Footer() {
               <li><Link href="/about#faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
               <li><Link href="/about#privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
+              {user && (
+                <li>
+                  <button 
+                    onClick={handleSignOut}
+                    className="text-muted-foreground hover:text-secondary transition-colors cursor-pointer p-0 bg-transparent border-none text-left w-full"
+                  >
+                    Sign Out
+                  </button>
+                </li>
+              )}
               <FooterInstall />
             </ul>
           </div>

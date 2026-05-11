@@ -3,7 +3,7 @@
 import AdminGuard from '@/components/AdminGuard';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -20,11 +20,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { label: 'Dashboard', href: '/admin', icon: <FaHome />, id: 'dashboard' },
-    { label: 'Management', href: '/admin/management', icon: <FaUserShield />, id: 'management', ceoOnly: true },
-    { label: 'Products', href: '/admin/products', icon: <FaBoxes />, id: 'products' },
-    { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: 'installments' },
-    { label: 'Settings', href: '/admin/settings', icon: <FaCog />, id: 'settings' },
-    { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar />, id: 'stats' },
+    { label: 'Management', href: '/admin/management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
+    { label: 'Products', href: '/admin/products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
+    { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
+    { label: 'Settings', href: '/admin/settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
+    { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar />, id: '/ADMIN/STATS' },
+    { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
   ];
 
   const filteredNav = navItems.filter(item => {

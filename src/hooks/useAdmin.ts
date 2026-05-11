@@ -44,7 +44,14 @@ export function useAdmin() {
               uid: authUser.uid,
               email: authUser.email || '',
               role: 'CEO',
-              assignedRoutes: ['management', 'products', 'installments', 'settings', 'stats']
+              assignedRoutes: [
+                '/ADMIN/MANAGEMENT',
+                '/ADMIN/PRODUCTS',
+                '/ADMIN/INSTALLMENTS',
+                '/ADMIN/SETTINGS',
+                '/ADMIN/STATS',
+                '/ADMIN/ABOUT'
+              ]
             });
           } else {
             setAdminData(null);

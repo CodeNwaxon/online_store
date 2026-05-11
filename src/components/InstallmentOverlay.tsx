@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@/data/products';
 import { installmentSettings } from '@/data/installmentSettings';
-import { FaTimes, FaCreditCard } from 'react-icons/fa';
+import { FaTimes, FaCreditCard, FaUser, FaPhone } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
@@ -22,6 +22,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [isProcessing, setIsProcessing] = useState(false);
   const [downPaymentInput, setDownPaymentInput] = useState<number | string>('');
   const [userEmail, setUserEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [loanStatus, setLoanStatus] = useState<'checking' | 'none' | 'active' | 'cancelling'>('checking');
   const router = useRouter();
 
@@ -70,6 +72,14 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const handleProceed = async () => {
     const amountToPay = Number(downPaymentInput);
 
+    if (!fullName || fullName.length < 3) {
+      toast.error('Please enter your full name.');
+      return;
+    }
+    if (!phone || phone.length < 10) {
+      toast.error('Please enter a valid phone number.');
+      return;
+    }
     if (!userEmail || !userEmail.includes('@')) {
       toast.error('Please enter a valid email address.');
       return;
@@ -122,11 +132,13 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           installmentId: '',
         });
 
-        const installmentRef = await addDoc(collection(db, 'installments'), {
-          userId: currentUser.uid,
-          userEmail: userEmail || currentUser.email,
-          productId: product.id,
-          productName: product.name,
+          const installmentRef = await addDoc(collection(db, 'installments'), {
+            userId: currentUser.uid,
+            userEmail: userEmail || currentUser.email,
+            customerName: fullName,
+            customerPhone: phone,
+            productId: product.id,
+            productName: product.name,
           productCategory: product.category,
           productImage: product.image,
           shippingFee: product.shipping,
@@ -275,17 +287,49 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
             </div>
           </div>
 
+          {/* Customer Info Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <h3 className="font-bold mb-2">Full Name</h3>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Your Full Name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full py-3 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                  required
+                />
+                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs" />
+              </div>
+            </div>
+            <div>
+              <h3 className="font-bold mb-2">Phone Number</h3>
+              <div className="relative">
+                <input
+                  type="tel"
+                  placeholder="080... or +234..."
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full py-3 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                  required
+                />
+                <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs" />
+              </div>
+            </div>
+          </div>
+
           {/* Email Section */}
           <div className="mb-6">
-            <h3 className="font-bold mb-3">Account Email (Linked to Account)</h3>
+            <h3 className="font-bold mb-2">Account Email</h3>
             <input
               type="email"
               readOnly
               value={userEmail}
-              className="w-full p-4 rounded-lg border border-border text-base bg-muted text-muted-foreground cursor-not-allowed outline-none"
+              className="w-full p-3 rounded-lg border border-border text-sm bg-muted text-muted-foreground cursor-not-allowed outline-none"
             />
-            <p className="text-[0.7rem] text-muted-foreground mt-1.5">
-              * This email is used for your loan tracking and receipts.
+            <p className="text-[0.65rem] text-muted-foreground mt-1">
+              * Linked to your account for receipts and tracking.
             </p>
           </div>
 

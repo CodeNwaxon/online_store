@@ -2,51 +2,76 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Admin (CEO) Bypass
-    function isCEO() {
-      return request.auth != null && request.auth.uid == "MRAnZKmiEDcg5xVOjMOtbULMOtb2";
+    // ─── 1. CORE AUTH & PROFILES (Priority for Sign-in) ───────────
+    
+    match /users/{userId} {
+      // Allow any authenticated user to read profiles (needed for search)
+      allow read: if request.auth != null;
+      // Allow users to manage their own profile document
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Installments Rules
-    match /installments/{installmentId} {
-      allow read: if isCEO() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
+    // ─── 2. HELPERS ───────────────────────────────────────────────
+    
+    function isCEO() {
+      return request.auth != null && (
+        request.auth.uid == "MRAnZKmiEDcg5xVOjMOtbULMOtb2" || 
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'CEO')
+      );
+    }
+
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid == "MRAnZKmiEDcg5xVOjMOtbULMOtb2" || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // ─── 3. COLLECTIONS ───────────────────────────────────────────
+
+    // Installments
+    match /installments/{id} {
+      allow read: if isAdmin() || (request.auth != null && (resource == null || resource.data.userEmail == request.auth.token.email));
       allow create: if request.auth != null;
-      allow update: if isCEO() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
+      allow update: if isAdmin() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
       allow delete: if isCEO();
     }
 
-    // Reviews Rules
-    match /reviews/{reviewId} {
-      allow read: if true;
+    // Receipts
+    match /receipts/{id} {
+      allow read: if isAdmin() || (request.auth != null && (resource == null || resource.data.userEmail == request.auth.token.email));
       allow create: if request.auth != null;
-      allow delete: if isCEO() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
+      allow update: if isAdmin();
+      allow delete: if isCEO();
     }
 
-    // Product Likes Rules
-    match /product_likes/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null || isCEO();
-    }
-
-    // Admin Staff Collection
+    // Admin Staff Management
     match /admins/{adminId} {
       allow read: if request.auth != null;
       allow write: if isCEO();
     }
 
-    // Settings Collection
+    // Site Settings
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isCEO();
     }
 
-    // Users Collection Rules
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Reviews & Product Interactions
+    match /reviews/{id} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow delete: if isCEO() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
     }
+
+    match /product_likes/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ─── 4. SAFETY NET ────────────────────────────────────────────
     
-    // Default deny for everything else
     match /{document=**} {
       allow read, write: if isCEO();
     }
