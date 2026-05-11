@@ -15,7 +15,6 @@ import { toast } from 'react-hot-toast';
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
   { href: '/shop', label: 'Shop', icon: <FaStore /> },
-  { href: '/installments', label: 'Installments', icon: <FaCreditCard /> },
   { href: '/about', label: 'About', icon: <FaInfoCircle /> },
   { href: '/contact', label: 'Contact', icon: <FaPhone /> },
 ];
@@ -26,9 +25,11 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
 
   useEffect(() => {
+    setMounted(true);
     const unsub = onAuthStateChanged(auth, setUser);
     return () => unsub();
   }, []);
@@ -96,7 +97,7 @@ export default function Navbar() {
             {/* Cart */}
             <button onClick={() => setIsCartOpen(true)} className="relative flex items-center p-1">
               <FaShoppingCart size={22} />
-              {totalItems > 0 && (
+              {mounted && totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-secondary text-white rounded-full w-[18px] h-[18px] text-[0.65rem] flex items-center justify-center font-bold">
                   {totalItems}
                 </span>

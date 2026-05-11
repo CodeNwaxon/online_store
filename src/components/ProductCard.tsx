@@ -23,7 +23,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="bg-card border border-border rounded md:rounded-[var(--radius)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-md h-full flex flex-col group">
+    <div className="bg-card border border-border md:rounded-[var(--radius)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-md h-full flex flex-col group">
       <Link href={`/product/${product.id}`}>
         <div className="relative h-[200px] max-md:h-[130px] w-full cursor-pointer">
           <Image

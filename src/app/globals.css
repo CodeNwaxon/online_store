@@ -22,6 +22,19 @@
   --radius-xl: calc(var(--radius) + 4px);
   
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
+  --animate-shrink: shrink 10s linear forwards;
+  --animate-slide-in: slideIn 0.5s ease-out;
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
 }
 
 @layer base {
@@ -60,5 +73,4 @@
       --card-foreground: #F5F2EF;
     }
   }
-
 }

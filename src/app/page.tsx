@@ -138,6 +138,18 @@ export default function Home() {
             </div>
           </div>
         ))}
+        
+        {/* Hero Dots */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+          {heroSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-white/40 w-4 hover:bg-white/60'}`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
       </section>
 
       {/* Features Section */}
