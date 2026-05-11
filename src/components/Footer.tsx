@@ -1,9 +1,50 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaFacebookF, FaInstagram, FaLinkedinIn, FaXTwitter } from 'react-icons/fa6';
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaWhatsapp, FaYoutube, FaTiktok, FaShareAlt } from 'react-icons/fa';
 import FooterInstall from './FooterInstall';
+import { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+import { useAdmin } from '@/hooks/useAdmin';
+
+const ICON_MAP: any = {
+  Facebook: <FaFacebook size={20} />,
+  Instagram: <FaInstagram size={20} />,
+  Twitter: <FaTwitter size={20} />,
+  LinkedIn: <FaLinkedin size={20} />,
+  WhatsApp: <FaWhatsapp size={20} />,
+  YouTube: <FaYoutube size={20} />,
+  TikTok: <FaTiktok size={20} />,
+};
 
 export default function Footer() {
+  const [settings, setSettings] = useState<any>(null);
+  const { isAdmin, isCEO } = useAdmin();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const docSnap = await getDoc(doc(db, 'settings', 'general'));
+      if (docSnap.exists()) setSettings(docSnap.data());
+    };
+    fetchSettings();
+  }, []);
+
+  const siteName = settings?.siteName || 'Quick Choice';
+  const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with ${siteName}®.`;
+
+  // Function to highlight site name in message
+  const renderMessage = (msg: string, name: string) => {
+    const parts = msg.split(new RegExp(`(${name})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === name.toLowerCase() 
+        ? <span key={i} className="text-primary font-bold">{part}</span> 
+        : part
+    );
+  };
+
   return (
     <footer className="bg-card border-t border-border pt-16 pb-8 mt-auto">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
@@ -12,23 +53,26 @@ export default function Footer() {
             <div className="flex gap-4 items-start">
               <Image
                 src="/logos.png"
-                alt="Quick Choice Logo"
+                alt="Logo"
                 width={40}
                 height={40}
                 className="object-contain shrink-0 border-2 border-primary rounded p-0.5"
               />
               <p className="text-muted-foreground text-[0.9rem] m-0">
-                Premium African-inspired store bringing you the best in electronics, furniture, and more with <span className="text-[#646668ff] font-bold">Quick Choice&reg;</span>.
+                {renderMessage(footerMessage, siteName)}
               </p>
             </div>
           </div>
           <div>
-            <h4 className="mb-6 text-[#007bff] font-bold">Quick Choice</h4>
+            <h4 className="mb-6 text-primary font-bold">{siteName}</h4>
             <ul className="list-none flex flex-col gap-3">
               <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
               <li><Link href="/shop" className="text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
               <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact</Link></li>
+              {isAdmin && (
+                <li><Link href="/admin" className="text-secondary font-bold hover:text-primary transition-colors">{isCEO ? 'CEO Panel' : 'Admin Panel'}</Link></li>
+              )}
             </ul>
           </div>
           <div>
@@ -43,15 +87,18 @@ export default function Footer() {
           <div>
             <h4 className="mb-6 font-bold">Connect With Us</h4>
             <div className="flex gap-4">
-              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="Facebook"><FaFacebookF size={20} /></a>
-              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="X"><FaXTwitter size={20} /></a>
-              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="Instagram"><FaInstagram size={20} /></a>
-              <a href="#" className="text-primary hover:text-primary-hover transition-colors" aria-label="LinkedIn"><FaLinkedinIn size={20} /></a>
+              {settings?.socialLinks?.map((link: any, i: number) => (
+                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
+                  {ICON_MAP[link.platform] || <FaShareAlt size={20} />}
+                </a>
+              )) || (
+                <p className="text-xs text-muted-foreground italic">Follow us on social media</p>
+              )}
             </div>
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-border text-center text-muted-foreground text-sm">
-          &copy; {new Date().getFullYear()} Quick Choice. All rights reserved. Designed with passion.
+          &copy; {new Date().getFullYear()} {siteName}. All rights reserved. Designed with passion.
         </div>
       </div>
     </footer>

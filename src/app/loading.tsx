@@ -8,9 +8,9 @@ export default function Loading() {
       <div className="relative w-[100px] h-[100px]">
         {/* Circling Ring */}
         <div className="absolute inset-0 rounded-full border-4 border-muted border-t-primary animate-spin" />
-        
+
         {/* Small Logo in Center */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] rounded-full overflow-hidden border-2 border-primary p-1 bg-white">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] overflow-hidden p-1 bg-white">
           <Image
             src="/logos.png"
             alt="Loading..."
@@ -20,7 +20,7 @@ export default function Loading() {
           />
         </div>
       </div>
-      
+
       <p className="mt-6 font-bold text-primary tracking-[2px] text-sm uppercase">
         Quick Choice
       </p>
