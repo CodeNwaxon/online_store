@@ -142,68 +142,88 @@ export default function AdminInstallments() {
           </div>
 
           {/* INSTALLMENT CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0 pb-10">
-            {filteredInstallments.map(inst => (
-              <div 
-                key={inst.id}
-                onClick={() => markAsRead(inst)}
-                className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden
-                  ${inst.status === 'cancelled' && !inst.isRefunded ? 'border-secondary animate-[pulse_2s_infinite]' : 'border-border'}
-                  ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
-                `}
-              >
-                {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
-                {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
-                
-                <div className="flex items-center gap-3 md:gap-4 mb-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
-                    <FaUser size={18} />
+          {filteredInstallments.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0 pb-10">
+              {filteredInstallments.map(inst => (
+                <div 
+                  key={inst.id}
+                  onClick={() => markAsRead(inst)}
+                  className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden
+                    ${inst.status === 'cancelled' && !inst.isRefunded ? 'border-secondary animate-[pulse_2s_infinite]' : 'border-border'}
+                    ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
+                  `}
+                >
+                  {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
+                  {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
+                  
+                  <div className="flex items-center gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
+                      <FaUser size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.payerInfo?.fullName || 'Unknown'}</h3>
+                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate">{inst.product?.name || 'Product deleted'}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.payerInfo?.fullName || 'Unknown'}</h3>
-                    <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate">{inst.product?.name || 'Product deleted'}</p>
-                  </div>
-                </div>
 
-                <div className="space-y-2 text-[0.8rem] md:text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Down Payment:</span>
-                    <span className="font-bold text-primary">₦{inst.downPayment?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-bold">{inst.months} Months</span>
+                  <div className="space-y-2 text-[0.8rem] md:text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Down Payment:</span>
+                      <span className="font-bold text-primary">₦{inst.downPayment?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-bold">{inst.months} Months</span>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded-xl border border-dashed border-border mx-4 md:mx-0">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                <FaWallet size={30} />
               </div>
-            ))}
-          </div>
+              <h3 className="text-lg font-bold">No installments</h3>
+              <p className="text-sm text-muted-foreground">There are currently no installment plans to display for this filter.</p>
+            </div>
+          )}
         </div>
       ) : (
         /* COMPLAINTS LIST */
         <div className="space-y-4 px-4 md:px-0">
-          {complaints.map(comp => (
-            <div 
-              key={comp.id}
-              onClick={() => markAsRead(comp)}
-              className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 transition-all hover:border-primary cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4
-                ${comp.isNew ? 'border-secondary animate-pulse' : 'border-border'}
-              `}
-            >
-              <div className="flex items-center gap-4 md:gap-6">
-                <div className="text-primary shrink-0"><FaExclamationCircle size={20} /></div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-sm md:text-base">{comp.name}</h3>
-                  <p className="text-[0.8rem] md:text-sm text-muted-foreground line-clamp-1">{comp.message}</p>
+          {complaints.length > 0 ? (
+            complaints.map(comp => (
+              <div 
+                key={comp.id}
+                onClick={() => markAsRead(comp)}
+                className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 transition-all hover:border-primary cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4
+                  ${comp.isNew ? 'border-secondary animate-pulse' : 'border-border'}
+                `}
+              >
+                <div className="flex items-center gap-4 md:gap-6">
+                  <div className="text-primary shrink-0"><FaExclamationCircle size={20} /></div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm md:text-base">{comp.name}</h3>
+                    <p className="text-[0.8rem] md:text-sm text-muted-foreground line-clamp-1">{comp.message}</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 w-full sm:w-auto justify-end">
+                  <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setShowPasskeyModal({ type: 'deleteComplaint', id: comp.id }); }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
                 </div>
               </div>
-              <div className="flex gap-4 w-full sm:w-auto justify-end">
-                <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
-                <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
-                <button onClick={(e) => { e.stopPropagation(); setShowPasskeyModal({ type: 'deleteComplaint', id: comp.id }); }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
+                <FaExclamationCircle size={30} />
               </div>
+              <h3 className="text-lg font-bold">No complaints from customers</h3>
+              <p className="text-sm text-muted-foreground">Everything seems to be running smoothly. No complaints reported yet.</p>
             </div>
-          ))}
+          )}
         </div>
       )}
 

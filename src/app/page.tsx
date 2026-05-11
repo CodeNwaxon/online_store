@@ -77,7 +77,7 @@ export default function Home() {
       <section className="relative h-[650px] overflow-hidden bg-foreground">
         {heroSlides.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/40">
-            <p className="text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
+            <p className="p-3 md:text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
           </div>
         ) : (
           heroSlides.map((slide, index) => (
@@ -131,7 +131,7 @@ export default function Home() {
             </div>
           ))
         )}
-        
+
         {/* Hero Dots */}
         {heroSlides.length > 1 && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
