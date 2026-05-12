@@ -112,7 +112,7 @@ function ShopContent() {
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
                 className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
-                {showPromoOnly ? 'Showing Promos' : 'Promos'}
+                Promos
               </button>
 
               <button
@@ -120,7 +120,7 @@ function ShopContent() {
                 className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
-                {showLikedOnly ? 'Showing Favorites' : 'Favorites'}
+                Favorites
               </button>
 
             </div>
