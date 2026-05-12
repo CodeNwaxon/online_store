@@ -13,6 +13,8 @@ export interface Product {
   isPromo?: boolean;
   oldPrice?: number;
   shipping: number; // Shipping cost
+  quantity?: number;
+  group?: string;
 }
 
 export const products: Product[] = [

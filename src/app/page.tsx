@@ -74,7 +74,7 @@ export default function Home() {
     <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section className="relative h-[650px] overflow-hidden bg-foreground">
+      <section className="relative h-[70vh] max-h-[650px] max-md:h-[60vh] max-md:max-h-[500px] overflow-y-auto bg-foreground scrollbar-hide">
         {heroSlides.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/40">
             <p className="p-3 md:text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>

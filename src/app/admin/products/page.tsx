@@ -28,6 +28,16 @@ const formatStructure = (str: string) => {
   return str.trim().toUpperCase();
 };
 
+const formatPriceInput = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  return new Intl.NumberFormat().format(parseInt(digits));
+};
+
+const parsePriceInput = (value: string) => {
+  return value.replace(/\D/g, "");
+};
+
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +77,9 @@ export default function AdminProducts() {
   const [newGroupName, setNewGroupName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Delete confirmation state
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), (snap) => {
@@ -128,6 +141,20 @@ export default function AdminProducts() {
 
   const handleAddImageUrl = () => {
     if (!imageUrlInput) return;
+
+    try {
+      const url = new URL(imageUrlInput);
+      const allowedDomains = ['res.cloudinary.com', 'picsum.photos', 'encrypted-tbn3.gstatic.com', 'images.unsplash.com'];
+      const isAllowed = allowedDomains.some(domain => url.hostname.includes(domain));
+      
+      if (!isAllowed) {
+        toast.error(`Warning: Host "${url.hostname}" might not be configured. Image may not show in store cards.`, { duration: 5000 });
+      }
+    } catch {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+
     if (images.length >= 4) {
       toast.error('Maximum 4 images allowed');
       return;
@@ -196,13 +223,13 @@ export default function AdminProducts() {
 
       const productData = {
         name: formatName(name),
-        price: isPromo ? Number(oldPrice) : Number(price),
+        price: isPromo ? Number(parsePriceInput(oldPrice)) : Number(parsePriceInput(price)),
         description,
         group: formatStructure(group),
         category: formatStructure(category),
         quantity: Number(quantity),
         isPromo,
-        oldPrice: isPromo ? Number(price) : null,
+        oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: 'Quick Choice', // Default or add to form
@@ -235,23 +262,29 @@ export default function AdminProducts() {
     setIsPromo(product.isPromo || false);
     // Logic: price (state) = original price, oldPrice (state) = promo price
     if (product.isPromo) {
-      setPrice(product.oldPrice?.toString() || '');
-      setOldPrice(product.price.toString());
+      setPrice(formatPriceInput(product.oldPrice?.toString() || ''));
+      setOldPrice(formatPriceInput(product.price.toString()));
     } else {
-      setPrice(product.price.toString());
+      setPrice(formatPriceInput(product.price.toString()));
       setOldPrice('');
     }
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  const handleDelete = (id: string) => {
+    setProductToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
+      await deleteDoc(doc(db, 'products', productToDelete));
       toast.success('Product deleted.');
     } catch (error) {
       toast.error('Failed to delete.');
+    } finally {
+      setProductToDelete(null);
     }
   };
 
@@ -281,8 +314,15 @@ export default function AdminProducts() {
               <input required value={name} onChange={e => setName(e.target.value)} type="text" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs md:text-sm font-bold">Price (₦)</label>
-              <input required value={price} onChange={e => setPrice(e.target.value)} type="number" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+              <label className="text-xs md:text-sm font-bold text-primary">Price (₦)</label>
+              <input 
+                required 
+                value={price} 
+                onChange={e => setPrice(formatPriceInput(e.target.value))} 
+                type="text" 
+                placeholder="e.g. 50,000"
+                className="w-full p-3 rounded-md border border-primary/30 bg-background text-sm focus:border-primary outline-none transition-all font-bold" 
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold flex justify-between items-center">
@@ -380,12 +420,19 @@ export default function AdminProducts() {
               {isPromo && (
                 <div className="flex flex-row gap-4 animate-[slideIn_0.2s_ease] mt-2">
                   <div className="flex-1">
-                    <label className="text-[0.65rem] font-bold block mb-1 text-muted-foreground uppercase">Old Price (Auto)</label>
-                    <input readOnly value={price} type="number" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
+                    <label className="text-[0.65rem] font-bold block mb-1 text-muted-foreground uppercase">Original Price</label>
+                    <input readOnly value={price} type="text" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
                   </div>
                   <div className="flex-1">
-                    <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">New Promo Price (₦)</label>
-                    <input required value={oldPrice} onChange={e => setOldPrice(e.target.value)} type="number" className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold" />
+                    <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">Promo Price (₦)</label>
+                    <input 
+                      required 
+                      value={oldPrice} 
+                      onChange={e => setOldPrice(formatPriceInput(e.target.value))} 
+                      type="text" 
+                      placeholder="e.g. 45,000"
+                      className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none" 
+                    />
                   </div>
                 </div>
               )}
@@ -401,17 +448,29 @@ export default function AdminProducts() {
           <div className="space-y-4">
             <label className="text-xs md:text-sm font-bold">Product Images (Min 1, Max 4)</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Paste Image URL..." 
-                  className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
-                  value={imageUrlInput}
-                  onChange={e => setImageUrlInput(e.target.value)}
-                />
-                <button type="button" onClick={handleAddImageUrl} className="bg-muted p-3 rounded-md border border-border hover:bg-muted/80">
-                  <FaLink />
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Paste Image URL..." 
+                    className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
+                    value={imageUrlInput}
+                    onChange={e => setImageUrlInput(e.target.value)}
+                  />
+                  <button type="button" onClick={handleAddImageUrl} className="bg-primary text-white p-3 rounded-md hover:bg-primary-hover shadow-sm transition-colors">
+                    <FaPlus />
+                  </button>
+                </div>
+                {imageUrlInput && (
+                  <div className="mt-1 h-12 w-20 rounded border border-border overflow-hidden bg-muted animate-in fade-in slide-in-from-top-1">
+                    <img 
+                      src={imageUrlInput} 
+                      alt="Live Preview" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                    />
+                  </div>
+                )}
               </div>
               <div className="relative">
                 <label className="flex items-center justify-center gap-2 p-3 rounded-md border border-dashed border-primary bg-primary/5 text-primary font-bold cursor-pointer hover:bg-primary/10 transition-colors text-sm">
@@ -424,12 +483,16 @@ export default function AdminProducts() {
             {/* PREVIEW */}
             <div className="flex flex-wrap gap-4 mt-4">
               {images.map((img, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border group">
-                  <Image 
+                <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border group bg-muted">
+                  {/* Use standard img for preview to avoid Next.js Image component hostname restriction crashes in admin */}
+                  <img 
                     src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)} 
                     alt="preview" 
-                    fill 
-                    className="object-cover" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Invalid+Image';
+                      toast.error('One of your images failed to load.');
+                    }}
                   />
                   <button 
                     type="button" 
@@ -569,25 +632,60 @@ export default function AdminProducts() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
-            <div key={product.id} className="relative group">
-              <div className="opacity-0 group-hover:opacity-100 absolute top-2 right-2 z-10 flex gap-2 transition-opacity">
-                <button onClick={() => handleEdit(product)} className="bg-white text-blue-600 p-2 rounded-full shadow-md hover:bg-blue-50">
-                  <FaEdit />
+            <div key={product.id} className="relative group bg-card rounded-[var(--radius)] overflow-hidden">
+              <div className="absolute top-12 right-2 z-30 flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 md:translate-x-2 md:group-hover:translate-x-0 opacity-100 translate-x-0 transition-all duration-300">
+                <button 
+                  onClick={() => handleEdit(product)} 
+                  className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
+                  title="Edit Product"
+                >
+                  <FaEdit size={14} />
                 </button>
-                <button onClick={() => handleDelete(product.id)} className="bg-white text-red-600 p-2 rounded-full shadow-md hover:bg-red-50">
-                  <FaTrash />
+                <button 
+                  onClick={() => handleDelete(product.id)} 
+                  className="bg-red-500 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
+                  title="Delete Product"
+                >
+                  <FaTrash size={14} />
                 </button>
               </div>
-              <div className="pointer-events-none">
-                <ProductCard product={product} />
-              </div>
-              <div className="absolute bottom-2 left-2 bg-primary/90 text-white px-2 py-1 rounded text-xs font-bold">
-                Qty: {product.quantity}
+              
+              <div className="relative">
+                <ProductCard product={product} isAdmin={true} />
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* DELETE CONFIRMATION OVERLAY */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-sm rounded-[var(--radius)] border border-border shadow-2xl p-6 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <div className="bg-red-100 text-red-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaTrash size={20} />
+              </div>
+              <h3 className="text-xl font-bold">Delete Product?</h3>
+              <p className="text-sm text-muted-foreground">This action cannot be undone. The product will be permanently removed from your store.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={confirmDelete}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-bold transition-colors"
+              >
+                Yes, Delete
+              </button>
+              <button 
+                onClick={() => setProductToDelete(null)}
+                className="w-full bg-muted hover:bg-muted/80 text-foreground py-3 rounded-md font-bold transition-colors border border-border"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
