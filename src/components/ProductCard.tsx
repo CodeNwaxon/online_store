@@ -41,13 +41,28 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
         </span>
       )}
       {product.images && product.images.length > 1 && (
-        <button
-          onClick={cycleImage}
-          className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-20 shadow-sm hover:bg-white transition-colors"
-          title="See next image"
-        >
-          <FaEllipsisV size={16} className="text-primary" />
-        </button>
+        <>
+          <button
+            onClick={cycleImage}
+            className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm hover:bg-white transition-colors"
+            title="See next image"
+          >
+            <FaEllipsisV size={14} className="text-primary" />
+          </button>
+          <div className="absolute bottom-2 left-3 flex gap-1.5 max-md:gap-2.5 z-20">
+            {product.images.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(i); }}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  currentImgIndex === i 
+                    ? 'bg-primary w-4' 
+                    : 'bg-white/60 w-1.5 hover:bg-white'
+                }`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
