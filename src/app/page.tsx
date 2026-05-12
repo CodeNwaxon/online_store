@@ -133,18 +133,18 @@ export default function Home() {
                         <div className={`text-lg ${theme.accent} font-semibold mb-2`}>
                           {slide.manufacturer || slide.group}
                         </div>
-                        <h1 className={`text-5xl max-md:text-2xl font-bold mb-4 leading-[1.1] ${theme.text}`}>
+                        <h1 className={`text-4xl max-md:text-xl font-bold mb-4 leading-[1.1] ${theme.text}`}>
                           {slide.name}
                         </h1>
-                        <div className="flex items-center gap-4 mb-6 max-md:justify-center">
-                          <span className={`text-3xl max-md:text-xl font-bold ${theme.accent}`}>
-                            ₦{slide.price?.toLocaleString()}
-                          </span>
+                        <div className="flex flex-col md:gap-1 mb-6 max-md:flex-row max-md:gap-4 max-md:items-center max-md:justify-center">
                           {slide.oldPrice && (
-                            <span className="text-xl max-md:text-base line-through text-slate-400 font-bold bg-white/50 px-2 py-0.5 rounded">
+                            <span className="text-2xl max-md:text-base line-through text-slate-400 font-bold">
                               ₦{slide.oldPrice?.toLocaleString()}
                             </span>
                           )}
+                          <span className={`text-4xl max-md:text-xl font-bold ${theme.accent}`}>
+                            ₦{slide.price?.toLocaleString()}
+                          </span>
                         </div>
                         <p className={`text-lg mb-10 ${theme.subtext} leading-relaxed max-md:text-xs max-md:mb-6 line-clamp-3`}>
                           {slide.description}
@@ -163,17 +163,17 @@ export default function Home() {
                       </div>
 
                       {/* Product Image Container */}
-                      <div className="flex-1 flex justify-center md:justify-end items-center h-full max-md:h-[60%] w-full">
-                        <div className="relative w-full h-full flex items-center justify-center md:justify-end md:p-8">
+                      <div className="flex-1 flex justify-center items-center h-full max-md:h-[60%] w-full">
+                        <div className="relative w-full h-full md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero">
                           {slide.isPromo && (
-                            <span className="absolute top-10 right-4 max-md:top-14 max-md:right-2 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm">
+                            <span className="absolute top-4 left-4 bg-secondary text-white px-2 py-0.5 rounded text-xs font-bold z-20 shadow-sm">
                               SPECIAL PROMO
                             </span>
                           )}
                           <img
                             src={slide.image}
                             alt={slide.name}
-                            className="w-full h-full object-cover md:rounded-xl md:shadow-2xl transform hover:scale-105 transition-transform duration-700"
+                            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
                           />
                         </div>
                       </div>
