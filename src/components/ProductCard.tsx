@@ -26,44 +26,46 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
 
   const CardContent = (
-    <div className="relative h-[200px] max-md:h-[130px] w-full cursor-pointer bg-muted/20">
-      <Image
-        src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
-        alt={product.name}
-        fill
-        className="object-contain p-2 transition-all duration-300 group-hover:scale-105"
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        onError={() => setImgError(true)}
-      />
-      {product.isPromo && (
-        <span className="absolute top-2.5 left-2.5 bg-secondary text-white px-2 py-0.5 rounded text-xs font-bold z-10">
-          PROMO
-        </span>
-      )}
-      {product.images && product.images.length > 1 && (
-        <>
-          <button
-            onClick={cycleImage}
-            className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm hover:bg-white transition-colors"
-            title="See next image"
-          >
-            <FaEllipsisV size={14} className="text-primary" />
-          </button>
-          <div className="absolute bottom-2 left-3 flex gap-1.5 max-md:gap-2.5 z-20">
-            {product.images.map((_, i) => (
-              <button
-                key={i}
-                onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(i); }}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  currentImgIndex === i 
-                    ? 'bg-primary w-4' 
-                    : 'bg-white/60 w-1.5 hover:bg-white'
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      )}
+    <div className={`relative h-[280px] max-md:h-[200px] w-full cursor-pointer bg-muted/20 p-1`}>
+      <div className="relative w-full h-full overflow-hidden rounded-md">
+        <Image
+          src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
+          alt={product.name}
+          fill
+          className="object-cover transition-all duration-300 group-hover:scale-110"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={() => setImgError(true)}
+        />
+        {product.isPromo && (
+          <span className="absolute top-2.5 left-2.5 bg-secondary text-white px-2 py-0.5 rounded text-xs font-bold z-10">
+            PROMO
+          </span>
+        )}
+        {product.images && product.images.length > 1 && (
+          <>
+            <button
+              onClick={cycleImage}
+              className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm hover:bg-white transition-colors"
+              title="See next image"
+            >
+              <FaEllipsisV size={14} className="text-primary" />
+            </button>
+            <div className="absolute bottom-4 left-3 flex gap-1.5 max-md:gap-2.5 z-20">
+              {product.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(i); }}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    currentImgIndex === i 
+                      ? 'bg-primary w-4' 
+                      : 'bg-white/60 w-1.5 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 

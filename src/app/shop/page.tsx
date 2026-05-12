@@ -2,17 +2,21 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { products, Category } from '@/data/products';
+import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
 import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } from 'react-icons/fa';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 function ShopContent() {
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get('category') as Category | 'All' | null;
+  const initialCategory = searchParams.get('category');
 
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>(initialCategory || 'All');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | 'All'>('All');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedGroup, setSelectedGroup] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
@@ -20,37 +24,63 @@ function ShopContent() {
   const [userLikes, setUserLikes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const prodSnap = await getDocs(collection(db, 'products'));
+        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts(staticProducts);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
     const stored = JSON.parse(localStorage.getItem('user_likes') || '{}');
     setUserLikes(stored);
   }, []);
 
-  // Reset subcategory when category changes
+  // Reset category when group changes
   useEffect(() => {
-    setSelectedSubcategory('All');
-  }, [selectedCategory]);
+    setSelectedCategory('All');
+  }, [selectedGroup]);
 
-  const categories: (Category | 'All')[] = ['All', 'Electronics', 'Furniture'];
+  const groups = ['All', ...Array.from(new Set(products.map(p => p.group))).filter(Boolean)].sort();
 
-  // Get unique subcategories for the selected category
-  const availableSubcategories = Array.from(new Set(
+  // Get unique categories for the selected group
+  const availableCategories = Array.from(new Set(
     products
-      .filter(p => p.category === selectedCategory)
-      .map(p => p.subcategory)
-      .filter((s): s is string => !!s)
+      .filter(p => p.group === selectedGroup)
+      .map(p => p.category)
+      .filter((c): c is string => !!c)
   )).sort();
 
   const filteredProducts = products.filter(product => {
+    const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSubcategory = selectedSubcategory === 'All' || product.subcategory === selectedSubcategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.manufacturer && product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesLiked = !showLikedOnly || userLikes[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
-    return matchesCategory && matchesSubcategory && matchesSearch && matchesLiked && matchesPromo;
+    return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo;
   });
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
+
+  if (loading) {
+    return (
+      <div className="py-32 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-muted-foreground animate-pulse text-xl">Discovering our collection...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-16">
@@ -69,13 +99,13 @@ function ShopContent() {
           {/* Main Filters Bar */}
           <div className="flex flex-wrap gap-6 items-center justify-between p-3 md:p-6 bg-card border border-border md:rounded-[var(--radius)]">
             <div className="flex gap-3 flex-wrap">
-              {categories.map(category => (
+              {groups.map(group => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedCategory === category ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  key={group}
+                  onClick={() => setSelectedGroup(group)}
+                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
-                  {category}
+                  {group}
                 </button>
               ))}
 
@@ -99,7 +129,7 @@ function ShopContent() {
             <div className="relative flex-1 min-w-[250px]">
               <input
                 type="text"
-                placeholder="Search by name, brand (LG, TCL, etc.) or description..."
+                placeholder="Search by name, brand or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
@@ -111,22 +141,22 @@ function ShopContent() {
             </div>
           </div>
 
-          {/* Subcategories Bar - Only shown when a specific category is selected and has subcategories */}
-          {selectedCategory !== 'All' && availableSubcategories.length > 0 && (
+          {/* Categories Bar - Only shown when a specific group is selected and has categories */}
+          {selectedGroup !== 'All' && availableCategories.length > 0 && (
             <div className="flex gap-3 flex-wrap p-4 bg-muted rounded-[var(--radius)] border border-border animate-[fadeIn_0.3s_ease-out]">
               <button
-                onClick={() => setSelectedSubcategory('All')}
-                className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                onClick={() => setSelectedCategory('All')}
+                className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
               >
-                All {selectedCategory}
+                All {selectedGroup}
               </button>
-              {availableSubcategories.map(sub => (
+              {availableCategories.map(cat => (
                 <button
-                  key={sub}
-                  onClick={() => setSelectedSubcategory(sub)}
-                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === sub ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
-                  {sub}
+                  {cat}
                 </button>
               ))}
             </div>
@@ -142,11 +172,11 @@ function ShopContent() {
           </div>
         ) : (
           <div className="text-center py-16">
-            <h3 className="text-2xl mb-4">No products found</h3>
+            <h3 className="text-2xl mb-4 text-muted-foreground">No products found</h3>
             <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
             <button
               className="border border-border hover:bg-muted text-foreground px-4 py-2 rounded-md font-semibold mt-6 inline-block transition-colors"
-              onClick={() => { setSelectedCategory('All'); setSelectedSubcategory('All'); setSearchQuery(''); setVisibleCount(20); }}
+              onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); setSearchQuery(''); setVisibleCount(20); }}
             >
               Reset All Filters
             </button>
@@ -175,3 +205,4 @@ export default function Shop() {
     </Suspense>
   );
 }
+

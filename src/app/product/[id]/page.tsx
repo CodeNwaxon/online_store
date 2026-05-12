@@ -1,20 +1,63 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { products } from '@/data/products';
+import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
 export default function ProductDetail() {
   const params = useParams();
   const id = params.id as string;
-  const product = products.find((p) => p.id === id);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        // Try to find in Firestore first
+        const docRef = doc(db, 'products', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          setProduct({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          // Fallback to static products
+          const staticProd = staticProducts.find((p) => p.id === id);
+          if (staticProd) setProduct(staticProd);
+        }
+
+        // Fetch all products for related section
+        const prodSnap = await getDocs(collection(db, 'products'));
+        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAllProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="py-32 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-muted-foreground animate-pulse">Loading product details...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -27,7 +70,12 @@ export default function ProductDetail() {
     );
   }
 
-  const whatsappMessage = `I want to make enquiries about ${product.name}, ${product.manufacturer}, and ₦${product.price.toLocaleString()}.`;
+  // Ensure images array exists
+  const productImages = product.images && product.images.length > 0
+    ? product.images
+    : [product.image];
+
+  const whatsappMessage = `I want to make enquiries about ${product.name}, ${product.manufacturer || 'Quick Choice'}, and ₦${product.price.toLocaleString()}.`;
   const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
@@ -42,25 +90,27 @@ export default function ProductDetail() {
           <div>
             <div className="relative h-[500px] max-md:h-[300px] w-full rounded-[var(--radius)] overflow-hidden bg-muted">
               <Image
-                src={product.images[activeImageIndex]}
+                src={productImages[activeImageIndex]}
                 alt={product.name}
                 fill
-                className="object-contain"
+                className="object-cover"
                 priority
               />
             </div>
 
-            <div className="flex gap-4 mt-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded">
-              {product.images.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveImageIndex(index)}
-                  className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
-                >
-                  <Image src={img} alt={`${product.name} ${index}`} fill className="object-cover" />
-                </button>
-              ))}
-            </div>
+            {productImages.length > 1 && (
+              <div className="flex gap-4 mt-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded">
+                {productImages.map((img: string, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveImageIndex(index)}
+                    className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
+                  >
+                    <Image src={img} alt={`${product.name} ${index}`} fill className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right Side: Details */}
@@ -70,7 +120,7 @@ export default function ProductDetail() {
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name}</h1>
             <div className="text-lg text-muted-foreground mb-6">
-              Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
+              Manufactured by <span className="font-semibold text-foreground">{product.manufacturer || 'Quick Choice'}</span>
             </div>
 
             <div className="text-3xl font-bold text-primary mb-8">
@@ -120,13 +170,11 @@ export default function ProductDetail() {
         <div className="mt-24 max-md:mt-16">
           <h2 className="text-2xl md:text-3xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-8">
-            {products
+            {allProducts
               .filter(p => p.id !== product.id)
               .sort((a, b) => {
-                // Priority 1: Same subcategory
                 if (a.subcategory === product.subcategory && b.subcategory !== product.subcategory) return -1;
                 if (b.subcategory === product.subcategory && a.subcategory !== product.subcategory) return 1;
-                // Priority 2: Same category
                 if (a.category === product.category && b.category !== product.category) return -1;
                 if (b.category === product.category && a.category !== product.category) return 1;
                 return 0;
@@ -136,8 +184,14 @@ export default function ProductDetail() {
                 <ProductCard key={relatedProduct.id} product={relatedProduct} />
               ))}
           </div>
+          {allProducts.filter(p => p.id !== product.id).length === 0 && (
+            <div className="text-center py-8 bg-muted/20 rounded-lg">
+              <p className="text-muted-foreground">No related products found at the moment.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

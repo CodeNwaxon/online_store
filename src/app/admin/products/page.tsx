@@ -565,7 +565,6 @@ export default function AdminProducts() {
             {heroSaving ? 'Saving...' : 'Save Hero Slides'}
           </button>
         </div>
-
         <div className="p-4 md:p-8">
           {products.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -574,7 +573,7 @@ export default function AdminProducts() {
               <p className="text-xs text-muted-foreground mt-1">Add products above to select them for the hero carousel.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
               {products.map(product => {
                 const isSelected = heroSlides.includes(product.id);
                 const selectionIndex = heroSlides.indexOf(product.id);
@@ -597,12 +596,12 @@ export default function AdminProducts() {
                           alt={product.name}
                           fill
                           className="object-cover"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                          sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 12vw"
                         />
                       )}
                       {/* Selection badge */}
                       {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow">
+                        <div className="absolute top-1 right-1 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">
                           {selectionIndex + 1}
                         </div>
                       )}
@@ -611,16 +610,16 @@ export default function AdminProducts() {
                         isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
                       }`}>
                         {isSelected && (
-                          <div className="bg-primary text-white rounded-full p-2">
-                            <FaCheck size={14} />
+                          <div className="bg-primary text-white rounded-full p-1.5">
+                            <FaCheck size={12} />
                           </div>
                         )}
                       </div>
                     </div>
                     {/* Info */}
-                    <div className="p-2 bg-background">
-                      <p className="text-xs font-bold truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{product.category}</p>
+                    <div className="p-1.5 bg-background">
+                      <p className="text-[10px] font-bold truncate leading-tight">{product.name}</p>
+                      <p className="text-[9px] text-muted-foreground truncate leading-tight">{product.category}</p>
                     </div>
                   </button>
                 );
@@ -631,7 +630,7 @@ export default function AdminProducts() {
       </section>
 
       {/* PRODUCT LIST & FILTERS */}
-      <section className="space-y-6 md:space-y-8 px-4 md:px-0">
+      <section className="space-y-6 md:space-y-8 px-4 md:px-0 pt-16 border-t border-border/50">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
@@ -659,7 +658,7 @@ export default function AdminProducts() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
             <div key={product.id} className="relative group bg-card rounded-[var(--radius)] overflow-hidden">
-              <div className="absolute top-12 right-2 z-30 flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 md:translate-x-2 md:group-hover:translate-x-0 opacity-100 translate-x-0 transition-all duration-300">
+              <div className="absolute top-16 right-2 z-30 flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 md:translate-x-2 md:group-hover:translate-x-0 opacity-100 translate-x-0 transition-all duration-300">
                 <button 
                   onClick={() => handleEdit(product)} 
                   className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"

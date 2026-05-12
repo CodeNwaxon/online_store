@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { products, Product, Category } from '@/data/products';
+import { products as staticProducts, Product, Category } from '@/data/products';
 import { installmentSettings } from '@/data/installmentSettings';
 import { FaSearch, FaInfoCircle, FaCreditCard, FaTimes, FaGoogle } from 'react-icons/fa';
 import { Toaster, toast } from 'react-hot-toast';
@@ -17,13 +17,34 @@ function InstallmentsContent() {
   const searchParams = useSearchParams();
   const querySearch = searchParams.get('search');
 
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | 'All'>('All');
+  const [selectedGroup, setSelectedGroup] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const prodSnap = await getDocs(collection(db, 'products'));
+        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts(staticProducts);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     if (querySearch) {
       setSearchQuery(querySearch);
+      setSelectedGroup('All');
       setSelectedCategory('All');
     }
   }, [querySearch]);
@@ -37,10 +58,11 @@ function InstallmentsContent() {
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: 3 | 4} | null>(null);
 
-  // Reset subcategory when category changes
+  // Reset category when group changes
   useEffect(() => {
-    setSelectedSubcategory('All');
-  }, [selectedCategory]);
+    setSelectedCategory('All');
+  }, [selectedGroup]);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -64,10 +86,11 @@ function InstallmentsContent() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.manufacturer && product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSubcategory = selectedSubcategory === 'All' || product.subcategory === selectedSubcategory;
-    return matchesSearch && matchesCategory && matchesSubcategory;
+    return matchesSearch && matchesGroup && matchesCategory;
   });
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
@@ -106,7 +129,16 @@ function InstallmentsContent() {
     }).format(amount);
   };
 
-  const categories: (Category | 'All')[] = ['All', 'Electronics', 'Furniture'];
+  const groups = ['All', ...Array.from(new Set(products.map(p => p.group))).filter(Boolean)].sort();
+
+  if (loading) {
+    return (
+      <div className="py-32 flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-muted-foreground animate-pulse text-xl">Loading flexible plans...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-16">
@@ -164,38 +196,38 @@ function InstallmentsContent() {
         <div className="flex flex-col gap-6 mb-12">
           <div className="flex flex-wrap gap-6 items-center justify-between p-2 md:p-6 bg-card border border-border rounded-sm md:rounded-lg">
             <div className="flex gap-3 flex-wrap">
-              {categories.map(category => (
+              {groups.map(group => (
                 <button
-                  key={category}
-                  onClick={() => { setSelectedCategory(category); setVisibleCount(20); }}
-                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedCategory === category ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  key={group}
+                  onClick={() => { setSelectedGroup(group); setVisibleCount(20); }}
+                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
-                  {category}
+                  {group}
                 </button>
               ))}
             </div>
 
-            {/* Subcategories Bar - Only shown when a specific category is selected */}
-            {selectedCategory !== 'All' && (
-              <div className="flex gap-3 flex-wrap mt-4 w-full p-4 bg-muted rounded-[var(--radius)] border border-border">
+            {/* Categories Sub-filter - Shown when a group is selected */}
+            {selectedGroup !== 'All' && (
+              <div className="flex gap-3 flex-wrap mt-4 w-full p-4 bg-muted rounded-[var(--radius)] border border-border animate-in fade-in slide-in-from-top-1">
                 <button
-                  onClick={() => setSelectedSubcategory('All')}
-                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                  onClick={() => setSelectedCategory('All')}
+                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
-                  All {selectedCategory}
+                  All {selectedGroup}
                 </button>
                 {Array.from(new Set(
                   products
-                    .filter(p => p.category === selectedCategory)
-                    .map(p => p.subcategory)
-                    .filter((s): s is string => !!s)
-                )).sort().map(sub => (
+                    .filter(p => p.group === selectedGroup)
+                    .map(p => p.category)
+                    .filter((c): c is string => !!c)
+                )).sort().map(cat => (
                   <button
-                    key={sub}
-                    onClick={() => setSelectedSubcategory(sub)}
-                    className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedSubcategory === sub ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                   >
-                    {sub}
+                    {cat}
                   </button>
                 ))}
               </div>
@@ -218,15 +250,17 @@ function InstallmentsContent() {
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 px-6 md:px-0">
           {displayedProducts.map(product => (
             <div key={product.id} className="bg-card border border-border rounded-[var(--radius)] overflow-hidden transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer flex flex-col h-full">
-              <div className="h-[200px] bg-muted relative">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="h-[200px] bg-muted relative p-2">
+                <div className="relative w-full h-full overflow-hidden rounded-md shadow-inner">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-contain transition-all duration-300 hover:scale-110"
+                  />
+                </div>
               </div>
               <div className="p-6 flex flex-col flex-1">
                 <h3 className="font-bold mb-2">{product.name}</h3>
@@ -313,3 +347,4 @@ export default function InstallmentsPage() {
     </Suspense>
   );
 }
+

@@ -8,9 +8,20 @@ import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
 import ReviewSection from '@/components/ReviewSection';
 import InstallPrompt from '@/components/InstallPrompt';
+import { products as staticProducts } from '@/data/products';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 
+const heroThemes = [
+  { bg: 'bg-[#F8FAFC]', text: 'text-slate-900', subtext: 'text-slate-600', accent: 'text-primary', button: 'border-slate-900 text-slate-900 hover:bg-slate-900/5' },
+  { bg: 'bg-[#F0F9FF]', text: 'text-blue-900', subtext: 'text-blue-700', accent: 'text-blue-600', button: 'border-blue-900 text-blue-900 hover:bg-blue-900/5' },
+  { bg: 'bg-[#FFF1F2]', text: 'text-rose-900', subtext: 'text-rose-700', accent: 'text-rose-600', button: 'border-rose-900 text-rose-900 hover:bg-rose-900/5' },
+  { bg: 'bg-[#F0FDFA]', text: 'text-teal-900', subtext: 'text-teal-700', accent: 'text-teal-600', button: 'border-teal-900 text-teal-900 hover:bg-teal-900/5' },
+  { bg: 'bg-[#FFFBEB]', text: 'text-amber-900', subtext: 'text-amber-700', accent: 'text-amber-600', button: 'border-amber-900 text-amber-900 hover:bg-amber-900/5' },
+  { bg: 'bg-[#F5F3FF]', text: 'text-violet-900', subtext: 'text-violet-700', accent: 'text-violet-600', button: 'border-violet-900 text-violet-900 hover:bg-violet-900/5' },
+  { bg: 'bg-[#ECFDF5]', text: 'text-emerald-900', subtext: 'text-emerald-700', accent: 'text-emerald-600', button: 'border-emerald-900 text-emerald-900 hover:bg-emerald-900/5' },
+  { bg: 'bg-[#FFF7ED]', text: 'text-orange-900', subtext: 'text-orange-700', accent: 'text-orange-600', button: 'border-orange-900 text-orange-900 hover:bg-orange-900/5' },
+];
 
 export default function Home() {
   const router = useRouter();
@@ -28,14 +39,22 @@ export default function Home() {
       try {
         // Fetch all products
         const prodSnap = await getDocs(collection(db, 'products'));
-        const allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        let allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        
+        // Fallback to static products if dynamic collection is empty
+        if (allProducts.length === 0) {
+          allProducts = staticProducts;
+        }
 
         // Fetch hero config
         const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
         if (heroSnap.exists()) {
           const ids: string[] = heroSnap.data().productIds || [];
           const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
-          setHeroSlides(slides);
+          setHeroSlides(slides.length > 0 ? slides : allProducts.filter(p => p.isPromo).slice(0, 5));
+        } else {
+          // Default hero slides if no config
+          setHeroSlides(allProducts.filter(p => p.isPromo).slice(0, 5));
         }
 
         // Fetch general settings (installment bg)
@@ -45,7 +64,11 @@ export default function Home() {
         }
 
         // Promo products for carousel
-        setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 8));
+        setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 10));
+      } catch (error) {
+        console.error("Error loading home data:", error);
+        setPromoProducts(staticProducts.filter(p => p.isPromo).slice(0, 10));
+        setHeroSlides(staticProducts.filter(p => p.isPromo).slice(0, 5));
       } finally {
         setDataLoading(false);
       }
@@ -71,7 +94,7 @@ export default function Home() {
 
   useEffect(() => {
     if (heroSlides.length <= 1) return;
-    
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
@@ -82,67 +105,84 @@ export default function Home() {
     <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section className="relative h-[70vh] max-h-[650px] max-md:h-[60vh] max-md:max-h-[500px] overflow-y-auto bg-foreground scrollbar-hide">
+      <section className="relative h-[650px] max-md:h-[550px] overflow-y-auto bg-slate-50 scrollbar-hide">
         {dataLoading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-foreground">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-white/60 font-medium animate-pulse">Loading amazing deals...</p>
+            <p className="text-slate-500 font-medium animate-pulse">Loading amazing deals...</p>
           </div>
         ) : heroSlides.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/40">
             <p className="p-3 md:text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
           </div>
         ) : (
-          heroSlides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-cover bg-center cursor-pointer ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
-              style={{ backgroundImage: `url(${slide.image})` }}
-              onClick={() => router.push(`/product/${slide.id}`)}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center">
-                <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full">
-                  <div className="max-w-[650px] text-white">
-                    {slide.isPromo && (
-                      <span className="bg-secondary px-3 py-1 rounded text-sm font-bold mb-4 inline-block">
-                        SPECIAL PROMO
-                      </span>
-                    )}
-                    <div className="text-lg text-primary font-semibold mb-2">
-                      {slide.manufacturer || slide.group}
-                    </div>
-                    <h1 className="text-5xl max-md:text-4xl font-bold mb-4 leading-[1.1]">
-                      {slide.name}
-                    </h1>
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="text-3xl max-md:text-2xl font-bold text-primary">
-                        ₦{slide.price?.toLocaleString()}
-                      </span>
-                      {slide.oldPrice && (
-                        <span className="text-xl max-md:text-lg line-through text-white/60 font-bold bg-white/10 px-2 py-0.5 rounded">
-                          ₦{slide.oldPrice?.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-lg mb-10 opacity-90 leading-relaxed max-md:text-base">
-                      {slide.description}
-                    </p>
-                    <div className="flex gap-4 flex-wrap">
-                      <Link href={`/product/${slide.id}`} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3">
-                        View Product <FaArrowRight size={18} />
-                      </Link>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
-                        className="border-2 border-white text-white hover:bg-white/10 rounded-md font-semibold transition-colors px-6 py-3"
-                      >
-                        Buy Now
-                      </button>
+          heroSlides.map((slide, index) => {
+            const theme = heroThemes[index % heroThemes.length];
+            return (
+              <div
+                key={slide.id}
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out cursor-pointer ${theme.bg} ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+                onClick={() => router.push(`/product/${slide.id}`)}
+              >
+                {/* Subtle background for depth */}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent flex items-center">
+                  <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full h-full">
+                    <div className="flex flex-col-reverse md:flex-row items-center justify-between h-full gap-4 md:gap-8 py-8 md:py-0">
+                      {/* Text Content */}
+                      <div className={`max-w-[600px] ${theme.text} flex-1 z-10 max-md:text-center max-md:px-4`}>
+                        <div className={`text-lg ${theme.accent} font-semibold mb-2`}>
+                          {slide.manufacturer || slide.group}
+                        </div>
+                        <h1 className={`text-5xl max-md:text-2xl font-bold mb-4 leading-[1.1] ${theme.text}`}>
+                          {slide.name}
+                        </h1>
+                        <div className="flex items-center gap-4 mb-6 max-md:justify-center">
+                          <span className={`text-3xl max-md:text-xl font-bold ${theme.accent}`}>
+                            ₦{slide.price?.toLocaleString()}
+                          </span>
+                          {slide.oldPrice && (
+                            <span className="text-xl max-md:text-base line-through text-slate-400 font-bold bg-white/50 px-2 py-0.5 rounded">
+                              ₦{slide.oldPrice?.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-lg mb-10 ${theme.subtext} leading-relaxed max-md:text-xs max-md:mb-6 line-clamp-3`}>
+                          {slide.description}
+                        </p>
+                        <div className="flex gap-4 flex-wrap max-md:justify-center">
+                          <Link href={`/product/${slide.id}`} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs">
+                            View Product <FaArrowRight size={18} />
+                          </Link>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
+                            className={`border-2 ${theme.button} rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs`}
+                          >
+                            Buy Now
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Product Image Container */}
+                      <div className="flex-1 flex justify-center md:justify-end items-center h-full max-md:h-[60%] w-full">
+                        <div className="relative w-full h-full flex items-center justify-center md:justify-end md:p-8">
+                          {slide.isPromo && (
+                            <span className="absolute top-10 right-4 max-md:top-14 max-md:right-2 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm">
+                              SPECIAL PROMO
+                            </span>
+                          )}
+                          <img
+                            src={slide.image}
+                            alt={slide.name}
+                            className="w-full h-full object-cover md:rounded-xl md:shadow-2xl transform hover:scale-105 transition-transform duration-700"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
 
         {/* Hero Dots */}
@@ -152,7 +192,7 @@ export default function Home() {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-white/40 w-4 hover:bg-white/60'}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-slate-300 w-4 hover:bg-slate-400'}`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             ))}
