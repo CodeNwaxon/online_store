@@ -116,7 +116,7 @@ export default function ProductDetail() {
           {/* Right Side: Details */}
           <div>
             <div className="text-sm text-primary font-semibold uppercase mb-2">
-              {product.category}
+              {product.group} / {product.category}
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name}</h1>
             <div className="text-lg text-muted-foreground mb-6">
@@ -161,8 +161,8 @@ export default function ProductDetail() {
             </div>
 
             <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm">
-              <div className="mb-2"><strong>Category:</strong> {product.category} {product.subcategory && `/ ${product.subcategory}`}</div>
-              <div><strong>Product ID:</strong> {product.id}</div>
+              <div className="mb-2"><strong>Group:</strong> {product.group}</div>
+              <div><strong>Category:</strong> {product.category}</div>
             </div>
           </div>
         </div>
