@@ -657,8 +657,8 @@ export default function AdminProducts() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
-            <div key={product.id} className="relative group bg-card rounded-[var(--radius)] overflow-hidden">
-              <div className="absolute top-16 right-2 z-30 flex flex-col gap-2 md:opacity-0 md:group-hover:opacity-100 md:translate-x-2 md:group-hover:translate-x-0 opacity-100 translate-x-0 transition-all duration-300">
+            <div key={product.id} className="relative group bg-card rounded-[var(--radius)]">
+              <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
                 <button 
                   onClick={() => handleEdit(product)} 
                   className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"

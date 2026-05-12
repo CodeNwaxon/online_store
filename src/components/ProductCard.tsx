@@ -32,7 +32,7 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
           src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
           alt={product.name}
           fill
-          className="object-cover transition-all duration-300 group-hover:scale-110"
+          className={`${isAdmin ? 'object-contain' : 'object-cover'} transition-all duration-300 group-hover:scale-110`}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
         />
