@@ -143,13 +143,7 @@ export default function AdminProducts() {
     if (!imageUrlInput) return;
 
     try {
-      const url = new URL(imageUrlInput);
-      const allowedDomains = ['res.cloudinary.com', 'picsum.photos', 'encrypted-tbn3.gstatic.com', 'images.unsplash.com'];
-      const isAllowed = allowedDomains.some(domain => url.hostname.includes(domain));
-      
-      if (!isAllowed) {
-        toast.error(`Warning: Host "${url.hostname}" might not be configured. Image may not show in store cards.`, { duration: 5000 });
-      }
+      new URL(imageUrlInput);
     } catch {
       toast.error('Please enter a valid URL');
       return;
