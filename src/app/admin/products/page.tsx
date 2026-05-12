@@ -400,10 +400,6 @@ export default function AdminProducts() {
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-xs md:text-sm font-bold">Quantity In Stock</label>
-              <input required value={quantity} onChange={e => setQuantity(e.target.value)} type="number" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
-            </div>
-            <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold">Promotion</label>
               <div className="pt-3">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
@@ -450,6 +446,12 @@ export default function AdminProducts() {
                     className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
                     value={imageUrlInput}
                     onChange={e => setImageUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddImageUrl();
+                      }
+                    }}
                   />
                   <button type="button" onClick={handleAddImageUrl} className="bg-primary text-white p-3 rounded-md hover:bg-primary-hover shadow-sm transition-colors">
                     <FaPlus />
@@ -491,12 +493,42 @@ export default function AdminProducts() {
                   <button 
                     type="button" 
                     onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10"
                   >
                     <FaTimes size={12} />
                   </button>
                 </div>
               ))}
+            </div>
+
+            {/* QUANTITY MOVED HERE */}
+            <div className="pt-4 border-t border-border mt-4">
+              <div className="max-w-[200px] space-y-2">
+                <label className="text-xs md:text-sm font-bold text-primary">Quantity In Stock</label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setQuantity(Math.max(0, Number(quantity) - 1).toString())}
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                  >
+                    -
+                  </button>
+                  <input 
+                    required 
+                    value={quantity} 
+                    onChange={e => setQuantity(e.target.value)} 
+                    type="number" 
+                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setQuantity((Number(quantity) + 1).toString())}
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
