@@ -10,7 +10,17 @@ import ReviewSection from '@/components/ReviewSection';
 import InstallPrompt from '@/components/InstallPrompt';
 import { products as staticProducts } from '@/data/products';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+
+const getOrdinal = (d: number) => {
+  if (d > 3 && d < 21) return 'th';
+  switch (d % 10) {
+    case 1:  return "st";
+    case 2:  return "nd";
+    case 3:  return "rd";
+    default: return "th";
+  }
+};
 
 const heroThemes = [
   { bg: 'bg-[#F8FAFC]', text: 'text-slate-900', subtext: 'text-slate-600', accent: 'text-primary', button: 'border-slate-900 text-slate-900 hover:bg-slate-900/5' },
@@ -44,6 +54,31 @@ export default function Home() {
         // Fallback to static products if dynamic collection is empty
         if (allProducts.length === 0) {
           allProducts = staticProducts;
+        }
+
+        // Auto-remove expired promos
+        const now = new Date();
+        const expiredPromos = allProducts.filter((p: any) => 
+          p.isPromo && 
+          p.promoEndDate && 
+          new Date(p.promoEndDate) < now
+        );
+
+        if (expiredPromos.length > 0) {
+          for (const promo of expiredPromos) {
+            try {
+              await updateDoc(doc(db, 'products', promo.id), {
+                isPromo: false,
+                promoEndDate: null,
+                updatedAt: now.toISOString()
+              });
+            } catch (err) {
+              console.error("Error auto-removing promo:", err);
+            }
+          }
+          // Refresh data after auto-removal
+          loadData();
+          return;
         }
 
         // Fetch hero config
@@ -166,8 +201,15 @@ export default function Home() {
                       <div className="flex-1 flex justify-center items-center h-full max-md:h-[60%] w-full">
                         <div className="relative w-full h-full md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero">
                           {slide.isPromo && (
-                            <span className="absolute top-4 left-4 bg-secondary text-white px-2 py-0.5 rounded text-xs font-bold z-20 shadow-sm">
-                              SPECIAL PROMO
+                            <span className="absolute top-4 left-4 bg-secondary text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm flex flex-col items-center">
+                              <span>SPECIAL PROMO</span>
+                              {slide.promoEndDate && (
+                                <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded-sm mt-1 border border-white/20 whitespace-nowrap">
+                                  Ends {new Date(slide.promoEndDate).getDate()}
+                                  <span className="text-[7px] align-top font-normal">{getOrdinal(new Date(slide.promoEndDate).getDate())}</span>
+                                  {' '}{new Date(slide.promoEndDate).toLocaleDateString('en-GB', { month: 'short' })}
+                                </span>
+                              )}
                             </span>
                           )}
                           <img

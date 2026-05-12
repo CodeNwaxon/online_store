@@ -8,6 +8,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LikeButton from './LikeButton';
 
+const getOrdinal = (d: number) => {
+  if (d > 3 && d < 21) return 'th';
+  switch (d % 10) {
+    case 1:  return "st";
+    case 2:  return "nd";
+    case 3:  return "rd";
+    default: return "th";
+  }
+};
+
 interface ProductCardProps {
   product: Product;
   isAdmin?: boolean;
@@ -37,8 +47,15 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
           onError={() => setImgError(true)}
         />
         {product.isPromo && (
-          <span className="absolute top-2.5 left-2.5 bg-secondary text-white px-2 py-0.5 rounded text-xs font-bold z-10">
-            PROMO
+          <span className="absolute top-2.5 left-2.5 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center">
+            <span>SPECIAL PROMO</span>
+            {product.promoEndDate && (
+              <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded-sm mt-1 border border-white/20 whitespace-nowrap">
+                Ends {new Date(product.promoEndDate).getDate()}
+                <span className="text-[7px] align-top font-normal">{getOrdinal(new Date(product.promoEndDate).getDate())}</span>
+                {' '}{new Date(product.promoEndDate).toLocaleDateString('en-GB', { month: 'short' })}
+              </span>
+            )}
           </span>
         )}
         {product.images && product.images.length > 1 && (

@@ -56,6 +56,7 @@ export default function AdminProducts() {
   const [quantity, setQuantity] = useState('1');
   const [isPromo, setIsPromo] = useState(false);
   const [oldPrice, setOldPrice] = useState('');
+  const [promoEndDate, setPromoEndDate] = useState('');
   
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -82,8 +83,33 @@ export default function AdminProducts() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'products'), (snap) => {
+    const unsub = onSnapshot(collection(db, 'products'), async (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Auto-remove expired promos
+      const now = new Date();
+      const expiredPromos = prods.filter((p: any) => 
+        p.isPromo && 
+        p.promoEndDate && 
+        new Date(p.promoEndDate) < now
+      );
+
+      if (expiredPromos.length > 0) {
+        for (const promo of expiredPromos) {
+          try {
+            await updateDoc(doc(db, 'products', promo.id), {
+              isPromo: false,
+              promoEndDate: null,
+              updatedAt: now.toISOString()
+            });
+          } catch (err) {
+            console.error("Error auto-removing promo:", err);
+          }
+        }
+        // The snapshot listener will trigger again after updates
+        return;
+      }
+
       setProducts(prods);
       
       // Dynamically extract groups and categories from products to stay updated
@@ -184,6 +210,7 @@ export default function AdminProducts() {
     setQuantity('1');
     setOldPrice('');
     setImages([]);
+    setPromoEndDate('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -224,6 +251,7 @@ export default function AdminProducts() {
         quantity: Number(quantity),
         isPromo,
         oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
+        promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: 'Quick Choice', // Default or add to form
@@ -253,15 +281,8 @@ export default function AdminProducts() {
     setGroup(product.group);
     setCategory(product.category);
     setQuantity(product.quantity.toString());
-    setIsPromo(product.isPromo || false);
-    // Logic: price (state) = original price, oldPrice (state) = promo price
-    if (product.isPromo) {
-      setPrice(formatPriceInput(product.oldPrice?.toString() || ''));
-      setOldPrice(formatPriceInput(product.price.toString()));
-    } else {
-      setPrice(formatPriceInput(product.price.toString()));
-      setOldPrice('');
-    }
+    setOldPrice(product.isPromo ? formatPriceInput(product.price.toString()) : '');
+    setPromoEndDate(product.promoEndDate || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -408,20 +429,31 @@ export default function AdminProducts() {
                 </label>
               </div>
               {isPromo && (
-                <div className="flex flex-row gap-4 animate-[slideIn_0.2s_ease] mt-2">
-                  <div className="flex-1">
-                    <label className="text-[0.65rem] font-bold block mb-1 text-muted-foreground uppercase">Original Price</label>
-                    <input readOnly value={price} type="text" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
+                <div className="flex flex-col gap-4 animate-[slideIn_0.2s_ease] mt-2">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="text-[0.65rem] font-bold block mb-1 text-muted-foreground uppercase">Original Price</label>
+                      <input readOnly value={price} type="text" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">Promo Price (₦)</label>
+                      <input 
+                        required 
+                        value={oldPrice} 
+                        onChange={e => setOldPrice(formatPriceInput(e.target.value))} 
+                        type="text" 
+                        placeholder="e.g. 45,000"
+                        className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none" 
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">Promo Price (₦)</label>
+                  <div>
+                    <label className="text-[0.65rem] font-bold block mb-1 text-secondary uppercase">Promo End Date (Optional)</label>
                     <input 
-                      required 
-                      value={oldPrice} 
-                      onChange={e => setOldPrice(formatPriceInput(e.target.value))} 
-                      type="text" 
-                      placeholder="e.g. 45,000"
-                      className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none" 
+                      type="date" 
+                      value={promoEndDate} 
+                      onChange={e => setPromoEndDate(e.target.value)}
+                      className="w-full p-2 rounded-md border border-border bg-background text-sm"
                     />
                   </div>
                 </div>

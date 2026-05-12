@@ -7,7 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } from 'react-icons/fa';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { useLikeStore } from '@/store/useLikeStore';
 
 function ShopContent() {
@@ -30,6 +30,32 @@ function ShopContent() {
       try {
         const prodSnap = await getDocs(collection(db, 'products'));
         const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Auto-remove expired promos
+        const now = new Date();
+        const expiredPromos = dynamicProducts.filter((p: any) => 
+          p.isPromo && 
+          p.promoEndDate && 
+          new Date(p.promoEndDate) < now
+        );
+
+        if (expiredPromos.length > 0) {
+          for (const promo of expiredPromos) {
+            try {
+              await updateDoc(doc(db, 'products', promo.id), {
+                isPromo: false,
+                promoEndDate: null,
+                updatedAt: now.toISOString()
+              });
+            } catch (err) {
+              console.error("Error auto-removing promo:", err);
+            }
+          }
+          // Refresh products after update
+          fetchProducts();
+          return;
+        }
+
         setProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
       } catch (error) {
         console.error("Error fetching products:", error);

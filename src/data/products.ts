@@ -15,6 +15,7 @@ export interface Product {
   shipping: number; // Shipping cost
   quantity?: number;
   group?: string;
+  promoEndDate?: string;
 }
 
 export const products: Product[] = [
