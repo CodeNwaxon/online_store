@@ -19,30 +19,36 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
   const [promoProducts, setPromoProducts] = useState<any[]>([]);
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
+  const [dataLoading, setDataLoading] = useState(true);
 
   // Load hero slides and promo products from Firestore
   useEffect(() => {
     const loadData = async () => {
-      // Fetch all products
-      const prodSnap = await getDocs(collection(db, 'products'));
-      const allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      setDataLoading(true);
+      try {
+        // Fetch all products
+        const prodSnap = await getDocs(collection(db, 'products'));
+        const allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
-      // Fetch hero config
-      const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
-      if (heroSnap.exists()) {
-        const ids: string[] = heroSnap.data().productIds || [];
-        const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
-        setHeroSlides(slides);
+        // Fetch hero config
+        const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+        if (heroSnap.exists()) {
+          const ids: string[] = heroSnap.data().productIds || [];
+          const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
+          setHeroSlides(slides);
+        }
+
+        // Fetch general settings (installment bg)
+        const generalSnap = await getDoc(doc(db, 'settings', 'general'));
+        if (generalSnap.exists() && generalSnap.data().installmentBg) {
+          setInstallmentBg(generalSnap.data().installmentBg);
+        }
+
+        // Promo products for carousel
+        setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 8));
+      } finally {
+        setDataLoading(false);
       }
-
-      // Fetch general settings (installment bg)
-      const generalSnap = await getDoc(doc(db, 'settings', 'general'));
-      if (generalSnap.exists() && generalSnap.data().installmentBg) {
-        setInstallmentBg(generalSnap.data().installmentBg);
-      }
-
-      // Promo products for carousel
-      setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 8));
     };
     loadData();
   }, []);
@@ -77,7 +83,12 @@ export default function Home() {
       <InstallPrompt />
       {/* Hero Section */}
       <section className="relative h-[70vh] max-h-[650px] max-md:h-[60vh] max-md:max-h-[500px] overflow-y-auto bg-foreground scrollbar-hide">
-        {heroSlides.length === 0 ? (
+        {dataLoading ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-foreground">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-white/60 font-medium animate-pulse">Loading amazing deals...</p>
+          </div>
+        ) : heroSlides.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/40">
             <p className="p-3 md:text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
           </div>
