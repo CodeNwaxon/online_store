@@ -10,16 +10,19 @@ interface LikeButtonProps {
   productId: string;
 }
 
+import { useLikeStore } from '@/store/useLikeStore';
+
+interface LikeButtonProps {
+  productId: string;
+}
+
 export default function LikeButton({ productId }: LikeButtonProps) {
   const [likes, setLikes] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const { toggleLike, isLiked: checkIsLiked } = useLikeStore();
+  const isLiked = checkIsLiked(productId);
 
   useEffect(() => {
-    // 1. Check local storage for user's like status
-    const storedLikes = JSON.parse(localStorage.getItem('user_likes') || '{}');
-    setIsLiked(!!storedLikes[productId]);
-
-    // 2. Listen to real-time like count from Firestore
+    // Listen to real-time like count from Firestore
     const docRef = doc(db, 'product_likes', productId);
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -41,14 +44,11 @@ export default function LikeButton({ productId }: LikeButtonProps) {
     }
 
     const docRef = doc(db, 'product_likes', productId);
-    const storedLikes = JSON.parse(localStorage.getItem('user_likes') || '{}');
 
     try {
       if (isLiked) {
         // Unlike
         await updateDoc(docRef, { count: increment(-1) });
-        delete storedLikes[productId];
-        setIsLiked(false);
       } else {
         // Like
         const docSnap = await getDoc(docRef);
@@ -57,10 +57,8 @@ export default function LikeButton({ productId }: LikeButtonProps) {
         } else {
           await updateDoc(docRef, { count: increment(1) });
         }
-        storedLikes[productId] = true;
-        setIsLiked(true);
       }
-      localStorage.setItem('user_likes', JSON.stringify(storedLikes));
+      toggleLike(productId);
     } catch (error) {
       console.error('Error updating likes:', error);
       toast.error('Failed to update like');

@@ -8,6 +8,7 @@ import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } 
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { useLikeStore } from '@/store/useLikeStore';
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -21,7 +22,7 @@ function ShopContent() {
   const [visibleCount, setVisibleCount] = useState(20);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
-  const [userLikes, setUserLikes] = useState<Record<string, boolean>>({});
+  const { likedProductIds } = useLikeStore();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -39,8 +40,6 @@ function ShopContent() {
     };
 
     fetchProducts();
-    const stored = JSON.parse(localStorage.getItem('user_likes') || '{}');
-    setUserLikes(stored);
   }, []);
 
   // Reset category when group changes
@@ -66,7 +65,7 @@ function ShopContent() {
       (product.manufacturer && product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesLiked = !showLikedOnly || userLikes[product.id];
+    const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
     return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo;
   });
