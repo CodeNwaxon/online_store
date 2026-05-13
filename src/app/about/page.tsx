@@ -78,7 +78,7 @@ export default function About() {
             </div>
             <div className="p-8 max-md:p-0">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Message from our Founder</h2>
-              <p className="text-muted-foreground mb-6 text-xl leading-relaxed italic border-l-4 border-primary pl-6">
+              <p className="text-muted-foreground mb-6 md:text-lg leading-relaxed italic border-l-4 border-primary pl-6">
                 "{ceo.message}"
               </p>
               <div className="font-bold text-2xl">{ceo.name}</div>
@@ -108,7 +108,7 @@ export default function About() {
               <h3 className="mb-4 font-bold text-xl">Email Support</h3>
               <div className="space-y-2">
                 {settings?.emails?.map((e: any, i: number) => (
-                  <p key={i} className="text-sm"><strong>{e.position}:</strong> {e.email}</p>
+                  <p key={i} className="text-muted-foreground text-sm"><strong>{e.position}:</strong> <a className="text-blue-700 hover:underline" href={`mailto:${e.email}`} target="_blank" rel="noopener noreferrer">{e.email}</a></p>
                 )) || <p className="text-muted-foreground">support@onlinestore.com</p>}
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function About() {
               <h3 className="mb-4 font-bold text-xl">Phone Support</h3>
               <div className="space-y-2">
                 {settings?.phones?.map((p: any, i: number) => (
-                  <p key={i} className="text-sm"><strong>{p.position}:</strong> {p.number}</p>
+                  <p key={i} className="text-sm text-muted-foreground"><strong>{p.position}:</strong> <a href={`tel:${p.number}`} target="_blank" rel="noopener noreferrer">{p.number}</a></p>
                 )) || <p className="text-muted-foreground">+234 800 999 8888</p>}
               </div>
             </div>
