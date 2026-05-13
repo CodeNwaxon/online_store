@@ -10,6 +10,8 @@ import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import WarrantyModal from '@/components/WarrantyModal';
+
 
 export default function ProductDetail() {
   const params = useParams();
@@ -19,6 +21,7 @@ export default function ProductDetail() {
   const addItem = useCartStore((state) => state.addItem);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -38,8 +41,19 @@ export default function ProductDetail() {
 
         // Fetch all products for related section
         const prodSnap = await getDocs(collection(db, 'products'));
-        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAllProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
+        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const parseDate = (dateVal: any) => {
+          if (!dateVal) return 0;
+          if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+          return new Date(dateVal).getTime() || 0;
+        };
+
+        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+          const dateA = parseDate(a.updatedAt);
+          const dateB = parseDate(b.updatedAt);
+          return dateB - dateA;
+        });
+        setAllProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching product:", error);
       } finally {
@@ -75,11 +89,11 @@ export default function ProductDetail() {
     ? product.images
     : [product.image];
 
-  const whatsappMessage = `I want to make enquiries about ${product.name}, ${product.manufacturer || 'Quick Choice'}, and ₦${product.price.toLocaleString()}.`;
+  const whatsappMessage = `I want to make enquiries about ${product.name}${product.manufacturer ? `, made by ${product.manufacturer}` : ''}, priced at ₦${product.price.toLocaleString()}.`;
   const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
-    <div className="py-14 max-md:py-4">
+    <div className="py-12 max-md:py-4">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
         <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
           <FaArrowLeft size={16} /> Back to Shop
@@ -119,9 +133,11 @@ export default function ProductDetail() {
               {product.group} / {product.category}
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name}</h1>
-            <div className="text-lg text-muted-foreground mb-6">
-              Manufactured by <span className="font-semibold text-foreground">{product.manufacturer || 'Quick Choice'}</span>
-            </div>
+            {product.manufacturer && (
+              <div className="text-lg text-muted-foreground mb-6">
+                Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
+              </div>
+            )}
 
             <div className="text-3xl font-bold text-primary mb-8">
               ₦{product.price.toLocaleString()}
@@ -160,12 +176,33 @@ export default function ProductDetail() {
               </Link>
             </div>
 
-            <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm">
-              <div className="mb-2"><strong>Group:</strong> {product.group}</div>
+            <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm space-y-2">
+              <div><strong>Group:</strong> {product.group}</div>
               <div><strong>Category:</strong> {product.category}</div>
+              {product.manufacturer && (
+                <div><strong>Manufacturer:</strong> {product.manufacturer}</div>
+              )}
+              {product.warranty && (
+                <div className="flex items-center gap-2">
+                  <strong>Warranty:</strong>
+                  <button 
+                    onClick={() => setShowWarrantyModal(true)}
+                    className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hover:bg-emerald-200 transition-colors"
+                  >
+                    ✓ {product.warranty} {!isNaN(Number(product.warranty)) && (Number(product.warranty) > 1 ? 'years' : 'year')}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        <WarrantyModal 
+          isOpen={showWarrantyModal} 
+          onClose={() => setShowWarrantyModal(false)} 
+          warrantyValue={product.warranty}
+        />
+
 
         <div className="mt-24 max-md:mt-16">
           <h2 className="text-2xl md:text-3xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>

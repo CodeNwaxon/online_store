@@ -38,6 +38,13 @@ const parsePriceInput = (value: string) => {
   return value.replace(/\D/g, "");
 };
 
+const parseDate = (dateVal: any) => {
+  if (!dateVal) return 0;
+  if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+  return new Date(dateVal).getTime() || 0;
+};
+
+
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +64,8 @@ export default function AdminProducts() {
   const [isPromo, setIsPromo] = useState(false);
   const [oldPrice, setOldPrice] = useState('');
   const [promoEndDate, setPromoEndDate] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
+  const [warranty, setWarranty] = useState('');
   
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -84,7 +93,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), async (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
       // Auto-remove expired promos
       const now = new Date();
@@ -110,7 +119,14 @@ export default function AdminProducts() {
         return;
       }
 
-      setProducts(prods);
+      // Sort products by updatedAt descending (newest/most recently edited first)
+      const sortedProds = [...prods].sort((a, b) => {
+        const dateA = parseDate(a.updatedAt);
+        const dateB = parseDate(b.updatedAt);
+        return dateB - dateA;
+      });
+
+      setProducts(sortedProds);
       
       // Dynamically extract groups and categories from products to stay updated
       const newMap: Record<string, string[]> = { ...categoriesByGroup };
@@ -211,6 +227,8 @@ export default function AdminProducts() {
     setOldPrice('');
     setImages([]);
     setPromoEndDate('');
+    setManufacturer('');
+    setWarranty('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -254,9 +272,11 @@ export default function AdminProducts() {
         promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
-        manufacturer: 'Quick Choice', // Default or add to form
+        manufacturer: manufacturer.trim() || 'Unknown',
+        warranty: warranty.trim() || '',
         updatedAt: new Date().toISOString(),
       };
+
 
       if (editingId) {
         await updateDoc(doc(db, 'products', editingId), productData);
@@ -281,8 +301,14 @@ export default function AdminProducts() {
     setGroup(product.group);
     setCategory(product.category);
     setQuantity(product.quantity.toString());
+    setIsPromo(product.isPromo || false);
+    // If promo: form's `price` = original price (product.oldPrice), form's `oldPrice` = promo price (product.price)
+    // If not promo: form's `price` = selling price (product.price)
+    setPrice(product.isPromo ? formatPriceInput((product.oldPrice || 0).toString()) : formatPriceInput(product.price.toString()));
     setOldPrice(product.isPromo ? formatPriceInput(product.price.toString()) : '');
     setPromoEndDate(product.promoEndDate || '');
+    setManufacturer(product.manufacturer || '');
+    setWarranty(product.warranty || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -324,10 +350,38 @@ export default function AdminProducts() {
         <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Product Name */}
             <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold">Product Name</label>
-              <input required value={name} onChange={e => setName(e.target.value)} type="text" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+              <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Samsung 55-inch Smart TV" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
             </div>
+
+            {/* Manufacturer */}
+            <div className="space-y-2">
+              <label className="text-xs md:text-sm font-bold">Manufacturer</label>
+              <input
+                value={manufacturer}
+                onChange={e => setManufacturer(e.target.value)}
+                type="text"
+                placeholder="e.g. Samsung, LG, Nexus..."
+                className="w-full p-3 rounded-md border border-border bg-background text-sm"
+              />
+            </div>
+
+            {/* Warranty */}
+            <div className="space-y-2">
+              <label className="text-xs md:text-sm font-bold">Warranty</label>
+              <input
+                value={warranty}
+                onChange={e => setWarranty(e.target.value)}
+                type="text"
+                placeholder="e.g. 1 Year, 6 Months, No Warranty"
+                className="w-full p-3 rounded-md border border-border bg-background text-sm"
+              />
+              <p className="text-[0.65rem] text-muted-foreground">Warranty period or terms for this product.</p>
+            </div>
+
+            {/* Price */}
             <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold text-primary">Price (₦)</label>
               <input 
@@ -339,6 +393,8 @@ export default function AdminProducts() {
                 className="w-full p-3 rounded-md border border-primary/30 bg-background text-sm focus:border-primary outline-none transition-all font-bold" 
               />
             </div>
+
+            {/* Group */}
             <div className="space-y-2">
               <label className="text-sm font-bold flex justify-between items-center">
                 Group
@@ -371,6 +427,7 @@ export default function AdminProducts() {
               )}
             </div>
 
+            {/* Category */}
             <div className="space-y-2">
               <label className="text-sm font-bold flex justify-between items-center">
                 Category
@@ -420,9 +477,11 @@ export default function AdminProducts() {
                 </select>
               )}
             </div>
-            <div className="space-y-2">
+
+            {/* Promotion */}
+            <div className="space-y-2 md:col-span-2">
               <label className="text-xs md:text-sm font-bold">Promotion</label>
-              <div className="pt-3">
+              <div className="pt-1">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
                   <input type="checkbox" checked={isPromo} onChange={e => setIsPromo(e.target.checked)} className="size-4" />
                   Is Promo?
@@ -463,10 +522,10 @@ export default function AdminProducts() {
 
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-bold">Description</label>
-            <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+            <textarea required rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. This 55-inch Samsung Smart TV features 4K UHD resolution, built-in Wi-Fi, and access to Netflix, YouTube and more. Perfect for home entertainment." className="w-full p-3 rounded-md border border-border bg-background text-sm" />
           </div>
 
-          {/* IMAGE SECTION */}
+
           <div className="space-y-4">
             <label className="text-xs md:text-sm font-bold">Product Images (Min 1, Max 4)</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -687,9 +746,9 @@ export default function AdminProducts() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {filteredProducts.map(product => (
-            <div key={product.id} className="relative group bg-card rounded-[var(--radius)]">
+            <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
               <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
                 <button 
                   onClick={() => handleEdit(product)} 
@@ -707,7 +766,7 @@ export default function AdminProducts() {
                 </button>
               </div>
               
-              <div className="relative">
+              <div className="relative flex-1 flex flex-col">
                 <ProductCard product={product} isAdmin={true} />
               </div>
             </div>

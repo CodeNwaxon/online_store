@@ -16,6 +16,7 @@ export interface Product {
   quantity?: number;
   group?: string;
   promoEndDate?: string;
+  warranty?: string;
 }
 
 export const products: Product[] = [

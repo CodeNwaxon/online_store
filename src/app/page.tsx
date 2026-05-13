@@ -56,6 +56,19 @@ export default function Home() {
           allProducts = staticProducts;
         }
 
+        const parseDate = (dateVal: any) => {
+          if (!dateVal) return 0;
+          if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+          return new Date(dateVal).getTime() || 0;
+        };
+
+        // Sort products by updatedAt descending
+        allProducts.sort((a, b) => {
+          const dateA = parseDate(a.updatedAt);
+          const dateB = parseDate(b.updatedAt);
+          return dateB - dateA;
+        });
+
         // Auto-remove expired promos
         const now = new Date();
         const expiredPromos = allProducts.filter((p: any) =>
@@ -181,7 +194,7 @@ export default function Home() {
                             ₦{slide.price?.toLocaleString()}
                           </span>
                         </div>
-                        <p className={`text-lg mb-10 ${theme.subtext} leading-relaxed max-md:text-xs max-md:mb-6 line-clamp-3`}>
+                        <p className={`text-base mb-8 ${theme.subtext} leading-relaxed max-md:text-xs max-md:mb-4 line-clamp-3`}>
                           {slide.description}
                         </p>
                         <div className="flex gap-4 flex-wrap max-md:justify-center">

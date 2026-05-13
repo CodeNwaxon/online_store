@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt, FaImage, FaTimes, FaLink } from 'react-icons/fa';
+import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt, FaImage, FaTimes, FaLink, FaShieldAlt, FaLock } from 'react-icons/fa';
 
 const SOCIAL_PLATFORMS = [
   { name: 'WhatsApp', icon: 'FaWhatsapp', placeholder: 'https://wa.me/234...' },
@@ -24,6 +24,20 @@ export default function AdminSettings() {
   const [emails, setEmails] = useState<{ position: string, email: string }[]>([]);
   const [addresses, setAddresses] = useState<{ office: string, address: string }[]>([]);
   const [socialLinks, setSocialLinks] = useState<{ platform: string, url: string }[]>([]);
+  const [warrantyPolicy, setWarrantyPolicy] = useState('');
+
+  // Passkey Overlay State
+  const [showPasskeyOverlay, setShowPasskeyOverlay] = useState(false);
+  const [passkeyInput, setPasskeyInput] = useState('');
+  const [passkeyError, setPasskeyError] = useState('');
+  const [isSavingWarranty, setIsSavingWarranty] = useState(false);
+
+  const DEFAULT_WARRANTY_POLICY = `Please note:
+1. Warranty does NOT cover self-inflicted or accidental damages (e.g., screen breaks, liquid spills, or physical impact).
+2. Warranties are provided directly by the manufacturing companies, not by Quick Choice store.
+3. If a product requires service, Quick Choice will facilitate sending it to the manufacturer. This process may take some time for repairs and return.
+4. Returns/Exchanges: If a product is found to have a manufacturing defect within 2 days of purchase, it can be exchanged, provided it is in the exact condition it was purchased (including original packaging and accessories).`;
+
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -38,6 +52,7 @@ export default function AdminSettings() {
         setEmails(data.emails || []);
         setAddresses(data.addresses || []);
         setSocialLinks(data.socialLinks || []);
+        setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
       }
     };
     fetchSettings();
@@ -59,6 +74,35 @@ export default function AdminSettings() {
       toast.error('Failed to update settings.');
     }
   };
+
+  const handleSaveWarranty = async () => {
+    setIsSavingWarranty(true);
+    setPasskeyError('');
+    try {
+      const docRef = doc(db, 'settings', 'general');
+      const docSnap = await getDoc(docRef);
+      const currentPasskey = docSnap.data()?.passkey || 'admin1234';
+
+      if (passkeyInput !== currentPasskey) {
+        setPasskeyError('Incorrect CEO passkey. Access denied.');
+        setIsSavingWarranty(false);
+        return;
+      }
+
+      await setDoc(docRef, {
+        warrantyPolicy
+      }, { merge: true });
+
+      toast.success('Warranty policy updated!');
+      setShowPasskeyOverlay(false);
+      setPasskeyInput('');
+    } catch (error) {
+      toast.error('Failed to update policy.');
+    } finally {
+      setIsSavingWarranty(false);
+    }
+  };
+
 
   return (
     <div className="max-w-[1000px] mx-auto space-y-12 pb-20">
@@ -159,9 +203,8 @@ export default function AdminSettings() {
         {/* File Upload */}
         <div>
           <label className="block text-sm font-bold mb-2">Upload File</label>
-          <label className={`flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed cursor-pointer transition-colors ${
-            installmentBgUploading ? 'border-primary/50 bg-primary/5 opacity-70' : 'border-primary bg-primary/5 hover:bg-primary/10'
-          }`}>
+          <label className={`flex items-center justify-center gap-2 p-4 rounded-md border-2 border-dashed cursor-pointer transition-colors ${installmentBgUploading ? 'border-primary/50 bg-primary/5 opacity-70' : 'border-primary bg-primary/5 hover:bg-primary/10'
+            }`}>
             <FaImage className="text-primary" />
             <span className="text-sm font-bold text-primary">
               {installmentBgUploading ? 'Uploading...' : 'Choose Image File'}
@@ -322,6 +365,7 @@ export default function AdminSettings() {
 
       {/* SOCIAL LINKS */}
       <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+        {/* ... existing social links code ... */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
           <h2 className="text-base md:text-lg font-bold flex items-center gap-2 w-full md:w-auto"><FaShareAlt className="text-primary" /> Social Links</h2>
           <div className="w-full md:w-auto">
@@ -364,6 +408,83 @@ export default function AdminSettings() {
           ))}
         </div>
       </section>
+
+      {/* WARRANTY POLICIES SECTION */}
+      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">
+        <div className="flex justify-between items-center border-b border-border pb-4">
+          <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <FaShieldAlt className="text-primary" /> Warranty Policies
+          </h2>
+          <button
+            onClick={() => setShowPasskeyOverlay(true)}
+            className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm shadow-sm hover:opacity-90 transition-opacity"
+          >
+            Save Policy
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground italic">
+          * Updating these policies requires the CEO passkey.
+        </p>
+        <textarea
+          rows={10}
+          className="w-full p-4 rounded-md border border-border bg-background text-sm leading-relaxed"
+          value={warrantyPolicy}
+          onChange={(e) => setWarrantyPolicy(e.target.value)}
+          placeholder="Enter the official store warranty policy here..."
+        />
+      </section>
+
+      {/* CEO PASSKEY OVERLAY */}
+      {showPasskeyOverlay && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-[var(--radius)] shadow-2xl w-full max-w-sm p-8 text-center animate-in zoom-in-95 duration-200">
+            <div className="bg-secondary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaLock className="text-secondary text-2xl" />
+            </div>
+            <h3 className="font-bold text-xl mb-2">CEO Authorization</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Please enter the CEO passkey to save changes to the warranty policy.
+            </p>
+            <input
+              type="password"
+              autoFocus
+              placeholder="Enter CEO Passkey"
+              className={`w-full p-4 rounded-md border text-center font-bold text-lg mb-2 focus:outline-none transition-colors ${passkeyError ? 'border-red-500 bg-red-50' : 'border-border focus:border-primary'
+                }`}
+              value={passkeyInput}
+              onChange={(e) => {
+                setPasskeyInput(e.target.value);
+                setPasskeyError('');
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveWarranty()}
+            />
+            {passkeyError && (
+              <p className="text-red-500 text-xs font-bold mb-4 animate-bounce">
+                {passkeyError}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPasskeyOverlay(false);
+                  setPasskeyInput('');
+                  setPasskeyError('');
+                }}
+                className="flex-1 py-3 rounded-md border border-border font-bold hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveWarranty}
+                disabled={isSavingWarranty || !passkeyInput}
+                className="flex-1 py-3 rounded-md bg-primary text-white font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {isSavingWarranty ? 'Saving...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

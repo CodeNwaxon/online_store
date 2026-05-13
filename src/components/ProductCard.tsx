@@ -7,13 +7,15 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import LikeButton from './LikeButton';
+import WarrantyModal from './WarrantyModal';
+
 
 const getOrdinal = (d: number) => {
   if (d > 3 && d < 21) return 'th';
   switch (d % 10) {
-    case 1:  return "st";
-    case 2:  return "nd";
-    case 3:  return "rd";
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
     default: return "th";
   }
 };
@@ -26,6 +28,8 @@ interface ProductCardProps {
 export default function ProductCard({ product, isAdmin }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+
 
   const cycleImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,10 +51,10 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
           onError={() => setImgError(true)}
         />
         {product.isPromo && (
-          <span className="absolute top-2.5 left-2.5 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center">
+          <span className="absolute top-0.5 left-0.5 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center">
             <span>SPECIAL PROMO</span>
             {product.promoEndDate && (
-              <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded-sm mt-1 border border-white/20 whitespace-nowrap">
+              <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded mt-1 border border-white/20 whitespace-nowrap">
                 Ends {new Date(product.promoEndDate).getDate()}
                 <span className="text-[7px] align-top font-normal">{getOrdinal(new Date(product.promoEndDate).getDate())}</span>
                 {' '}{new Date(product.promoEndDate).toLocaleDateString('en-GB', { month: 'short' })}
@@ -72,11 +76,10 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
                 <button
                   key={i}
                   onClick={(e) => { e.stopPropagation(); setCurrentImgIndex(i); }}
-                  className={`h-1 rounded-full transition-all duration-300 ${
-                    currentImgIndex === i 
-                      ? 'bg-primary w-4' 
-                      : 'bg-white/60 w-1.5 hover:bg-white'
-                  }`}
+                  className={`h-1 rounded-full transition-all duration-300 ${currentImgIndex === i
+                    ? 'bg-primary w-4'
+                    : 'bg-white/60 w-1.5 hover:bg-white'
+                    }`}
                 />
               ))}
             </div>
@@ -109,12 +112,38 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
         >
           {product.name}
         </h3>
-        <div className="text-[0.75rem] text-muted-foreground mb-1.5 italic">
-          By {product.manufacturer}
-        </div>
-        <p className="text-[0.75rem] max-md:text-[0.68rem] max-md:h-[32px] max-md:mb-1.5 text-muted-foreground mb-3 h-[45px] overflow-hidden leading-[1.3] line-clamp-3">
+
+        <p className="text-[0.75rem] max-md:text-[0.68rem] text-muted-foreground mb-3 h-[60px] max-md:h-[40px] overflow-y-auto leading-[1.3] pr-1">
           {product.description}
         </p>
+
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          {product.manufacturer && (
+            <span className="text-[0.65rem] text-muted-foreground font-medium italic">
+              By {product.manufacturer}
+            </span>
+          )}
+          {product.warranty && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowWarrantyModal(true);
+              }}
+              className="text-[0.65rem] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-medium border border-emerald-100/50 hover:bg-emerald-100 transition-colors"
+            >
+              ✓ {product.warranty} {!isNaN(Number(product.warranty)) && (Number(product.warranty) > 1 ? 'Years' : 'Year')} Warranty
+            </button>
+          )}
+        </div>
+
+        <WarrantyModal
+          isOpen={showWarrantyModal}
+          onClose={() => setShowWarrantyModal(false)}
+          warrantyValue={product.warranty}
+        />
+
 
         <div className="flex justify-between items-center mt-auto pt-2 border-t border-border/50">
           <div className="flex flex-col">

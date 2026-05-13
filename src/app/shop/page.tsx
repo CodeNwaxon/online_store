@@ -29,7 +29,7 @@ function ShopContent() {
       setLoading(true);
       try {
         const prodSnap = await getDocs(collection(db, 'products'));
-        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
         
         // Auto-remove expired promos
         const now = new Date();
@@ -56,7 +56,19 @@ function ShopContent() {
           return;
         }
 
-        setProducts(dynamicProducts.length > 0 ? dynamicProducts : staticProducts);
+        const parseDate = (dateVal: any) => {
+          if (!dateVal) return 0;
+          if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+          return new Date(dateVal).getTime() || 0;
+        };
+
+        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+          const dateA = parseDate(a.updatedAt);
+          const dateB = parseDate(b.updatedAt);
+          return dateB - dateA;
+        });
+
+        setProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
         setProducts(staticProducts);
