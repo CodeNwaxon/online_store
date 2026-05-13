@@ -23,11 +23,27 @@ export default function ProductDetail() {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
 
+  // State for dynamic WhatsApp number
+  const [contactNumber, setContactNumber] = useState('2347034632037'); // Default fallback
+
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndSettings = async () => {
       setLoading(true);
       try {
-        // Try to find in Firestore first
+        // 1. Fetch WhatsApp Number from Site Settings
+        const settingsRef = doc(db, 'settings', 'general');
+        const settingsSnap = await getDoc(settingsRef);
+        if (settingsSnap.exists()) {
+          const settingsData = settingsSnap.data();
+          if (settingsData.phones && settingsData.phones.length > 0) {
+            // Remove non-numeric characters (except maybe +) to ensure clean URL
+            const rawNumber = settingsData.phones[0].number;
+            const cleanNumber = rawNumber.replace(/\D/g, '');
+            setContactNumber(cleanNumber);
+          }
+        }
+
+        // 2. Try to find product in Firestore
         const docRef = doc(db, 'products', id);
         const docSnap = await getDoc(docRef);
 
@@ -39,9 +55,10 @@ export default function ProductDetail() {
           if (staticProd) setProduct(staticProd);
         }
 
-        // Fetch all products for related section
+        // 3. Fetch all products for related section
         const prodSnap = await getDocs(collection(db, 'products'));
         const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
         const parseDate = (dateVal: any) => {
           if (!dateVal) return 0;
           if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
@@ -55,13 +72,13 @@ export default function ProductDetail() {
         });
         setAllProducts(sortedProducts);
       } catch (error) {
-        console.error("Error fetching product:", error);
+        console.error("Error fetching product or settings:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) fetchProduct();
+    if (id) fetchProductAndSettings();
   }, [id]);
 
   if (loading) {
@@ -84,13 +101,13 @@ export default function ProductDetail() {
     );
   }
 
-  // Ensure images array exists
   const productImages = product.images && product.images.length > 0
     ? product.images
     : [product.image];
 
   const whatsappMessage = `I want to make enquiries about ${product.name}${product.manufacturer ? `, made by ${product.manufacturer}` : ''}, priced at ₦${product.price.toLocaleString()}.`;
-  const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMessage)}`;
+  // Uses dynamic contactNumber from state
+  const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
     <div className="py-12 max-md:py-4">
@@ -100,7 +117,7 @@ export default function ProductDetail() {
         </Link>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">
-          {/* Left Side: Images */}
+          {/* Images Section */}
           <div>
             <div className="relative h-[500px] max-md:h-[300px] w-full rounded-[var(--radius)] overflow-hidden bg-muted">
               <Image
@@ -127,7 +144,7 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Right Side: Details */}
+          {/* Details Section */}
           <div>
             <div className="text-sm text-primary font-semibold uppercase mb-2">
               {product.group} / {product.category}
@@ -145,14 +162,15 @@ export default function ProductDetail() {
 
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-muted-foreground leading-relaxed italic">
                 {product.description}
               </p>
             </div>
 
+            {/* CTA Buttons */}
             <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
               <button
-                className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 text-sm max-md:text-xs rounded-md font-semibold transition-colors"
+                className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors"
                 onClick={() => addItem(product)}
               >
                 <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
@@ -170,7 +188,7 @@ export default function ProductDetail() {
 
               <Link
                 href={`/installments?search=${encodeURIComponent(product.name)}`}
-                className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs max-md:text-[0.7rem] font-semibold rounded-md transition-opacity text-center"
+                className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
               >
                 <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
               </Link>
@@ -185,7 +203,7 @@ export default function ProductDetail() {
               {product.warranty && (
                 <div className="flex items-center gap-2">
                   <strong>Warranty:</strong>
-                  <button 
+                  <button
                     onClick={() => setShowWarrantyModal(true)}
                     className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hover:bg-emerald-200 transition-colors"
                   >
@@ -197,13 +215,13 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        <WarrantyModal 
-          isOpen={showWarrantyModal} 
-          onClose={() => setShowWarrantyModal(false)} 
+        <WarrantyModal
+          isOpen={showWarrantyModal}
+          onClose={() => setShowWarrantyModal(false)}
           warrantyValue={product.warranty}
         />
 
-
+        {/* Related Products */}
         <div className="mt-24 max-md:mt-16">
           <h2 className="text-2xl md:text-3xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-8">
@@ -221,14 +239,8 @@ export default function ProductDetail() {
                 <ProductCard key={relatedProduct.id} product={relatedProduct} />
               ))}
           </div>
-          {allProducts.filter(p => p.id !== product.id).length === 0 && (
-            <div className="text-center py-8 bg-muted/20 rounded-lg">
-              <p className="text-muted-foreground">No related products found at the moment.</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
-
