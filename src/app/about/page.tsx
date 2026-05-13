@@ -144,7 +144,7 @@ export default function About() {
       <section id="faq" className="py-24 max-md:py-12">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Frequently Asked Questions</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
             <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
 
             {/* Search Input Box */}
@@ -157,7 +157,7 @@ export default function About() {
               <input
                 type="text"
                 placeholder="Search for a question (e.g. 'warranty', 'delivery')..."
-                className="w-full pl-12 pr-4 py-4 rounded-full border border-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
+                className="w-full pl-12 pr-4 py-2 md:py-4 rounded-full border border-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -182,7 +182,7 @@ export default function About() {
               }
 
               return displayFaqs.map((faq: any, index: number) => (
-                <div key={index} className="p-8 border border-border rounded-xl bg-card hover:border-primary transition-colors animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div key={index} className="p-4 md:p-8 border border-border rounded-sm md:rounded-xl bg-card hover:border-primary transition-colors animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <h4 className="text-xl font-bold mb-4">{faq.question}</h4>
                   <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
                 </div>
@@ -195,7 +195,7 @@ export default function About() {
             <div className="mt-12 text-center">
               <button
                 onClick={() => setShowAllFaqs(!showAllFaqs)}
-                className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:opacity-90 transition-all"
+                className="inline-flex items-center gap-2 bg-primary text-white px-4 md:px-8 py-2 md:py-3 rounded-full font-bold shadow-lg hover:opacity-90 transition-all"
               >
                 {showAllFaqs ? 'Show Less' : 'Show More Questions'}
                 <svg className={`w-5 h-5 transition-transform duration-300 ${showAllFaqs ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,10 +211,10 @@ export default function About() {
       <section id="privacy" className="py-24 max-md:py-12 bg-card border-t border-border">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold mb-12">Store Policies</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-12">Store Policies</h2>
             <div className="flex flex-col gap-8 text-muted-foreground">
               {policies.map((p: any, i: number) => (
-                <div key={i} className="flex gap-6 items-start p-6 bg-muted/30 rounded-lg">
+                <div key={i} className="flex gap-4 md:gap-6 items-start p-4 md:p-6 bg-muted/30 rounded-sm md:rounded-lg">
                   <FaCheckCircle size={24} className="shrink-0 text-primary" />
                   <div>
                     <h3 className="font-bold text-foreground text-xl mb-2">{p.title}</h3>
