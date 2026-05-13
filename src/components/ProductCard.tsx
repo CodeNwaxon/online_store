@@ -117,10 +117,10 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
           {product.description}
         </p>
 
-        <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="flex flex-col justify-start items-start gap-2 mb-2">
           {product.manufacturer && (
             <span className="text-[0.65rem] text-muted-foreground font-medium italic">
-              By {product.manufacturer}
+              By {product.manufacturer.toUpperCase()}
             </span>
           )}
           {product.warranty && (
