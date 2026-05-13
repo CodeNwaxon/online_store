@@ -79,7 +79,7 @@ export default function ProductDetail() {
   const whatsappUrl = `https://wa.me/2347034632037?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
-    <div className="py-16 max-md:py-8">
+    <div className="py-14 max-md:py-4">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
         <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
           <FaArrowLeft size={16} /> Back to Shop
