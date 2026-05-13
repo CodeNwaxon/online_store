@@ -134,6 +134,11 @@ export default function AdminInstallments() {
     return true;
   });
 
+  const formatNumberWithCommas = (val: number | string) => {
+    if (!val && val !== 0) return '';
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
   return (
     <div className="space-y-8">
       {/* HEADER & TABS */}
@@ -390,8 +395,11 @@ export default function AdminInstallments() {
                       <input 
                         type="number" 
                         className="w-full bg-background border border-border rounded p-2 text-sm" 
-                        value={instSettings.shortPlan.months}
-                        onChange={(e) => setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: parseInt(e.target.value) } }))}
+                        value={instSettings.shortPlan.months || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: isNaN(val) ? 0 : val } }));
+                        }}
                       />
                     </div>
                     <div>
@@ -399,8 +407,11 @@ export default function AdminInstallments() {
                       <input 
                         type="number" 
                         className="w-full bg-background border border-border rounded p-2 text-sm" 
-                        value={instSettings.shortPlan.increase}
-                        onChange={(e) => setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: parseInt(e.target.value) } }))}
+                        value={instSettings.shortPlan.increase || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: isNaN(val) ? 0 : val } }));
+                        }}
                       />
                     </div>
                   </div>
@@ -413,8 +424,11 @@ export default function AdminInstallments() {
                       <input 
                         type="number" 
                         className="w-full bg-background border border-border rounded p-2 text-sm" 
-                        value={instSettings.longPlan.months}
-                        onChange={(e) => setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: parseInt(e.target.value) } }))}
+                        value={instSettings.longPlan.months || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: isNaN(val) ? 0 : val } }));
+                        }}
                       />
                     </div>
                     <div>
@@ -422,8 +436,11 @@ export default function AdminInstallments() {
                       <input 
                         type="number" 
                         className="w-full bg-background border border-border rounded p-2 text-sm" 
-                        value={instSettings.longPlan.increase}
-                        onChange={(e) => setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: parseInt(e.target.value) } }))}
+                        value={instSettings.longPlan.increase || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: isNaN(val) ? 0 : val } }));
+                        }}
                       />
                     </div>
                   </div>
@@ -434,10 +451,19 @@ export default function AdminInstallments() {
                 <div>
                   <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Price Threshold (₦)</label>
                   <input 
-                    type="number" 
+                    type="text" 
                     className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                    value={instSettings.downpaymentThreshold}
-                    onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentThreshold: parseInt(e.target.value) }))}
+                    value={formatNumberWithCommas(instSettings.downpaymentThreshold)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/,/g, '');
+                      if (val === '') {
+                        setInstSettings(prev => ({ ...prev, downpaymentThreshold: 0 }));
+                        return;
+                      }
+                      if (!isNaN(Number(val))) {
+                        setInstSettings(prev => ({ ...prev, downpaymentThreshold: Number(val) }));
+                      }
+                    }}
                   />
                   <p className="text-[10px] text-muted-foreground mt-1">Example: 1,000,000</p>
                 </div>
@@ -447,8 +473,11 @@ export default function AdminInstallments() {
                     <input 
                       type="number" 
                       className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                      value={instSettings.downpaymentUnderThreshold}
-                      onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentUnderThreshold: parseInt(e.target.value) }))}
+                      value={instSettings.downpaymentUnderThreshold || ''}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setInstSettings(prev => ({ ...prev, downpaymentUnderThreshold: isNaN(val) ? 0 : val }));
+                      }}
                     />
                     <span className="text-sm font-bold">%</span>
                   </div>
@@ -459,8 +488,11 @@ export default function AdminInstallments() {
                     <input 
                       type="number" 
                       className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                      value={instSettings.downpaymentOverThreshold}
-                      onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentOverThreshold: parseInt(e.target.value) }))}
+                      value={instSettings.downpaymentOverThreshold || ''}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setInstSettings(prev => ({ ...prev, downpaymentOverThreshold: isNaN(val) ? 0 : val }));
+                      }}
                     />
                     <span className="text-sm font-bold">%</span>
                   </div>
@@ -476,8 +508,11 @@ export default function AdminInstallments() {
                 <input 
                   type="number" 
                   className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                  value={instSettings.gracePeriodDays}
-                  onChange={(e) => setInstSettings(prev => ({ ...prev, gracePeriodDays: parseInt(e.target.value) }))}
+                  value={instSettings.gracePeriodDays || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setInstSettings(prev => ({ ...prev, gracePeriodDays: isNaN(val) ? 0 : val }));
+                  }}
                 />
               </div>
               <div>
@@ -485,8 +520,11 @@ export default function AdminInstallments() {
                 <input 
                   type="number" 
                   className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                  value={instSettings.lateFeePercent}
-                  onChange={(e) => setInstSettings(prev => ({ ...prev, lateFeePercent: parseInt(e.target.value) }))}
+                  value={instSettings.lateFeePercent || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setInstSettings(prev => ({ ...prev, lateFeePercent: isNaN(val) ? 0 : val }));
+                  }}
                 />
               </div>
               <div>
@@ -494,8 +532,11 @@ export default function AdminInstallments() {
                 <input 
                   type="number" 
                   className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
-                  value={instSettings.withdrawalFeePercent}
-                  onChange={(e) => setInstSettings(prev => ({ ...prev, withdrawalFeePercent: parseInt(e.target.value) }))}
+                  value={instSettings.withdrawalFeePercent || ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setInstSettings(prev => ({ ...prev, withdrawalFeePercent: isNaN(val) ? 0 : val }));
+                  }}
                 />
               </div>
             </div>
