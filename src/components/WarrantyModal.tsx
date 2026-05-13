@@ -13,7 +13,7 @@ interface WarrantyModalProps {
 }
 
 export default function WarrantyModal({ isOpen, onClose, warrantyValue }: WarrantyModalProps) {
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
   const [policy, setPolicy] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -39,7 +39,7 @@ export default function WarrantyModal({ isOpen, onClose, warrantyValue }: Warran
           const docSnap = await getDoc(doc(db, 'settings', 'general'));
           if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.siteName) setSiteName(data.siteName);
+            if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
             if (data.warrantyPolicy) setPolicy(data.warrantyPolicy);
           }
         } catch (error) {

@@ -40,7 +40,7 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
   const [promoProducts, setPromoProducts] = useState<any[]>([]);
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
 
   // Load hero slides and promo products from Firestore

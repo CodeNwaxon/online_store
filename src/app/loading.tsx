@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 export default function Loading() {
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const docSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (docSnap.exists() && docSnap.data().siteName) {
-          setSiteName(docSnap.data().siteName);
+        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+        const response = await fetch(
+          `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/general`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const name = data.fields?.siteName?.stringValue;
+          if (name) setSiteName(name);
         }
       } catch (err) {
-        console.error("Error fetching site name for loading:", err);
+        // Silent fallback to default
       }
     };
     fetchSettings();

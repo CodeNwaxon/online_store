@@ -14,7 +14,7 @@ const SOCIAL_PLATFORMS = [
 ];
 
 export default function AdminSettings() {
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
   const [footerMessage, setFooterMessage] = useState('');
   const [installmentBg, setInstallmentBg] = useState('');
   const [installmentBgUrlInput, setInstallmentBgUrlInput] = useState('');
@@ -34,8 +34,8 @@ export default function AdminSettings() {
 
   const DEFAULT_WARRANTY_POLICY = `Please note:
 1. Warranty does NOT cover self-inflicted or accidental damages (e.g., screen breaks, liquid spills, or physical impact).
-2. Warranties are provided directly by the manufacturing companies, not by Quick Choice store.
-3. If a product requires service, Quick Choice will facilitate sending it to the manufacturer. This process may take some time for repairs and return.
+2. Warranties are provided directly by the manufacturing companies, not by our store.
+3. If a product requires service, we will facilitate sending it to the manufacturer. This process may take some time for repairs and return.
 4. Returns/Exchanges: If a product is found to have a manufacturing defect within 2 days of purchase, it can be exchanged, provided it is in the exact condition it was purchased (including original packaging and accessories).`;
 
 
@@ -45,7 +45,7 @@ export default function AdminSettings() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setSiteName(data.siteName || 'Quick Choice');
+        setSiteName(data.siteName || '');
         setFooterMessage(data.footerMessage || '');
         setInstallmentBg(data.installmentBg || '');
         setPhones(data.phones || []);
@@ -139,7 +139,7 @@ export default function AdminSettings() {
               placeholder="e.g. Premium African-inspired store..."
             />
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-              Tip: Wrap your company name in square brackets like <code className="bg-muted px-1 rounded">[Quick Choice]</code> to make it bold and primary-colored in the footer.
+              Tip: Wrap your company name in square brackets like <code className="bg-muted px-1 rounded">[Your Store Name]</code> to make it bold and primary-colored in the footer.
             </p>
           </div>
         </div>

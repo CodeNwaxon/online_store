@@ -10,7 +10,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export async function generateMetadata(): Promise<Metadata> {
-  let siteName = 'Quick Choice';
+  let siteName = '';
   
   try {
     // Using fetch REST API to avoid GRPC errors in server-side metadata generation
@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     
     if (response.ok) {
       const data = await response.json();
-      siteName = data.fields?.siteName?.stringValue || 'Quick Choice';
+      siteName = data.fields?.siteName?.stringValue || '';
     }
   } catch (error) {
     // Silent fallback to avoid console noise during build

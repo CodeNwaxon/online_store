@@ -22,12 +22,12 @@ export default function Checkout() {
     address: ''
   });
 
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'general'));
-      if (docSnap.exists()) setSiteName(docSnap.data().siteName || 'Quick Choice');
+      if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
     };
     fetchSettings();
 

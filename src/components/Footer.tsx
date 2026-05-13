@@ -44,7 +44,7 @@ export default function Footer() {
     fetchSettings();
   }, []);
 
-  const siteName = settings?.siteName || 'Quick Choice';
+  const siteName = settings?.siteName || '';
   const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}]®.`;
 
   // Function to highlight text in brackets [Like This]

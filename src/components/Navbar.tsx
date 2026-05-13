@@ -40,7 +40,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { user, isAdmin, isCEO, adminData } = useAdmin();
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
 
@@ -50,7 +50,7 @@ export default function Navbar() {
     setMounted(true);
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'general'));
-      if (docSnap.exists()) setSiteName(docSnap.data().siteName || 'Quick Choice');
+      if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
     };
     fetchSettings();
   }, []);

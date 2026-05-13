@@ -19,7 +19,7 @@ export default function PayLoanPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [refundDetails, setRefundDetails] = useState({ accountName: '', accountNumber: '', bankName: '' });
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
-  const [siteName, setSiteName] = useState('Quick Choice');
+  const [siteName, setSiteName] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export default function PayLoanPage() {
       setUser(currentUser);
       if (currentUser) {
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || 'Quick Choice');
+        if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || '');
         await fetchLoan(currentUser.email!);
         await fetchHistory(currentUser.uid);
       } else {

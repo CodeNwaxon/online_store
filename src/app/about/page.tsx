@@ -27,7 +27,7 @@ export default function About() {
 
   if (loading) return <div className="py-20 text-center font-bold text-primary animate-pulse">Loading Our Story...</div>;
 
-  const siteName = settings?.siteName || 'Quick Choice';
+  const siteName = settings?.siteName || '';
   const ceo = settings?.ceoInfo || {
     name: 'Kofi Mensah',
     role: 'Founder & CEO',
