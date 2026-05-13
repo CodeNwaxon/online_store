@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Product } from '@/data/products';
-import { installmentSettings } from '@/data/installmentSettings';
 import { FaTimes, FaCreditCard, FaUser, FaPhone } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -12,7 +11,7 @@ import { useRouter } from 'next/navigation';
 
 interface InstallmentOverlayProps {
   product: Product;
-  plan: 3 | 4;
+  plan: number;
   onClose: () => void;
 }
 
@@ -25,15 +24,35 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [loanStatus, setLoanStatus] = useState<'checking' | 'none' | 'active' | 'cancelling'>('checking');
+  const [instSettings, setInstSettings] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    if (auth.currentUser?.email) {
-      setUserEmail(auth.currentUser.email);
-      checkExistingLoan(auth.currentUser.email);
-    } else {
-      setLoanStatus('none');
-    }
+    const init = async () => {
+      // Fetch settings
+      const setSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
+      if (!setSnap.empty) {
+        setInstSettings(setSnap.docs[0].data());
+      } else {
+        // Fallback
+        setInstSettings({
+          shortPlan: { months: 3, increase: 20 },
+          longPlan: { months: 4, increase: 30 },
+          downpaymentThreshold: 1000000,
+          downpaymentUnderThreshold: 30,
+          downpaymentOverThreshold: 50,
+          deliveryPolicy: "Goods are only delivered at the completion of payment."
+        });
+      }
+
+      if (auth.currentUser?.email) {
+        setUserEmail(auth.currentUser.email);
+        await checkExistingLoan(auth.currentUser.email);
+      } else {
+        setLoanStatus('none');
+      }
+    };
+    init();
   }, []);
 
   const checkExistingLoan = async (email: string) => {
@@ -51,16 +70,23 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     }
   };
 
-  const increaseRate = plan === 3 ? installmentSettings.threeMonthIncrease : installmentSettings.fourMonthIncrease;
+  if (!instSettings) return (
+    <div className="fixed inset-0 bg-black/85 z-[1000] flex items-center justify-center p-4">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const currentPlanConfig = plan === instSettings.shortPlan.months ? instSettings.shortPlan : instSettings.longPlan;
+  const increaseRate = currentPlanConfig.increase / 100;
   const increaseAmount = product.price * increaseRate;
   const totalAmount = product.price + increaseAmount;
 
-  // Down payment rules
-  const downPaymentRate = product.price >= installmentSettings.oneMillionThreshold
-    ? installmentSettings.downPaymentOver1M
-    : installmentSettings.downPaymentUnder1M;
-
-  const requiredDownPayment = totalAmount * downPaymentRate;
+  // Down payment rules - based on price threshold
+  const applicableRate = product.price >= (instSettings.downpaymentThreshold || 1000000) 
+    ? (instSettings.downpaymentOverThreshold || 50) 
+    : (instSettings.downpaymentUnderThreshold || 30);
+    
+  const minRequiredDownPayment = totalAmount * (applicableRate / 100);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -85,8 +111,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       return;
     }
 
-    if (!downPaymentInput || amountToPay < requiredDownPayment) {
-      toast.error(`Amount is below down payment. Minimum required: ${formatCurrency(requiredDownPayment)}`);
+    if (!downPaymentInput || amountToPay < minRequiredDownPayment) {
+      toast.error(`Amount is below minimum down payment. Required: ${formatCurrency(minRequiredDownPayment)}`);
       return;
     }
 
@@ -337,21 +363,37 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           <div className="mb-8">
             <h3 className="font-bold mb-4">Enter Down Payment</h3>
 
-            {downPaymentInput && Number(downPaymentInput) < requiredDownPayment && (
+            {downPaymentInput && Number(downPaymentInput) < minRequiredDownPayment && (
               <p className="text-red-500 text-[0.85rem] mb-2 font-bold animate-[shake_0.3s]">
-                ⚠️ Amount is too low. Minimum: {formatCurrency(requiredDownPayment)}
+                ⚠️ Amount is too low. Minimum: {formatCurrency(minRequiredDownPayment)}
               </p>
             )}
+
+            <div className="mb-4">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Required Deposit Plan</p>
+              <button
+                onClick={() => setDownPaymentInput(Math.round(minRequiredDownPayment))}
+                className={`w-full py-3 rounded border text-xs font-bold transition-all bg-primary text-white border-primary`}
+              >
+                Apply {applicableRate}% Deposit ({formatCurrency(minRequiredDownPayment)})
+              </button>
+              <p className="text-[9px] text-muted-foreground mt-1 text-center italic">
+                {product.price >= instSettings.downpaymentThreshold 
+                  ? `* High-value items (above ₦${instSettings.downpaymentThreshold.toLocaleString()}) require a ${applicableRate}% minimum deposit.`
+                  : `* Items below ₦${instSettings.downpaymentThreshold.toLocaleString()} require a ${applicableRate}% minimum deposit.`
+                }
+              </p>
+            </div>
 
             <div className="relative">
               <input
                 type="number"
-                placeholder={`Minimum ${formatCurrency(requiredDownPayment)}`}
+                placeholder={`Minimum ${formatCurrency(minRequiredDownPayment)}`}
                 value={downPaymentInput}
                 onChange={(e) => setDownPaymentInput(e.target.value)}
-                className={`w-full py-4 pr-4 pl-12 rounded-lg border text-base font-bold outline-none ${downPaymentInput && Number(downPaymentInput) < requiredDownPayment ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
+                className={`w-full py-4 pr-4 pl-12 rounded-lg border text-base font-bold outline-none ${downPaymentInput && Number(downPaymentInput) < minRequiredDownPayment ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-primary'}`}
               />
-              <FaCreditCard className={`absolute left-4 top-1/2 -translate-y-1/2 ${downPaymentInput && Number(downPaymentInput) < requiredDownPayment ? 'text-red-500' : 'text-primary'}`} />
+              <FaCreditCard className={`absolute left-4 top-1/2 -translate-y-1/2 ${downPaymentInput && Number(downPaymentInput) < minRequiredDownPayment ? 'text-red-500' : 'text-primary'}`} />
             </div>
             <p className="text-[0.75rem] text-muted-foreground mt-2">
               * You can pay more than the minimum to reduce your future monthly payments.
@@ -369,16 +411,16 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
                 </div>
                 <div className="flex-1">
                   <div className="text-xs opacity-90">Pay Now (Deposit)</div>
-                  <div className="font-bold">{formatCurrency(Number(downPaymentInput) || requiredDownPayment)}</div>
+                  <div className="font-bold">{formatCurrency(Number(downPaymentInput) || minRequiredDownPayment)}</div>
                 </div>
                 <span className="text-[0.7rem] bg-white/20 px-2 py-1 rounded-full">Immediate</span>
               </div>
 
               {/* Installments List */}
-              {Array.from({ length: plan }).map((_, i) => {
-                const currentPaid = Number(downPaymentInput) || requiredDownPayment;
+              {Array.from({ length: plan - 1 }).map((_, i) => {
+                const currentPaid = Number(downPaymentInput) || minRequiredDownPayment;
                 const remaining = totalAmount - currentPaid;
-                const dynamicMonthly = remaining / plan;
+                const dynamicMonthly = remaining / (plan - 1);
 
                 return (
                   <div key={i} className="flex items-center gap-4 p-4 bg-muted rounded-[var(--radius)] border border-border">
@@ -403,7 +445,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           >
             {isProcessing ? 'Processing...' : (
               <>
-                <FaCreditCard /> Proceed to Pay {downPaymentInput ? formatCurrency(Number(downPaymentInput)) : formatCurrency(requiredDownPayment)}
+                <FaCreditCard /> Proceed to Pay {downPaymentInput ? formatCurrency(Number(downPaymentInput)) : formatCurrency(minRequiredDownPayment)}
               </>
             )}
           </button>

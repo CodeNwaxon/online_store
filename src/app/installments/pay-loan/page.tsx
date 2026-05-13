@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
-import { installmentSettings } from '@/data/installmentSettings';
 import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -20,6 +19,7 @@ export default function PayLoanPage() {
   const [refundDetails, setRefundDetails] = useState({ accountName: '', accountNumber: '', bankName: '' });
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const [siteName, setSiteName] = useState('');
+  const [instSettings, setInstSettings] = useState<any>({ withdrawalFeePercent: 15 });
   const router = useRouter();
 
   useEffect(() => {
@@ -28,6 +28,10 @@ export default function PayLoanPage() {
       if (currentUser) {
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
         if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || '');
+        
+        const instSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
+        if (!instSnap.empty) setInstSettings(instSnap.docs[0].data());
+
         await fetchLoan(currentUser.email!);
         await fetchHistory(currentUser.uid);
       } else {
@@ -144,7 +148,8 @@ export default function PayLoanPage() {
 
       // Fee is 15% of the TOTAL loan amount (not the amount already paid)
       // This is the cancellation penalty to cover business costs
-      const charge = loan.totalAmount * installmentSettings.cancellationFee;
+      const withdrawalFee = instSettings.withdrawalFeePercent / 100;
+      const charge = loan.totalAmount * withdrawalFee;
       const refundAmount = totalPaid - charge;
 
       const loanRef = doc(db, 'installments', loan.id);
@@ -420,7 +425,7 @@ export default function PayLoanPage() {
               <FaExclamationTriangle size={50} color="red" className="mb-6 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">Cancel Installment Plan?</h2>
               <p className="text-muted-foreground mb-8">
-                If you cancel now, you will lose <strong>{installmentSettings.cancellationFee * 100}%</strong> as a processing fee.
+                If you cancel now, you will lose <strong>{instSettings.withdrawalFeePercent}%</strong> as a processing fee.
                 Refund will be processed to your account.
               </p>
               <div className="flex gap-4">

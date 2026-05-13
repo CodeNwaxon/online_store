@@ -25,7 +25,9 @@ import {
   FaUser, 
   FaWallet,
   FaExclamationCircle,
-  FaLock
+  FaLock,
+  FaCog,
+  FaSave
 } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 
@@ -36,6 +38,20 @@ export default function AdminInstallments() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: string, id: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'plans' | 'fees' | 'policy'>('plans');
+
+  // Installment Settings State
+  const [instSettings, setInstSettings] = useState({
+    shortPlan: { months: 3, increase: 20 },
+    longPlan: { months: 4, increase: 30 },
+    downpaymentThreshold: 1000000,
+    downpaymentUnderThreshold: 30,
+    downpaymentOverThreshold: 50,
+    gracePeriodDays: 5,
+    lateFeePercent: 5,
+    withdrawalFeePercent: 15,
+    deliveryPolicy: "Goods are only delivered at the completion of payment."
+  });
 
   // Filters for installments
   const [filter, setFilter] = useState<'all' | 'unsettled' | 'cleared' | 'vip'>('all');
@@ -51,6 +67,15 @@ export default function AdminInstallments() {
     }, (error) => {
       console.warn("Complaints listener error:", error);
     });
+
+    const loadSettings = async () => {
+      const docSnap = await getDoc(doc(db, 'settings', 'installments'));
+      if (docSnap.exists()) {
+        setInstSettings(prev => ({ ...prev, ...docSnap.data() }));
+      }
+    };
+    loadSettings();
+
     return () => { unsubInst(); unsubComp(); };
   }, []);
 
@@ -83,6 +108,9 @@ export default function AdminInstallments() {
       } else if (actionType === 'deleteSettled') {
         await deleteDoc(doc(db, 'installments', id));
         toast.success('Record deleted.');
+      } else if (actionType === 'saveInstallmentSettings') {
+        await setDoc(doc(db, 'settings', 'installments'), instSettings);
+        toast.success('Installment settings updated successfully!');
       }
       setShowPasskeyModal(null);
       setPasskeyInput('');
@@ -326,6 +354,166 @@ export default function AdminInstallments() {
           </div>
         </div>
       )}
+
+      {/* INSTALLMENT SETTINGS SECTION */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mt-12 mx-4 md:mx-0">
+        <div className="bg-muted px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FaCog className="text-primary" /> Installment Settings
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">Configure interest rates, months, and payment policies.</p>
+          </div>
+          <button 
+            onClick={() => setShowPasskeyModal({ type: 'saveInstallmentSettings', id: 'new-settings' })}
+            className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors flex items-center gap-2"
+          >
+            <FaSave /> Save Settings
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="flex gap-4 border-b border-border mb-6">
+            <button onClick={() => setActiveSettingsTab('plans')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'plans' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Plans & Months</button>
+            <button onClick={() => setActiveSettingsTab('fees')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'fees' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Interest & Fees</button>
+            <button onClick={() => setActiveSettingsTab('policy')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'policy' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Policies</button>
+          </div>
+
+          {activeSettingsTab === 'plans' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <h3 className="font-bold text-sm mb-4">Short-term Plan</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
+                      <input 
+                        type="number" 
+                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                        value={instSettings.shortPlan.months}
+                        onChange={(e) => setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: parseInt(e.target.value) } }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
+                      <input 
+                        type="number" 
+                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                        value={instSettings.shortPlan.increase}
+                        onChange={(e) => setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: parseInt(e.target.value) } }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                  <h3 className="font-bold text-sm mb-4">Long-term Plan</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
+                      <input 
+                        type="number" 
+                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                        value={instSettings.longPlan.months}
+                        onChange={(e) => setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: parseInt(e.target.value) } }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
+                      <input 
+                        type="number" 
+                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                        value={instSettings.longPlan.increase}
+                        onChange={(e) => setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: parseInt(e.target.value) } }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Price Threshold (₦)</label>
+                  <input 
+                    type="number" 
+                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                    value={instSettings.downpaymentThreshold}
+                    onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentThreshold: parseInt(e.target.value) }))}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Example: 1,000,000</p>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Below Threshold (%)</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                      value={instSettings.downpaymentUnderThreshold}
+                      onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentUnderThreshold: parseInt(e.target.value) }))}
+                    />
+                    <span className="text-sm font-bold">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Above Threshold (%)</label>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                      value={instSettings.downpaymentOverThreshold}
+                      onChange={(e) => setInstSettings(prev => ({ ...prev, downpaymentOverThreshold: parseInt(e.target.value) }))}
+                    />
+                    <span className="text-sm font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSettingsTab === 'fees' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Grace Period (Days)</label>
+                <input 
+                  type="number" 
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                  value={instSettings.gracePeriodDays}
+                  onChange={(e) => setInstSettings(prev => ({ ...prev, gracePeriodDays: parseInt(e.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Late Fee (%)</label>
+                <input 
+                  type="number" 
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                  value={instSettings.lateFeePercent}
+                  onChange={(e) => setInstSettings(prev => ({ ...prev, lateFeePercent: parseInt(e.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Withdrawal Fee (%)</label>
+                <input 
+                  type="number" 
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                  value={instSettings.withdrawalFeePercent}
+                  onChange={(e) => setInstSettings(prev => ({ ...prev, withdrawalFeePercent: parseInt(e.target.value) }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeSettingsTab === 'policy' && (
+            <div>
+              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Delivery Policy Text</label>
+              <textarea 
+                rows={3}
+                className="w-full bg-background border border-border rounded p-3 text-sm" 
+                value={instSettings.deliveryPolicy}
+                onChange={(e) => setInstSettings(prev => ({ ...prev, deliveryPolicy: e.target.value }))}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* PASSKEY MODAL */}
       {showPasskeyModal && (

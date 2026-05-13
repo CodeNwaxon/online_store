@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { products as staticProducts, Product, Category } from '@/data/products';
-import { installmentSettings } from '@/data/installmentSettings';
 import { FaSearch, FaInfoCircle, FaCreditCard, FaTimes, FaGoogle } from 'react-icons/fa';
 import { Toaster, toast } from 'react-hot-toast';
 import InstallmentOverlay from '@/components/InstallmentOverlay';
@@ -22,7 +21,14 @@ function InstallmentsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-
+  const [instSettings, setInstSettings] = useState<any>({
+    shortPlan: { months: 3, increase: 20 },
+    longPlan: { months: 4, increase: 30 },
+    gracePeriodDays: 5,
+    lateFeePercent: 5,
+    withdrawalFeePercent: 15,
+    deliveryPolicy: "Goods are only delivered at the completion of payment."
+  });
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
@@ -48,7 +54,15 @@ function InstallmentsContent() {
       }
     };
 
+    const fetchSettings = async () => {
+      const docSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
+      if (!docSnap.empty) {
+        setInstSettings(docSnap.docs[0].data());
+      }
+    };
+
     fetchProducts();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -60,13 +74,13 @@ function InstallmentsContent() {
   }, [querySearch]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<3 | 4 | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [activeLoan, setActiveLoan] = useState<any | null>(null);
   const [visibleCount, setVisibleCount] = useState(20);
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
-  const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: 3 | 4} | null>(null);
+  const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: number} | null>(null);
 
   // Reset category when group changes
   useEffect(() => {
@@ -105,7 +119,7 @@ function InstallmentsContent() {
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
-  const handleSelectPlan = (product: Product, plan: 3 | 4) => {
+  const handleSelectPlan = (product: Product, plan: number) => {
     if (!user) {
       setPendingPlanSelection({ product, plan });
       setShowAuthOverlay(true);
@@ -176,27 +190,27 @@ function InstallmentsContent() {
             <div>
               <h3 className="font-bold mb-2">Flexible Plans</h3>
               <p className="text-sm text-muted-foreground">
-                Choose between <strong>3 months</strong> ({installmentSettings.threeMonthIncrease * 100}% increase)
-                or <strong>4 months</strong> ({installmentSettings.fourMonthIncrease * 100}% increase).
+                Choose between <strong>{instSettings.shortPlan.months} months</strong> ({instSettings.shortPlan.increase}% increase)
+                or <strong>{instSettings.longPlan.months} months</strong> ({instSettings.longPlan.increase}% increase).
               </p>
             </div>
             <div>
               <h3 className="font-bold mb-2">Delivery Policy</h3>
               <p className="text-sm text-muted-foreground">
-                Goods are only delivered at the <strong>completion of payment</strong>.
+                {instSettings.deliveryPolicy}
               </p>
             </div>
             <div>
               <h3 className="font-bold mb-2">Late Payment & Grace</h3>
               <p className="text-sm text-muted-foreground">
-                Each month has a <strong>{installmentSettings.gracePeriodDays}-day grace period</strong>.
-                After that, a <strong>{installmentSettings.latePaymentFee * 100}% increase</strong> is added.
+                Each month has a <strong>{instSettings.gracePeriodDays}-day grace period</strong>.
+                After that, a <strong>{instSettings.lateFeePercent}% increase</strong> is added.
               </p>
             </div>
             <div>
               <h3 className="font-bold mb-2">Cancellation</h3>
               <p className="text-sm text-muted-foreground">
-                Withdrawing payments attracts a <strong>{installmentSettings.cancellationFee * 100}% charge</strong> from the total amount paid.
+                Withdrawing payments attracts a <strong>{instSettings.withdrawalFeePercent}% charge</strong> from the total amount paid.
               </p>
             </div>
           </div>
@@ -280,16 +294,16 @@ function InstallmentsContent() {
 
                 <div className="grid grid-cols-2 gap-3 mt-auto">
                   <button
-                    onClick={() => handleSelectPlan(product, 3)}
+                    onClick={() => handleSelectPlan(product, instSettings.shortPlan.months)}
                     className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
                   >
-                    3 Months Plan
+                    {instSettings.shortPlan.months} Months Plan
                   </button>
                   <button
-                    onClick={() => handleSelectPlan(product, 4)}
+                    onClick={() => handleSelectPlan(product, instSettings.longPlan.months)}
                     className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
                   >
-                    4 Months Plan
+                    {instSettings.longPlan.months} Months Plan
                   </button>
                 </div>
               </div>
