@@ -17,7 +17,7 @@ export default function About() {
         getDoc(doc(db, 'settings', 'general')),
         getDoc(doc(db, 'settings', 'about'))
       ]);
-      
+
       if (settingsSnap.exists()) setSettings(settingsSnap.data());
       if (aboutSnap.exists()) setAboutData(aboutSnap.data());
       setLoading(false);
@@ -69,20 +69,20 @@ export default function About() {
         <div className="max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="relative h-[500px] max-md:h-[350px] rounded-[var(--radius)] overflow-hidden border-4 border-primary/20">
-              <Image 
-                src={ceo.image} 
-                alt={ceo.name} 
-                fill 
+              <Image
+                src={ceo.image}
+                alt={ceo.name}
+                fill
                 className="object-cover"
               />
             </div>
             <div className="p-8 max-md:p-0">
-              <h2 className="text-3xl font-bold mb-4">Message from our CEO</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Message from our Founder</h2>
               <p className="text-muted-foreground mb-6 text-xl leading-relaxed italic border-l-4 border-primary pl-6">
                 "{ceo.message}"
               </p>
               <div className="font-bold text-2xl">{ceo.name}</div>
-              <div className="text-primary font-bold mb-6">Founder & CEO</div>
+              <div className="text-primary font-bold mb-6">Online Store Founder</div>
               <div className="flex flex-col gap-4">
                 <a href={`mailto:${ceo.email}`} className="flex items-center gap-3 hover:text-primary transition-colors">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"><FaEnvelope /></div>
@@ -125,9 +125,9 @@ export default function About() {
               <div className="text-primary mb-4"><FaMapMarkerAlt size={24} /></div>
               <h3 className="mb-4 font-bold text-xl">Visit Us</h3>
               <p className="text-muted-foreground text-sm mb-4"><strong>{primaryAddress.office}:</strong> {primaryAddress.address}</p>
-              <a 
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(primaryAddress.address)}`} 
-                target="_blank" 
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(primaryAddress.address)}`}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary font-bold hover:underline"
               >
