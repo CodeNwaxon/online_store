@@ -15,22 +15,22 @@ import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore'
 const getOrdinal = (d: number) => {
   if (d > 3 && d < 21) return 'th';
   switch (d % 10) {
-    case 1:  return "st";
-    case 2:  return "nd";
-    case 3:  return "rd";
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
     default: return "th";
   }
 };
 
 const heroThemes = [
-  { bg: 'bg-[#F8FAFC]', text: 'text-slate-900', subtext: 'text-slate-600', accent: 'text-primary', button: 'border-slate-900 text-slate-900 hover:bg-slate-900/5' },
-  { bg: 'bg-[#F0F9FF]', text: 'text-blue-900', subtext: 'text-blue-700', accent: 'text-blue-600', button: 'border-blue-900 text-blue-900 hover:bg-blue-900/5' },
-  { bg: 'bg-[#FFF1F2]', text: 'text-rose-900', subtext: 'text-rose-700', accent: 'text-rose-600', button: 'border-rose-900 text-rose-900 hover:bg-rose-900/5' },
-  { bg: 'bg-[#F0FDFA]', text: 'text-teal-900', subtext: 'text-teal-700', accent: 'text-teal-600', button: 'border-teal-900 text-teal-900 hover:bg-teal-900/5' },
-  { bg: 'bg-[#FFFBEB]', text: 'text-amber-900', subtext: 'text-amber-700', accent: 'text-amber-600', button: 'border-amber-900 text-amber-900 hover:bg-amber-900/5' },
-  { bg: 'bg-[#F5F3FF]', text: 'text-violet-900', subtext: 'text-violet-700', accent: 'text-violet-600', button: 'border-violet-900 text-violet-900 hover:bg-violet-900/5' },
-  { bg: 'bg-[#ECFDF5]', text: 'text-emerald-900', subtext: 'text-emerald-700', accent: 'text-emerald-600', button: 'border-emerald-900 text-emerald-900 hover:bg-emerald-900/5' },
-  { bg: 'bg-[#FFF7ED]', text: 'text-orange-900', subtext: 'text-orange-700', accent: 'text-orange-600', button: 'border-orange-900 text-orange-900 hover:bg-orange-900/5' },
+  { bg: 'bg-[#F8FAFC]', text: 'text-slate-900', subtext: 'text-slate-600', accent: 'text-primary', button: 'border-slate-900 text-slate-900 hover:bg-slate-900/5', viewBtn: 'bg-primary text-white hover:bg-primary-hover' },
+  { bg: 'bg-[#F0F9FF]', text: 'text-blue-900', subtext: 'text-blue-700', accent: 'text-blue-600', button: 'border-blue-900 text-blue-900 hover:bg-blue-900/5', viewBtn: 'bg-blue-900 text-white hover:bg-blue-800' },
+  { bg: 'bg-[#FFF1F2]', text: 'text-rose-900', subtext: 'text-rose-700', accent: 'text-rose-600', button: 'border-rose-900 text-rose-900 hover:bg-rose-900/5', viewBtn: 'bg-rose-900 text-white hover:bg-rose-800' },
+  { bg: 'bg-[#F0FDFA]', text: 'text-teal-900', subtext: 'text-teal-700', accent: 'text-teal-600', button: 'border-teal-900 text-teal-900 hover:bg-teal-900/5', viewBtn: 'bg-teal-900 text-white hover:bg-teal-800' },
+  { bg: 'bg-[#FFFBEB]', text: 'text-amber-900', subtext: 'text-amber-700', accent: 'text-amber-600', button: 'border-amber-900 text-amber-900 hover:bg-amber-900/5', viewBtn: 'bg-amber-900 text-white hover:bg-amber-800' },
+  { bg: 'bg-[#F5F3FF]', text: 'text-violet-900', subtext: 'text-violet-700', accent: 'text-violet-600', button: 'border-violet-900 text-violet-900 hover:bg-violet-900/5', viewBtn: 'bg-violet-900 text-white hover:bg-violet-800' },
+  { bg: 'bg-[#ECFDF5]', text: 'text-emerald-900', subtext: 'text-emerald-700', accent: 'text-emerald-600', button: 'border-emerald-900 text-emerald-900 hover:bg-emerald-900/5', viewBtn: 'bg-emerald-900 text-white hover:bg-emerald-800' },
+  { bg: 'bg-[#FFF7ED]', text: 'text-orange-900', subtext: 'text-orange-700', accent: 'text-orange-600', button: 'border-orange-900 text-orange-900 hover:bg-orange-900/5', viewBtn: 'bg-orange-900 text-white hover:bg-orange-800' },
 ];
 
 export default function Home() {
@@ -50,7 +50,7 @@ export default function Home() {
         // Fetch all products
         const prodSnap = await getDocs(collection(db, 'products'));
         let allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        
+
         // Fallback to static products if dynamic collection is empty
         if (allProducts.length === 0) {
           allProducts = staticProducts;
@@ -58,9 +58,9 @@ export default function Home() {
 
         // Auto-remove expired promos
         const now = new Date();
-        const expiredPromos = allProducts.filter((p: any) => 
-          p.isPromo && 
-          p.promoEndDate && 
+        const expiredPromos = allProducts.filter((p: any) =>
+          p.isPromo &&
+          p.promoEndDate &&
           new Date(p.promoEndDate) < now
         );
 
@@ -140,7 +140,7 @@ export default function Home() {
     <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section className="relative h-[650px] max-md:h-[550px] overflow-y-auto bg-slate-50 scrollbar-hide">
+      <section className="relative h-[620px] max-md:h-[650px] overflow-hidden bg-slate-50">
         {dataLoading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
@@ -161,10 +161,10 @@ export default function Home() {
               >
                 {/* Subtle background for depth */}
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent flex items-center">
-                  <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full h-full">
-                    <div className="flex flex-col-reverse md:flex-row items-center justify-between h-full gap-4 md:gap-8 py-8 md:py-0">
+                  <div className="max-w-[1200px] mx-auto px-3 md:px-6 w-full h-full">
+                    <div className="flex flex-col-reverse md:flex-row items-center justify-between h-full gap-2 md:gap-8 max-md:pt-4 max-md:pb-14 md:py-0">
                       {/* Text Content */}
-                      <div className={`max-w-[600px] ${theme.text} flex-1 z-10 max-md:text-center max-md:px-4`}>
+                      <div className={`max-w-[600px] ${theme.text} flex-1 z-10 max-md:text-center max-md:px-3`}>
                         <div className={`text-lg ${theme.accent} font-semibold mb-2`}>
                           {slide.manufacturer || slide.group}
                         </div>
@@ -185,7 +185,7 @@ export default function Home() {
                           {slide.description}
                         </p>
                         <div className="flex gap-4 flex-wrap max-md:justify-center">
-                          <Link href={`/product/${slide.id}`} className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs">
+                          <Link href={`/product/${slide.id}`} className={`${theme.viewBtn} flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs`}>
                             View Product <FaArrowRight size={18} />
                           </Link>
                           <button
@@ -198,8 +198,8 @@ export default function Home() {
                       </div>
 
                       {/* Product Image Container */}
-                      <div className="flex-1 flex justify-center items-center h-full max-md:h-[60%] w-full">
-                        <div className="relative w-full h-full md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero">
+                      <div className="flex-1 flex justify-center items-center h-full max-md:h-auto w-full max-md:px-3 max-md:mt-4">
+                        <div className="relative w-full aspect-square md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero max-md:rounded-sm">
                           {slide.isPromo && (
                             <span className="absolute top-4 left-4 bg-secondary text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm flex flex-col items-center">
                               <span>SPECIAL PROMO</span>
@@ -215,7 +215,7 @@ export default function Home() {
                           <img
                             src={slide.image}
                             alt={slide.name}
-                            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
+                            className="w-full h-full object-cover max-md:object-contain transform hover:scale-105 transition-transform duration-700"
                           />
                         </div>
                       </div>
