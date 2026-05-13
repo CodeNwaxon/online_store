@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </h2>
             <p className="text-xs text-muted-foreground mt-1">Logged in as {adminData?.role}</p>
           </div>
-          
+
           <nav className="flex-1 p-4 flex flex-col gap-1">
             {filteredNav.map(item => (
               <Link
@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 max-md:p-4">
+        <main className="flex-1 p-4 md:p-8">
           {children}
         </main>
       </div>

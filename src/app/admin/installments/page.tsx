@@ -2,27 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  getDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  collection,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
   setDoc,
   query,
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { 
-  FaWhatsapp, 
-  FaPhoneAlt, 
-  FaEnvelope, 
-  FaTrash, 
-  FaCheckCircle, 
-  FaTimesCircle, 
-  FaPrint, 
-  FaUser, 
+import {
+  FaWhatsapp,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaTrash,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaPrint,
+  FaUser,
   FaWallet,
   FaExclamationCircle,
   FaLock,
@@ -87,7 +87,7 @@ export default function AdminInstallments() {
     if (type === 'call') url = `tel:${nigerianPhone}`;
     if (type === 'whatsapp') url = `https://wa.me/${nigerianPhone.replace('+', '')}`;
     if (type === 'email') url = `mailto:${contact}`;
-    
+
     window.open(url, '_blank');
   };
 
@@ -100,7 +100,7 @@ export default function AdminInstallments() {
         await deleteDoc(doc(db, 'complaints', id));
         toast.success('Complaint deleted.');
       } else if (actionType === 'clearPayment') {
-        await updateDoc(doc(db, 'installments', id), { 
+        await updateDoc(doc(db, 'installments', id), {
           status: 'cleared',
           settledAt: new Date().toISOString()
         });
@@ -142,19 +142,19 @@ export default function AdminInstallments() {
   return (
     <div className="space-y-8">
       {/* HEADER & TABS */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 px-4 md:px-0">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6 px- md:px-0">
         <div className="text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-bold">Financials & Feedback</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Manage installments and complaints.</p>
         </div>
         <div className="bg-muted p-1 rounded-lg flex gap-1 border border-border w-full md:w-auto">
-          <button 
+          <button
             onClick={() => setActiveTab('installments')}
             className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'installments' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Installments {installments.filter(i => i.isNew).length > 0 && <span className="bg-secondary text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">New</span>}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('complaints')}
             className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'complaints' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
@@ -168,7 +168,7 @@ export default function AdminInstallments() {
           {/* INSTALLMENT FILTERS */}
           <div className="flex flex-wrap gap-2 px-4 md:px-0">
             {['all', 'unsettled', 'cleared', 'vip'].map((f) => (
-              <button 
+              <button
                 key={f}
                 onClick={() => setFilter(f as any)}
                 className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full border text-[0.7rem] md:text-sm font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary'}`}
@@ -180,9 +180,9 @@ export default function AdminInstallments() {
 
           {/* INSTALLMENT CARDS */}
           {filteredInstallments.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0 pb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-3 md:px-0 pb-10">
               {filteredInstallments.map(inst => (
-                <div 
+                <div
                   key={inst.id}
                   onClick={() => markAsRead(inst)}
                   className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden
@@ -192,7 +192,7 @@ export default function AdminInstallments() {
                 >
                   {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
                   {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
-                  
+
                   <div className="flex items-center gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
                       <FaUser size={18} />
@@ -217,7 +217,7 @@ export default function AdminInstallments() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded-xl border border-dashed border-border mx-4 md:mx-0">
+            <div className="flex flex-col items-center justify-center px-4 py-20 text-center bg-card rounded-xl border border-dashed border-border mx-0">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
                 <FaWallet size={30} />
               </div>
@@ -228,13 +228,13 @@ export default function AdminInstallments() {
         </div>
       ) : (
         /* COMPLAINTS LIST */
-        <div className="space-y-4 px-4 md:px-0">
+        <div className="space-y-4 px-0">
           {complaints.length > 0 ? (
             complaints.map(comp => (
-              <div 
+              <div
                 key={comp.id}
                 onClick={() => markAsRead(comp)}
-                className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 transition-all hover:border-primary cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4
+                className={`bg-card p-4 md:p-6 rounded md:rounded-[var(--radius)] border-2 transition-all hover:border-primary cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4
                   ${comp.isNew ? 'border-secondary animate-pulse' : 'border-border'}
                 `}
               >
@@ -253,7 +253,7 @@ export default function AdminInstallments() {
               </div>
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded md:rounded-xl border border-dashed border-border">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
                 <FaExclamationCircle size={30} />
               </div>
@@ -267,12 +267,12 @@ export default function AdminInstallments() {
       {/* DETAILS OVERLAY */}
       {selectedItem && (
         <div className="fixed inset-0 z-[1000] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-[600px] rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+          <div className="bg-card w-full max-w-[600px] rounded md:rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
             <div className="bg-primary p-6 text-white flex justify-between items-center">
               <h2 className="text-xl font-bold">Detailed Information</h2>
               <button onClick={() => setSelectedItem(null)} className="text-white/80 hover:text-white"><FaTimesCircle size={24} /></button>
             </div>
-            
+
             <div className="p-4 md:p-8 space-y-6 md:space-y-8">
               {activeTab === 'installments' ? (
                 <>
@@ -320,9 +320,9 @@ export default function AdminInstallments() {
                         <p><strong>Account Number:</strong> {selectedItem.refundInfo?.accountNumber || 'N/A'}</p>
                         <p><strong>Bank Name:</strong> {selectedItem.refundInfo?.bankName || 'N/A'}</p>
                         <p className="text-lg font-bold text-secondary mt-4">Payback Amount: ₦{selectedItem.downPayment?.toLocaleString()}</p>
-                        
+
                         {!selectedItem.isRefunded && (
-                          <button 
+                          <button
                             onClick={() => setShowPasskeyModal({ type: 'clearPayment', id: selectedItem.id })}
                             className="w-full bg-secondary text-white py-3 rounded-md font-bold mt-4"
                           >
@@ -361,15 +361,15 @@ export default function AdminInstallments() {
       )}
 
       {/* INSTALLMENT SETTINGS SECTION */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mt-12 mx-4 md:mx-0">
-        <div className="bg-muted px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-card border border-border rounded md:rounded-xl overflow-hidden shadow-sm mt-12 mx-0">
+        <div className="bg-muted px-3 md:px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <FaCog className="text-primary" /> Installment Settings
             </h2>
             <p className="text-xs text-muted-foreground mt-1">Configure interest rates, months, and payment policies.</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowPasskeyModal({ type: 'saveInstallmentSettings', id: 'new-settings' })}
             className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors flex items-center gap-2"
           >
@@ -377,7 +377,7 @@ export default function AdminInstallments() {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="py-6 px-3 md:p-6">
           <div className="flex gap-4 border-b border-border mb-6">
             <button onClick={() => setActiveSettingsTab('plans')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'plans' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Plans & Months</button>
             <button onClick={() => setActiveSettingsTab('fees')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'fees' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Interest & Fees</button>
@@ -392,9 +392,9 @@ export default function AdminInstallments() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                      <input 
-                        type="number" 
-                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm"
                         value={instSettings.shortPlan.months || ''}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
@@ -404,9 +404,9 @@ export default function AdminInstallments() {
                     </div>
                     <div>
                       <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                      <input 
-                        type="number" 
-                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm"
                         value={instSettings.shortPlan.increase || ''}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
@@ -421,9 +421,9 @@ export default function AdminInstallments() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                      <input 
-                        type="number" 
-                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm"
                         value={instSettings.longPlan.months || ''}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
@@ -433,9 +433,9 @@ export default function AdminInstallments() {
                     </div>
                     <div>
                       <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                      <input 
-                        type="number" 
-                        className="w-full bg-background border border-border rounded p-2 text-sm" 
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm"
                         value={instSettings.longPlan.increase || ''}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
@@ -450,9 +450,9 @@ export default function AdminInstallments() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Price Threshold (₦)</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                  <input
+                    type="text"
+                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                     value={formatNumberWithCommas(instSettings.downpaymentThreshold)}
                     onChange={(e) => {
                       const val = e.target.value.replace(/,/g, '');
@@ -470,9 +470,9 @@ export default function AdminInstallments() {
                 <div>
                   <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Below Threshold (%)</label>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="number" 
-                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                    <input
+                      type="number"
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                       value={instSettings.downpaymentUnderThreshold || ''}
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
@@ -485,9 +485,9 @@ export default function AdminInstallments() {
                 <div>
                   <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Above Threshold (%)</label>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="number" 
-                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                    <input
+                      type="number"
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                       value={instSettings.downpaymentOverThreshold || ''}
                       onChange={(e) => {
                         const val = parseInt(e.target.value);
@@ -505,9 +505,9 @@ export default function AdminInstallments() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Grace Period (Days)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                <input
+                  type="number"
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                   value={instSettings.gracePeriodDays || ''}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -517,9 +517,9 @@ export default function AdminInstallments() {
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Late Fee (%)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                <input
+                  type="number"
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                   value={instSettings.lateFeePercent || ''}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -529,9 +529,9 @@ export default function AdminInstallments() {
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Withdrawal Fee (%)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold" 
+                <input
+                  type="number"
+                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
                   value={instSettings.withdrawalFeePercent || ''}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -545,9 +545,9 @@ export default function AdminInstallments() {
           {activeSettingsTab === 'policy' && (
             <div>
               <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Delivery Policy Text</label>
-              <textarea 
+              <textarea
                 rows={3}
-                className="w-full bg-background border border-border rounded p-3 text-sm" 
+                className="w-full bg-background border border-border rounded p-3 text-sm"
                 value={instSettings.deliveryPolicy}
                 onChange={(e) => setInstSettings(prev => ({ ...prev, deliveryPolicy: e.target.value }))}
               />
@@ -563,8 +563,8 @@ export default function AdminInstallments() {
             <FaLock className="mx-auto text-4xl text-primary mb-4" />
             <h3 className="text-xl font-bold mb-2">CEO Passkey Required</h3>
             <p className="text-sm text-muted-foreground mb-6">Enter the CEO passcode to authorize this action.</p>
-            <input 
-              type="password" 
+            <input
+              type="password"
               autoFocus
               className="w-full p-4 rounded-md border border-border bg-background text-center text-2xl tracking-widest mb-6"
               value={passkeyInput}

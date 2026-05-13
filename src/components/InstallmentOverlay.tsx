@@ -5,7 +5,7 @@ import { Product } from '@/data/products';
 import { FaTimes, FaCreditCard, FaUser, FaPhone } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, onSnapshot, doc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -28,13 +28,11 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const router = useRouter();
 
   useEffect(() => {
-    const init = async () => {
-      // Fetch settings
-      const setSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
-      if (!setSnap.empty) {
-        setInstSettings(setSnap.docs[0].data());
+    // Real-time settings listener
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'installments'), (docSnap) => {
+      if (docSnap.exists()) {
+        setInstSettings(docSnap.data());
       } else {
-        // Fallback
         setInstSettings({
           shortPlan: { months: 3, increase: 20 },
           longPlan: { months: 4, increase: 30 },
@@ -44,15 +42,16 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           deliveryPolicy: "Goods are only delivered at the completion of payment."
         });
       }
+    });
 
-      if (auth.currentUser?.email) {
-        setUserEmail(auth.currentUser.email);
-        await checkExistingLoan(auth.currentUser.email);
-      } else {
-        setLoanStatus('none');
-      }
-    };
-    init();
+    if (auth.currentUser?.email) {
+      setUserEmail(auth.currentUser.email);
+      checkExistingLoan(auth.currentUser.email);
+    } else {
+      setLoanStatus('none');
+    }
+
+    return () => unsubSettings();
   }, []);
 
   const checkExistingLoan = async (email: string) => {
@@ -174,6 +173,9 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           downPaymentPaid: amountToPay,
           totalAmountPaid: amountToPay,
           monthsPaid: 1,
+          lateFeePercent: instSettings.lateFeePercent || 5,
+          withdrawalFeePercent: instSettings.withdrawalFeePercent || 15,
+          gracePeriodDays: instSettings.gracePeriodDays || 5,
           payments: [
             {
               month: 1,

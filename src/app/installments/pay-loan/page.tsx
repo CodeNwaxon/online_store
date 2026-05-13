@@ -146,9 +146,12 @@ export default function PayLoanPage() {
         .filter((p: any) => p.status === 'paid')
         .reduce((sum: number, p: any) => sum + p.amount, 0);
 
-      // Fee is 15% of the TOTAL loan amount (not the amount already paid)
-      // This is the cancellation penalty to cover business costs
-      const withdrawalFee = instSettings.withdrawalFeePercent / 100;
+      // Fee is calculated based on the percent locked at creation, or current fallback
+      const withdrawalPercent = loan.withdrawalFeePercent !== undefined 
+        ? loan.withdrawalFeePercent 
+        : (instSettings.withdrawalFeePercent || 15);
+        
+      const withdrawalFee = withdrawalPercent / 100;
       const charge = loan.totalAmount * withdrawalFee;
       const refundAmount = totalPaid - charge;
 
@@ -425,7 +428,7 @@ export default function PayLoanPage() {
               <FaExclamationTriangle size={50} color="red" className="mb-6 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">Cancel Installment Plan?</h2>
               <p className="text-muted-foreground mb-8">
-                If you cancel now, you will lose <strong>{instSettings.withdrawalFeePercent}%</strong> as a processing fee.
+                If you cancel now, you will lose <strong>{loan.withdrawalFeePercent !== undefined ? loan.withdrawalFeePercent : instSettings.withdrawalFeePercent}%</strong> as a processing fee.
                 Refund will be processed to your account.
               </p>
               <div className="flex gap-4">

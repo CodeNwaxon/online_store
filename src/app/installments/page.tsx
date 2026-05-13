@@ -8,7 +8,7 @@ import InstallmentOverlay from '@/components/InstallmentOverlay';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -54,15 +54,14 @@ function InstallmentsContent() {
       }
     };
 
-    const fetchSettings = async () => {
-      const docSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
-      if (!docSnap.empty) {
-        setInstSettings(docSnap.docs[0].data());
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'installments'), (doc) => {
+      if (doc.exists()) {
+        setInstSettings(doc.data());
       }
-    };
+    });
 
     fetchProducts();
-    fetchSettings();
+    return () => unsubSettings();
   }, []);
 
   useEffect(() => {
