@@ -266,7 +266,7 @@ function InstallmentsContent() {
               <div className="h-[200px] bg-muted relative p-2">
                 <div className="relative w-full h-full overflow-hidden rounded-md shadow-inner">
                   <img
-                    src={product.image}
+                    src={product.images?.[0] || product.image}
                     alt={product.name}
                     className="w-full h-full object-contain transition-all duration-300 hover:scale-110"
                   />

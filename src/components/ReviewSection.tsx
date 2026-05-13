@@ -15,6 +15,7 @@ export default function ReviewSection() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetchingReviews, setFetchingReviews] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function ReviewSection() {
     const unsubscribeReviews = onSnapshot(q, (snapshot) => {
       const reviewsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setReviews(reviewsData);
+      setFetchingReviews(false);
     }, (error) => {
       if (error.code !== 'permission-denied') {
         console.warn("Firestore Listener Error:", error);
@@ -33,6 +35,7 @@ export default function ReviewSection() {
       // Simple fallback without ordering
       getDocs(collection(db, 'reviews')).then(snap => {
         setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setFetchingReviews(false);
       });
     });
 
@@ -158,7 +161,22 @@ export default function ReviewSection() {
         )}
 
         <div className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[600px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
-          {reviews.length > 0 ? (
+          {fetchingReviews ? (
+            // Skeleton Loaders
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="shrink-0 flex-none w-full md:w-[300px] bg-card border border-border rounded-[var(--radius)] p-8 text-center animate-pulse">
+                <div className="flex justify-center gap-1 mb-4">
+                  {[...Array(5)].map((_, s) => <div key={s} className="w-4 h-4 bg-muted rounded-full" />)}
+                </div>
+                <div className="h-4 bg-muted rounded w-full mb-3" />
+                <div className="h-4 bg-muted rounded w-3/4 mx-auto mb-6" />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-muted" />
+                  <div className="h-4 bg-muted rounded w-20" />
+                </div>
+              </div>
+            ))
+          ) : reviews.length > 0 ? (
             reviews.map((review) => (
               <div key={review.id} className="shrink-0 flex-none w-full md:w-[300px] md:snap-start bg-card border border-border rounded-[var(--radius)] p-8 text-center relative shadow-sm max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
                 {user && (user.email === review.userEmail || user.uid === "MRAnZKmiEDcg5xVOjMOtbULMOtb2") && (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
 import { installmentSettings } from '@/data/installmentSettings';
 import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
@@ -19,12 +19,15 @@ export default function PayLoanPage() {
   const [history, setHistory] = useState<any[]>([]);
   const [refundDetails, setRefundDetails] = useState({ accountName: '', accountNumber: '', bankName: '' });
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const [siteName, setSiteName] = useState('Quick Choice');
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
+        if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || 'Quick Choice');
         await fetchLoan(currentUser.email!);
         await fetchHistory(currentUser.uid);
       } else {
@@ -65,7 +68,7 @@ export default function PayLoanPage() {
   const handlePrintReceipt = (paymentName: string, amount: number, receiptId?: string) => {
     // Use the permanent receipt ID from the database, or a unique fallback for older records
     const displayUid = receiptId ? receiptId.substring(0, 10).toUpperCase() : `REF-${loan.id.substring(0, 4)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -95,7 +98,7 @@ export default function PayLoanPage() {
             <div class="receipt-uid">ID: ${displayUid}</div>
             <div class="header">
               <img src="/logos.png" class="logo-img" />
-              <div class="logo-text">QUICK CHOICE&reg;</div>
+              <div class="logo-text">${siteName.toUpperCase()}&reg;</div>
               <div style="font-size: 0.75rem; margin-top: 0.4rem; letter-spacing: 1px; text-transform: uppercase;">Official Payment Receipt</div>
             </div>
             <div class="details">
@@ -111,7 +114,7 @@ export default function PayLoanPage() {
                <div class="stamp">PAYMENT VERIFIED</div>
             </div>
             <div class="footer">
-              Thank you for choosing Quick Choice&reg;!<br/>
+              Thank you for choosing ${siteName}&reg;!<br/>
               168, Akarigbo Road, Sabo Sagamu, Ogun State.
             </div>
           </div>
@@ -202,7 +205,7 @@ export default function PayLoanPage() {
         <img src="/logos.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35px] h-[35px]" />
       </div>
       <div className="text-center">
-        <h3 className="font-bold text-xl mb-1">Quick Choice</h3>
+        <h3 className="font-bold text-xl mb-1">{siteName}</h3>
         <p className="text-muted-foreground text-sm">Synchronizing your loan data...</p>
       </div>
     </div>
@@ -219,23 +222,23 @@ export default function PayLoanPage() {
     <div className="py-16">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <Toaster position="top-center" />
-        
+
         <div className="flex justify-between items-start mb-12 max-md:flex-col max-md:gap-4">
           <div>
             <h1 className="text-4xl font-bold">Installment Dashboard</h1>
             <p className="text-muted-foreground mt-2">Track your active loans and payment history</p>
           </div>
           <div className="flex gap-4 flex-wrap">
-            <button 
+            <button
               onClick={() => setShowHistory(!showHistory)}
               className="border border-border text-foreground hover:bg-muted px-4 py-2 rounded-md font-semibold transition-colors"
             >
               {showHistory ? 'Back to Active' : 'View History'}
             </button>
             {loan && loan.status === 'active' && (
-              <button 
+              <button
                 onClick={() => setShowCancelConfirm(true)}
-                className="border border-red-500 text-red-500 hover:bg-red-50 px-4 py-2 rounded-md font-semibold transition-colors" 
+                className="border border-red-500 text-red-500 hover:bg-red-50 px-4 py-2 rounded-md font-semibold transition-colors"
               >
                 Cancel Plan
               </button>
@@ -248,9 +251,9 @@ export default function PayLoanPage() {
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold">Payment History</h2>
               {history.length > 0 && (
-                <button 
+                <button
                   onClick={() => history.forEach(h => handleHideFromHistory(h.id))}
-                  className="border border-border text-foreground hover:bg-muted px-3 py-1.5 rounded-md text-sm transition-colors" 
+                  className="border border-border text-foreground hover:bg-muted px-3 py-1.5 rounded-md text-sm transition-colors"
                 >
                   Clear All History
                 </button>
@@ -292,7 +295,7 @@ export default function PayLoanPage() {
               <div className="bg-card border border-border rounded-[var(--radius)] p-8 h-fit">
                 <img src={loan.productImage} alt="" className="w-full rounded-[var(--radius)] mb-6" />
                 <h3 className="text-xl font-bold mb-4">{loan.productName}</h3>
-                
+
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Amount</span>
@@ -340,15 +343,15 @@ export default function PayLoanPage() {
 
               <div>
                 <h3 className="font-bold text-2xl mb-6">{loan.status === 'active' ? 'Payment Timeline' : 'Loan Status'}</h3>
-                
+
                 {loan.status === 'cancelling' ? (
                   <div className="bg-card p-8 rounded-[var(--radius)] border border-border">
-                     <h2 className="text-xl font-bold mb-4">Plan Cancellation in Progress</h2>
-                     <p className="mb-6">You have requested a refund for this plan. You will receive <strong>{formatCurrency(loan.refundDetails?.refundAmount)}</strong> once verified.</p>
-                     <div className="flex items-center gap-4 text-primary">
-                        <div className="w-5 h-5 border-2 border-border border-t-primary rounded-full animate-spin" />
-                        <span>Waiting for Admin Approval...</span>
-                     </div>
+                    <h2 className="text-xl font-bold mb-4">Plan Cancellation in Progress</h2>
+                    <p className="mb-6">You have requested a refund for this plan. You will receive <strong>{formatCurrency(loan.refundDetails?.refundAmount)}</strong> once verified.</p>
+                    <div className="flex items-center gap-4 text-primary">
+                      <div className="w-5 h-5 border-2 border-border border-t-primary rounded-full animate-spin" />
+                      <span>Waiting for Admin Approval...</span>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
@@ -368,20 +371,20 @@ export default function PayLoanPage() {
                       const expired = isExpired(payment.deadline) && payment.status !== 'paid';
                       return (
                         <div key={payment.month} className={`flex items-center gap-6 p-6 rounded-[var(--radius)] transition-colors ${payment.status === 'paid' ? 'bg-muted border-border opacity-60 cursor-default' : (selectedMonths.includes(actualIndex) ? 'bg-card border-2 border-primary cursor-pointer' : 'bg-card border border-border cursor-pointer hover:border-primary')}`}
-                        onClick={() => {
-                          if (payment.status === 'paid') return;
-                          for (let i = 0; i < actualIndex; i++) {
-                            if (loan.payments[i].status !== 'paid' && !selectedMonths.includes(i)) {
-                              toast.error(`Please select Month ${loan.payments[i].month - 1} first.`);
-                              return;
+                          onClick={() => {
+                            if (payment.status === 'paid') return;
+                            for (let i = 0; i < actualIndex; i++) {
+                              if (loan.payments[i].status !== 'paid' && !selectedMonths.includes(i)) {
+                                toast.error(`Please select Month ${loan.payments[i].month - 1} first.`);
+                                return;
+                              }
                             }
-                          }
-                          if (selectedMonths.includes(actualIndex)) {
-                            setSelectedMonths(selectedMonths.filter(m => m < actualIndex));
-                          } else {
-                            setSelectedMonths([...selectedMonths, actualIndex]);
-                          }
-                        }}
+                            if (selectedMonths.includes(actualIndex)) {
+                              setSelectedMonths(selectedMonths.filter(m => m < actualIndex));
+                            } else {
+                              setSelectedMonths([...selectedMonths, actualIndex]);
+                            }
+                          }}
                         >
                           <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center shrink-0 ${payment.status === 'paid' || selectedMonths.includes(actualIndex) ? 'bg-primary' : (expired ? 'bg-red-500' : 'bg-border text-muted-foreground')}`}>
                             {payment.status === 'paid' ? <FaCheckCircle /> : (selectedMonths.includes(actualIndex) ? <FaCheckCircle /> : payment.month - 1)}
@@ -417,7 +420,7 @@ export default function PayLoanPage() {
               <FaExclamationTriangle size={50} color="red" className="mb-6 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">Cancel Installment Plan?</h2>
               <p className="text-muted-foreground mb-8">
-                If you cancel now, you will lose <strong>{installmentSettings.cancellationFee * 100}%</strong> as a processing fee. 
+                If you cancel now, you will lose <strong>{installmentSettings.cancellationFee * 100}%</strong> as a processing fee.
                 Refund will be processed to your account.
               </p>
               <div className="flex gap-4">
@@ -433,27 +436,27 @@ export default function PayLoanPage() {
             <div className="bg-background p-8 rounded-[var(--radius)] max-w-[500px] w-full shadow-xl">
               <h2 className="text-2xl font-bold mb-6">Refund Account Details</h2>
               <p className="text-sm text-muted-foreground mb-6">Enter the account where you want to receive your refund.</p>
-              
+
               <div className="flex flex-col gap-4 mb-8">
-                <input 
-                  type="text" 
-                  placeholder="Account Name" 
+                <input
+                  type="text"
+                  placeholder="Account Name"
                   value={refundDetails.accountName}
-                  onChange={(e) => setRefundDetails({...refundDetails, accountName: e.target.value})}
+                  onChange={(e) => setRefundDetails({ ...refundDetails, accountName: e.target.value })}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
-                <input 
-                  type="text" 
-                  placeholder="Account Number" 
+                <input
+                  type="text"
+                  placeholder="Account Number"
                   value={refundDetails.accountNumber}
-                  onChange={(e) => setRefundDetails({...refundDetails, accountNumber: e.target.value})}
+                  onChange={(e) => setRefundDetails({ ...refundDetails, accountNumber: e.target.value })}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
-                <input 
-                  type="text" 
-                  placeholder="Bank Name" 
+                <input
+                  type="text"
+                  placeholder="Bank Name"
                   value={refundDetails.bankName}
-                  onChange={(e) => setRefundDetails({...refundDetails, bankName: e.target.value})}
+                  onChange={(e) => setRefundDetails({ ...refundDetails, bankName: e.target.value })}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
               </div>

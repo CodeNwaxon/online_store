@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -19,6 +19,7 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaCheck, FaStar, FaSave } from 'react-icons/fa';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -45,7 +46,10 @@ const parseDate = (dateVal: any) => {
 };
 
 
-export default function AdminProducts() {
+function AdminProductsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const editParam = searchParams.get('edit');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -148,6 +152,16 @@ export default function AdminProducts() {
     return () => unsub();
   }, []);
 
+  // Handle auto-edit from query parameter
+  useEffect(() => {
+    if (editParam && products.length > 0) {
+      const productToEdit = products.find(p => p.id === editParam);
+      if (productToEdit && editingId !== editParam) {
+        handleEdit(productToEdit);
+      }
+    }
+  }, [editParam, products, editingId]);
+
   // Load hero slides from Firestore
   useEffect(() => {
     const loadHero = async () => {
@@ -233,6 +247,14 @@ export default function AdminProducts() {
     setIsAddingCategory(false);
     setNewGroupName('');
     setNewCategoryName('');
+  };
+
+  const handleCancel = () => {
+    if (editParam) {
+      router.push('/admin/stats?tab=inventory');
+    } else {
+      resetForm();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -334,7 +356,7 @@ export default function AdminProducts() {
                           p.category?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
     return matchesSearch && matchesGroup;
-  }).sort((a, b) => (b.isPromo ? 1 : 0) - (a.isPromo ? 1 : 0));
+  }).sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));
 
   return (
     <div className="space-y-8 md:space-y-12">
@@ -632,7 +654,7 @@ export default function AdminProducts() {
               {loading ? 'Processing...' : (editingId ? 'Update Product' : 'Add Product')}
             </button>
             {editingId && (
-              <button type="button" onClick={resetForm} className="bg-muted px-8 py-4 rounded-md font-bold border border-border text-sm">Cancel</button>
+              <button type="button" onClick={handleCancel} className="bg-muted px-8 py-4 rounded-md font-bold border border-border text-sm">Cancel</button>
             )}
           </div>
         </form>
@@ -803,5 +825,13 @@ export default function AdminProducts() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminProducts() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <AdminProductsContent />
+    </Suspense>
   );
 }

@@ -138,6 +138,9 @@ export default function AdminSettings() {
               onChange={(e) => setFooterMessage(e.target.value)}
               placeholder="e.g. Premium African-inspired store..."
             />
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+              Tip: Wrap your company name in square brackets like <code className="bg-muted px-1 rounded">[Quick Choice]</code> to make it bold and primary-colored in the footer.
+            </p>
           </div>
         </div>
       </section>

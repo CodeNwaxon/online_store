@@ -203,8 +203,10 @@ function ShopContent() {
         {/* Product lists */}
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-8">
-            {displayedProducts.map(product => (
-              <div key={product.id} className="mb-4  md:mb-0"><ProductCard product={product} /> </div>
+            {displayedProducts.map((product, index) => (
+              <div key={product.id} className="mb-4  md:mb-0">
+                <ProductCard product={product} priority={index < 4} /> 
+              </div>
             ))}
           </div>
         ) : (

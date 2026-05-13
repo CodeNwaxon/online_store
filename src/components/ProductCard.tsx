@@ -23,9 +23,10 @@ const getOrdinal = (d: number) => {
 interface ProductCardProps {
   product: Product;
   isAdmin?: boolean;
+  priority?: boolean;
 }
 
-export default function ProductCard({ product, isAdmin }: ProductCardProps) {
+export default function ProductCard({ product, isAdmin, priority = false }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
@@ -49,6 +50,8 @@ export default function ProductCard({ product, isAdmin }: ProductCardProps) {
           className={`${isAdmin ? 'object-contain' : 'object-cover'} transition-all duration-300 group-hover:scale-110`}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
         />
         {product.isPromo && (
           <span className="absolute top-0.5 left-0.5 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center">

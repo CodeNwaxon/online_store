@@ -46,8 +46,8 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
       {/* Desktop Slider View */}
       <div className="hidden md:block">
         <div className="grid grid-cols-4 gap-8 transition-all duration-500 ease-in-out">
-          {displayedProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
+          {displayedProducts.map((product, index) => (
+            <ProductCard key={product.id} product={product} priority={index < 4} />
           ))}
         </div>
 
@@ -78,9 +78,9 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
           onScroll={handleMobileScroll}
           className="flex overflow-x-auto gap-1 md:gap-[0.6rem] snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
-          {products.map(product => (
+          {products.map((product, index) => (
             <div key={product.id} className="min-w-[10.5rem] w-[10.5rem] shrink-0 snap-start">
-              <ProductCard product={product} />
+              <ProductCard product={product} priority={index < 2} />
             </div>
           ))}
         </div>

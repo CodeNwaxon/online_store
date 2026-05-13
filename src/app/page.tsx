@@ -40,6 +40,7 @@ export default function Home() {
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
   const [promoProducts, setPromoProducts] = useState<any[]>([]);
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
+  const [siteName, setSiteName] = useState('Quick Choice');
   const [dataLoading, setDataLoading] = useState(true);
 
   // Load hero slides and promo products from Firestore
@@ -107,8 +108,10 @@ export default function Home() {
 
         // Fetch general settings (installment bg)
         const generalSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (generalSnap.exists() && generalSnap.data().installmentBg) {
-          setInstallmentBg(generalSnap.data().installmentBg);
+        if (generalSnap.exists()) {
+          const gData = generalSnap.data();
+          if (gData.installmentBg) setInstallmentBg(gData.installmentBg);
+          if (gData.siteName) setSiteName(gData.siteName);
         }
 
         // Promo products for carousel
@@ -133,7 +136,7 @@ export default function Home() {
       image: slide.image,
       images: slide.images || [slide.image],
       category: slide.category,
-      manufacturer: slide.manufacturer || 'Quick Choice',
+      manufacturer: slide.manufacturer || siteName,
       shipping: slide.shipping || 0
     };
     addItem(product);
@@ -226,8 +229,10 @@ export default function Home() {
                             </span>
                           )}
                           <img
-                            src={slide.image}
+                            src={slide.images?.[0] || slide.image}
                             alt={slide.name}
+                            loading="eager"
+                            fetchPriority="high"
                             className="w-full h-full object-cover max-md:object-contain transform hover:scale-105 transition-transform duration-700"
                           />
                         </div>
@@ -296,7 +301,23 @@ export default function Home() {
               View All <FaArrowRight size={16} />
             </Link>
           </div>
-          <PromoCarousel products={promoProducts} />
+          
+          {dataLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-card border border-border rounded-[var(--radius)] h-[400px] animate-pulse">
+                  <div className="bg-muted h-[240px] w-full rounded-t-[var(--radius)]" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 bg-muted rounded w-1/3" />
+                    <div className="h-6 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <PromoCarousel products={promoProducts} />
+          )}
         </div>
       </section>
 

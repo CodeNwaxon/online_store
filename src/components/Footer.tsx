@@ -45,16 +45,18 @@ export default function Footer() {
   }, []);
 
   const siteName = settings?.siteName || 'Quick Choice';
-  const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with ${siteName}®.`;
+  const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}]®.`;
 
-  // Function to highlight site name in message
-  const renderMessage = (msg: string, name: string) => {
-    const parts = msg.split(new RegExp(`(${name})`, 'gi'));
-    return parts.map((part, i) => 
-      part.toLowerCase() === name.toLowerCase() 
-        ? <span key={i} className="text-primary font-bold">{part}</span> 
-        : part
-    );
+  // Function to highlight text in brackets [Like This]
+  const renderMessage = (msg: string) => {
+    const parts = msg.split(/(\[.*?\])/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('[') && part.endsWith(']')) {
+        const text = part.slice(1, -1);
+        return <span key={i} className="text-primary font-semibold">{text}</span>;
+      }
+      return part;
+    });
   };
 
   return (
@@ -71,7 +73,7 @@ export default function Footer() {
                 className="object-contain shrink-0 border-2 border-primary rounded p-0.5"
               />
               <p className="text-muted-foreground text-[0.9rem] m-0">
-                {renderMessage(footerMessage, siteName)}
+                {renderMessage(footerMessage)}
               </p>
             </div>
           </div>

@@ -1,8 +1,27 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Loading() {
+  const [siteName, setSiteName] = useState('Quick Choice');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'general'));
+        if (docSnap.exists() && docSnap.data().siteName) {
+          setSiteName(docSnap.data().siteName);
+        }
+      } catch (err) {
+        console.error("Error fetching site name for loading:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   return (
     <div className="fixed inset-0 bg-background flex flex-col items-center justify-center z-[9999]">
       <div className="relative w-[100px] h-[100px]">
@@ -22,7 +41,7 @@ export default function Loading() {
       </div>
 
       <p className="mt-6 font-bold text-primary tracking-[2px] text-sm uppercase">
-        Quick Choice
+        {siteName}
       </p>
     </div>
   );

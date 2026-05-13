@@ -5,8 +5,9 @@ import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -21,7 +22,15 @@ export default function Checkout() {
     address: ''
   });
 
+  const [siteName, setSiteName] = useState('Quick Choice');
+
   useEffect(() => {
+    const fetchSettings = async () => {
+      const docSnap = await getDoc(doc(db, 'settings', 'general'));
+      if (docSnap.exists()) setSiteName(docSnap.data().siteName || 'Quick Choice');
+    };
+    fetchSettings();
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setFormData(prev => ({
@@ -184,7 +193,7 @@ export default function Checkout() {
               {loading ? 'Processing...' : `Pay ₦${getTotalPrice().toLocaleString()}`}
             </button>
             <p className="text-center text-xs text-muted-foreground mt-4">
-              Secure payment powered by Quick Choice.
+              Secure payment powered by {siteName}.
             </p>
           </div>
         </form>

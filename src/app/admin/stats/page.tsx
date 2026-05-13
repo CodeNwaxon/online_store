@@ -6,9 +6,13 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function AdminStats() {
-  const [view, setView] = useState<'stats' | 'inventory'>('stats');
+function AdminStatsContent() {
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as 'stats' | 'inventory') || 'stats';
+  const [view, setView] = useState<'stats' | 'inventory'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
 
@@ -124,10 +128,12 @@ export default function AdminStats() {
                     <div className="flex items-center gap-3 md:gap-4 min-w-0">
                       <span className="text-base md:text-lg font-black text-muted-foreground w-5 md:w-6">#{i + 1}</span>
                       <div className="relative w-10 h-10 md:w-12 md:h-12 rounded border border-border overflow-hidden shrink-0">
-                        <Image src={item.product.image} alt={item.product.name} fill className="object-cover" />
+                        <Image src={item.product.images?.[0] || item.product.image} alt={item.product.name} fill className="object-cover" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs md:text-sm truncate">{item.product.name}</p>
+                        <Link href={`/admin/products?edit=${item.product.id}`} className="hover:underline">
+                          <p className="font-bold text-xs md:text-sm truncate">{item.product.name}</p>
+                        </Link>
                         <p className="text-[9px] md:text-[10px] uppercase text-muted-foreground">{item.product.group}</p>
                       </div>
                     </div>
@@ -187,12 +193,15 @@ export default function AdminStats() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {products.sort((a, b) => a.quantity - b.quantity).map(product => (
+                {[...products].sort((a, b) => {
+                    const parseDate = (v: any) => { if (!v) return 0; if (typeof v?.toDate === 'function') return v.toDate().getTime(); return new Date(v).getTime() || 0; };
+                    return parseDate(b.updatedAt) - parseDate(a.updatedAt);
+                  }).map(product => (
                   <tr key={product.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-3 md:px-6 py-4">
                       <div className="flex items-center gap-2 md:gap-4">
                         <div className="relative w-8 h-8 md:w-10 md:h-10 rounded-md border border-border overflow-hidden shrink-0">
-                          <Image src={product.image} alt={product.name} fill className="object-cover" />
+                          <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
                         </div>
                         <span className="font-bold text-xs md:text-sm truncate max-w-[100px] md:max-w-[200px]">{product.name}</span>
                       </div>
@@ -220,5 +229,13 @@ export default function AdminStats() {
         </section>
       )}
     </div>
+  );
+}
+
+export default function AdminStats() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading stats...</div>}>
+      <AdminStatsContent />
+    </Suspense>
   );
 }

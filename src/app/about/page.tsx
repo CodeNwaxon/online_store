@@ -34,7 +34,7 @@ export default function About() {
     email: 'ceo@onlinestore.com',
     phone: '+234 800 123 4567',
     image: 'https://picsum.photos/seed/ceo/800/1000',
-    message: 'Founded with a vision to bring premium quality goods to every home, Quick Choice combines modern convenience with the vibrant spirit of African design.'
+    message: `Founded with a vision to bring premium quality goods to every home, ${siteName} combines modern convenience with the vibrant spirit of African design.`
   };
 
   const primaryAddress = settings?.addresses?.[0] || {
