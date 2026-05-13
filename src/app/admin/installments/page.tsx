@@ -19,7 +19,6 @@ import {
   FaPhoneAlt,
   FaEnvelope,
   FaTrash,
-  FaCheckCircle,
   FaTimesCircle,
   FaPrint,
   FaUser,
@@ -29,7 +28,6 @@ import {
   FaCog,
   FaSave
 } from 'react-icons/fa';
-import AdminGuard from '@/components/AdminGuard';
 
 export default function AdminInstallments() {
   const [activeTab, setActiveTab] = useState<'installments' | 'complaints'>('installments');
