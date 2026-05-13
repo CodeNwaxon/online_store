@@ -4,13 +4,16 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaSave, FaPlus, FaTrash, FaInfoCircle, FaQuestionCircle, FaShieldAlt } from 'react-icons/fa';
+import { FaSave, FaPlus, FaTrash, FaInfoCircle, FaQuestionCircle, FaShieldAlt, FaUndo } from 'react-icons/fa';
 
 export default function AdminAboutEditor() {
   const [heroText, setHeroText] = useState('');
   const [missionStatement, setMissionStatement] = useState('');
   const [faqs, setFaqs] = useState<{ question: string, answer: string }[]>([]);
   const [policies, setPolicies] = useState<{ title: string, content: string }[]>([]);
+
+  // Track the original data to detect "dirty" state
+  const [originalData, setOriginalData] = useState<any>(null);
 
   useEffect(() => {
     const fetchAboutData = async () => {
@@ -21,22 +24,44 @@ export default function AdminAboutEditor() {
         setMissionStatement(data.missionStatement || '');
         setFaqs(data.faqs || []);
         setPolicies(data.policies || []);
+        // Store the snapshot for comparison
+        setOriginalData(data);
       }
     };
     fetchAboutData();
   }, []);
 
+  // Determine if any field has changed
+  const isDirty = JSON.stringify({
+    heroText,
+    missionStatement,
+    faqs,
+    policies,
+  }) !== JSON.stringify({
+    heroText: originalData?.heroText || '',
+    missionStatement: originalData?.missionStatement || '',
+    faqs: originalData?.faqs || [],
+    policies: originalData?.policies || [],
+  });
+
   const handleSave = async () => {
     try {
-      await setDoc(doc(db, 'settings', 'about'), {
-        heroText,
-        missionStatement,
-        faqs,
-        policies,
-      }, { merge: true });
+      const newData = { heroText, missionStatement, faqs, policies };
+      await setDoc(doc(db, 'settings', 'about'), newData, { merge: true });
+      setOriginalData(newData); // Update original data so bar disappears
       toast.success('About page sections updated!');
     } catch (error) {
       toast.error('Failed to save changes.');
+    }
+  };
+
+  const handleCancel = () => {
+    if (originalData) {
+      setHeroText(originalData.heroText || '');
+      setMissionStatement(originalData.missionStatement || '');
+      setFaqs(originalData.faqs || []);
+      setPolicies(originalData.policies || []);
+      toast('Changes discarded', { icon: '🔄' });
     }
   };
 
@@ -167,6 +192,27 @@ export default function AdminAboutEditor() {
           * Location, CEO Profile, and Contact Info are managed in <strong>Admin Management</strong> and <strong>Site Settings</strong> and will automatically appear on the About page.
         </p>
       </div>
+
+      {/* DIRTY SAVE BAR */}
+      {isDirty && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[600px] bg-card border border-primary shadow-2xl rounded-full p-2 pl-6 flex justify-between items-center z-50 animate-in fade-in slide-in-from-bottom-4">
+          <p className="text-sm font-medium">You have unsaved changes</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-2"
+            >
+              <FaUndo size={12} /> Discard
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-6 py-2 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow-lg flex items-center gap-2"
+            >
+              <FaSave size={12} /> Update Now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
