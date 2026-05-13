@@ -9,6 +9,8 @@ import { FaEnvelope, FaPhone, FaCheckCircle, FaMapMarkerAlt } from 'react-icons/
 export default function About() {
   const [settings, setSettings] = useState<any>(null);
   const [aboutData, setAboutData] = useState<any>(null);
+  const [showAllFaqs, setShowAllFaqs] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -138,28 +140,77 @@ export default function About() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* FAQ Section */}
       <section id="faq" className="py-24 max-md:py-12">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Frequently Asked Questions</h2>
-            <div className="w-24 h-1 bg-primary mx-auto"></div>
-          </div>
-          <div className="max-w-[800px] mx-auto grid gap-6">
-            {faqs.map((faq: any, index: number) => (
-              <div key={index} className="p-8 border border-border rounded-xl bg-card hover:border-primary transition-colors">
-                <h4 className="text-xl font-bold mb-4">{faq.question}</h4>
-                <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+            <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
+
+            {/* Search Input Box */}
+            <div className="max-w-md mx-auto relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-            ))}
+              <input
+                type="text"
+                placeholder="Search for a question (e.g. 'warranty', 'delivery')..."
+                className="w-full pl-12 pr-4 py-4 rounded-full border border-border bg-card focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
+
+          <div className="max-w-7xl mx-auto grid gap-6">
+            {(() => {
+              // Filter FAQs based on search term
+              const filteredFaqs = faqs.filter((faq: any) =>
+                faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
+              );
+
+              // Determine which ones to show (slice only if not searching)
+              const displayFaqs = searchTerm
+                ? filteredFaqs
+                : (showAllFaqs ? filteredFaqs : filteredFaqs.slice(0, 4));
+
+              if (displayFaqs.length === 0) {
+                return <p className="text-center py-10 text-muted-foreground">No matching questions found.</p>;
+              }
+
+              return displayFaqs.map((faq: any, index: number) => (
+                <div key={index} className="p-8 border border-border rounded-xl bg-card hover:border-primary transition-colors animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <h4 className="text-xl font-bold mb-4">{faq.question}</h4>
+                  <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* Toggle Button - Hidden during search or if list is short */}
+          {!searchTerm && faqs.length > 4 && (
+            <div className="mt-12 text-center">
+              <button
+                onClick={() => setShowAllFaqs(!showAllFaqs)}
+                className="inline-flex items-center gap-2 bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:opacity-90 transition-all"
+              >
+                {showAllFaqs ? 'Show Less' : 'Show More Questions'}
+                <svg className={`w-5 h-5 transition-transform duration-300 ${showAllFaqs ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Policies */}
       <section id="privacy" className="py-24 max-md:py-12 bg-card border-t border-border">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-          <div className="max-w-[800px] mx-auto">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="max-w-6xl mx-auto">
             <h2 className="text-4xl font-bold mb-12">Store Policies</h2>
             <div className="flex flex-col gap-8 text-muted-foreground">
               {policies.map((p: any, i: number) => (

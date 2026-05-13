@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt, FaImage, FaTimes, FaLink, FaShieldAlt, FaLock } from 'react-icons/fa';
+import { FaSave, FaPlus, FaTrash, FaPhone, FaEnvelope, FaMapMarkerAlt, FaShareAlt, FaImage, FaTimes, FaLink, FaShieldAlt, FaLock, FaUndo } from 'react-icons/fa';
 
 const SOCIAL_PLATFORMS = [
   { name: 'WhatsApp', icon: 'FaWhatsapp', placeholder: 'https://wa.me/234...' },
@@ -25,6 +25,9 @@ export default function AdminSettings() {
   const [addresses, setAddresses] = useState<{ office: string, address: string }[]>([]);
   const [socialLinks, setSocialLinks] = useState<{ platform: string, url: string }[]>([]);
   const [warrantyPolicy, setWarrantyPolicy] = useState('');
+
+  // Track original data for dirty save (excluding warranty)
+  const [originalData, setOriginalData] = useState<any>(null);
 
   // Passkey Overlay State
   const [showPasskeyOverlay, setShowPasskeyOverlay] = useState(false);
@@ -53,14 +56,36 @@ export default function AdminSettings() {
         setAddresses(data.addresses || []);
         setSocialLinks(data.socialLinks || []);
         setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
+
+        // Store snapshot for dirty check
+        setOriginalData(data);
       }
     };
     fetchSettings();
   }, []);
 
+  // Dirty state calculation
+  const isDirty = JSON.stringify({
+    siteName,
+    footerMessage,
+    installmentBg,
+    phones,
+    emails,
+    addresses,
+    socialLinks
+  }) !== JSON.stringify({
+    siteName: originalData?.siteName || '',
+    footerMessage: originalData?.footerMessage || '',
+    installmentBg: originalData?.installmentBg || '',
+    phones: originalData?.phones || [],
+    emails: originalData?.emails || [],
+    addresses: originalData?.addresses || [],
+    socialLinks: originalData?.socialLinks || []
+  });
+
   const handleSave = async () => {
     try {
-      await setDoc(doc(db, 'settings', 'general'), {
+      const updatedData = {
         siteName,
         footerMessage,
         installmentBg,
@@ -68,10 +93,27 @@ export default function AdminSettings() {
         emails,
         addresses,
         socialLinks
-      }, { merge: true });
+      };
+      await setDoc(doc(db, 'settings', 'general'), updatedData, { merge: true });
+
+      // Update originalData so the bar disappears
+      setOriginalData({ ...originalData, ...updatedData });
       toast.success('Settings updated successfully!');
     } catch (error) {
       toast.error('Failed to update settings.');
+    }
+  };
+
+  const handleCancelChanges = () => {
+    if (originalData) {
+      setSiteName(originalData.siteName || '');
+      setFooterMessage(originalData.footerMessage || '');
+      setInstallmentBg(originalData.installmentBg || '');
+      setPhones(originalData.phones || []);
+      setEmails(originalData.emails || []);
+      setAddresses(originalData.addresses || []);
+      setSocialLinks(originalData.socialLinks || []);
+      toast('Changes discarded', { icon: '🔄' });
     }
   };
 
@@ -93,6 +135,9 @@ export default function AdminSettings() {
         warrantyPolicy
       }, { merge: true });
 
+      // Update local original data for warranty specifically
+      setOriginalData({ ...originalData, warrantyPolicy });
+
       toast.success('Warranty policy updated!');
       setShowPasskeyOverlay(false);
       setPasskeyInput('');
@@ -105,7 +150,7 @@ export default function AdminSettings() {
 
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-12 pb-20">
+    <div className="max-w-[1000px] mx-auto space-y-12 pb-20 relative">
       <header className="flex flex-col md:flex-row justify-between items-center gap-6 px-4 md:px-0">
         <div className="text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-bold">Site Settings</h1>
@@ -368,7 +413,6 @@ export default function AdminSettings() {
 
       {/* SOCIAL LINKS */}
       <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
-        {/* ... existing social links code ... */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
           <h2 className="text-base md:text-lg font-bold flex items-center gap-2 w-full md:w-auto"><FaShareAlt className="text-primary" /> Social Links</h2>
           <div className="w-full md:w-auto">
@@ -436,6 +480,27 @@ export default function AdminSettings() {
           placeholder="Enter the official store warranty policy here..."
         />
       </section>
+
+      {/* DIRTY SAVE BAR */}
+      {isDirty && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[650px] bg-card border border-primary shadow-2xl rounded-full p-2 pl-6 flex justify-between items-center z-[500] animate-in fade-in slide-in-from-bottom-4">
+          <p className="text-xs md:text-sm font-medium">Site settings have unsaved changes</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancelChanges}
+              className="px-3 md:px-4 py-2 text-xs md:text-sm font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-2"
+            >
+              <FaUndo size={12} /> Discard
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-5 md:px-6 py-2 text-xs md:text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow-lg flex items-center gap-2"
+            >
+              <FaSave size={12} /> Update Now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CEO PASSKEY OVERLAY */}
       {showPasskeyOverlay && (
