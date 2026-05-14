@@ -113,7 +113,8 @@ function InstallmentsContent() {
       (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    return matchesSearch && matchesGroup && matchesCategory;
+    const isVisible = (product.quantity ?? 0) > 0;
+    return matchesSearch && matchesGroup && matchesCategory && isVisible;
   });
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);

@@ -61,12 +61,13 @@ export default function Contact() {
     e.preventDefault();
     setLoading(true);
     try {
-      await addDoc(collection(db, 'compliants'), {
+      await addDoc(collection(db, 'complaints'), {
         userId: user?.uid || 'guest',
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         message: formData.message,
+        isNew: true,
         createdAt: new Date()
       });
       setSubmitted(true);

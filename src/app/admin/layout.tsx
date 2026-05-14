@@ -5,13 +5,27 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { adminData, isCEO } = useAdmin();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
+      const instCount = snap.size;
+      const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (compSnap) => {
+        setUnreadCount(instCount + compSnap.size);
+      });
+      return () => unsubComp();
+    });
+    return () => unsubInst();
+  }, []);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -51,9 +65,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${pathname === item.href ? 'bg-primary text-white font-bold' : 'text-foreground hover:bg-muted'}`}
+                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-md transition-colors ${pathname === item.href ? 'bg-primary text-white font-bold' : 'text-foreground hover:bg-muted'}`}
               >
-                {item.icon} {item.label}
+                <span className="flex items-center gap-3">
+                  {item.icon} {item.label}
+                </span>
+                {item.label === 'Installments' && unreadCount > 0 && (
+                  <span className="bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

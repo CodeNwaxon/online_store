@@ -30,12 +30,13 @@ import {
 } from 'react-icons/fa';
 
 export default function AdminInstallments() {
-  const [activeTab, setActiveTab] = useState<'installments' | 'complaints'>('installments');
+  const [activeTab, setActiveTab] = useState<'installments' | 'complaints' | 'settings'>('installments');
   const [installments, setInstallments] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: string, id: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<{ type: string, id: string } | null>(null);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'plans' | 'fees' | 'policy'>('plans');
 
   // Installment Settings State
@@ -79,8 +80,22 @@ export default function AdminInstallments() {
 
   const handleAction = (type: 'call' | 'whatsapp' | 'email', contact: string) => {
     let url = '';
-    const cleanPhone = contact.replace(/\D/g, '');
-    const nigerianPhone = cleanPhone.startsWith('0') ? `+234${cleanPhone.slice(1)}` : `+${cleanPhone}`;
+    let cleanPhone = contact.replace(/\D/g, '');
+    
+    // If it starts with 2340..., remove the 0
+    if (cleanPhone.startsWith('2340')) {
+      cleanPhone = '234' + cleanPhone.slice(4);
+    } 
+    // If it starts with 0..., replace with 234...
+    else if (cleanPhone.startsWith('0')) {
+      cleanPhone = '234' + cleanPhone.slice(1);
+    }
+    // If it doesn't start with 234, add it
+    else if (!cleanPhone.startsWith('234')) {
+      cleanPhone = '234' + cleanPhone;
+    }
+
+    const nigerianPhone = `+${cleanPhone}`;
 
     if (type === 'call') url = `tel:${nigerianPhone}`;
     if (type === 'whatsapp') url = `https://wa.me/${nigerianPhone.replace('+', '')}`;
@@ -158,10 +173,16 @@ export default function AdminInstallments() {
           >
             Complaints {complaints.filter(c => c.isNew).length > 0 && <span className="bg-secondary text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">New</span>}
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'settings' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            Settings
+          </button>
         </div>
       </div>
 
-      {activeTab === 'installments' ? (
+      {activeTab === 'installments' && (
         <div className="space-y-6">
           {/* INSTALLMENT FILTERS */}
           <div className="flex flex-wrap gap-2 px-4 md:px-0">
@@ -210,6 +231,14 @@ export default function AdminInstallments() {
                       <span className="text-muted-foreground">Duration:</span>
                       <span className="font-bold">{inst.months} Months</span>
                     </div>
+                    {inst.isNew && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); markAsRead(inst); }}
+                        className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-2 rounded-md font-bold text-xs transition-colors"
+                      >
+                        Mark as Read
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -224,7 +253,9 @@ export default function AdminInstallments() {
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'complaints' && (
         /* COMPLAINTS LIST */
         <div className="space-y-4 px-0">
           {complaints.length > 0 ? (
@@ -243,10 +274,23 @@ export default function AdminInstallments() {
                     <p className="text-[0.8rem] md:text-sm text-muted-foreground line-clamp-1">{comp.message}</p>
                   </div>
                 </div>
-                <div className="flex gap-4 w-full sm:w-auto justify-end">
-                  <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); setShowPasskeyModal({ type: 'deleteComplaint', id: comp.id }); }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
+                <div className="flex gap-4 w-full sm:w-auto justify-end items-center">
+                  {comp.isNew && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); markAsRead(comp); }}
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md font-bold text-xs transition-colors shrink-0"
+                    >
+                      Mark as Read
+                    </button>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
+                    <button onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setConfirmDelete({ type: 'deleteComplaint', id: comp.id });
+                    }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
+                  </div>
                 </div>
               </div>
             ))
@@ -259,6 +303,203 @@ export default function AdminInstallments() {
               <p className="text-sm text-muted-foreground">Everything seems to be running smoothly. No complaints reported yet.</p>
             </div>
           )}
+        </div>
+      )}
+      {activeTab === 'settings' && (
+        /* INSTALLMENT SETTINGS SECTION */
+        <div className="bg-card border border-border rounded md:rounded-xl overflow-hidden shadow-sm mt-0 mx-0">
+          <div className="bg-muted px-3 md:px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <FaCog className="text-primary" /> Installment Settings
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">Configure interest rates, months, and payment policies.</p>
+            </div>
+            <button
+              onClick={() => setShowPasskeyModal({ type: 'saveInstallmentSettings', id: 'new-settings' })}
+              className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors flex items-center gap-2"
+            >
+              <FaSave /> Save Settings
+            </button>
+          </div>
+
+          <div className="py-6 px-3 md:p-6">
+            <div className="flex gap-4 border-b border-border mb-6">
+              <button onClick={() => setActiveSettingsTab('plans')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'plans' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Plans & Months</button>
+              <button onClick={() => setActiveSettingsTab('fees')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'fees' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Interest & Fees</button>
+              <button onClick={() => setActiveSettingsTab('policy')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'policy' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Policies</button>
+            </div>
+
+            {activeSettingsTab === 'plans' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                    <h3 className="font-bold text-sm mb-4">Short-term Plan</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
+                        <input
+                          type="number"
+                          className="w-full bg-background border border-border rounded p-2 text-sm"
+                          value={instSettings.shortPlan.months || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: isNaN(val) ? 0 : val } }));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
+                        <input
+                          type="number"
+                          className="w-full bg-background border border-border rounded p-2 text-sm"
+                          value={instSettings.shortPlan.increase || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: isNaN(val) ? 0 : val } }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
+                    <h3 className="font-bold text-sm mb-4">Long-term Plan</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
+                        <input
+                          type="number"
+                          className="w-full bg-background border border-border rounded p-2 text-sm"
+                          value={instSettings.longPlan.months || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: isNaN(val) ? 0 : val } }));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
+                        <input
+                          type="number"
+                          className="w-full bg-background border border-border rounded p-2 text-sm"
+                          value={instSettings.longPlan.increase || ''}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: isNaN(val) ? 0 : val } }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Price Threshold (₦)</label>
+                    <input
+                      type="text"
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                      value={formatNumberWithCommas(instSettings.downpaymentThreshold)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/,/g, '');
+                        if (val === '') {
+                          setInstSettings(prev => ({ ...prev, downpaymentThreshold: 0 }));
+                          return;
+                        }
+                        if (!isNaN(Number(val))) {
+                          setInstSettings(prev => ({ ...prev, downpaymentThreshold: Number(val) }));
+                        }
+                      }}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Example: 1,000,000</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Below Threshold (%)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                        value={instSettings.downpaymentUnderThreshold || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, downpaymentUnderThreshold: isNaN(val) ? 0 : val }));
+                        }}
+                      />
+                      <span className="text-sm font-bold">%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Above Threshold (%)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                        value={instSettings.downpaymentOverThreshold || ''}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setInstSettings(prev => ({ ...prev, downpaymentOverThreshold: isNaN(val) ? 0 : val }));
+                        }}
+                      />
+                      <span className="text-sm font-bold">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSettingsTab === 'fees' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Grace Period (Days)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                    value={instSettings.gracePeriodDays || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setInstSettings(prev => ({ ...prev, gracePeriodDays: isNaN(val) ? 0 : val }));
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Late Fee (%)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                    value={instSettings.lateFeePercent || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setInstSettings(prev => ({ ...prev, lateFeePercent: isNaN(val) ? 0 : val }));
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Withdrawal Fee (%)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                    value={instSettings.withdrawalFeePercent || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setInstSettings(prev => ({ ...prev, withdrawalFeePercent: isNaN(val) ? 0 : val }));
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeSettingsTab === 'policy' && (
+              <div>
+                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Delivery Policy Text</label>
+                <textarea
+                  rows={3}
+                  className="w-full bg-background border border-border rounded p-3 text-sm"
+                  value={instSettings.deliveryPolicy}
+                  onChange={(e) => setInstSettings(prev => ({ ...prev, deliveryPolicy: e.target.value }))}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -358,206 +599,12 @@ export default function AdminInstallments() {
         </div>
       )}
 
-      {/* INSTALLMENT SETTINGS SECTION */}
-      <div className="bg-card border border-border rounded md:rounded-xl overflow-hidden shadow-sm mt-12 mx-0">
-        <div className="bg-muted px-3 md:px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <FaCog className="text-primary" /> Installment Settings
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">Configure interest rates, months, and payment policies.</p>
-          </div>
-          <button
-            onClick={() => setShowPasskeyModal({ type: 'saveInstallmentSettings', id: 'new-settings' })}
-            className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors flex items-center gap-2"
-          >
-            <FaSave /> Save Settings
-          </button>
-        </div>
 
-        <div className="py-6 px-3 md:p-6">
-          <div className="flex gap-4 border-b border-border mb-6">
-            <button onClick={() => setActiveSettingsTab('plans')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'plans' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Plans & Months</button>
-            <button onClick={() => setActiveSettingsTab('fees')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'fees' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Interest & Fees</button>
-            <button onClick={() => setActiveSettingsTab('policy')} className={`pb-2 px-1 text-sm font-bold transition-all border-b-2 ${activeSettingsTab === 'policy' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>Policies</button>
-          </div>
-
-          {activeSettingsTab === 'plans' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                  <h3 className="font-bold text-sm mb-4">Short-term Plan</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                      <input
-                        type="number"
-                        className="w-full bg-background border border-border rounded p-2 text-sm"
-                        value={instSettings.shortPlan.months || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: isNaN(val) ? 0 : val } }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-background border border-border rounded p-2 text-sm"
-                        value={instSettings.shortPlan.increase || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: isNaN(val) ? 0 : val } }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                  <h3 className="font-bold text-sm mb-4">Long-term Plan</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                      <input
-                        type="number"
-                        className="w-full bg-background border border-border rounded p-2 text-sm"
-                        value={instSettings.longPlan.months || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: isNaN(val) ? 0 : val } }));
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                      <input
-                        type="number"
-                        className="w-full bg-background border border-border rounded p-2 text-sm"
-                        value={instSettings.longPlan.increase || ''}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: isNaN(val) ? 0 : val } }));
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Price Threshold (₦)</label>
-                  <input
-                    type="text"
-                    className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                    value={formatNumberWithCommas(instSettings.downpaymentThreshold)}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/,/g, '');
-                      if (val === '') {
-                        setInstSettings(prev => ({ ...prev, downpaymentThreshold: 0 }));
-                        return;
-                      }
-                      if (!isNaN(Number(val))) {
-                        setInstSettings(prev => ({ ...prev, downpaymentThreshold: Number(val) }));
-                      }
-                    }}
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">Example: 1,000,000</p>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Below Threshold (%)</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                      value={instSettings.downpaymentUnderThreshold || ''}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setInstSettings(prev => ({ ...prev, downpaymentUnderThreshold: isNaN(val) ? 0 : val }));
-                      }}
-                    />
-                    <span className="text-sm font-bold">%</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Above Threshold (%)</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                      value={instSettings.downpaymentOverThreshold || ''}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setInstSettings(prev => ({ ...prev, downpaymentOverThreshold: isNaN(val) ? 0 : val }));
-                      }}
-                    />
-                    <span className="text-sm font-bold">%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSettingsTab === 'fees' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Grace Period (Days)</label>
-                <input
-                  type="number"
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                  value={instSettings.gracePeriodDays || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setInstSettings(prev => ({ ...prev, gracePeriodDays: isNaN(val) ? 0 : val }));
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Late Fee (%)</label>
-                <input
-                  type="number"
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                  value={instSettings.lateFeePercent || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setInstSettings(prev => ({ ...prev, lateFeePercent: isNaN(val) ? 0 : val }));
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Withdrawal Fee (%)</label>
-                <input
-                  type="number"
-                  className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
-                  value={instSettings.withdrawalFeePercent || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setInstSettings(prev => ({ ...prev, withdrawalFeePercent: isNaN(val) ? 0 : val }));
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {activeSettingsTab === 'policy' && (
-            <div>
-              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Delivery Policy Text</label>
-              <textarea
-                rows={3}
-                className="w-full bg-background border border-border rounded p-3 text-sm"
-                value={instSettings.deliveryPolicy}
-                onChange={(e) => setInstSettings(prev => ({ ...prev, deliveryPolicy: e.target.value }))}
-              />
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* PASSKEY MODAL */}
       {showPasskeyModal && (
         <div className="fixed inset-0 z-[2000] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-card p-8 rounded-xl shadow-2xl w-full max-w-sm text-center">
+          <div className="bg-card p-8 rounded-xl shadow-2xl w-full max-w-sm text-center border border-border">
             <FaLock className="mx-auto text-4xl text-primary mb-4" />
             <h3 className="text-xl font-bold mb-2">CEO Passkey Required</h3>
             <p className="text-sm text-muted-foreground mb-6">Enter the CEO passcode to authorize this action.</p>
@@ -570,8 +617,42 @@ export default function AdminInstallments() {
               onKeyDown={(e) => e.key === 'Enter' && verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)}
             />
             <div className="flex gap-4">
-              <button onClick={() => setShowPasskeyModal(null)} className="flex-1 py-3 font-bold border border-border rounded-md">Cancel</button>
-              <button onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} className="flex-1 py-3 font-bold bg-primary text-white rounded-md">Confirm</button>
+              <button onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); }} className="flex-1 py-3 font-bold border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
+              <button onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} className="flex-1 py-3 font-bold bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE MODAL */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[1900] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-card p-8 rounded-2xl shadow-2xl w-full max-w-md text-center border-2 border-secondary/20">
+            <div className="w-20 h-20 bg-secondary/10 text-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaTrash size={40} />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 text-foreground">Confirm Deletion</h3>
+            <p className="text-muted-foreground mb-8">
+              Are you sure you want to delete this {confirmDelete.type === 'deleteComplaint' ? 'complaint' : 'record'}? 
+              This action cannot be undone and will permanently remove it from the database.
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setConfirmDelete(null)} 
+                className="flex-1 py-4 font-bold border border-border rounded-xl hover:bg-muted transition-all"
+              >
+                No, Keep it
+              </button>
+              <button 
+                onClick={() => {
+                  const data = confirmDelete;
+                  setConfirmDelete(null);
+                  setShowPasskeyModal(data);
+                }} 
+                className="flex-1 py-4 font-bold bg-secondary text-white rounded-xl hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
+              >
+                Yes, Delete
+              </button>
             </div>
           </div>
         </div>

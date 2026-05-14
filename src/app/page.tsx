@@ -31,6 +31,10 @@ const heroThemes = [
   { bg: 'bg-[#F5F3FF]', text: 'text-violet-900', subtext: 'text-violet-700', accent: 'text-violet-600', button: 'border-violet-900 text-violet-900 hover:bg-violet-900/5', viewBtn: 'bg-violet-900 text-white hover:bg-violet-800' },
   { bg: 'bg-[#ECFDF5]', text: 'text-emerald-900', subtext: 'text-emerald-700', accent: 'text-emerald-600', button: 'border-emerald-900 text-emerald-900 hover:bg-emerald-900/5', viewBtn: 'bg-emerald-900 text-white hover:bg-emerald-800' },
   { bg: 'bg-[#FFF7ED]', text: 'text-orange-900', subtext: 'text-orange-700', accent: 'text-orange-600', button: 'border-orange-900 text-orange-900 hover:bg-orange-900/5', viewBtn: 'bg-orange-900 text-white hover:bg-orange-800' },
+  { bg: 'bg-[#EEF2FF]', text: 'text-indigo-900', subtext: 'text-indigo-700', accent: 'text-indigo-600', button: 'border-indigo-900 text-indigo-900 hover:bg-indigo-900/5', viewBtn: 'bg-indigo-900 text-white hover:bg-indigo-800' },
+  { bg: 'bg-[#FDF4FF]', text: 'text-fuchsia-900', subtext: 'text-fuchsia-700', accent: 'text-fuchsia-600', button: 'border-fuchsia-900 text-fuchsia-900 hover:bg-fuchsia-900/5', viewBtn: 'bg-fuchsia-900 text-white hover:bg-fuchsia-800' },
+  { bg: 'bg-[#F7FEE7]', text: 'text-lime-900', subtext: 'text-lime-700', accent: 'text-lime-600', button: 'border-lime-900 text-lime-900 hover:bg-lime-900/5', viewBtn: 'bg-lime-900 text-white hover:bg-lime-800' },
+  { bg: 'bg-[#ECFEFF]', text: 'text-cyan-900', subtext: 'text-cyan-700', accent: 'text-cyan-600', button: 'border-cyan-900 text-cyan-900 hover:bg-cyan-900/5', viewBtn: 'bg-cyan-900 text-white hover:bg-cyan-800' },
 ];
 
 export default function Home() {
@@ -56,6 +60,9 @@ export default function Home() {
         if (allProducts.length === 0) {
           allProducts = staticProducts;
         }
+
+        // Filter out out-of-stock products for public visibility
+        allProducts = allProducts.filter(p => (p.quantity ?? 0) > 0);
 
         const parseDate = (dateVal: any) => {
           if (!dateVal) return 0;
@@ -211,6 +218,20 @@ export default function Home() {
                             Buy Now
                           </button>
                         </div>
+
+                        {/* Hero Dots - Anchored to content */}
+                        {heroSlides.length > 1 && (
+                          <div className="mt-6 max-md:mt-4 flex gap-2 max-md:gap-1.5 max-md:justify-center">
+                            {heroSlides.map((_, dotIndex) => (
+                              <button
+                                key={dotIndex}
+                                onClick={(e) => { e.stopPropagation(); setCurrentSlide(dotIndex); }}
+                                className={`h-1 rounded-full transition-all duration-300 ${currentSlide === dotIndex ? 'bg-primary w-6' : 'bg-slate-300 w-2 hover:bg-slate-400'}`}
+                                aria-label={`Go to slide ${dotIndex + 1}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Product Image Container */}
@@ -245,19 +266,7 @@ export default function Home() {
           })
         )}
 
-        {/* Hero Dots */}
-        {heroSlides.length > 1 && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
-            {heroSlides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === index ? 'bg-primary w-10' : 'bg-slate-300 w-4 hover:bg-slate-400'}`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
+
       </section>
 
       {/* Features Section */}

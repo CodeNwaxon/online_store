@@ -98,14 +98,11 @@ function ShopContent() {
   const filteredProducts = products.filter(product => {
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.manufacturer && product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
-    return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo;
+    const isVisible = (product.quantity ?? 0) > 0;
+    return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo && isVisible;
   });
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);

@@ -16,7 +16,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaCheck, FaStar, FaSave } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaCheck, FaStar, FaSave, FaChevronDown } from 'react-icons/fa';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -56,6 +56,7 @@ function AdminProductsContent() {
   // Hero Slides State
   const [heroSlides, setHeroSlides] = useState<string[]>([]);
   const [heroSaving, setHeroSaving] = useState(false);
+  const [isHeroExpanded, setIsHeroExpanded] = useState(false);
 
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -175,8 +176,8 @@ function AdminProductsContent() {
     if (heroSlides.includes(productId)) {
       setHeroSlides(heroSlides.filter(id => id !== productId));
     } else {
-      if (heroSlides.length >= 8) {
-        toast.error('Maximum 8 hero slides allowed.');
+      if (heroSlides.length >= 12) {
+        toast.error('Maximum 12 hero slides allowed.');
         return;
       }
       setHeroSlides([...heroSlides, productId]);
@@ -663,11 +664,14 @@ function AdminProductsContent() {
       {/* HOME HERO SLIDES */}
       <section className="bg-card md:rounded-[var(--radius)] border border-border shadow-sm overflow-hidden">
         <div className="p-4 md:p-8 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
-              <FaStar className="text-primary" /> Home Hero Slides
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">Select up to 8 products to feature on the home page carousel. <span className="font-bold text-primary">{heroSlides.length}/8 selected</span></p>
+          <div className="flex items-center gap-4 flex-1 cursor-pointer group/title" onClick={() => setIsHeroExpanded(!isHeroExpanded)}>
+            <div className="flex flex-col">
+              <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
+                <FaStar className="text-primary" /> Home Hero Slides
+                <FaChevronDown className={`transition-transform duration-300 text-muted-foreground ${isHeroExpanded ? 'rotate-180' : ''}`} size={16} />
+              </h2>
+            <p className="text-xs text-muted-foreground mt-1">Select up to 12 products to feature on the home page carousel. <span className="font-bold text-primary">{heroSlides.length}/12 selected</span></p>
+            </div>
           </div>
           <button
             onClick={handleSaveHero}
@@ -678,67 +682,72 @@ function AdminProductsContent() {
             {heroSaving ? 'Saving...' : 'Save Hero Slides'}
           </button>
         </div>
-        <div className="p-4 md:p-8">
-          {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <FaBox className="text-muted-foreground mb-4" size={40} />
-              <p className="text-muted-foreground font-bold">No products found</p>
-              <p className="text-xs text-muted-foreground mt-1">Add products above to select them for the hero carousel.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
-              {products.map(product => {
-                const isSelected = heroSlides.includes(product.id);
-                const selectionIndex = heroSlides.indexOf(product.id);
-                return (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => handleToggleHero(product.id)}
-                    className={`relative rounded-[var(--radius)] border-2 overflow-hidden transition-all text-left group ${
-                      isSelected
-                        ? 'border-primary shadow-lg shadow-primary/20'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative aspect-square bg-muted">
-                      {product.image && (
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 12vw"
-                        />
-                      )}
-                      {/* Selection badge */}
-                      {isSelected && (
-                        <div className="absolute top-1 right-1 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">
-                          {selectionIndex + 1}
-                        </div>
-                      )}
-                      {/* Overlay */}
-                      <div className={`absolute inset-0 flex items-center justify-center transition-all ${
-                        isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
-                      }`}>
-                        {isSelected && (
-                          <div className="bg-primary text-white rounded-full p-1.5">
-                            <FaCheck size={12} />
+        
+        <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isHeroExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+          <div className="p-4 md:p-8 border-t border-border/50 bg-muted/5">
+            {products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FaBox className="text-muted-foreground mb-4" size={40} />
+                <p className="text-muted-foreground font-bold">No products found</p>
+                <p className="text-xs text-muted-foreground mt-1">Add products above to select them for the hero carousel.</p>
+              </div>
+            ) : (
+              <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 pb-4">
+                  {products.map(product => {
+                    const isSelected = heroSlides.includes(product.id);
+                    const selectionIndex = heroSlides.indexOf(product.id);
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => handleToggleHero(product.id)}
+                        className={`relative rounded-[var(--radius)] border-2 overflow-hidden transition-all text-left group ${
+                          isSelected
+                            ? 'border-primary shadow-lg shadow-primary/20'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {/* Thumbnail */}
+                        <div className="relative aspect-square bg-muted">
+                          {product.image && (
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 12vw"
+                            />
+                          )}
+                          {/* Selection badge */}
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">
+                              {selectionIndex + 1}
+                            </div>
+                          )}
+                          {/* Overlay */}
+                          <div className={`absolute inset-0 flex items-center justify-center transition-all ${
+                            isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
+                          }`}>
+                            {isSelected && (
+                              <div className="bg-primary text-white rounded-full p-1.5">
+                                <FaCheck size={12} />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Info */}
-                    <div className="p-1.5 bg-background">
-                      <p className="text-[10px] font-bold truncate leading-tight">{product.name}</p>
-                      <p className="text-[9px] text-muted-foreground truncate leading-tight">{product.category}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                        </div>
+                        {/* Info */}
+                        <div className="p-1.5 bg-background">
+                          <p className="text-[10px] font-bold truncate leading-tight">{product.name}</p>
+                          <p className="text-[9px] text-muted-foreground truncate leading-tight">{product.category}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

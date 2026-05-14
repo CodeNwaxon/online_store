@@ -119,12 +119,12 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">
           {/* Images Section */}
           <div>
-            <div className="relative h-[500px] max-md:h-[300px] w-full rounded-[var(--radius)] overflow-hidden bg-muted">
+            <div className="relative h-[500px] max-md:h-[300px] w-full rounded-[var(--radius)] overflow-hidden bg-white">
               <Image
                 src={productImages[activeImageIndex]}
                 alt={product.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             </div>
@@ -137,7 +137,7 @@ export default function ProductDetail() {
                     onClick={() => setActiveImageIndex(index)}
                     className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
                   >
-                    <Image src={img} alt={`${product.name} ${index}`} fill className="object-cover" />
+                    <Image src={img} alt={`${product.name} ${index}`} fill className="object-contain" />
                   </button>
                 ))}
               </div>
@@ -149,14 +149,14 @@ export default function ProductDetail() {
             <div className="text-sm text-primary font-semibold uppercase mb-2">
               {product.group} / {product.category}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{product.name}</h1>
+            <h1 className="text-2xl md:text-4xl font-bold mb-2">{product.name}</h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
                 Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
               </div>
             )}
 
-            <div className="text-3xl font-bold text-primary mb-8">
+            <div className="text-2xl font-bold text-primary mb-8">
               ₦{product.price.toLocaleString()}
             </div>
 

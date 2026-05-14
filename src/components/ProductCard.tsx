@@ -65,6 +65,11 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
             )}
           </span>
         )}
+        {isAdmin && (product.quantity ?? 0) <= 5 && (
+          <div className="absolute top-1 right-1 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black z-[40] shadow-lg border-2 border-white animate-bounce">
+            {product.quantity}
+          </div>
+        )}
         {product.images && product.images.length > 1 && (
           <>
             <button
@@ -160,7 +165,11 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
             </span>
           </div>
           {isAdmin && (
-            <div className="bg-muted px-1.5 py-0.5 rounded text-[0.6rem] font-bold text-muted-foreground border border-border">
+            <div className={`px-2 py-0.5 rounded-full text-[0.65rem] font-black border transition-colors ${
+              (product.quantity ?? 0) <= 5 
+                ? 'bg-red-50 text-red-600 border-red-200' 
+                : 'bg-muted text-muted-foreground border-border'
+            }`}>
               Stock: {product.quantity}
             </div>
           )}
