@@ -163,7 +163,7 @@ export default function Home() {
     <div className="relative">
       <InstallPrompt />
       {/* Hero Section */}
-      <section className="relative h-[620px] max-md:h-[650px] overflow-hidden bg-slate-50">
+      <section className="relative h-[620px] max-md:h-[670px] overflow-hidden bg-slate-50">
         {dataLoading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
@@ -310,7 +310,7 @@ export default function Home() {
               View All <FaArrowRight size={16} />
             </Link>
           </div>
-          
+
           {dataLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 px-4">
               {[...Array(4)].map((_, i) => (

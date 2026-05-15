@@ -19,6 +19,7 @@ function AdminStatsContent() {
   const [sales, setSales] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [visibleInventory, setVisibleInventory] = useState(25);
 
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
@@ -87,6 +88,8 @@ function AdminStatsContent() {
     const parseDate = (v: any) => { if (!v) return 0; if (typeof v?.toDate === 'function') return v.toDate().getTime(); return new Date(v).getTime() || 0; };
     return parseDate(b.updatedAt) - parseDate(a.updatedAt);
   });
+
+  const uniqueCategoriesCount = new Set(products.map(p => p.category)).size;
 
   return (
     <div className="space-y-10 pb-20">
@@ -210,6 +213,11 @@ function AdminStatsContent() {
             <div>
               <h2 className="font-bold text-lg text-center md:text-left">Product Inventory</h2>
               <p className="text-[10px] md:text-xs text-muted-foreground text-center md:text-left">Update quantities directly or click to edit full details.</p>
+              <div className="flex items-center justify-center md:justify-start gap-2 text-[9px] text-muted-foreground mt-1 md:hidden font-medium">
+                <span>Products ({products.length})</span>
+                <span className="opacity-40">•</span>
+                <span>Categories ({uniqueCategoriesCount})</span>
+              </div>
             </div>
             <div className="relative w-full md:w-64">
               <input
@@ -225,7 +233,7 @@ function AdminStatsContent() {
 
           {/* ── MOBILE CARD LIST (2-row layout) ── */}
           <div className="md:hidden divide-y divide-border">
-            {filteredInventory.map(product => (
+            {filteredInventory.slice(0, visibleInventory).map(product => (
               <div key={product.id} className="p-3 flex flex-col gap-2">
                 {/* Row 1: Image + Name */}
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -281,15 +289,15 @@ function AdminStatsContent() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/50 text-xs font-bold uppercase text-muted-foreground">
-                  <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Product <span className="hidden md:inline">({products.length})</span></th>
+                  <th className="px-6 py-4">Category <span className="hidden md:inline">({uniqueCategoriesCount})</span></th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4 text-center">Stock</th>
                   <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredInventory.map(product => (
+                {filteredInventory.slice(0, visibleInventory).map(product => (
                   <tr key={product.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
@@ -343,6 +351,17 @@ function AdminStatsContent() {
               </tbody>
             </table>
           </div>
+
+          {filteredInventory.length > visibleInventory && (
+            <div className="p-4 md:p-6 border-t border-border bg-muted/5 flex justify-center">
+              <button 
+                onClick={() => setVisibleInventory(prev => prev + 25)}
+                className="px-8 py-2 bg-primary text-white rounded-full font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+              >
+                Load More Products ({filteredInventory.length - visibleInventory} remaining)
+              </button>
+            </div>
+          )}
         </section>
       )}
     </div>

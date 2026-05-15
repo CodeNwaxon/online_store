@@ -14,6 +14,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { products } from '@/data/products';
 import {
   FaWhatsapp,
   FaPhoneAlt,
@@ -82,11 +83,11 @@ export default function AdminInstallments() {
   const handleAction = (type: 'call' | 'whatsapp' | 'email', contact: string) => {
     let url = '';
     let cleanPhone = contact.replace(/\D/g, '');
-    
+
     // If it starts with 2340..., remove the 0
     if (cleanPhone.startsWith('2340')) {
       cleanPhone = '234' + cleanPhone.slice(4);
-    } 
+    }
     // If it starts with 0..., replace with 234...
     else if (cleanPhone.startsWith('0')) {
       cleanPhone = '234' + cleanPhone.slice(1);
@@ -201,17 +202,17 @@ export default function AdminInstallments() {
                 </button>
               ))}
             </div>
-            
+
             <div className="relative w-full md:w-64">
-              <input 
-                type="text" 
-                placeholder="Search by product name..." 
+              <input
+                type="text"
+                placeholder="Search by product name..."
                 className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
-              <svg 
-                className="absolute left-3 top-2.5 text-muted-foreground size-4" 
+              <svg
+                className="absolute left-3 top-2.5 text-muted-foreground size-4"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -240,13 +241,11 @@ export default function AdminInstallments() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.customerName || inst.payerInfo?.fullName || 'Unknown'}</h3>
-                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate">
+                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate flex items-center flex-wrap">
                         {inst.productName || inst.product?.name || 'Product deleted'}
-                        {(inst.basePrice || inst.product?.price) && (
-                          <span className="ml-2 text-[0.6rem] text-muted-foreground opacity-60 font-medium">
-                            Orig: ₦{(inst.basePrice || inst.product?.price).toLocaleString()}
-                          </span>
-                        )}
+                        <span className="bg-muted rounded p-0.5 ml-2 font-bold text-[0.7rem] md:text-xs">
+                          ₦{(inst.totalAmount || inst.product?.price || 0).toLocaleString()}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -254,14 +253,18 @@ export default function AdminInstallments() {
                   <div className="space-y-2 text-[0.8rem] md:text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Down Payment:</span>
-                      <span className="font-bold text-primary">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
+                      <span className="font-bold">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duration:</span>
-                      <span className="font-bold">{inst.months} Months</span>
+                      <span className="text-muted-foreground">Duration/Months:</span>
+                      <span className="font-bold">{inst.planMonths || inst.months || 'N/A'} Months</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Monthly Payment:</span>
+                      <span className="font-bold">₦{(inst.monthlyAmount || Math.round(((inst.product?.price || inst.totalAmount || 0) - (inst.downPaymentPaid || inst.downPayment || 0)) / (inst.planMonths || inst.months || 1))).toLocaleString()}</span>
                     </div>
                     {inst.isNew && (
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); markAsRead(inst); }}
                         className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-2 rounded-md font-bold text-xs transition-colors"
                       >
@@ -305,7 +308,7 @@ export default function AdminInstallments() {
                 </div>
                 <div className="flex gap-4 w-full sm:w-auto justify-end items-center">
                   {comp.isNew && (
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); markAsRead(comp); }}
                       className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md font-bold text-xs transition-colors shrink-0"
                     >
@@ -315,8 +318,8 @@ export default function AdminInstallments() {
                   <div className="flex gap-2">
                     <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
                     <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
-                    <button onClick={(e) => { 
-                      e.stopPropagation(); 
+                    <button onClick={(e) => {
+                      e.stopPropagation();
                       setConfirmDelete({ type: 'deleteComplaint', id: comp.id });
                     }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
                   </div>
@@ -553,28 +556,36 @@ export default function AdminInstallments() {
                     </div>
                     <div>
                       <h4 className="text-[0.65rem] font-bold text-muted-foreground uppercase mb-2">Product Info</h4>
-                      <p className="font-bold text-sm md:text-base">{selectedItem.productName || selectedItem.product?.name || 'Product deleted'}</p>
-                      <p className="text-sm text-primary font-bold">₦{(selectedItem.product?.price || selectedItem.totalAmount || 0).toLocaleString()}</p>
+                      {(() => {
+                        const productData = products.find(p => p.id === selectedItem.productId);
+                        const basePrice = selectedItem.basePrice || productData?.price;
+                        return (
+                          <div className="space-y-1">
+                            <p className="font-bold text-sm md:text-base leading-tight">{selectedItem.productName || selectedItem.product?.name || 'Product deleted'}</p>
+                            <p className="text-sm md:text-base text-primary font-bold">₦{(selectedItem.product?.price || selectedItem.totalAmount || 0).toLocaleString()}</p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
                   <div className="bg-muted p-6 rounded-lg space-y-4">
                     <h4 className="text-xs font-bold uppercase flex items-center gap-2"><FaWallet /> Payment Plan</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex justify-between border-b border-border pb-2">
-                        <span>Down Payment:</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
+                        <span className="text-muted-foreground shrink-0">Down Payment:</span>
                         <span className="font-bold">₦{(selectedItem.downPaymentPaid || selectedItem.downPayment || 0).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between border-b border-border pb-2">
-                        <span>Monthly:</span>
+                      <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
+                        <span className="text-muted-foreground shrink-0">Monthly:</span>
                         <span className="font-bold">₦{(selectedItem.monthlyAmount || Math.round(((selectedItem.product?.price || selectedItem.totalAmount || 0) - (selectedItem.downPaymentPaid || selectedItem.downPayment || 0)) / (selectedItem.planMonths || selectedItem.months || 1))).toLocaleString()}</span>
                       </div>
-                      <div className="flex justify-between border-b border-border pb-2">
-                        <span>Duration:</span>
+                      <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
+                        <span className="text-muted-foreground shrink-0">Duration:</span>
                         <span className="font-bold">{selectedItem.planMonths || selectedItem.months || 'N/A'} Months</span>
                       </div>
-                      <div className="flex justify-between border-b border-border pb-2">
-                        <span>Status:</span>
+                      <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
+                        <span className="text-muted-foreground shrink-0">Status:</span>
                         <span className={`font-bold uppercase ${selectedItem.status === 'cancelled' ? 'text-secondary' : 'text-green-600'}`}>{selectedItem.status}</span>
                       </div>
                     </div>
@@ -601,10 +612,44 @@ export default function AdminInstallments() {
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-4">
-                    <button onClick={() => handleAction('whatsapp', selectedItem.payerInfo?.phone)} className="flex-1 bg-[#25D366] text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><FaWhatsapp /> WhatsApp</button>
-                    <button onClick={() => handleAction('call', selectedItem.payerInfo?.phone)} className="flex-1 bg-primary text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><FaPhoneAlt /> Call Direct</button>
-                    <button onClick={() => handleAction('email', selectedItem.payerInfo?.email)} className="flex-1 bg-muted border border-border py-3 rounded-md font-bold flex items-center justify-center gap-2 text-sm"><FaEnvelope /> Email</button>
+                  <div className="bg-card p-6 rounded-lg border border-border space-y-4 shadow-sm">
+                    <h4 className="text-xs font-bold uppercase flex items-center gap-2 text-primary"><FaWallet /> Financial Breakdown</h4>
+                    {(() => {
+                      const productData = products.find(p => p.id === selectedItem.productId);
+                      const basePrice = selectedItem.basePrice || productData?.price || 0;
+                      const totalAmount = selectedItem.totalAmount || selectedItem.product?.price || 0;
+                      const interestAmount = Math.max(0, totalAmount - basePrice);
+                      const interestPercent = basePrice > 0 ? Math.round((interestAmount / basePrice) * 100) : 0;
+                      
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-sm">
+                          <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 border-b md:border-0 border-border pb-2 md:pb-0">
+                            <span className="text-muted-foreground shrink-0">Original Price:</span>
+                            <span className="font-bold text-base md:text-lg">₦{basePrice.toLocaleString()}</span>
+                          </div>
+                          <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 border-b md:border-0 border-border pb-2 md:pb-0">
+                            <span className="text-muted-foreground shrink-0">Interest ({interestPercent}%):</span>
+                            <span className="font-bold text-base md:text-lg text-secondary">+ ₦{interestAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1">
+                            <span className="text-muted-foreground shrink-0">Total Plan Cost:</span>
+                            <span className="font-bold text-base md:text-lg text-primary">₦{totalAmount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex flex-row gap-2 md:gap-4">
+                    <button onClick={() => handleAction('whatsapp', selectedItem.payerInfo?.phone || selectedItem.customerPhone)} className="flex-1 bg-[#25D366] text-white py-3 md:py-4 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#25D366]/20">
+                      <FaWhatsapp size={20} /> <span className="hidden md:inline">WhatsApp</span>
+                    </button>
+                    <button onClick={() => handleAction('call', selectedItem.payerInfo?.phone || selectedItem.customerPhone)} className="flex-1 bg-primary text-white py-3 md:py-4 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-lg shadow-primary/20">
+                      <FaPhoneAlt size={18} /> <span className="hidden md:inline">Call Direct</span>
+                    </button>
+                    <button onClick={() => handleAction('email', selectedItem.payerInfo?.email || selectedItem.userEmail)} className="flex-1 bg-muted border border-border py-3 md:py-4 rounded-xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-muted/80">
+                      <FaEnvelope size={18} /> <span className="hidden md:inline">Email</span>
+                    </button>
                   </div>
 
                   {selectedItem.status === 'completed' && (
@@ -662,22 +707,22 @@ export default function AdminInstallments() {
             </div>
             <h3 className="text-2xl font-bold mb-2 text-foreground">Confirm Deletion</h3>
             <p className="text-muted-foreground mb-8">
-              Are you sure you want to delete this {confirmDelete.type === 'deleteComplaint' ? 'complaint' : 'record'}? 
+              Are you sure you want to delete this {confirmDelete.type === 'deleteComplaint' ? 'complaint' : 'record'}?
               This action cannot be undone and will permanently remove it from the database.
             </p>
             <div className="flex gap-4">
-              <button 
-                onClick={() => setConfirmDelete(null)} 
+              <button
+                onClick={() => setConfirmDelete(null)}
                 className="flex-1 py-4 font-bold border border-border rounded-xl hover:bg-muted transition-all"
               >
                 No, Keep it
               </button>
-              <button 
+              <button
                 onClick={() => {
                   const data = confirmDelete;
                   setConfirmDelete(null);
                   setShowPasskeyModal(data);
-                }} 
+                }}
                 className="flex-1 py-4 font-bold bg-secondary text-white rounded-xl hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
               >
                 Yes, Delete
