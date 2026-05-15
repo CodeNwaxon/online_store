@@ -92,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           />
         )}
 
+        {/* Mobile Sidebar */}
         <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border z-[101] flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-6 border-b border-border mt-16 md:mt-0">
             <p className="text-xs text-muted-foreground">Logged in as {adminData?.role}</p>
@@ -132,6 +133,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
+        {/* Desktop Sidebar */}
         <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen">
           <div className="p-6 border-b border-border">
             <div className="flex items-center gap-2 mb-6">
