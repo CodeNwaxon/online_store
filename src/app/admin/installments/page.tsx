@@ -58,6 +58,7 @@ export default function AdminInstallments() {
   const [passkeyInput, setPasskeyInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ type: string, id: string } | null>(null);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'plans' | 'fees' | 'policy'>('plans');
+  const [visibleCards, setVisibleCards] = useState(25);
 
   // Installment Settings State
   const [instSettings, setInstSettings] = useState({
@@ -451,8 +452,9 @@ export default function AdminInstallments() {
 
           {/* INSTALLMENT CARDS */}
           {filteredInstallments.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-3 md:px-0 pb-10">
-              {filteredInstallments.map(inst => (
+            <div className="pb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-3 md:px-0">
+                {filteredInstallments.slice(0, visibleCards).map(inst => (
                 <div
                   key={inst.id}
                   onClick={() => markAsRead(inst)}
@@ -473,8 +475,18 @@ export default function AdminInstallments() {
                       <FaTrash size={14} />
                     </button>
                   )}
-                  {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
-                  {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
+                  {(() => {
+                    if (inst.status === 'completed') {
+                      return <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">COMPLETED</div>;
+                    }
+                    if (inst.status === 'cancelling' || (inst.status === 'cancelled' && !inst.isRefunded)) {
+                      return <div className="absolute top-0 right-0 bg-yellow-400 text-red-800 text-[9px] px-3 py-1 font-bold rounded-bl-lg">PENDING REFUND</div>;
+                    }
+                    if (inst.status === 'cleared' || (inst.status === 'cancelled' && inst.isRefunded)) {
+                      return <div className="absolute top-0 right-0 bg-red-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">CANCELLED</div>;
+                    }
+                    return null;
+                  })()}
 
                   <div className="flex items-center gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
@@ -514,7 +526,19 @@ export default function AdminInstallments() {
                     )}
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
+
+              {visibleCards < filteredInstallments.length && (
+                <div className="flex justify-center mt-8 mb-4">
+                  <button
+                    onClick={() => setVisibleCards(prev => prev + 25)}
+                    className="px-6 py-3 bg-muted text-foreground hover:bg-border rounded-md font-bold transition-colors"
+                  >
+                    Load More
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center px-4 py-20 text-center bg-card rounded-xl border border-dashed border-border mx-0">

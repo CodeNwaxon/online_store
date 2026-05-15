@@ -44,6 +44,7 @@ export default function AdminOrders() {
   const [showPasskeyModal, setShowPasskeyModal] = useState<string | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [visibleCards, setVisibleCards] = useState(25);
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -133,8 +134,9 @@ export default function AdminOrders() {
           <p className="font-bold animate-pulse">Fetching orders...</p>
         </div>
       ) : filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrders.map(order => (
+        <div className="pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredOrders.slice(0, visibleCards).map(order => (
             <div 
               key={order.id}
               onClick={() => markAsRead(order)}
@@ -203,7 +205,19 @@ export default function AdminOrders() {
                 </button>
               </div>
             </div>
-          ))}
+            ))}
+          </div>
+
+          {visibleCards < filteredOrders.length && (
+            <div className="flex justify-center mt-8 mb-4">
+              <button
+                onClick={() => setVisibleCards(prev => prev + 25)}
+                className="px-6 py-3 bg-muted text-foreground hover:bg-border rounded-md font-bold transition-colors"
+              >
+                Load More
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="py-32 text-center bg-card border-2 border-dashed border-border rounded-3xl">
