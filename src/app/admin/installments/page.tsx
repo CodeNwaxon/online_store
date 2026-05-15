@@ -59,6 +59,8 @@ export default function AdminInstallments() {
   const [confirmDelete, setConfirmDelete] = useState<{ type: string, id: string } | null>(null);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'plans' | 'fees' | 'policy'>('plans');
   const [visibleCards, setVisibleCards] = useState(25);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [showReceiptInput, setShowReceiptInput] = useState<string | null>(null);
 
   // Installment Settings State
   const [instSettings, setInstSettings] = useState({
@@ -135,11 +137,37 @@ export default function AdminInstallments() {
         await deleteDoc(doc(db, 'complaints', id));
         toast.success('Complaint deleted.');
       } else if (actionType === 'clearPayment') {
-        await updateDoc(doc(db, 'installments', id), {
+        let receiptUrl = null;
+        if (receiptFile) {
+          const toastId = toast.loading('Uploading receipt...');
+          try {
+            const formData = new FormData();
+            formData.append('file', receiptFile);
+            formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+
+            const res = await fetch(
+              `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+              { method: 'POST', body: formData }
+            );
+            const data = await res.json();
+            receiptUrl = data.secure_url;
+            toast.success('Receipt uploaded successfully!', { id: toastId });
+          } catch (error) {
+            toast.error('Failed to upload receipt', { id: toastId });
+            return; // stop execution if upload fails
+          }
+        }
+
+        const updateData: any = {
           status: 'cleared',
           settledAt: new Date().toISOString()
-        });
+        };
+        if (receiptUrl) updateData.adminRefundReceiptUrl = receiptUrl;
+
+        await updateDoc(doc(db, 'installments', id), updateData);
         toast.success('Payment marked as cleared.');
+        setReceiptFile(null);
+        setShowReceiptInput(null);
       } else if (actionType === 'deleteSettled') {
         await deleteDoc(doc(db, 'installments', id));
         toast.success('Record deleted.');
@@ -455,77 +483,77 @@ export default function AdminInstallments() {
             <div className="pb-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-3 md:px-0">
                 {filteredInstallments.slice(0, visibleCards).map(inst => (
-                <div
-                  key={inst.id}
-                  onClick={() => markAsRead(inst)}
-                  className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden group
+                  <div
+                    key={inst.id}
+                    onClick={() => markAsRead(inst)}
+                    className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden group
                     ${inst.status === 'cancelled' && !inst.isRefunded ? 'border-secondary animate-[pulse_2s_infinite]' : 'border-border'}
                     ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
                   `}
-                >
-                  {(inst.status === 'completed' || inst.status === 'cleared') && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowPasskeyModal({ type: 'deleteSettled', id: inst.id });
-                      }}
-                      className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 z-10"
-                      title="Delete Record"
-                    >
-                      <FaTrash size={14} />
-                    </button>
-                  )}
-                  {(() => {
-                    if (inst.status === 'completed') {
-                      return <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">COMPLETED</div>;
-                    }
-                    if (inst.status === 'cancelling' || (inst.status === 'cancelled' && !inst.isRefunded)) {
-                      return <div className="absolute top-0 right-0 bg-yellow-400 text-red-800 text-[9px] px-3 py-1 font-bold rounded-bl-lg">PENDING REFUND</div>;
-                    }
-                    if (inst.status === 'cleared' || (inst.status === 'cancelled' && inst.isRefunded)) {
-                      return <div className="absolute top-0 right-0 bg-red-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">CANCELLED</div>;
-                    }
-                    return null;
-                  })()}
-
-                  <div className="flex items-center gap-3 md:gap-4 mb-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
-                      <FaUser size={18} />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.customerName || inst.payerInfo?.fullName || 'Unknown'}</h3>
-                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate flex items-center flex-wrap">
-                        {inst.productName || inst.product?.name || 'Product deleted'}
-                        <span className="bg-muted rounded p-0.5 ml-2 font-bold text-[0.7rem] md:text-xs">
-                          ₦{(inst.totalAmount || inst.product?.price || 0).toLocaleString()}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-[0.8rem] md:text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Down Payment:</span>
-                      <span className="font-bold">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duration/Months:</span>
-                      <span className="font-bold">{inst.planMonths || inst.months || 'N/A'} Months</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Monthly Payment:</span>
-                      <span className="font-bold">₦{(inst.monthlyAmount || Math.round(((inst.product?.price || inst.totalAmount || 0) - (inst.downPaymentPaid || inst.downPayment || 0)) / (inst.planMonths || inst.months || 1))).toLocaleString()}</span>
-                    </div>
-                    {inst.isNew && (
+                  >
+                    {(inst.status === 'completed' || inst.status === 'cleared') && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); markAsRead(inst); }}
-                        className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-2 rounded-md font-bold text-xs transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPasskeyModal({ type: 'deleteSettled', id: inst.id });
+                        }}
+                        className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 z-10"
+                        title="Delete Record"
                       >
-                        Mark as Read
+                        <FaTrash size={14} />
                       </button>
                     )}
+                    {(() => {
+                      if (inst.status === 'completed') {
+                        return <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">COMPLETED</div>;
+                      }
+                      if (inst.status === 'cancelling' || (inst.status === 'cancelled' && !inst.isRefunded)) {
+                        return <div className="absolute top-0 right-0 bg-yellow-400 text-red-800 text-[9px] px-3 py-1 font-bold rounded-bl-lg">PENDING REFUND</div>;
+                      }
+                      if (inst.status === 'cleared' || (inst.status === 'cancelled' && inst.isRefunded)) {
+                        return <div className="absolute top-0 right-0 bg-red-500 text-white text-[9px] px-3 py-1 font-bold rounded-bl-lg">CANCELLED</div>;
+                      }
+                      return null;
+                    })()}
+
+                    <div className="flex items-center gap-3 md:gap-4 mb-4">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted flex items-center justify-center text-primary">
+                        <FaUser size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.customerName || inst.payerInfo?.fullName || 'Unknown'}</h3>
+                        <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate flex items-center flex-wrap">
+                          {inst.productName || inst.product?.name || 'Product deleted'}
+                          <span className="bg-muted rounded p-0.5 ml-2 font-bold text-[0.7rem] md:text-xs">
+                            ₦{(inst.totalAmount || inst.product?.price || 0).toLocaleString()}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-[0.8rem] md:text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Down Payment:</span>
+                        <span className="font-bold">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duration/Months:</span>
+                        <span className="font-bold">{inst.planMonths || inst.months || 'N/A'} Months</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Monthly Payment:</span>
+                        <span className="font-bold">₦{(inst.monthlyAmount || Math.round(((inst.product?.price || inst.totalAmount || 0) - (inst.downPaymentPaid || inst.downPayment || 0)) / (inst.planMonths || inst.months || 1))).toLocaleString()}</span>
+                      </div>
+                      {inst.isNew && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); markAsRead(inst); }}
+                          className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white py-2 rounded-md font-bold text-xs transition-colors"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
                 ))}
               </div>
 
@@ -856,22 +884,49 @@ export default function AdminInstallments() {
                     </div>
                   </div>
 
-                  {selectedItem.status === 'cancelled' && (
+                  {(selectedItem.status === 'cancelling' || selectedItem.status === 'cancelled') && selectedItem.refundDetails && (
                     <div className="p-6 border-2 border-secondary rounded-lg bg-secondary/5">
                       <h4 className="text-secondary font-bold mb-4 flex items-center gap-2"><FaExclamationCircle /> REFUND REQUIRED</h4>
                       <div className="space-y-3 text-sm">
-                        <p><strong>Account Name:</strong> {selectedItem.refundInfo?.accountName || 'N/A'}</p>
-                        <p><strong>Account Number:</strong> {selectedItem.refundInfo?.accountNumber || 'N/A'}</p>
-                        <p><strong>Bank Name:</strong> {selectedItem.refundInfo?.bankName || 'N/A'}</p>
-                        <p className="text-lg font-bold text-secondary mt-4">Payback Amount: ₦{selectedItem.downPayment?.toLocaleString()}</p>
+                        <p><strong>Account Name:</strong> {selectedItem.refundDetails.accountName || 'N/A'}</p>
+                        <p><strong>Account Number:</strong> {selectedItem.refundDetails.accountNumber || 'N/A'}</p>
+                        <p><strong>Bank Name:</strong> {selectedItem.refundDetails.bankName || 'N/A'}</p>
+                        <p className="text-lg font-bold text-secondary mt-4">Payback Amount: ₦{selectedItem.refundDetails.refundAmount?.toLocaleString()}</p>
 
-                        {!selectedItem.isRefunded && (
-                          <button
-                            onClick={() => setShowPasskeyModal({ type: 'clearPayment', id: selectedItem.id })}
-                            className="w-full bg-secondary text-white py-3 rounded-md font-bold mt-4"
-                          >
-                            Mark Refund as Completed
-                          </button>
+                        {!selectedItem.isRefunded && selectedItem.status !== 'cleared' && (
+                          showReceiptInput === selectedItem.id ? (
+                            <div className="mt-4 p-4 border border-dashed border-secondary bg-background rounded-md">
+                              <label className="block text-xs font-bold mb-2">Upload Payment Receipt Evidence (Required)</label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                                className="w-full text-sm mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => { setShowReceiptInput(null); setReceiptFile(null); }}
+                                  className="flex-1 bg-muted text-foreground py-2 rounded-md font-bold text-sm transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  disabled={!receiptFile}
+                                  onClick={() => setShowPasskeyModal({ type: 'clearPayment', id: selectedItem.id })}
+                                  className="flex-1 bg-primary text-white py-2 rounded-md font-bold text-sm hover:bg-primary-hover transition-colors disabled:opacity-50"
+                                >
+                                  Upload
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setShowReceiptInput(selectedItem.id)}
+                              className="w-full bg-secondary text-white py-3 rounded-md font-bold mt-4 hover:bg-secondary/90 transition-colors"
+                            >
+                              I have completed payment
+                            </button>
+                          )
                         )}
                       </div>
                     </div>

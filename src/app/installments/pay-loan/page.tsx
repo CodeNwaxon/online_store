@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint } from 'react-icons/fa';
+import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +19,8 @@ export default function PayLoanPage() {
   const [refundDetails, setRefundDetails] = useState({ accountName: '', accountNumber: '', bankName: '' });
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const [siteName, setSiteName] = useState('');
+  const [customerCare, setCustomerCare] = useState('');
+  const [confirmHistoryDelete, setConfirmHistoryDelete] = useState<string | null>(null);
   const [instSettings, setInstSettings] = useState<any>({ withdrawalFeePercent: 15 });
   const router = useRouter();
 
@@ -27,7 +29,10 @@ export default function PayLoanPage() {
       setUser(currentUser);
       if (currentUser) {
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || '');
+        if (settingsSnap.exists()) {
+          setSiteName(settingsSnap.data().siteName || '');
+          setCustomerCare(settingsSnap.data().phones?.[0]?.number || settingsSnap.data().phone1 || settingsSnap.data().phone || '');
+        }
 
         const instSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
         if (!instSnap.empty) setInstSettings(instSnap.docs[0].data());
@@ -45,11 +50,15 @@ export default function PayLoanPage() {
     const q = query(
       collection(db, 'installments'),
       where('userEmail', '==', email),
-      where('status', 'in', ['active', 'cancelling'])
+      where('status', 'in', ['active', 'cancelling', 'cleared'])
     );
     const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      setLoan({ id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() });
+    const docsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    const active = docsData.find((d: any) => d.status === 'active' || d.status === 'cancelling');
+    const cleared = docsData.find((d: any) => d.status === 'cleared' && !d.dismissedRefund);
+
+    if (active || cleared) {
+      setLoan(active || cleared);
     } else {
       setLoan(null);
     }
@@ -60,7 +69,7 @@ export default function PayLoanPage() {
     const q = query(
       collection(db, 'installments'),
       where('userId', '==', userId),
-      where('status', 'in', ['completed', 'cancelled', 'refunded'])
+      where('status', 'in', ['completed', 'cancelled', 'refunded', 'cleared'])
     );
     const querySnapshot = await getDocs(q);
     const historyData = querySnapshot.docs
@@ -416,7 +425,7 @@ export default function PayLoanPage() {
               <h2 className="text-2xl font-bold">Payment History</h2>
               {history.length > 0 && (
                 <button
-                  onClick={() => history.forEach(h => handleHideFromHistory(h.id))}
+                  onClick={() => setConfirmHistoryDelete('ALL')}
                   className="border border-border text-foreground hover:bg-muted px-3 py-1.5 rounded-md text-sm transition-colors"
                 >
                   Clear All History
@@ -428,31 +437,47 @@ export default function PayLoanPage() {
             ) : (
               <div className="flex flex-col gap-4">
                 {history.map((item) => (
-                  <div key={item.id} className="bg-card border border-border rounded-[var(--radius)] p-6 flex justify-between items-center max-md:flex-col max-md:items-start max-md:gap-4">
-                    <div className="flex gap-6 items-center">
-                      <img src={item.productImage} className="w-[60px] h-[60px] rounded-lg object-cover" />
-                      <div>
-                        <div className="font-bold">{item.productName}</div>
-                        <div className="text-sm text-muted-foreground">Status: <span className={`capitalize font-medium ${item.status === 'completed' ? 'text-green-600' : 'text-red-500'}`}>{item.status}</span></div>
+                  <div key={item.id} className="bg-card border border-border rounded-[var(--radius)] p-6 flex flex-col gap-4">
+                    <div className="flex justify-between items-center max-md:flex-col max-md:items-start max-md:gap-4">
+                      <div className="flex gap-6 items-center">
+                        <img src={item.productImage} className="w-[60px] h-[60px] rounded-lg object-cover" />
+                        <div>
+                          <div className="font-bold">{item.productName}</div>
+                          <div className="text-sm text-muted-foreground">Status: <span className={`capitalize font-medium ${item.status === 'completed' ? 'text-green-600' : 'text-red-500'}`}>{item.status}</span></div>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 items-center max-md:w-full max-md:justify-between">
+                        <div className="text-right">
+                          <div className="font-bold">{formatCurrency(item.totalAmount)}</div>
+                          <div className="text-xs text-muted-foreground">{new Date(item.createdAt.toDate()).toLocaleDateString()}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          {item.status === 'completed' && (
+                            <button
+                              onClick={() => handlePrintFinalReceipt(item)}
+                              className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 text-xs font-bold"
+                            >
+                              <FaPrint size={14} /> Final Receipt
+                            </button>
+                          )}
+                          <button onClick={() => setConfirmHistoryDelete(item.id)} className="border border-border text-foreground hover:bg-muted p-2 rounded-md transition-colors"><FaTrash size={14} /></button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-4 items-center max-md:w-full max-md:justify-between">
-                      <div className="text-right">
-                        <div className="font-bold">{formatCurrency(item.totalAmount)}</div>
-                        <div className="text-xs text-muted-foreground">{new Date(item.createdAt.toDate()).toLocaleDateString()}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        {item.status === 'completed' && (
-                          <button
-                            onClick={() => handlePrintFinalReceipt(item)}
-                            className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 text-xs font-bold"
-                          >
-                            <FaPrint size={14} /> Final Receipt
-                          </button>
+                    {item.status === 'cleared' && (
+                      <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-lg text-sm mt-2 w-full">
+                        <p className="font-bold flex items-center gap-2 mb-1"><FaCheckCircle /> Refund Processed Successfully</p>
+                        <p>Your money has been refunded by admin. Please check your bank or contact customer care at <a href={`tel:${customerCare}`} className="text-blue-600 underline font-bold">{customerCare}</a> for assistance.</p>
+                        {item.adminRefundReceiptUrl && (
+                          <div className="mt-4 border-t border-green-200 pt-4">
+                            <p className="font-bold text-xs mb-2 text-green-900 uppercase">Payment Evidence from Admin:</p>
+                            <a href={item.adminRefundReceiptUrl} target="_blank" rel="noreferrer" className="block max-w-[200px] overflow-hidden rounded-md border border-green-300 hover:opacity-80 transition-opacity bg-white">
+                              <img src={item.adminRefundReceiptUrl} alt="Refund Receipt" className="w-full h-auto object-cover" />
+                            </a>
+                          </div>
                         )}
-                        <button onClick={() => handleHideFromHistory(item.id)} className="border border-border text-foreground hover:bg-muted p-2 rounded-md transition-colors"><FaTrash size={14} /></button>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -460,9 +485,44 @@ export default function PayLoanPage() {
           </div>
         ) : (
           !loan ? (
-            <div className="text-center py-16">
-              <h2 className="text-2xl font-bold mb-4">No active installment plans.</h2>
-              <button className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors" onClick={() => router.push('/installments')}>Start a Plan</button>
+            <div className="bg-card border border-border p-12 rounded-[var(--radius)] text-center max-w-[600px] mx-auto mt-10 shadow-sm">
+              <div className="w-16 h-16 bg-muted text-muted-foreground rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaShoppingBag size={24} />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">No Active Installment Plan</h2>
+              <p className="text-muted-foreground mb-6">You don't have any active installment plans at the moment. Browse our products to start a new plan.</p>
+              <button className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors" onClick={() => router.push('/installments')}>Start a New Plan</button>
+            </div>
+          ) : loan.status === 'cleared' ? (
+            <div className="bg-card border border-border p-8 rounded-[var(--radius)] text-center max-w-[600px] mx-auto mt-10 shadow-lg">
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FaCheckCircle size={36} />
+              </div>
+              <h2 className="text-2xl font-bold mb-4 text-foreground">Refund Processed Successfully</h2>
+              <p className="text-muted-foreground mb-6">
+                Your money has been refunded by admin. Please check your bank or contact customer care at <a href={`tel:${customerCare}`} className="text-blue-600 underline font-bold">{customerCare}</a> for assistance.
+              </p>
+              {loan.adminRefundReceiptUrl && (
+                <div className="mb-8 p-4 border border-green-200 bg-green-50 rounded-lg inline-block text-left">
+                  <p className="font-bold text-xs mb-3 text-green-900 uppercase text-center">Payment Evidence from Admin:</p>
+                  <a href={loan.adminRefundReceiptUrl} target="_blank" rel="noreferrer" className="block mx-auto max-w-[250px] overflow-hidden rounded-md border border-green-300 hover:opacity-80 transition-opacity bg-white">
+                    <img src={loan.adminRefundReceiptUrl} alt="Refund Receipt" className="w-full h-auto object-cover" />
+                  </a>
+                </div>
+              )}
+              <div>
+                <button
+                  onClick={async () => {
+                    const toastId = toast.loading('Dismissing...');
+                    await updateDoc(doc(db, 'installments', loan.id), { dismissedRefund: true });
+                    setLoan(null);
+                    toast.success('Dismissed successfully', { id: toastId });
+                  }}
+                  className="bg-primary text-white px-8 py-3 rounded-md font-bold hover:bg-primary-hover transition-colors"
+                >
+                  Acknowledged
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-12">
@@ -677,6 +737,46 @@ export default function PayLoanPage() {
               <div className="flex gap-4">
                 <button onClick={() => setShowRefundForm(false)} className="flex-1 border border-border hover:bg-muted text-foreground py-3 rounded-md font-semibold transition-colors">Cancel</button>
                 <button onClick={handleSubmitRefund} className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-md font-semibold transition-colors">Submit & Confirm</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONFIRM HISTORY DELETE OVERLAY */}
+        {confirmHistoryDelete && (
+          <div className="fixed inset-0 z-[2000] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card w-full max-w-[400px] rounded-2xl shadow-2xl p-6 text-center animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaTrash size={24} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
+                {confirmHistoryDelete === 'ALL' ? 'Clear All History?' : 'Delete History Record?'}
+              </h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                {confirmHistoryDelete === 'ALL'
+                  ? 'This will permanently hide all records from your history view. This action cannot be undone.'
+                  : 'This will permanently hide this record from your history view. This action cannot be undone.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmHistoryDelete(null)}
+                  className="flex-1 bg-muted hover:bg-muted/80 text-foreground py-3 rounded-lg font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmHistoryDelete === 'ALL') {
+                      history.forEach(h => handleHideFromHistory(h.id));
+                    } else {
+                      handleHideFromHistory(confirmHistoryDelete);
+                    }
+                    setConfirmHistoryDelete(null);
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold transition-colors"
+                >
+                  {confirmHistoryDelete === 'ALL' ? 'Yes, Clear All' : 'Yes, Delete'}
+                </button>
               </div>
             </div>
           </div>
