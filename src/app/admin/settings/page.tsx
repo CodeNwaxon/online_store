@@ -150,13 +150,13 @@ export default function AdminSettings() {
 
 
   return (
-    <div className="max-w-[1000px] mx-auto space-y-12 pb-20 relative">
+    <div className="max-w-[1000px] mx-auto space-y-6 md:space-y-12 pb-20 relative">
       <header className="flex flex-col md:flex-row justify-between items-center gap-6 px-4 md:px-0">
         <div className="text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-bold">Site Settings</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">Global configuration for your online store.</p>
         </div>
-        <button onClick={handleSave} className="w-full md:w-auto bg-primary text-sm md:text-base text-white px-8 py-3 rounded-md font-bold flex items-center justify-center gap-2 shadow-lg">
+        <button onClick={handleSave} className="w-full md:w-auto bg-primary text-sm md:text-base text-white px-8 py-3 rounded-md font-bold flex items-center justify-center gap-2 shadow-lg mt-4 md:mt-0">
           <FaSave /> Save All Changes
         </button>
       </header>
@@ -224,11 +224,11 @@ export default function AdminSettings() {
         {/* URL Input */}
         <div>
           <label className="block text-sm font-bold mb-2">Image URL</label>
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
             <input
               type="text"
               placeholder="Paste image URL here..."
-              className="flex-1 p-3 rounded-md border border-border bg-background text-sm"
+              className="w-full md:flex-1 p-3 rounded-md border border-border bg-background text-sm"
               value={installmentBgUrlInput}
               onChange={(e) => setInstallmentBgUrlInput(e.target.value)}
             />
@@ -241,7 +241,7 @@ export default function AdminSettings() {
                   toast.success('URL applied!');
                 }
               }}
-              className="bg-muted px-4 py-2 rounded-md border border-border text-sm font-bold hover:bg-muted/80 flex items-center gap-2"
+              className="w-full md:w-auto bg-muted px-4 py-3 md:py-2 rounded-md border border-border text-sm font-bold hover:bg-muted/80 flex items-center justify-center gap-2"
             >
               <FaLink /> Apply
             </button>
@@ -292,7 +292,7 @@ export default function AdminSettings() {
       {/* CONTACTS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* PHONES */}
-        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+        <section className="bg-card py-4 px-2 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-base md:text-lg font-bold flex items-center gap-2"><FaPhone className="text-primary" /> Phone Numbers</h2>
             <button onClick={() => setPhones([...phones, { position: '', number: '' }])} className="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
@@ -301,10 +301,10 @@ export default function AdminSettings() {
           </div>
           <div className="space-y-4">
             {phones.map((item, i) => (
-              <div key={i} className="flex gap-2 items-center">
+              <div key={i} className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/20 md:bg-transparent p-3 md:p-0 rounded-md border md:border-none border-border">
                 <input
                   placeholder="Position (e.g. CEO)"
-                  className="flex-1 p-2 rounded border border-border bg-background text-sm"
+                  className="w-full md:flex-1 p-2 rounded border border-border bg-background text-sm"
                   value={item.position}
                   onChange={(e) => {
                     const newItems = [...phones];
@@ -314,7 +314,7 @@ export default function AdminSettings() {
                 />
                 <input
                   placeholder="Number"
-                  className="flex-1 p-2 rounded border border-border bg-background text-sm"
+                  className="w-full md:flex-1 p-2 rounded border border-border bg-background text-sm"
                   value={item.number}
                   onChange={(e) => {
                     const newItems = [...phones];
@@ -322,8 +322,8 @@ export default function AdminSettings() {
                     setPhones(newItems);
                   }}
                 />
-                <button onClick={() => setPhones(phones.filter((_, idx) => idx !== i))} className="text-secondary p-2">
-                  <FaTrash size={14} />
+                <button onClick={() => setPhones(phones.filter((_, idx) => idx !== i))} className="self-end md:self-auto text-secondary p-2 bg-secondary/10 md:bg-transparent rounded-md mt-2 md:mt-0">
+                  <FaTrash size={14} className="md:w-[14px] w-[12px]" />
                 </button>
               </div>
             ))}
@@ -331,7 +331,7 @@ export default function AdminSettings() {
         </section>
 
         {/* EMAILS */}
-        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+        <section className="bg-card py-4 px-2 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-base md:text-lg font-bold flex items-center gap-2"><FaEnvelope className="text-primary" /> Email Addresses</h2>
             <button onClick={() => setEmails([...emails, { position: '', email: '' }])} className="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
@@ -340,10 +340,10 @@ export default function AdminSettings() {
           </div>
           <div className="space-y-4">
             {emails.map((item, i) => (
-              <div key={i} className="flex gap-2 items-center">
+              <div key={i} className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/20 md:bg-transparent p-3 md:p-0 rounded-md border md:border-none border-border">
                 <input
                   placeholder="Position"
-                  className="flex-1 p-2 rounded border border-border bg-background text-sm"
+                  className="w-full md:flex-1 p-2 rounded border border-border bg-background text-sm"
                   value={item.position}
                   onChange={(e) => {
                     const newItems = [...emails];
@@ -353,7 +353,7 @@ export default function AdminSettings() {
                 />
                 <input
                   placeholder="Email"
-                  className="flex-1 p-2 rounded border border-border bg-background text-sm"
+                  className="w-full md:flex-1 p-2 rounded border border-border bg-background text-sm"
                   value={item.email}
                   onChange={(e) => {
                     const newItems = [...emails];
@@ -361,8 +361,8 @@ export default function AdminSettings() {
                     setEmails(newItems);
                   }}
                 />
-                <button onClick={() => setEmails(emails.filter((_, idx) => idx !== i))} className="text-secondary p-2">
-                  <FaTrash size={14} />
+                <button onClick={() => setEmails(emails.filter((_, idx) => idx !== i))} className="self-end md:self-auto text-secondary p-2 bg-secondary/10 md:bg-transparent rounded-md mt-2 md:mt-0">
+                  <FaTrash size={14} className="md:w-[14px] w-[12px]" />
                 </button>
               </div>
             ))}
@@ -371,7 +371,7 @@ export default function AdminSettings() {
       </div>
 
       {/* ADDRESSES */}
-      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+      <section className="bg-card py-4 px-2 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-base md:text-lg font-bold flex items-center gap-2"><FaMapMarkerAlt className="text-primary" /> Business Addresses</h2>
           <button onClick={() => setAddresses([...addresses, { office: '', address: '' }])} className="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
@@ -381,7 +381,7 @@ export default function AdminSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {addresses.map((item, i) => (
             <div key={i} className="p-4 border border-border rounded-md bg-muted/30 relative">
-              <button onClick={() => setAddresses(addresses.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 text-secondary">
+              <button onClick={() => setAddresses(addresses.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 md:top-2 md:right-2 text-secondary">
                 <FaTrash size={14} />
               </button>
               <div className="space-y-3">
@@ -412,7 +412,7 @@ export default function AdminSettings() {
       </section>
 
       {/* SOCIAL LINKS */}
-      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+      <section className="bg-card py-4 px-2 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
           <h2 className="text-base md:text-lg font-bold flex items-center gap-2 w-full md:w-auto"><FaShareAlt className="text-primary" /> Social Links</h2>
           <div className="w-full md:w-auto">
@@ -437,7 +437,7 @@ export default function AdminSettings() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {socialLinks.map((item, i) => (
-            <div key={i} className="flex gap-2 items-center p-3 bg-muted/50 rounded-md">
+            <div key={i} className="flex md:gap-2 items-center p-3 bg-muted/50 rounded-md">
               <span className="text-sm font-bold min-w-[80px]">{item.platform}</span>
               <input
                 className="flex-1 p-2 rounded border border-border bg-background text-xs"
@@ -457,14 +457,14 @@ export default function AdminSettings() {
       </section>
 
       {/* WARRANTY POLICIES SECTION */}
-      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">
+      <section className="bg-card py-4 px-2 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">
         <div className="flex justify-between items-center border-b border-border pb-4">
           <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
             <FaShieldAlt className="text-primary" /> Warranty Policies
           </h2>
           <button
             onClick={() => setShowPasskeyOverlay(true)}
-            className="bg-primary text-white px-6 py-2 rounded-md font-bold text-sm shadow-sm hover:opacity-90 transition-opacity"
+            className="bg-primary text-white px-3 md:px-6 py-2 rounded-md font-bold text-sm shadow-sm hover:opacity-90 transition-opacity"
           >
             Save Policy
           </button>
@@ -483,18 +483,18 @@ export default function AdminSettings() {
 
       {/* DIRTY SAVE BAR */}
       {isDirty && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[650px] bg-card border border-primary shadow-2xl rounded-full p-2 pl-6 flex justify-between items-center z-[500] animate-in fade-in slide-in-from-bottom-4">
-          <p className="text-xs md:text-sm font-medium">Site settings have unsaved changes</p>
-          <div className="flex gap-2">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[650px] bg-card border border-primary shadow-2xl rounded-2xl md:rounded-full p-4 md:p-2 md:pl-6 flex flex-col md:flex-row gap-3 justify-between items-center z-[500] animate-in fade-in slide-in-from-bottom-4">
+          <p className="text-xs md:text-sm font-medium w-full text-center md:text-left">Site settings have unsaved changes</p>
+          <div className="flex gap-2 w-full md:w-auto justify-center">
             <button
               onClick={handleCancelChanges}
-              className="px-3 md:px-4 py-2 text-xs md:text-sm font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-2"
+              className="flex-1 md:flex-none justify-center px-4 md:px-4 py-2 text-xs md:text-sm font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-2 border border-border md:border-none"
             >
               <FaUndo size={12} /> Discard
             </button>
             <button
               onClick={handleSave}
-              className="px-5 md:px-6 py-2 text-xs md:text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow-lg flex items-center gap-2"
+              className="flex-1 md:flex-none justify-center px-6 md:px-6 py-2 text-xs md:text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow-lg flex items-center gap-2"
             >
               <FaSave size={12} /> Update Now
             </button>

@@ -16,7 +16,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { adminData, isCEO } = useAdmin();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOrders, setUnreadOrders] = useState(0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
@@ -31,18 +30,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return () => unsubComp();
     });
 
-    // Close mobile menu when viewport switches to desktop (works with DevTools too)
-    const mediaQuery = window.matchMedia('(min-width: 768px)');
-    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
-      if (e.matches) setIsMobileMenuOpen(false);
-    };
-    handleMediaChange(mediaQuery);
-    mediaQuery.addEventListener('change', handleMediaChange);
-
     return () => {
       unsubOrders();
       unsubInst();
-      mediaQuery.removeEventListener('change', handleMediaChange);
     };
   }, []);
 
@@ -71,67 +61,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminGuard>
       <div className="flex min-h-screen bg-muted/30">
-        {/* Mobile Header (Hidden on Desktop) */}
-        <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border px-4 flex items-center justify-between z-[100]">
-          <h2 className="font-bold text-primary flex items-center gap-2">
-            <FaUserShield /> Admin
-          </h2>
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-foreground bg-muted rounded-lg"
-          >
-            {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
-          </button>
-        </div>
-
-        {/* Mobile Sidebar (Drawer) */}
-        {isMobileMenuOpen && (
-          <div
-            className="md:hidden fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* Mobile Sidebar */}
-        <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border z-[101] flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6 border-b border-border mt-16 md:mt-0">
-            <p className="text-xs text-muted-foreground">Logged in as {adminData?.role}</p>
-          </div>
-
-          <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
-            {filteredNav.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-md transition-colors ${pathname === item.href ? 'bg-primary text-white font-bold' : 'text-foreground hover:bg-muted'}`}
-              >
-                <span className="flex items-center gap-3">
-                  {item.icon} {item.label}
-                </span>
-                {item.label === 'Installments' && unreadCount > 0 && (
-                  <span className="bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    {unreadCount}
-                  </span>
-                )}
-                {item.label === 'Orders' && unreadOrders > 0 && (
-                  <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    {unreadOrders}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="p-4 border-t border-border">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 px-4 py-3 w-full text-left text-secondary hover:bg-secondary/10 rounded-md transition-colors font-semibold"
-            >
-              <FaSignOutAlt /> Sign Out
-            </button>
-          </div>
-        </aside>
 
         {/* Desktop Sidebar */}
         <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen">
@@ -197,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 pt-16 md:pt-0 ${pathname === '/admin/stats' ? 'p-1 md:p-4' : 'p-4 md:p-8'}`}>
+        <main className={`flex-1 min-w-0 overflow-x-hidden ${pathname === '/admin/stats' ? 'p-1 md:p-4' : 'p-4 md:p-8'}`}>
           {children}
         </main>
       </div>

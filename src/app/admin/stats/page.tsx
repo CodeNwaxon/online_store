@@ -17,6 +17,7 @@ function AdminStatsContent() {
   const [view, setView] = useState<'stats' | 'inventory'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
+  const [cartOrders, setCartOrders] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [visibleInventory, setVisibleInventory] = useState(25);
@@ -29,27 +30,68 @@ function AdminStatsContent() {
     });
     // Assuming a 'sales' or 'orders' collection exists or we derive from completed installments
     const unsubSales = onSnapshot(collection(db, 'installments'), (snap) => {
-      setSales(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((s: any) => s.status === 'completed' || s.status === 'cleared'));
+      setSales(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       console.warn("Stats sales listener error:", error);
     });
-    return () => { unsubProds(); unsubSales(); };
+    
+    const unsubOrders = onSnapshot(collection(db, 'orders'), (snap) => {
+      setCartOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((o: any) => o.type !== 'installment'));
+    }, (error) => {
+      console.warn("Stats orders listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); };
   }, []);
 
   // Calculate Stats
-  const totalRevenue = sales.reduce((acc, s) => acc + (s.product?.price || 0), 0);
+  const completedInstallments = sales.filter(s => s.status === 'completed');
+  const cancelledInstallments = sales.filter(s => s.status === 'cleared' && s.refundDetails); // 'cleared' often means refund processed
+  
+  const cartRevenue = cartOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+  const installmentRevenue = completedInstallments.reduce((acc, s) => acc + (s.totalAmountPaid || s.totalAmount || s.product?.price || 0), 0);
+  const cancelledRevenue = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
+  
+  const totalRevenue = cartRevenue + installmentRevenue + cancelledRevenue;
 
-  const revenueByGroup = sales.reduce((acc: any, s) => {
-    const group = s.product?.group || 'Other';
-    acc[group] = (acc[group] || 0) + (s.product?.price || 0);
+  const revenueByGroup = [...completedInstallments, ...cartOrders].reduce((acc: any, s) => {
+    // For installments, product group might be in s.product.group. For orders, we'd need to check items.
+    let group = 'Other';
+    let amount = 0;
+    
+    if (s.product?.group) {
+      group = s.product.group;
+      amount = s.totalAmountPaid || s.totalAmount || s.product.price || 0;
+      acc[group] = (acc[group] || 0) + amount;
+    } else if (s.items && Array.isArray(s.items)) {
+      s.items.forEach((item: any) => {
+        let itemGroup = 'Other';
+        const foundProduct = products.find(p => p.id === item.id);
+        if (foundProduct?.group) itemGroup = foundProduct.group;
+        acc[itemGroup] = (acc[itemGroup] || 0) + (item.price * item.quantity);
+      });
+    }
+    
     return acc;
   }, {});
 
-  const salesCountByProduct = sales.reduce((acc: any, s) => {
-    const pid = s.product?.id;
+  const salesCountByProduct = [...completedInstallments].reduce((acc: any, s) => {
+    const pid = s.product?.id || s.productId;
     if (pid) acc[pid] = (acc[pid] || 0) + 1;
     return acc;
   }, {});
+  
+  cartOrders.forEach(o => {
+    if (o.items && Array.isArray(o.items)) {
+      o.items.forEach((item: any) => {
+        accSalesCount(item.id, item.quantity);
+      });
+    }
+  });
+  
+  function accSalesCount(pid: string, qty: number) {
+    if (pid) salesCountByProduct[pid] = (salesCountByProduct[pid] || 0) + qty;
+  }
 
   const topProducts = Object.entries(salesCountByProduct)
     .map(([id, count]) => ({
@@ -146,7 +188,7 @@ function AdminStatsContent() {
                 <div className="p-1.5 md:p-3 bg-purple-100 text-purple-600 rounded-lg"><FaShoppingCart size={18} className="md:size-[24px]" /></div>
                 <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight">Sales</h3>
               </div>
-              <p className="text-base md:text-2xl font-black text-primary">{sales.length}</p>
+              <p className="text-base md:text-2xl font-black text-primary">{completedInstallments.length + cartOrders.length}</p>
             </div>
           </div>
 

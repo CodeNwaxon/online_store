@@ -13,7 +13,7 @@ import { useCartStore } from '@/store/useCartStore';
 import CartSlider from './CartSlider';
 import { auth, db } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'react-hot-toast';
 
@@ -29,6 +29,7 @@ const adminLinks = [
   { href: '/admin/management', label: 'Management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
   { href: '/admin/products', label: 'Products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
+  { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
   { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
   { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
@@ -43,6 +44,8 @@ export default function Navbar() {
   const [siteName, setSiteName] = useState('');
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadOrders, setUnreadOrders] = useState(0);
 
   const isAdminRoute = pathname.startsWith('/admin');
 
@@ -53,7 +56,26 @@ export default function Navbar() {
       if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
     };
     fetchSettings();
-  }, []);
+
+    if (isAdmin || isCEO) {
+      const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
+        setUnreadOrders(snap.size);
+      });
+
+      const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
+        const instCount = snap.size;
+        const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (compSnap) => {
+          setUnreadCount(instCount + compSnap.size);
+        });
+        return () => unsubComp();
+      });
+
+      return () => {
+        unsubOrders();
+        unsubInst();
+      };
+    }
+  }, [isAdmin, isCEO]);
 
   // Close drawer on route change
   useEffect(() => { setIsMenuOpen(false); }, [pathname]);
@@ -201,9 +223,21 @@ export default function Navbar() {
           {isAdminRoute ? (
             // Admin Drawer Links
             filteredAdminLinks.map(l => (
-              <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-[0.85rem] px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
-                {l.label}
+              <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                <div className="flex items-center gap-[0.85rem] text-[0.97rem]">
+                  <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+                  {l.label}
+                </div>
+                {l.label === 'Installments' && unreadCount > 0 && (
+                  <span className="bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    {unreadCount}
+                  </span>
+                )}
+                {l.label === 'Orders' && unreadOrders > 0 && (
+                  <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    {unreadOrders}
+                  </span>
+                )}
               </Link>
             ))
           ) : (

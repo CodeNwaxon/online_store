@@ -28,7 +28,7 @@ export default function PayLoanPage() {
       if (currentUser) {
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
         if (settingsSnap.exists()) setSiteName(settingsSnap.data().siteName || '');
-        
+
         const instSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
         if (!instSnap.empty) setInstSettings(instSnap.docs[0].data());
 
@@ -275,8 +275,23 @@ export default function PayLoanPage() {
   };
 
   const handleSubmitRefund = async () => {
-    if (!refundDetails.accountNumber || !refundDetails.bankName) {
+    if (!refundDetails.accountName || !refundDetails.accountNumber || !refundDetails.bankName) {
       toast.error('Please fill in all refund details.');
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(refundDetails.accountName)) {
+      toast.error('Account name must contain only letters.');
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(refundDetails.bankName)) {
+      toast.error('Bank name must contain only letters.');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(refundDetails.accountNumber)) {
+      toast.error('Account number must be exactly 10 digits.');
       return;
     }
 
@@ -288,10 +303,10 @@ export default function PayLoanPage() {
         .reduce((sum: number, p: any) => sum + p.amount, 0);
 
       // Fee is calculated based on the percent locked at creation, or current fallback
-      const withdrawalPercent = loan.withdrawalFeePercent !== undefined 
-        ? loan.withdrawalFeePercent 
+      const withdrawalPercent = loan.withdrawalFeePercent !== undefined
+        ? loan.withdrawalFeePercent
         : (instSettings.withdrawalFeePercent || 15);
-        
+
       const withdrawalFee = withdrawalPercent / 100;
       const charge = loan.totalAmount * withdrawalFee;
       const refundAmount = totalPaid - charge;
@@ -428,7 +443,7 @@ export default function PayLoanPage() {
                       </div>
                       <div className="flex gap-2">
                         {item.status === 'completed' && (
-                          <button 
+                          <button
                             onClick={() => handlePrintFinalReceipt(item)}
                             className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 text-xs font-bold"
                           >
@@ -574,17 +589,45 @@ export default function PayLoanPage() {
         )}
 
         {showCancelConfirm && (
-          <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4">
-            <div className="bg-background p-10 rounded-[var(--radius)] max-w-[500px] w-full text-center shadow-xl">
+          <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-3">
+            <div className="bg-background p-4 md:p-10 rounded-[var(--radius)] max-w-[500px] w-full text-center shadow-xl">
               <FaExclamationTriangle size={50} color="red" className="mb-6 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">Cancel Installment Plan?</h2>
-              <p className="text-muted-foreground mb-8">
-                If you cancel now, you will lose <strong>{loan.withdrawalFeePercent !== undefined ? loan.withdrawalFeePercent : instSettings.withdrawalFeePercent}%</strong> as a processing fee.
-                Refund will be processed to your account.
+              <p className="text-muted-foreground mb-6">
+                Are you sure you want to cancel this plan? Review the refund breakdown below. The refund will be processed to your bank account.
               </p>
+
+              {(() => {
+                const totalPaid = loan.payments
+                  .filter((p: any) => p.status === 'paid')
+                  .reduce((sum: number, p: any) => sum + p.amount, 0);
+                const withdrawalPercent = loan.withdrawalFeePercent !== undefined
+                  ? loan.withdrawalFeePercent
+                  : (instSettings.withdrawalFeePercent || 15);
+                const charge = loan.totalAmount * (withdrawalPercent / 100);
+                const refundAmount = Math.max(0, totalPaid - charge);
+
+                return (
+                  <div className="text-left bg-muted/50 p-5 rounded-lg border border-border mb-8 space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Total Amount You Paid</span>
+                      <span className="font-bold">{formatCurrency(totalPaid)}</span>
+                    </div>
+                    <div className="grid grid-cols-2  justify-between items-center text-red-500">
+                      <span className="text-left">Cancellation Fee <br />({withdrawalPercent}% of {formatCurrency(loan.totalAmount)})</span>
+                      <span className="text-right font-bold">- {formatCurrency(charge)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-border pt-3 font-bold text-base">
+                      <span>You Will Receive</span>
+                      <span className="text-green-600">{formatCurrency(refundAmount)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex gap-4">
                 <button onClick={() => setShowCancelConfirm(false)} className="flex-1 border border-border hover:bg-muted text-foreground py-3 rounded-md font-semibold transition-colors">Go Back</button>
-                <button onClick={() => { setShowCancelConfirm(false); setShowRefundForm(true); }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-semibold transition-colors">Continue to Refund</button>
+                <button onClick={() => { setShowCancelConfirm(false); setShowRefundForm(true); }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-semibold transition-colors">Continue Refund</button>
               </div>
             </div>
           </div>
@@ -601,21 +644,32 @@ export default function PayLoanPage() {
                   type="text"
                   placeholder="Account Name"
                   value={refundDetails.accountName}
-                  onChange={(e) => setRefundDetails({ ...refundDetails, accountName: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                    setRefundDetails({ ...refundDetails, accountName: val });
+                  }}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
                 <input
                   type="text"
-                  placeholder="Account Number"
+                  placeholder="Account Number (10 digits)"
                   value={refundDetails.accountNumber}
-                  onChange={(e) => setRefundDetails({ ...refundDetails, accountNumber: e.target.value })}
+                  maxLength={10}
+                  inputMode="numeric"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setRefundDetails({ ...refundDetails, accountNumber: val });
+                  }}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
                 <input
                   type="text"
                   placeholder="Bank Name"
                   value={refundDetails.bankName}
-                  onChange={(e) => setRefundDetails({ ...refundDetails, bankName: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                    setRefundDetails({ ...refundDetails, bankName: val });
+                  }}
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary"
                 />
               </div>

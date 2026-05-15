@@ -375,8 +375,8 @@ export default function AdminInstallments() {
     const matchesSearch = (inst.product?.name || inst.productName || '').toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
 
-    if (filter === 'unsettled') return inst.status === 'cancelled' && !inst.isRefunded;
-    if (filter === 'cleared') return inst.status === 'cleared' || (inst.status === 'cancelled' && inst.isRefunded);
+    if (filter === 'unsettled') return inst.status === 'cancelled' || inst.status === 'cancelling';
+    if (filter === 'cleared') return inst.status === 'cleared' || inst.status === 'completed' || (inst.status === 'cancelled' && inst.isRefunded);
     if (filter === 'vip') return inst.status === 'completed';
     return true;
   });
@@ -461,16 +461,18 @@ export default function AdminInstallments() {
                     ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
                   `}
                 >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPasskeyModal({ type: 'deleteSettled', id: inst.id });
-                    }}
-                    className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-0 group-hover:opacity-100 transition-all p-2 z-10"
-                    title="Delete Record"
-                  >
-                    <FaTrash size={14} />
-                  </button>
+                  {(inst.status === 'completed' || inst.status === 'cleared') && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPasskeyModal({ type: 'deleteSettled', id: inst.id });
+                      }}
+                      className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all p-2 z-10"
+                      title="Delete Record"
+                    >
+                      <FaTrash size={14} />
+                    </button>
+                  )}
                   {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
                   {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
 
