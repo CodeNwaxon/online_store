@@ -30,9 +30,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
       return () => unsubComp();
     });
+
+    // Close mobile menu when viewport switches to desktop (works with DevTools too)
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) setIsMobileMenuOpen(false);
+    };
+    handleMediaChange(mediaQuery);
+    mediaQuery.addEventListener('change', handleMediaChange);
+
     return () => {
       unsubOrders();
       unsubInst();
+      mediaQuery.removeEventListener('change', handleMediaChange);
     };
   }, []);
 
@@ -66,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <h2 className="font-bold text-primary flex items-center gap-2">
             <FaUserShield /> Admin
           </h2>
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 text-foreground bg-muted rounded-lg"
           >
@@ -76,12 +86,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Mobile Sidebar (Drawer) */}
         {isMobileMenuOpen && (
-          <div 
+          <div
             className="md:hidden fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}
-        
+
         <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border z-[101] flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="p-6 border-b border-border mt-16 md:mt-0">
             <p className="text-xs text-muted-foreground">Logged in as {adminData?.role}</p>
@@ -122,13 +132,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* Sidebar (Desktop) */}
         <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen">
           <div className="p-6 border-b border-border">
-            <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-              <FaUserShield /> Admin Panel
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">Logged in as {adminData?.role}</p>
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-black italic">QC</div>
+              <h2 className="text-lg font-bold text-primary tracking-tight">
+                {isCEO ? 'CEO Dashboard' : 'Admin Dashboard'}
+              </h2>
+            </div>
+
+            <Link href="/" className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary mb-6 transition-colors">
+              <FaHome size={14} /> Switch to Home
+            </Link>
+
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                {adminData?.image ? (
+                  <img src={adminData.image} alt="" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <FaUserShield size={18} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black truncate">{adminData?.name || 'Admin'}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{auth.currentUser?.email}</p>
+              </div>
+            </div>
           </div>
 
           <nav className="flex-1 p-4 flex flex-col gap-1">

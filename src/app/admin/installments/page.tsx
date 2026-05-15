@@ -456,11 +456,21 @@ export default function AdminInstallments() {
                 <div
                   key={inst.id}
                   onClick={() => markAsRead(inst)}
-                  className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden
+                  className={`bg-card p-4 md:p-6 rounded-[var(--radius)] border-2 cursor-pointer transition-all hover:shadow-lg relative overflow-hidden group
                     ${inst.status === 'cancelled' && !inst.isRefunded ? 'border-secondary animate-[pulse_2s_infinite]' : 'border-border'}
                     ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
                   `}
                 >
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setShowPasskeyModal({ type: 'deleteSettled', id: inst.id }); 
+                    }}
+                    className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-0 group-hover:opacity-100 transition-all p-2 z-10"
+                    title="Delete Record"
+                  >
+                    <FaTrash size={14} />
+                  </button>
                   {inst.isNew && <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">NEW</div>}
                   {inst.status === 'cancelled' && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] px-2 py-0.5 font-bold rounded-bl-lg">CANCELLED</div>}
 
@@ -940,12 +950,20 @@ export default function AdminInstallments() {
                   </div>
 
                   {selectedItem.status === 'completed' && (
-                    <button 
-                      onClick={() => setShowFinalReceipt(selectedItem)} 
-                      className="w-full bg-emerald-600 text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
-                    >
-                      <FaPrint /> View Final Receipt (Admin Copy)
-                    </button>
+                    <div className="flex gap-2 w-full">
+                      <button 
+                        onClick={() => setShowFinalReceipt(selectedItem)} 
+                        className="flex-[4] bg-emerald-600 text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
+                      >
+                        <FaPrint /> View Final Receipt
+                      </button>
+                      <button 
+                        onClick={() => setShowPasskeyModal({ type: 'deleteSettled', id: selectedItem.id })}
+                        className="flex-1 bg-red-100 text-red-600 py-3 rounded-md font-bold flex items-center justify-center hover:bg-red-200 transition-colors"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
                   )}
                 </>
               ) : (

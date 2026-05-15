@@ -10,6 +10,8 @@ export interface AdminData {
   email: string;
   role: 'CEO' | 'Admin';
   assignedRoutes: string[];
+  name?: string;
+  image?: string;
 }
 
 export function useAdmin() {
@@ -48,6 +50,7 @@ export function useAdmin() {
                 '/ADMIN/MANAGEMENT',
                 '/ADMIN/PRODUCTS',
                 '/ADMIN/INSTALLMENTS',
+                '/ADMIN/ORDERS',
                 '/ADMIN/SETTINGS',
                 '/ADMIN/STATS',
                 '/ADMIN/ABOUT'

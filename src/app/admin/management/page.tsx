@@ -22,6 +22,7 @@ import Image from 'next/image';
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/PRODUCTS',
   '/ADMIN/INSTALLMENTS',
+  '/ADMIN/ORDERS',
   '/ADMIN/SETTINGS',
   '/ADMIN/STATS',
   '/ADMIN/ABOUT'
