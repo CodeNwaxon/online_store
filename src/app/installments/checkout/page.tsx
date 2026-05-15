@@ -87,6 +87,29 @@ function LoanCheckoutContent() {
         updateData.shippingMethod = isOfficePickup ? 'Office Pickup' : 'Delivery';
         updateData.shippingAddress = address;
         updateData.phone = phone;
+
+        // Create Order document
+        const orderData = {
+          userId: loan.userId,
+          customerName: loan.customerName,
+          email: loan.userEmail,
+          phone: phone,
+          address: address || 'Office Pickup',
+          items: [{
+            id: loan.productId,
+            name: loan.productName,
+            price: loan.totalAmount,
+            quantity: 1,
+            image: loan.productImage
+          }],
+          totalAmount: loan.totalAmount,
+          status: 'paid',
+          type: 'installment',
+          isNew: true,
+          installmentId: loan.id,
+          createdAt: new Date().toISOString(),
+        };
+        await addDoc(collection(db, 'orders'), orderData);
       }
 
       await updateDoc(loanRef, updateData);

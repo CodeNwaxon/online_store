@@ -70,7 +70,6 @@ export default function PayLoanPage() {
   };
 
   const handlePrintReceipt = (paymentName: string, amount: number, receiptId?: string) => {
-    // Use the permanent receipt ID from the database, or a unique fallback for older records
     const displayUid = receiptId ? receiptId.substring(0, 10).toUpperCase() : `REF-${loan.id.substring(0, 4)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
 
     const printWindow = window.open('', '_blank');
@@ -80,51 +79,81 @@ export default function PayLoanPage() {
       <html>
         <head>
           <title>Receipt - ${displayUid}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
           <style>
-            body { font-family: 'Outfit', sans-serif; padding: 1.5rem; color: #333; }
-            .receipt-container { border: 2px solid #eee; padding: 2rem; max-width: 450px; margin: 0 auto; border-radius: 10px; position: relative; }
-            .receipt-uid { position: absolute; top: 1rem; right: 1.5rem; font-size: 0.65rem; color: #999; font-family: monospace; }
-            .header { text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #D48806; padding-bottom: 1rem; }
-            .logo-img { width: 55px; height: 55px; margin-bottom: 0.5rem; }
-            .logo-text { font-size: 1.4rem; font-weight: bold; color: #D48806; }
-            .details { margin-bottom: 1.5rem; }
-            .row { display: flex; justify-content: space-between; padding: 0.7rem 0; border-bottom: 1px solid #f9f9f9; }
-            .label { color: #666; font-size: 0.85rem; }
-            .value { font-weight: bold; font-size: 0.9rem; }
-            .product-name { font-size: 0.85rem; max-width: 220px; text-align: right; }
-            .footer { text-align: center; margin-top: 2.5rem; font-size: 0.75rem; color: #999; line-height: 1.5; }
-            .stamp { border: 2px solid green; color: green; display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; transform: rotate(-5deg); margin-top: 1rem; font-size: 0.8rem; }
-            @media print { .no-print { display: none; } }
+            body { font-family: 'Inter', sans-serif; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; background: #f1f5f9; }
+            .receipt { width: 380px; background: #fff; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #e2e8f0; }
+            .header { padding: 24px; background: #f8fafc; border-bottom: 1px dashed #e2e8f0; text-align: center; position: relative; }
+            .logo { width: 48px; height: 48px; margin: 0 auto 8px; display: block; object-fit: contain; }
+            .store-name { font-size: 18px; font-weight: 900; color: #D48806; text-transform: uppercase; letter-spacing: -0.05em; margin: 0; }
+            .official { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin-top: 4px; }
+            .copy-container { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; }
+            .id-badge { font-size: 8px; font-weight: bold; color: #94a3b8; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+            .copy-badge { font-size: 8px; font-weight: 900; color: #fff; background: #D48806; padding: 2px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em; }
+            .content { padding: 24px; }
+            .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+            .label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+            .value { font-size: 12px; font-weight: bold; color: #1e293b; text-align: right; max-width: 180px; word-break: break-all; margin: 0; }
+            .total-row { margin-top: 24px; padding-top: 16px; border-top: 2px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+            .total-label { font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; }
+            .total-value { font-size: 24px; font-weight: 900; color: #D48806; }
+            .status-badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; margin-top: 12px; }
+            .status-text { font-size: 9px; font-weight: 900; color: #15803d; text-transform: uppercase; letter-spacing: 0.1em; }
+            .footer { padding: 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
+            .footer-thanks { font-size: 9px; font-weight: bold; color: #1e293b; text-transform: uppercase; margin: 0; }
+            .footer-addr { font-size: 8px; font-weight: 500; color: #94a3b8; margin: 4px 0 0; }
+            .print-btn { margin-top: 20px; padding: 12px 24px; background: #1e293b; color: #fff; border: none; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            .print-btn:hover { background: #334155; transform: translateY(-1px); }
+            @media print { 
+              body { background: #fff; padding: 10px; display: block; } 
+              .no-print { display: none; } 
+              .receipt { border: 1px solid #e2e8f0; box-shadow: none; width: 380px; margin: 0 auto; border-radius: 16px; break-inside: avoid; } 
+            }
           </style>
         </head>
         <body>
-          <div class="receipt-container">
-            <div class="receipt-uid">ID: ${displayUid}</div>
+          <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo-img" />
-              <div class="logo-text">${siteName.toUpperCase()}&reg;</div>
-              <div style="font-size: 0.75rem; margin-top: 0.4rem; letter-spacing: 1px; text-transform: uppercase;">Official Payment Receipt</div>
-            </div>
-            <div class="details">
-              <div class="row"><span class="label">Customer:</span> <span class="value">${loan.userEmail}</span></div>
-              <div class="row"><span class="label">Reference:</span> <span class="value">${paymentName}</span></div>
-              <div class="row"><span class="label">Product:</span> <span class="value product-name">${loan.productName}</span></div>
-              <div class="row"><span class="label">Date:</span> <span class="value">${new Date().toLocaleDateString('en-GB')}</span></div>
-              <div class="row" style="font-size: 1.3rem; margin-top: 1.5rem; border-top: 2px solid #eee; padding-top: 1.5rem;">
-                <span class="label">Paid:</span> <span class="value">${formatCurrency(amount)}</span>
+              <img src="/logos.png" class="logo" />
+              <h1 class="store-name">${siteName.toUpperCase()}®</h1>
+              <div class="official">Official Payment Receipt</div>
+              <div class="copy-container">
+                <span class="id-badge">ID: ${displayUid}</span>
+                <span class="copy-badge">Customer Copy</span>
               </div>
             </div>
-            <div style="text-align: center;">
-               <div class="stamp">PAYMENT VERIFIED</div>
+            <div class="content">
+              <div class="row">
+                <div class="label">Customer:</div>
+                <div class="value">${loan.userEmail}</div>
+              </div>
+              <div class="row">
+                <div class="label">Reference:</div>
+                <div class="value">${paymentName === 'Initial Deposit' ? 'Deposit' : paymentName}</div>
+              </div>
+              <div class="row">
+                <div class="label">Product:</div>
+                <div class="value">${loan.productName}</div>
+              </div>
+              <div class="row">
+                <div class="label">Date:</div>
+                <div class="value">${new Date().toLocaleDateString('en-GB')}</div>
+              </div>
+              <div class="total-row">
+                <div class="total-label">Paid:</div>
+                <div class="total-value">${formatCurrency(amount)}</div>
+              </div>
+              <div class="status-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span class="status-text">Payment Verified</span>
+              </div>
             </div>
             <div class="footer">
-              Thank you for choosing ${siteName}&reg;!<br/>
-              168, Akarigbo Road, Sabo Sagamu, Ogun State.
+              <p class="footer-thanks">Thank you for choosing ${siteName}®!</p>
+              <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
-          <div class="no-print" style="text-align: center; margin-top: 2rem;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #D48806; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Print Receipt</button>
-          </div>
+          <button class="no-print print-btn" onclick="window.print()">Print Receipt</button>
         </body>
       </html>
     `;

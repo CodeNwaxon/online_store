@@ -10,12 +10,13 @@ import {
   getDocs,
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
   getDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield } from 'react-icons/fa';
+import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
 
 const DEFAULT_INTERNAL_ROUTES = [
@@ -63,6 +64,8 @@ export default function AdminManagement() {
   const [removePasskeyError, setRemovePasskeyError] = useState('');
   const [removeLoading, setRemoveLoading] = useState(false);
   const [showDuplicateAdminOverlay, setShowDuplicateAdminOverlay] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<any>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     // Fetch current admins
@@ -181,6 +184,21 @@ export default function AdminManagement() {
       toast.error('Failed to remove admin.');
     }
     setRemoveLoading(false);
+  };
+
+  const handleUpdateAdmin = async () => {
+    if (!editingAdmin) return;
+    setEditLoading(true);
+    try {
+      await updateDoc(doc(db, 'admins', editingAdmin.id), {
+        assignedRoutes: editingAdmin.assignedRoutes
+      });
+      toast.success('Admin staff routes updated!');
+      setEditingAdmin(null);
+    } catch (error) {
+      toast.error('Failed to update admin staff.');
+    }
+    setEditLoading(false);
   };
 
   const cancelRemove = () => {
@@ -398,6 +416,71 @@ export default function AdminManagement() {
           </div>
         </div>
       )}
+
+      {/* ── EDIT ADMIN OVERLAY ── */}
+      {editingAdmin && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg p-6 md:p-8 animate-in zoom-in duration-200">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="font-bold text-xl flex items-center gap-2">
+                  <FaEdit className="text-primary" /> Edit Admin Routes
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">Updating permissions for <span className="font-bold text-primary">{editingAdmin.email}</span></p>
+              </div>
+              <button onClick={() => setEditingAdmin(null)} className="text-muted-foreground hover:text-foreground"><FaTimes /></button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold mb-3 text-muted-foreground uppercase tracking-widest">Assign Duties (Select Links)</label>
+                <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {savedUrls.map((route) => (
+                    <label 
+                      key={route} 
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                        editingAdmin.assignedRoutes?.includes(route) 
+                          ? 'border-primary bg-primary/5 text-primary' 
+                          : 'border-border hover:border-border/80 text-muted-foreground'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editingAdmin.assignedRoutes?.includes(route)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditingAdmin({ ...editingAdmin, assignedRoutes: [...editingAdmin.assignedRoutes, route] });
+                          } else {
+                            setEditingAdmin({ ...editingAdmin, assignedRoutes: editingAdmin.assignedRoutes.filter((r: string) => r !== route) });
+                          }
+                        }}
+                        className="accent-primary w-4 h-4"
+                      />
+                      <span className="text-[0.7rem] font-black uppercase tracking-tight">{route.replace(/^\/ADMIN\//, '')}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setEditingAdmin(null)}
+                  className="flex-1 py-4 rounded-xl border border-border font-bold text-sm hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateAdmin}
+                  disabled={editLoading || !editingAdmin.assignedRoutes?.length}
+                  className="flex-1 py-4 rounded-xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  {editLoading ? 'Updating...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-[1000px] mx-auto space-y-8 md:space-y-12 pb-20 px-2 md:px-0">
         <header className="px-4 md:px-0">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -531,14 +614,23 @@ export default function AdminManagement() {
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => openRemoveOverlay(admin.id, admin.email)}
-                  className="text-secondary p-2 hover:bg-secondary/10 rounded-full shrink-0"
-                  title="Remove admin"
-                >
-                  <FaTrash size={14} />
-                </button>
-              </div>
+                <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setEditingAdmin({ ...admin })}
+                      className="text-primary p-2 hover:bg-primary/10 rounded-full"
+                      title="Edit admin routes"
+                    >
+                      <FaEdit size={14} />
+                    </button>
+                    <button
+                      onClick={() => openRemoveOverlay(admin.id, admin.email)}
+                      className="text-secondary p-2 hover:bg-secondary/10 rounded-full"
+                      title="Remove admin"
+                    >
+                      <FaTrash size={14} />
+                    </button>
+                  </div>
+                </div>
             ))}
           </div>
         </section>
@@ -591,7 +683,7 @@ export default function AdminManagement() {
             <input type="file" accept="image/*" onChange={handleImageChange} className="text-xs w-full" />
             {imagePreview && (
               <div className="mt-4 relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-primary">
-                <Image src={imagePreview} alt="CEO Preview" fill className="object-cover" />
+                <Image src={imagePreview} alt="CEO Preview" fill className="object-cover" sizes="100px" />
               </div>
             )}
           </div>

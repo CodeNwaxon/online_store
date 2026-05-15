@@ -137,7 +137,7 @@ export default function ProductDetail() {
                     onClick={() => setActiveImageIndex(index)}
                     className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
                   >
-                    <Image src={img} alt={`${product.name} ${index}`} fill className="object-contain" />
+                    <Image src={img} alt={`${product.name} ${index}`} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" />
                   </button>
                 ))}
               </div>

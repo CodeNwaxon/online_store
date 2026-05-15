@@ -62,7 +62,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               {items.map((item) => (
                 <div key={item.id} className="flex gap-4">
                   <div className="relative w-[80px] h-[80px] rounded shrink-0 overflow-hidden">
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between mb-1">

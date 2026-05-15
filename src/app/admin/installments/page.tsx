@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAdmin } from '@/hooks/useAdmin';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -27,14 +29,30 @@ import {
   FaExclamationCircle,
   FaLock,
   FaCog,
-  FaSave
+  FaSave,
+  FaCheckCircle,
+  FaArrowRight,
+  FaSearch,
+  FaChevronDown,
+  FaChevronUp,
+  FaReceipt,
+  FaTimes,
+  FaCalendarAlt,
+  FaIdCard,
+  FaHistory,
+  FaShoppingBag
 } from 'react-icons/fa';
+import Image from 'next/image';
 
 export default function AdminInstallments() {
   const [activeTab, setActiveTab] = useState<'installments' | 'complaints' | 'settings'>('installments');
   const [installments, setInstallments] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [showReceipt, setShowReceipt] = useState<string | null>(null);
+  const [receiptData, setReceiptData] = useState<any>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: string, id: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ type: string, id: string } | null>(null);
@@ -134,13 +152,121 @@ export default function AdminInstallments() {
     }
   };
 
+  const handlePrintAdminReceipt = () => {
+    if (!receiptData) return;
+    const displayUid = receiptData.id?.substring(0, 10).toUpperCase();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const receiptHtml = `
+      <html>
+        <head>
+          <title>Admin Receipt - ${displayUid}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; background: #fff; }
+            .receipt { width: 380px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+            .header { padding: 24px; background: #f8fafc; border-bottom: 1px dashed #e2e8f0; text-align: center; }
+            .logo { width: 48px; height: 48px; margin: 0 auto 8px; display: block; object-fit: contain; }
+            .store-name { font-size: 18px; font-weight: 900; color: #D48806; text-transform: uppercase; letter-spacing: -0.05em; margin: 0; }
+            .official { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin-top: 4px; }
+            .copy-container { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; }
+            .id-badge { font-size: 8px; font-weight: bold; color: #94a3b8; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+            .copy-badge { font-size: 8px; font-weight: 900; color: #fff; background: #1e293b; padding: 2px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em; }
+            .content { padding: 24px; }
+            .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+            .label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+            .value { font-size: 12px; font-weight: bold; color: #1e293b; text-align: right; max-width: 180px; word-break: break-all; margin: 0; }
+            .total-row { margin-top: 24px; padding-top: 16px; border-top: 2px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+            .total-label { font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; }
+            .total-value { font-size: 24px; font-weight: 900; color: #D48806; }
+            .status-badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; margin-top: 12px; }
+            .status-text { font-size: 9px; font-weight: 900; color: #15803d; text-transform: uppercase; letter-spacing: 0.1em; }
+            .footer { padding: 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
+            .footer-thanks { font-size: 9px; font-weight: bold; color: #1e293b; text-transform: uppercase; margin: 0; }
+            .footer-addr { font-size: 8px; font-weight: 500; color: #94a3b8; margin: 4px 0 0; }
+            @media print { body { padding: 10px; } .receipt { border: 1px solid #e2e8f0; } }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="header">
+              <img src="/logos.png" class="logo" />
+              <h1 class="store-name">QUICK CHOICE®</h1>
+              <div class="official">Official Payment Receipt</div>
+              <div class="copy-container">
+                <span class="id-badge">ID: ${displayUid}</span>
+                <span class="copy-badge">Admin Copy</span>
+              </div>
+            </div>
+            <div class="content">
+              <div class="row">
+                <div class="label">Customer:</div>
+                <div class="value">${receiptData.userEmail || receiptData.email}</div>
+              </div>
+              <div class="row">
+                <div class="label">Reference:</div>
+                <div class="value">${receiptData.paymentName === 'Initial Deposit' ? 'Deposit' : receiptData.paymentName}</div>
+              </div>
+              <div class="row">
+                <div class="label">Product:</div>
+                <div class="value">${receiptData.productName}</div>
+              </div>
+              <div class="row">
+                <div class="label">Date:</div>
+                <div class="value">${new Date(receiptData.createdAt?.seconds ? receiptData.createdAt.seconds * 1000 : receiptData.createdAt).toLocaleDateString('en-GB')}</div>
+              </div>
+              <div class="total-row">
+                <div class="total-label">Paid:</div>
+                <div class="total-value">₦${receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div class="status-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span class="status-text">Payment Verified</span>
+              </div>
+            </div>
+            <div class="footer">
+              <p class="footer-thanks">Thank you for choosing Quick Choice®!</p>
+              <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+            </div>
+          </div>
+          <script>window.onload = () => { window.print(); }</script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+  };
+
   const markAsRead = async (item: any) => {
     if (item.isNew) {
       const collectionName = activeTab === 'installments' ? 'installments' : 'complaints';
       await updateDoc(doc(db, collectionName, item.id), { isNew: false });
     }
     setSelectedItem(item);
+    setShowPaymentHistory(false);
   };
+
+  useEffect(() => {
+    if (showReceipt) {
+      const fetchReceipt = async () => {
+        setLoadingReceipt(true);
+        try {
+          const docSnap = await getDoc(doc(db, 'receipts', showReceipt));
+          if (docSnap.exists()) {
+            setReceiptData({ id: docSnap.id, ...docSnap.data() });
+          }
+        } catch (error) {
+          console.error("Error fetching receipt:", error);
+        } finally {
+          setLoadingReceipt(false);
+        }
+      };
+      fetchReceipt();
+    } else {
+      setReceiptData(null);
+    }
+  }, [showReceipt]);
 
   const filteredInstallments = installments.filter(inst => {
     const matchesSearch = (inst.product?.name || inst.productName || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -612,6 +738,64 @@ export default function AdminInstallments() {
                     </div>
                   )}
 
+                  {selectedItem.status === 'completed' && (
+                    <div className="bg-primary/5 p-6 rounded-lg border border-primary/20 flex flex-col items-center text-center gap-4">
+                      <div className="w-12 h-12 bg-primary/20 text-primary rounded-full flex items-center justify-center text-xl">
+                        <FaCheckCircle />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-primary">Payment Plan Completed!</h4>
+                        <p className="text-xs text-primary/70">The final payment has been made. You can now process the shipment in the Orders section.</p>
+                      </div>
+                      <Link 
+                        href={`/admin/orders?search=${selectedItem.id}`}
+                        className="w-full bg-primary text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors"
+                      >
+                        <FaShoppingBag /> View Final Order
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="bg-card p-6 rounded-lg border border-border space-y-4">
+                    <button 
+                      onClick={() => setShowPaymentHistory(!showPaymentHistory)}
+                      className="w-full flex items-center justify-between text-xs font-bold uppercase text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span className="flex items-center gap-2"><FaHistory /> Payment History ({selectedItem.payments?.filter((p: any) => p.status === 'paid').length || 0} Paid)</span>
+                      {showPaymentHistory ? <FaChevronUp /> : <FaChevronDown />}
+                    </button>
+                    
+                    {showPaymentHistory && (
+                      <div className="space-y-3 pt-2">
+                        {selectedItem.payments?.map((payment: any, idx: number) => (
+                          <div key={idx} className="flex flex-col gap-2 p-3 rounded-md bg-muted/50 border border-border text-xs">
+                             <div className="flex items-center justify-between">
+                                <span className="font-bold">{payment.month === 1 ? 'Down Payment' : `Month ${payment.month - 1} Payment`}</span>
+                                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                  {payment.status === 'paid' ? 'PAID' : 'PENDING'}
+                                </span>
+                             </div>
+                             <div className="flex items-center justify-between">
+                               <span className="text-muted-foreground">
+                                 {payment.status === 'paid' 
+                                   ? `Paid on ${new Date(payment.paidAt?.seconds ? payment.paidAt.seconds * 1000 : (payment.paidAt instanceof Date ? payment.paidAt.getTime() : payment.paidAt)).toLocaleDateString()}` 
+                                   : `Due ${new Date(payment.deadline?.seconds ? payment.deadline.seconds * 1000 : (payment.deadline instanceof Date ? payment.deadline.getTime() : payment.deadline)).toLocaleDateString()}`}
+                               </span>
+                               {payment.status === 'paid' && (
+                                 <button 
+                                   onClick={() => setShowReceipt(payment.receiptId)}
+                                   className="text-primary hover:underline font-bold flex items-center gap-1"
+                                 >
+                                   <FaReceipt /> View Receipt
+                                 </button>
+                               )}
+                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="bg-card p-6 rounded-lg border border-border space-y-4 shadow-sm">
                     <h4 className="text-xs font-bold uppercase flex items-center gap-2 text-primary"><FaWallet /> Financial Breakdown</h4>
                     {(() => {
@@ -694,6 +878,83 @@ export default function AdminInstallments() {
               <button onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); }} className="flex-1 py-3 font-bold border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
               <button onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} className="flex-1 py-3 font-bold bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">Confirm</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RECEIPT MODAL ── */}
+      {showReceipt && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:bg-white print:p-0 print:block">
+          <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-border print:border-none print:shadow-none print:mx-auto print:rounded-none print-modal-content">
+            {loadingReceipt ? (
+              <div className="p-20 flex flex-col items-center justify-center">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-sm text-muted-foreground">Loading receipt...</p>
+              </div>
+            ) : receiptData ? (
+              <div className="relative">
+                <div className="p-6 bg-slate-50 border-b border-dashed border-slate-200 relative">
+                  <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
+                  <div className="text-center">
+                    <div className="relative w-12 h-12 mx-auto mb-1">
+                      <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                    </div>
+                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Quick Choice®</h2>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                      <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {receiptData.id?.substring(0, 10).toUpperCase()}</span>
+                      <div className="bg-primary text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                        Admin Copy
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Customer:</div>
+                    <div className="font-bold text-xs text-slate-800 text-right max-w-[180px] break-all">{receiptData.userEmail || receiptData.email}</div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Reference:</div>
+                    <div className="font-bold text-xs text-slate-800">{receiptData.paymentName === 'Initial Deposit' ? 'Deposit' : receiptData.paymentName}</div>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Product:</div>
+                    <div className="font-bold text-xs text-slate-800 text-right max-w-[180px]">{receiptData.productName}</div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Date:</div>
+                    <div className="font-bold text-xs text-slate-800">
+                      {new Date(receiptData.createdAt?.seconds ? receiptData.createdAt.seconds * 1000 : receiptData.createdAt).toLocaleDateString('en-GB')}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 pt-4 border-t-2 border-slate-800 flex justify-between items-center">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
+                    <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 py-2 bg-green-50 rounded-lg border border-green-100 mt-2">
+                    <FaCheckCircle className="text-green-500" size={12} />
+                    <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">Payment Verified</span>
+                  </div>
+                </div>
+                
+                <div className="p-6 bg-slate-50 text-center space-y-1 border-t border-slate-200">
+                  <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Quick Choice®!</p>
+                  <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+                  <button onClick={handlePrintAdminReceipt} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
+                    <FaPrint size={12} /> Print Admin Record
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-10 text-center">
+                <p>Receipt not found.</p>
+                <button onClick={() => setShowReceipt(null)} className="mt-4 text-primary font-bold">Close</button>
+              </div>
+            )}
           </div>
         </div>
       )}

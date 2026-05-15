@@ -48,16 +48,41 @@ export default function Checkout() {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleCheckout = (e: React.FormEvent) => {
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const orderData = {
+        userId: auth.currentUser?.uid || 'guest',
+        customerName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image
+        })),
+        totalAmount: getTotalPrice(),
+        status: 'paid',
+        type: 'normal',
+        isNew: true,
+        createdAt: new Date().toISOString(),
+      };
+      
+      const { collection, addDoc } = await import('firebase/firestore');
+      await addDoc(collection(db, 'orders'), orderData);
+      
       setLoading(false);
       setIsSuccess(true);
       clearCart();
-    }, 2000);
+    } catch (error) {
+      console.error("Checkout error:", error);
+      setLoading(false);
+    }
   };
 
   if (items.length === 0 && !isSuccess) {
@@ -163,7 +188,7 @@ export default function Checkout() {
                 <div key={item.id} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 rounded shrink-0 overflow-hidden">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" />
+                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
                     </div>
                     <span className="text-muted-foreground">{item.name} x {item.quantity}</span>
                   </div>
