@@ -51,6 +51,7 @@ export default function AdminInstallments() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [showReceipt, setShowReceipt] = useState<string | null>(null);
+  const [showFinalReceipt, setShowFinalReceipt] = useState<any | null>(null);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: string, id: string } | null>(null);
@@ -234,6 +235,108 @@ export default function AdminInstallments() {
         </body>
       </html>
     `;
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+  };
+
+  const handlePrintFinalAdminReceipt = (loanData: any) => {
+    const displayUid = `FINAL-${loanData.id.substring(0, 6).toUpperCase()}`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const receiptHtml = `
+      <html>
+        <head>
+          <title>Final Receipt - ${displayUid}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; background: #fff; }
+            .receipt { width: 380px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+            .header { padding: 24px; background: #f8fafc; border-bottom: 1px dashed #e2e8f0; text-align: center; }
+            .logo { width: 48px; height: 48px; margin: 0 auto 8px; display: block; object-fit: contain; }
+            .store-name { font-size: 18px; font-weight: 900; color: #D48806; text-transform: uppercase; letter-spacing: -0.05em; margin: 0; }
+            .official { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.2em; margin-top: 4px; }
+            .copy-container { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; }
+            .id-badge { font-size: 8px; font-weight: bold; color: #94a3b8; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+            .copy-badge { font-size: 8px; font-weight: 900; color: #fff; background: #1e293b; padding: 2px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em; }
+            .content { padding: 24px; }
+            .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+            .label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+            .value { font-size: 11px; font-weight: bold; color: #1e293b; text-align: right; max-width: 180px; word-break: break-all; margin: 0; }
+            .section-title { font-size: 10px; font-weight: 900; color: #1e293b; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 12px; margin-top: 20px; }
+            .total-row { margin-top: 20px; padding-top: 16px; border-top: 2px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+            .total-label { font-size: 9px; font-weight: 900; color: #94a3b8; text-transform: uppercase; }
+            .total-value { font-size: 22px; font-weight: 900; color: #D48806; }
+            .status-badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; margin-top: 16px; }
+            .status-text { font-size: 10px; font-weight: 900; color: #15803d; text-transform: uppercase; letter-spacing: 0.1em; }
+            .footer { padding: 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
+            .footer-thanks { font-size: 9px; font-weight: bold; color: #1e293b; text-transform: uppercase; margin: 0; }
+            .footer-addr { font-size: 8px; font-weight: 500; color: #94a3b8; margin: 4px 0 0; }
+            @media print { body { padding: 10px; } .receipt { border: 1px solid #e2e8f0; } }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="header">
+              <img src="/logos.png" class="logo" />
+              <h1 class="store-name">QUICK CHOICE®</h1>
+              <div class="official">Official Completion Receipt</div>
+              <div class="copy-container">
+                <span class="id-badge">ID: ${displayUid}</span>
+                <span class="copy-badge">Admin Copy</span>
+              </div>
+            </div>
+            <div class="content">
+              <div class="section-title">Customer & Product</div>
+              <div class="row">
+                <div class="label">Customer:</div>
+                <div class="value">${loanData.userEmail || loanData.payerInfo?.email}</div>
+              </div>
+              <div class="row">
+                <div class="label">Product:</div>
+                <div class="value">${loanData.productName}</div>
+              </div>
+              <div class="row">
+                <div class="label">Plan:</div>
+                <div class="value">${loanData.planMonths} Months</div>
+              </div>
+
+              <div class="section-title">Financial Summary</div>
+              <div class="row">
+                <div class="label">Base Price:</div>
+                <div class="value">₦${(loanData.basePrice || 0).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <div class="label">Interest/Fees:</div>
+                <div class="value">₦${((loanData.totalAmount || 0) - (loanData.basePrice || 0)).toLocaleString()}</div>
+              </div>
+              <div class="row">
+                <div class="label">Down Payment:</div>
+                <div class="value">₦${(loanData.downPaymentPaid || 0).toLocaleString()}</div>
+              </div>
+              
+              <div class="total-row">
+                <div class="total-label">Total Paid:</div>
+                <div class="total-value">₦${(loanData.totalAmountPaid || loanData.totalAmount || 0).toLocaleString()}</div>
+              </div>
+
+              <div class="status-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <span class="status-text">LOAN FULLY CLEARED</span>
+              </div>
+              <p style="text-align: center; font-size: 8px; color: #94a3b8; margin-top: 8px; font-weight: bold; text-transform: uppercase;">Completed on: ${new Date(loanData.completedAt?.seconds ? loanData.completedAt.seconds * 1000 : (loanData.completedAt || Date.now())).toLocaleDateString('en-GB')}</p>
+            </div>
+            <div class="footer">
+              <p class="footer-thanks">Thank you for choosing Quick Choice®!</p>
+              <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+            </div>
+          </div>
+          <script>window.onload = () => { window.print(); }</script>
+        </body>
+      </html>
+    `;
+
     printWindow.document.write(receiptHtml);
     printWindow.document.close();
   };
@@ -837,7 +940,12 @@ export default function AdminInstallments() {
                   </div>
 
                   {selectedItem.status === 'completed' && (
-                    <button onClick={() => window.print()} className="w-full bg-accent text-white py-3 rounded-md font-bold flex items-center justify-center gap-2"><FaPrint /> Print Receipt</button>
+                    <button 
+                      onClick={() => setShowFinalReceipt(selectedItem)} 
+                      className="w-full bg-emerald-600 text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
+                    >
+                      <FaPrint /> View Final Receipt (Admin Copy)
+                    </button>
                   )}
                 </>
               ) : (
@@ -955,6 +1063,79 @@ export default function AdminInstallments() {
                 <button onClick={() => setShowReceipt(null)} className="mt-4 text-primary font-bold">Close</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── FINAL COMPLETION RECEIPT MODAL ── */}
+      {showFinalReceipt && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl border border-border">
+            <div className="relative">
+              <div className="p-6 bg-slate-50 border-b border-dashed border-slate-200 relative">
+                <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
+                <div className="text-center">
+                  <div className="relative w-12 h-12 mx-auto mb-1">
+                    <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                  </div>
+                  <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Quick Choice®</h2>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: FINAL-{showFinalReceipt.id?.substring(0, 6).toUpperCase()}</span>
+                    <div className="bg-primary text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                      Admin Copy
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Customer:</span>
+                    <span className="text-xs font-black text-slate-800 text-right max-w-[200px] break-all">{showFinalReceipt.userEmail || showFinalReceipt.payerInfo?.email}</span>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Product:</span>
+                    <span className="text-xs font-black text-slate-800 text-right">{showFinalReceipt.productName}</span>
+                  </div>
+                  <div className="flex justify-between items-start border-b border-slate-100 pb-4">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Plan:</span>
+                    <span className="text-xs font-black text-slate-800">{showFinalReceipt.planMonths} Months</span>
+                  </div>
+
+                  <div className="pt-2 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
+                      <span className="font-bold text-slate-600">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
+                      <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800">
+                      <span className="text-slate-800 font-black uppercase text-[10px]">Total Paid:</span>
+                      <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex flex-col items-center gap-2">
+                   <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
+                     <FaCheckCircle size={14} /> Loan Fully Cleared
+                   </div>
+                   <span className="text-[8px] font-bold text-emerald-600 uppercase">Completed on: {new Date(showFinalReceipt.completedAt?.seconds ? showFinalReceipt.completedAt.seconds * 1000 : (showFinalReceipt.completedAt || Date.now())).toLocaleDateString('en-GB')}</span>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 text-center space-y-1 border-t border-slate-200">
+                <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Quick Choice®!</p>
+                <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+                <button onClick={() => handlePrintFinalAdminReceipt(showFinalReceipt)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
+                  <FaPrint size={12} /> Print Official Admin Record
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

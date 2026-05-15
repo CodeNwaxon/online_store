@@ -101,8 +101,8 @@ export default function AdminOrders() {
           <p className="text-muted-foreground mt-1 text-sm">Manage all online payments and completed installments.</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          <div className="relative flex-1 sm:w-64">
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center justify-center md:justify-end">
+          <div className="relative flex-1 sm:w-64 w-full">
             <input 
               type="text" 
               placeholder="Search by name or product..."
@@ -113,7 +113,7 @@ export default function AdminOrders() {
             <FaSearch className="absolute left-3.5 top-3.5 text-muted-foreground size-4" />
           </div>
 
-          <div className="flex bg-muted p-1 rounded-xl border border-border">
+          <div className="flex bg-muted p-1 rounded-xl border border-border w-full sm:w-auto justify-center">
             {(['all', 'normal', 'installment'] as const).map((f) => (
               <button
                 key={f}
@@ -165,7 +165,9 @@ export default function AdminOrders() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-black text-primary text-lg">₦{order.totalAmount?.toLocaleString()}</p>
+                  <p className={`font-black text-lg ${order.type === 'installment' ? 'text-muted-foreground' : 'text-green-700'}`}>
+                    ₦{order.totalAmount?.toLocaleString()}
+                  </p>
                   <p className="text-[10px] text-muted-foreground font-bold">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
@@ -215,8 +217,8 @@ export default function AdminOrders() {
 
       {/* ── ORDER DETAILS OVERLAY ── */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[1500] flex items-center justify-end bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-card w-full max-w-2xl h-full rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
             {/* Header */}
             <div className={`p-8 ${selectedOrder.type === 'installment' ? 'bg-primary text-white' : 'bg-foreground text-background'}`}>
               <div className="flex justify-between items-start mb-6">
@@ -231,7 +233,7 @@ export default function AdminOrders() {
                       {selectedOrder.type}
                     </span>
                   </div>
-                  <h2 className="text-3xl font-black">{selectedOrder.customerName}</h2>
+                  <h2 className="text-xl md:text-3xl font-black">{selectedOrder.customerName}</h2>
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><FaTimes size={24} /></button>
               </div>
@@ -300,8 +302,8 @@ export default function AdminOrders() {
                   <span className="text-sm font-black uppercase">{selectedOrder.type === 'installment' ? 'Installments (Completed)' : 'Online Cart Payment'}</span>
                 </div>
                 <div className="flex justify-between items-center pt-4 border-t border-border/50">
-                  <span className="text-lg font-black uppercase">Total Amount Paid</span>
-                  <span className="text-3xl font-black text-primary">₦{selectedOrder.totalAmount?.toLocaleString()}</span>
+                  <span className="text-sm md:text-lg font-black uppercase">Total Amount Paid</span>
+                  <span className="text-2xl md:text-3xl font-black text-primary">₦{selectedOrder.totalAmount?.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -322,18 +324,22 @@ export default function AdminOrders() {
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 bg-muted border-t border-border flex gap-4">
-              <button onClick={() => window.print()} className="flex-1 py-4 bg-card border border-border rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-muted/50 transition-all">
-                <FaPrint /> Print Order Details
+            <div className="p-4 md:p-6 bg-muted border-t border-border flex gap-3 md:gap-4">
+              <button onClick={() => window.print()} className="flex-1 py-3 md:py-4 bg-card border border-border rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-muted/50 transition-all">
+                <FaPrint className="text-sm md:text-base" /> 
+                <span className="md:hidden">Print</span>
+                <span className="hidden md:inline">Print Order Details</span>
               </button>
               <button 
                 onClick={() => {
                   setSelectedOrder(null);
                   setConfirmDelete(selectedOrder.id);
                 }}
-                className="flex-1 py-4 bg-secondary text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
+                className="flex-1 py-3 md:py-4 bg-secondary text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
               >
-                <FaTrash /> Delete Record
+                <FaTrash className="text-xs md:text-sm" /> 
+                <span className="md:hidden">Delete</span>
+                <span className="hidden md:inline">Delete Record</span>
               </button>
             </div>
           </div>
