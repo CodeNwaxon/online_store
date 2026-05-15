@@ -461,10 +461,10 @@ export default function AdminInstallments() {
                     ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
                   `}
                 >
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setShowPasskeyModal({ type: 'deleteSettled', id: inst.id }); 
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPasskeyModal({ type: 'deleteSettled', id: inst.id });
                     }}
                     className="absolute top-8 right-4 text-muted-foreground hover:text-secondary opacity-0 group-hover:opacity-100 transition-all p-2 z-10"
                     title="Delete Record"
@@ -860,7 +860,7 @@ export default function AdminInstallments() {
                         <h4 className="font-bold text-primary">Payment Plan Completed!</h4>
                         <p className="text-xs text-primary/70">The final payment has been made. You can now process the shipment in the Orders section.</p>
                       </div>
-                      <Link 
+                      <Link
                         href={`/admin/orders?search=${selectedItem.id}`}
                         className="w-full bg-primary text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors"
                       >
@@ -870,39 +870,39 @@ export default function AdminInstallments() {
                   )}
 
                   <div className="bg-card p-6 rounded-lg border border-border space-y-4">
-                    <button 
+                    <button
                       onClick={() => setShowPaymentHistory(!showPaymentHistory)}
                       className="w-full flex items-center justify-between text-xs font-bold uppercase text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <span className="flex items-center gap-2"><FaHistory /> Payment History ({selectedItem.payments?.filter((p: any) => p.status === 'paid').length || 0} Paid)</span>
                       {showPaymentHistory ? <FaChevronUp /> : <FaChevronDown />}
                     </button>
-                    
+
                     {showPaymentHistory && (
                       <div className="space-y-3 pt-2">
                         {selectedItem.payments?.map((payment: any, idx: number) => (
                           <div key={idx} className="flex flex-col gap-2 p-3 rounded-md bg-muted/50 border border-border text-xs">
-                             <div className="flex items-center justify-between">
-                                <span className="font-bold">{payment.month === 1 ? 'Down Payment' : `Month ${payment.month - 1} Payment`}</span>
-                                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                  {payment.status === 'paid' ? 'PAID' : 'PENDING'}
-                                </span>
-                             </div>
-                             <div className="flex items-center justify-between">
-                               <span className="text-muted-foreground">
-                                 {payment.status === 'paid' 
-                                   ? `Paid on ${new Date(payment.paidAt?.seconds ? payment.paidAt.seconds * 1000 : (payment.paidAt instanceof Date ? payment.paidAt.getTime() : payment.paidAt)).toLocaleDateString()}` 
-                                   : `Due ${new Date(payment.deadline?.seconds ? payment.deadline.seconds * 1000 : (payment.deadline instanceof Date ? payment.deadline.getTime() : payment.deadline)).toLocaleDateString()}`}
-                               </span>
-                               {payment.status === 'paid' && (
-                                 <button 
-                                   onClick={() => setShowReceipt(payment.receiptId)}
-                                   className="text-primary hover:underline font-bold flex items-center gap-1"
-                                 >
-                                   <FaReceipt /> View Receipt
-                                 </button>
-                               )}
-                             </div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold">{payment.month === 1 ? 'Down Payment' : `Month ${payment.month - 1} Payment`}</span>
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${payment.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {payment.status === 'paid' ? 'PAID' : 'PENDING'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">
+                                {payment.status === 'paid'
+                                  ? `Paid on ${new Date(payment.paidAt?.seconds ? payment.paidAt.seconds * 1000 : (payment.paidAt instanceof Date ? payment.paidAt.getTime() : payment.paidAt)).toLocaleDateString()}`
+                                  : `Due ${new Date(payment.deadline?.seconds ? payment.deadline.seconds * 1000 : (payment.deadline instanceof Date ? payment.deadline.getTime() : payment.deadline)).toLocaleDateString()}`}
+                              </span>
+                              {payment.status === 'paid' && (
+                                <button
+                                  onClick={() => setShowReceipt(payment.receiptId)}
+                                  className="text-primary hover:underline font-bold flex items-center gap-1"
+                                >
+                                  <FaReceipt /> View Receipt
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -917,7 +917,7 @@ export default function AdminInstallments() {
                       const totalAmount = selectedItem.totalAmount || selectedItem.product?.price || 0;
                       const interestAmount = Math.max(0, totalAmount - basePrice);
                       const interestPercent = basePrice > 0 ? Math.round((interestAmount / basePrice) * 100) : 0;
-                      
+
                       return (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-sm">
                           <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 border-b md:border-0 border-border pb-2 md:pb-0">
@@ -951,13 +951,13 @@ export default function AdminInstallments() {
 
                   {selectedItem.status === 'completed' && (
                     <div className="flex gap-2 w-full">
-                      <button 
-                        onClick={() => setShowFinalReceipt(selectedItem)} 
+                      <button
+                        onClick={() => setShowFinalReceipt(selectedItem)}
                         className="flex-[4] bg-emerald-600 text-white py-3 rounded-md font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
                       >
                         <FaPrint /> View Final Receipt
                       </button>
-                      <button 
+                      <button
                         onClick={() => setShowPasskeyModal({ type: 'deleteSettled', id: selectedItem.id })}
                         className="flex-1 bg-red-100 text-red-600 py-3 rounded-md font-bold flex items-center justify-center hover:bg-red-200 transition-colors"
                       >
@@ -1035,7 +1035,7 @@ export default function AdminInstallments() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-6 space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Customer:</div>
@@ -1055,7 +1055,7 @@ export default function AdminInstallments() {
                       {new Date(receiptData.createdAt?.seconds ? receiptData.createdAt.seconds * 1000 : receiptData.createdAt).toLocaleDateString('en-GB')}
                     </div>
                   </div>
-                  
+
                   <div className="mt-6 pt-4 border-t-2 border-slate-800 flex justify-between items-center">
                     <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
                     <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
@@ -1066,7 +1066,7 @@ export default function AdminInstallments() {
                     <span className="text-[9px] font-black text-green-700 uppercase tracking-widest">Payment Verified</span>
                   </div>
                 </div>
-                
+
                 <div className="p-6 bg-slate-50 text-center space-y-1 border-t border-slate-200">
                   <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Quick Choice®!</p>
                   <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
@@ -1139,10 +1139,10 @@ export default function AdminInstallments() {
                 </div>
 
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex flex-col items-center gap-2">
-                   <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
-                     <FaCheckCircle size={14} /> Loan Fully Cleared
-                   </div>
-                   <span className="text-[8px] font-bold text-emerald-600 uppercase">Completed on: {new Date(showFinalReceipt.completedAt?.seconds ? showFinalReceipt.completedAt.seconds * 1000 : (showFinalReceipt.completedAt || Date.now())).toLocaleDateString('en-GB')}</span>
+                  <div className="flex items-center gap-2 text-emerald-700 font-black text-[10px] uppercase tracking-widest">
+                    <FaCheckCircle size={14} /> Loan Fully Cleared
+                  </div>
+                  <span className="text-[8px] font-bold text-emerald-600 uppercase">Completed on: {new Date(showFinalReceipt.completedAt?.seconds ? showFinalReceipt.completedAt.seconds * 1000 : (showFinalReceipt.completedAt || Date.now())).toLocaleDateString('en-GB')}</span>
                 </div>
               </div>
 
