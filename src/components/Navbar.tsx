@@ -102,10 +102,10 @@ export default function Navbar() {
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px]">
 
           {/* Logo — always visible */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-end md:items-center gap-2">
             <Image src="/logos.png" alt="Logo" width={38} height={38}
               className="object-contain border-2 border-primary rounded p-0.5" />
-            <span className="text-[1.2rem] font-bold text-primary">{siteName}&reg;</span>
+            <span className="text-[0.8rem] md:text-[1.2rem] font-bold text-primary">{siteName}&reg;</span>
           </Link>
 
           {/* Desktop centre links */}
