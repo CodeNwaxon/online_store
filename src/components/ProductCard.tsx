@@ -66,7 +66,7 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           </span>
         )}
         {isAdmin && (product.quantity ?? 0) <= 5 && (
-          <div className="absolute top-1 right-1 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black z-[40] shadow-lg border-2 border-white animate-bounce">
+          <div className="absolute top-1 right-10 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black z-[40] shadow-lg border-2 border-white animate-bounce">
             {product.quantity}
           </div>
         )}

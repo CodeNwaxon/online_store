@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight } from 'react-icons/fa';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -15,6 +17,8 @@ function AdminStatsContent() {
   const [view, setView] = useState<'stats' | 'inventory'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
+  const [searchQueryInventory, setSearchQueryInventory] = useState('');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
@@ -60,8 +64,33 @@ function AdminStatsContent() {
       .slice(0, limit);
   };
 
+  const updateQuantity = async (productId: string, newQuantity: number) => {
+    if (newQuantity < 0) return;
+    setUpdatingId(productId);
+    try {
+      await updateDoc(doc(db, 'products', productId), {
+        quantity: newQuantity,
+        updatedAt: new Date().toISOString()
+      });
+      toast.success('Quantity updated');
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error('Failed to update quantity');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const filteredInventory = products.filter(p => 
+    p.name.toLowerCase().includes(searchQueryInventory.toLowerCase())
+  ).sort((a, b) => {
+    const parseDate = (v: any) => { if (!v) return 0; if (typeof v?.toDate === 'function') return v.toDate().getTime(); return new Date(v).getTime() || 0; };
+    return parseDate(b.updatedAt) - parseDate(a.updatedAt);
+  });
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-20">
+      <Toaster position="top-center" />
       <header className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 md:p-6 md:rounded-xl border border-border shadow-sm">
         <div className="text-center md:text-left">
           <h1 className="text-xl md:text-2xl font-bold">Store Insights</h1>
@@ -177,48 +206,136 @@ function AdminStatsContent() {
       ) : (
         /* INVENTORY VIEW */
         <section className="bg-card md:rounded-xl border border-border shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-border bg-muted/20">
-            <h2 className="font-bold text-lg">Product Inventory</h2>
-            <p className="text-xs text-muted-foreground">Click any product to update its quantity.</p>
+          <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h2 className="font-bold text-lg text-center md:text-left">Product Inventory</h2>
+              <p className="text-[10px] md:text-xs text-muted-foreground text-center md:text-left">Update quantities directly or click to edit full details.</p>
+            </div>
+            <div className="relative w-full md:w-64">
+              <input
+                type="text"
+                placeholder="Search inventory..."
+                className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
+                value={searchQueryInventory}
+                onChange={e => setSearchQueryInventory(e.target.value)}
+              />
+              <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
+            </div>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* ── MOBILE CARD LIST (2-row layout) ── */}
+          <div className="md:hidden divide-y divide-border">
+            {filteredInventory.map(product => (
+              <div key={product.id} className="p-3 flex flex-col gap-2">
+                {/* Row 1: Image + Name */}
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="relative w-10 h-10 rounded-md border border-border overflow-hidden shrink-0">
+                    <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[0.8rem] leading-tight truncate" title={product.name}>{product.name}</p>
+                    <p className="text-[0.65rem] text-muted-foreground">₦{product.price.toLocaleString()}</p>
+                  </div>
+                </div>
+                {/* Row 2: Quantity controls + Action */}
+                <div className="flex items-center justify-between pl-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateQuantity(product.id, (product.quantity || 0) - 1)}
+                      disabled={updatingId === product.id}
+                      className="size-7 flex items-center justify-center bg-muted rounded-full text-muted-foreground disabled:opacity-50"
+                    >
+                      <FaMinus size={10} />
+                    </button>
+                    <input
+                      type="number"
+                      value={product.quantity}
+                      onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
+                      className={`w-12 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${
+                        product.quantity <= 5
+                          ? 'border-secondary/30 bg-secondary/5 text-secondary'
+                          : 'border-green-200 bg-green-50 text-green-700'
+                      } focus:border-primary`}
+                    />
+                    <button
+                      onClick={() => updateQuantity(product.id, (product.quantity || 0) + 1)}
+                      disabled={updatingId === product.id}
+                      className="size-7 flex items-center justify-center bg-muted rounded-full text-muted-foreground disabled:opacity-50"
+                    >
+                      <FaPlus size={10} />
+                    </button>
+                  </div>
+                  <Link
+                    href={`/admin/products?edit=${product.id}`}
+                    className="flex items-center gap-1.5 text-primary text-xs font-bold hover:underline"
+                  >
+                    Edit <FaArrowRight size={10} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── DESKTOP TABLE ── */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-muted/50 text-[10px] md:text-xs font-bold uppercase text-muted-foreground">
-                  <th className="px-3 md:px-6 py-4">Product</th>
-                  <th className="px-3 md:px-6 py-4 hidden sm:table-cell">Category</th>
-                  <th className="px-3 md:px-6 py-4">Price</th>
-                  <th className="px-3 md:px-6 py-4 text-center">Stock</th>
-                  <th className="px-3 md:px-6 py-4 text-right">Action</th>
+                <tr className="bg-muted/50 text-xs font-bold uppercase text-muted-foreground">
+                  <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4 text-center">Stock</th>
+                  <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {[...products].sort((a, b) => {
-                    const parseDate = (v: any) => { if (!v) return 0; if (typeof v?.toDate === 'function') return v.toDate().getTime(); return new Date(v).getTime() || 0; };
-                    return parseDate(b.updatedAt) - parseDate(a.updatedAt);
-                  }).map(product => (
+                {filteredInventory.map(product => (
                   <tr key={product.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="px-3 md:px-6 py-4">
-                      <div className="flex items-center gap-2 md:gap-4">
-                        <div className="relative w-8 h-8 md:w-10 md:h-10 rounded-md border border-border overflow-hidden shrink-0">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-10 h-10 rounded-md border border-border overflow-hidden shrink-0">
                           <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
                         </div>
-                        <span className="font-bold text-xs md:text-sm truncate max-w-[100px] md:max-w-[200px]">{product.name}</span>
+                        <span className="font-bold text-sm truncate max-w-[200px]">{product.name}</span>
                       </div>
                     </td>
-                    <td className="px-3 md:px-6 py-4 text-[10px] md:text-xs font-semibold text-muted-foreground hidden sm:table-cell">{product.category}</td>
-                    <td className="px-3 md:px-6 py-4 text-xs md:text-sm font-bold">₦{product.price.toLocaleString()}</td>
-                    <td className="px-3 md:px-6 py-4 text-center">
-                      <span className={`px-2 md:px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black ${product.quantity <= 5 ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'bg-green-100 text-green-700'}`}>
-                        {product.quantity} <span className="hidden sm:inline">Left</span>
-                      </span>
+                    <td className="px-6 py-4 text-xs font-semibold text-muted-foreground">{product.category}</td>
+                    <td className="px-6 py-4 text-sm font-bold">₦{product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(product.id, (product.quantity || 0) - 1)}
+                          disabled={updatingId === product.id}
+                          className="size-8 flex items-center justify-center bg-muted hover:bg-border rounded-full transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                          <FaMinus size={10} />
+                        </button>
+                        <input
+                          type="number"
+                          value={product.quantity}
+                          onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
+                          className={`w-14 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${
+                            product.quantity <= 5
+                              ? 'border-secondary/30 bg-secondary/5 text-secondary'
+                              : 'border-green-200 bg-green-50 text-green-700'
+                          } focus:border-primary`}
+                        />
+                        <button
+                          onClick={() => updateQuantity(product.id, (product.quantity || 0) + 1)}
+                          disabled={updatingId === product.id}
+                          className="size-8 flex items-center justify-center bg-muted hover:bg-border rounded-full transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                          <FaPlus size={10} />
+                        </button>
+                      </div>
                     </td>
-                    <td className="px-3 md:px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right">
                       <Link
                         href={`/admin/products?edit=${product.id}`}
-                        className="text-primary hover:underline text-[10px] md:text-xs font-bold flex items-center justify-end gap-1"
+                        className="text-primary hover:bg-primary/10 p-2 rounded-full inline-flex items-center justify-center transition-colors"
+                        title="Edit Full Details"
                       >
-                        <span className="hidden sm:inline">Update</span> <FaArrowRight size={10} />
+                        <FaArrowRight size={12} />
                       </Link>
                     </td>
                   </tr>

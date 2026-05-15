@@ -54,6 +54,7 @@ export default function AdminInstallments() {
 
   // Filters for installments
   const [filter, setFilter] = useState<'all' | 'unsettled' | 'cleared' | 'vip'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const unsubInst = onSnapshot(query(collection(db, 'installments'), orderBy('createdAt', 'desc')), (snap) => {
@@ -141,6 +142,9 @@ export default function AdminInstallments() {
   };
 
   const filteredInstallments = installments.filter(inst => {
+    const matchesSearch = (inst.product?.name || inst.productName || '').toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+
     if (filter === 'unsettled') return inst.status === 'cancelled' && !inst.isRefunded;
     if (filter === 'cleared') return inst.status === 'cleared' || (inst.status === 'cancelled' && inst.isRefunded);
     if (filter === 'vip') return inst.status === 'completed';
@@ -184,17 +188,35 @@ export default function AdminInstallments() {
 
       {activeTab === 'installments' && (
         <div className="space-y-6">
-          {/* INSTALLMENT FILTERS */}
-          <div className="flex flex-wrap gap-2 px-4 md:px-0">
-            {['all', 'unsettled', 'cleared', 'vip'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f as any)}
-                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full border text-[0.7rem] md:text-sm font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary'}`}
+          {/* INSTALLMENT FILTERS & SEARCH */}
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between px-4 md:px-0">
+            <div className="flex flex-wrap gap-2">
+              {['all', 'unsettled', 'cleared', 'vip'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f as any)}
+                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full border text-[0.7rem] md:text-sm font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary'}`}
+                >
+                  {f === 'unsettled' ? 'Unsettled' : f}
+                </button>
+              ))}
+            </div>
+            
+            <div className="relative w-full md:w-64">
+              <input 
+                type="text" 
+                placeholder="Search by product name..." 
+                className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              <svg 
+                className="absolute left-3 top-2.5 text-muted-foreground size-4" 
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
-                {f === 'unsettled' ? 'Unsettled' : f}
-              </button>
-            ))}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
 
           {/* INSTALLMENT CARDS */}
@@ -217,15 +239,22 @@ export default function AdminInstallments() {
                       <FaUser size={18} />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.payerInfo?.fullName || 'Unknown'}</h3>
-                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate">{inst.product?.name || 'Product deleted'}</p>
+                      <h3 className="font-bold leading-tight text-sm md:text-base truncate">{inst.customerName || inst.payerInfo?.fullName || 'Unknown'}</h3>
+                      <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate">
+                        {inst.productName || inst.product?.name || 'Product deleted'}
+                        {(inst.basePrice || inst.product?.price) && (
+                          <span className="ml-2 text-[0.6rem] text-muted-foreground opacity-60 font-medium">
+                            Orig: ₦{(inst.basePrice || inst.product?.price).toLocaleString()}
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
 
                   <div className="space-y-2 text-[0.8rem] md:text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Down Payment:</span>
-                      <span className="font-bold text-primary">₦{inst.downPayment?.toLocaleString()}</span>
+                      <span className="font-bold text-primary">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Duration:</span>
@@ -518,14 +547,14 @@ export default function AdminInstallments() {
                   <div className="flex flex-col gap-6">
                     <div>
                       <h4 className="text-[0.65rem] font-bold text-muted-foreground uppercase mb-2">Customer Info</h4>
-                      <p className="font-bold text-base md:text-lg">{selectedItem.payerInfo?.fullName}</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">{selectedItem.payerInfo?.email}</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">{selectedItem.payerInfo?.phone}</p>
+                      <p className="font-bold text-base md:text-lg">{selectedItem.customerName || selectedItem.payerInfo?.fullName || 'N/A'}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">{selectedItem.userEmail || selectedItem.payerInfo?.email || 'N/A'}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">{selectedItem.customerPhone || selectedItem.payerInfo?.phone || 'N/A'}</p>
                     </div>
                     <div>
                       <h4 className="text-[0.65rem] font-bold text-muted-foreground uppercase mb-2">Product Info</h4>
-                      <p className="font-bold text-sm md:text-base">{selectedItem.product?.name}</p>
-                      <p className="text-sm text-primary font-bold">₦{selectedItem.product?.price?.toLocaleString()}</p>
+                      <p className="font-bold text-sm md:text-base">{selectedItem.productName || selectedItem.product?.name || 'Product deleted'}</p>
+                      <p className="text-sm text-primary font-bold">₦{(selectedItem.product?.price || selectedItem.totalAmount || 0).toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -534,15 +563,15 @@ export default function AdminInstallments() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="flex justify-between border-b border-border pb-2">
                         <span>Down Payment:</span>
-                        <span className="font-bold">₦{selectedItem.downPayment?.toLocaleString()}</span>
+                        <span className="font-bold">₦{(selectedItem.downPaymentPaid || selectedItem.downPayment || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between border-b border-border pb-2">
                         <span>Monthly:</span>
-                        <span className="font-bold">₦{Math.round((selectedItem.product?.price - selectedItem.downPayment) / selectedItem.months).toLocaleString()}</span>
+                        <span className="font-bold">₦{(selectedItem.monthlyAmount || Math.round(((selectedItem.product?.price || selectedItem.totalAmount || 0) - (selectedItem.downPaymentPaid || selectedItem.downPayment || 0)) / (selectedItem.planMonths || selectedItem.months || 1))).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between border-b border-border pb-2">
                         <span>Duration:</span>
-                        <span className="font-bold">{selectedItem.months} Months</span>
+                        <span className="font-bold">{selectedItem.planMonths || selectedItem.months || 'N/A'} Months</span>
                       </div>
                       <div className="flex justify-between border-b border-border pb-2">
                         <span>Status:</span>

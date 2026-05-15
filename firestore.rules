@@ -42,7 +42,7 @@ service cloud.firestore {
     match /receipts/{id} {
       allow read: if isAdmin() || (request.auth != null && (resource == null || resource.data.userEmail == request.auth.token.email));
       allow create: if request.auth != null;
-      allow update: if isAdmin();
+      allow update: if isAdmin() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
       allow delete: if isCEO();
     }
 

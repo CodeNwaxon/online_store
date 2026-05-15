@@ -308,7 +308,11 @@ function AdminProductsContent() {
         await addDoc(collection(db, 'products'), productData);
         toast.success('Product added!');
       }
-      resetForm();
+      if (editParam) {
+        router.push('/admin/stats?tab=inventory');
+      } else {
+        resetForm();
+      }
     } catch (error) {
       console.error(error);
       toast.error('Operation failed.');
@@ -353,8 +357,7 @@ function AdminProductsContent() {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.category?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
     return matchesSearch && matchesGroup;
   }).sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));
