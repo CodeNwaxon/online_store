@@ -2,32 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  doc, 
-  updateDoc, 
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
   deleteDoc,
   getDoc,
   where
 } from 'firebase/firestore';
 import { toast, Toaster } from 'react-hot-toast';
-import { 
-  FaShoppingBag, 
-  FaSearch, 
-  FaFilter, 
-  FaTrash, 
-  FaCheckCircle, 
-  FaUser, 
-  FaPhoneAlt, 
-  FaEnvelope, 
-  FaMapMarkerAlt, 
-  FaCalendarAlt, 
-  FaCreditCard, 
-  FaTimes, 
-  FaArrowRight, 
+import {
+  FaShoppingBag,
+  FaSearch,
+  FaFilter,
+  FaTrash,
+  FaCheckCircle,
+  FaUser,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaMapMarkerAlt,
+  FaCalendarAlt,
+  FaCreditCard,
+  FaTimes,
+  FaArrowRight,
   FaLock,
   FaReceipt,
   FaPrint
@@ -40,10 +40,11 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'normal' | 'installment'>('all');
+  const [filter, setFilter] = useState<'all' | 'normal' | 'installment' | 'delivered'>('all');
   const [showPasskeyModal, setShowPasskeyModal] = useState<string | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmUnmark, setConfirmUnmark] = useState<string | null>(null);
   const [visibleCards, setVisibleCards] = useState(25);
 
   useEffect(() => {
@@ -70,29 +71,44 @@ export default function AdminOrders() {
       if (confirmDelete) {
         await deleteDoc(doc(db, 'orders', confirmDelete));
         toast.success('Order deleted successfully');
+      } else if (confirmUnmark) {
+        await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
+        toast.success('Order marked as undelivered');
       }
       setShowPasskeyModal(null);
       setConfirmDelete(null);
+      setConfirmUnmark(null);
       setPasskeyInput('');
     } else {
       toast.error('Incorrect CEO Passkey');
     }
   };
 
+  const markAsDelivered = async (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    await updateDoc(doc(db, 'orders', orderId), { delivered: true });
+    toast.success('Order marked as delivered');
+  };
+
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
+    const matchesSearch =
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesFilter = filter === 'all' || order.type === filter;
-    
+
+    let matchesFilter = true;
+    if (filter === 'normal' || filter === 'installment') {
+      matchesFilter = order.type === filter;
+    } else if (filter === 'delivered') {
+      matchesFilter = order.delivered === true;
+    }
+
     return matchesSearch && matchesFilter;
   });
 
   return (
     <div className="max-w-[1400px] mx-auto pb-20">
       <Toaster position="top-center" />
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div>
@@ -104,8 +120,8 @@ export default function AdminOrders() {
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center justify-center md:justify-end">
           <div className="relative flex-1 sm:w-64 w-full">
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Search by name or product..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:border-primary outline-none transition-all"
               value={searchQuery}
@@ -115,7 +131,7 @@ export default function AdminOrders() {
           </div>
 
           <div className="flex bg-muted p-1 rounded-xl border border-border w-full sm:w-auto justify-center">
-            {(['all', 'normal', 'installment'] as const).map((f) => (
+            {(['all', 'normal', 'installment', 'delivered'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -137,74 +153,98 @@ export default function AdminOrders() {
         <div className="pb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOrders.slice(0, visibleCards).map(order => (
-            <div 
-              key={order.id}
-              onClick={() => markAsRead(order)}
-              className={`group relative bg-card p-6 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 ${
-                order.type === 'installment' 
-                  ? 'border-primary/20 hover:border-primary/50' 
-                  : 'border-border hover:border-border'
-              } ${order.isNew ? 'ring-2 ring-green-500 animate-[pulse_3s_infinite]' : ''}`}
-            >
-              {order.isNew && (
-                <div className="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-green-500/20 z-10">
-                  NEW ORDER
-                </div>
-              )}
-              
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${
-                    order.type === 'installment' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {order.type === 'installment' ? <FaCreditCard /> : <FaShoppingBag />}
+              <div
+                key={order.id}
+                onClick={() => markAsRead(order)}
+                className={`group relative bg-card p-6 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 ${order.type === 'installment'
+                    ? 'border-primary/20 hover:border-primary/50'
+                    : 'border-border hover:border-border'
+                  } ${order.isNew ? 'ring-2 ring-green-500 animate-[pulse_3s_infinite]' : ''}`}
+              >
+                {order.isNew && (
+                  <div className="absolute -top-3 -right-3 bg-green-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-green-500/20 z-10">
+                    NEW ORDER
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm leading-tight truncate max-w-[150px]">{order.customerName}</h3>
-                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                      {order.type === 'installment' ? 'Installment Completed' : 'Online Payment'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-black text-lg ${order.type === 'installment' ? 'text-muted-foreground' : 'text-green-700'}`}>
-                    ₦{order.totalAmount?.toLocaleString()}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground font-bold">{new Date(order.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {order.items.slice(0, 2).map((item: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg">
-                    <div className="relative w-10 h-10 rounded border border-border overflow-hidden shrink-0">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="48px" />
-                    </div>
-                    <span className="text-xs font-bold truncate flex-1">{item.name}</span>
-                    <span className="text-[10px] font-black text-muted-foreground">x{item.quantity}</span>
-                  </div>
-                ))}
-                {order.items.length > 2 && (
-                  <p className="text-[10px] text-muted-foreground font-bold text-center">+{order.items.length - 2} more items</p>
                 )}
-              </div>
+                {order.delivered && (
+                  <div className="absolute -top-3 -left-3 bg-primary text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg shadow-primary/20 z-10 flex items-center gap-1">
+                    <FaCheckCircle size={10} /> DELIVERED
+                  </div>
+                )}
 
-              <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <FaMapMarkerAlt size={12} />
-                  <span className="text-[10px] font-bold truncate max-w-[120px]">{order.address}</span>
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${order.type === 'installment' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                      }`}>
+                      {order.type === 'installment' ? <FaCreditCard /> : <FaShoppingBag />}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm leading-tight truncate max-w-[150px]">{order.customerName}</h3>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                        {order.type === 'installment' ? 'Installment Completed' : 'Online Payment'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-black text-lg ${order.type === 'installment' ? 'text-muted-foreground' : 'text-green-700'}`}>
+                      ₦{order.totalAmount?.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-bold">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  </div>
                 </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDelete(order.id);
-                  }}
-                  className="p-2 text-secondary hover:bg-secondary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <FaTrash size={14} />
-                </button>
+
+                <div className="space-y-3">
+                  {order.items.slice(0, 2).map((item: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg">
+                      <div className="relative w-10 h-10 rounded border border-border overflow-hidden shrink-0">
+                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="48px" />
+                      </div>
+                      <span className="text-xs font-bold truncate flex-1">{item.name}</span>
+                      <span className="text-[10px] font-black text-muted-foreground">x{item.quantity}</span>
+                    </div>
+                  ))}
+                  {order.items.length > 2 && (
+                    <p className="text-[10px] text-muted-foreground font-bold text-center">+{order.items.length - 2} more items</p>
+                  )}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <FaMapMarkerAlt size={12} />
+                    <span className="text-[10px] font-bold truncate max-w-[120px]">{order.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!order.delivered ? (
+                      <button
+                        onClick={(e) => markAsDelivered(e, order.id)}
+                        className="px-3 py-1.5 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors z-10 relative"
+                      >
+                        Mark Delivered
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmUnmark(order.id);
+                          setShowPasskeyModal(order.id);
+                        }}
+                        className="px-3 py-1.5 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors z-10 relative opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                      >
+                        Unmark
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDelete(order.id);
+                      }}
+                      className="p-2 text-secondary hover:bg-secondary/10 rounded-lg transition-colors z-10 relative opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                    >
+                      <FaTrash size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
             ))}
           </div>
 
@@ -241,9 +281,8 @@ export default function AdminOrders() {
                     <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                       Order Details
                     </span>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                      selectedOrder.type === 'installment' ? 'bg-white text-primary' : 'bg-primary text-white'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${selectedOrder.type === 'installment' ? 'bg-white text-primary' : 'bg-primary text-white'
+                      }`}>
                       {selectedOrder.type}
                     </span>
                   </div>
@@ -327,7 +366,7 @@ export default function AdminOrders() {
                   <div className="text-xs font-bold text-primary">
                     This order was automatically generated after a successful installment plan completion.
                   </div>
-                  <Link 
+                  <Link
                     href={`/admin/installments?search=${selectedOrder.installmentId}`}
                     className="ml-auto bg-primary text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:scale-105 transition-all"
                   >
@@ -340,18 +379,18 @@ export default function AdminOrders() {
             {/* Footer Actions */}
             <div className="p-4 md:p-6 bg-muted border-t border-border flex gap-3 md:gap-4">
               <button onClick={() => window.print()} className="flex-1 py-3 md:py-4 bg-card border border-border rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-muted/50 transition-all">
-                <FaPrint className="text-sm md:text-base" /> 
+                <FaPrint className="text-sm md:text-base" />
                 <span className="md:hidden">Print</span>
                 <span className="hidden md:inline">Print Order Details</span>
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedOrder(null);
                   setConfirmDelete(selectedOrder.id);
                 }}
                 className="flex-1 py-3 md:py-4 bg-secondary text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
               >
-                <FaTrash className="text-xs md:text-sm" /> 
+                <FaTrash className="text-xs md:text-sm" />
                 <span className="md:hidden">Delete</span>
                 <span className="hidden md:inline">Delete Record</span>
               </button>
@@ -372,14 +411,14 @@ export default function AdminOrders() {
               Are you sure you want to permanently remove this order record? This action cannot be undone.
             </p>
             <div className="flex gap-4">
-              <button 
-                onClick={() => setConfirmDelete(null)} 
+              <button
+                onClick={() => setConfirmDelete(null)}
                 className="flex-1 py-4 font-black text-xs uppercase border border-border rounded-2xl hover:bg-muted transition-all"
               >
                 Cancel
               </button>
-              <button 
-                onClick={() => setShowPasskeyModal(confirmDelete)} 
+              <button
+                onClick={() => setShowPasskeyModal(confirmDelete)}
                 className="flex-1 py-4 font-black text-xs uppercase bg-secondary text-white rounded-2xl hover:bg-secondary/90 shadow-lg shadow-secondary/20 transition-all"
               >
                 Yes, Delete
@@ -398,10 +437,10 @@ export default function AdminOrders() {
             </div>
             <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">CEO Authorization</h3>
             <p className="text-muted-foreground mb-8 text-xs font-bold uppercase tracking-widest opacity-60">
-              Enter secure passkey to authorize deletion
+              Enter secure passkey to authorize {confirmDelete ? 'deletion' : 'action'}
             </p>
-            <input 
-              type="password" 
+            <input
+              type="password"
               className="w-full bg-muted border border-border rounded-2xl p-5 text-center text-2xl font-black tracking-[1em] mb-6 focus:border-primary outline-none transition-all shadow-inner"
               placeholder="••••"
               autoFocus
@@ -410,17 +449,17 @@ export default function AdminOrders() {
               onKeyDown={(e) => e.key === 'Enter' && verifyPasskey()}
             />
             <div className="flex gap-4">
-              <button 
-                onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); setConfirmDelete(null); }} 
+              <button
+                onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); setConfirmDelete(null); setConfirmUnmark(null); }}
                 className="flex-1 py-4 font-black text-xs uppercase border border-border rounded-2xl hover:bg-muted transition-all"
               >
                 Cancel
               </button>
-              <button 
-                onClick={verifyPasskey} 
+              <button
+                onClick={verifyPasskey}
                 className="flex-1 py-4 font-black text-xs uppercase bg-primary text-white rounded-2xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
               >
-                Verify & Authorize
+                Authorize
               </button>
             </div>
           </div>
