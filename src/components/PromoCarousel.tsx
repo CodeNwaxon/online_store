@@ -28,7 +28,7 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       const itemWidth = 168 + 4; // 10.5rem (168px) + gap-1 (4px)
-      
+
       // If we're at the very end of the scroll, force the last dot
       if (scrollLeft + clientWidth >= scrollWidth - 5) {
         setActiveMobileIndex(totalItems - 1);
@@ -45,7 +45,7 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
     <div className="relative w-full px-2 md:px-8">
       {/* Desktop Slider View */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-4 gap-8 transition-all duration-500 ease-in-out">
+        <div className="grid grid-cols-4 gap-4 transition-all duration-500 ease-in-out">
           {displayedProducts.map((product, index) => (
             <ProductCard key={product.id} product={product} priority={index < 4} />
           ))}
@@ -73,23 +73,23 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
 
       {/* Mobile Swipe View */}
       <div className="block md:hidden">
-        <div 
+        <div
           ref={scrollRef}
           onScroll={handleMobileScroll}
-          className="flex overflow-x-auto gap-1 md:gap-[0.6rem] snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className="flex overflow-x-auto gap-1 snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {products.map((product, index) => (
-            <div key={product.id} className="min-w-[10.5rem] w-[10.5rem] shrink-0 snap-start">
+            <div key={product.id} className="min-w-[11rem] w-[11rem] shrink-0 snap-start">
               <ProductCard product={product} priority={index < 2} />
             </div>
           ))}
         </div>
-        
+
         {/* Mobile Dots */}
         <div className="flex justify-center gap-1.5 mt-2">
           {products.map((_, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className={`h-1 rounded-full transition-all duration-300 ${activeMobileIndex === i ? 'bg-primary w-4' : 'bg-border w-1'}`}
             />
           ))}
