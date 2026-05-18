@@ -19,7 +19,7 @@ function ShopContent() {
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(32);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
   const { likedProductIds } = useLikeStore();
@@ -30,12 +30,12 @@ function ShopContent() {
       try {
         const prodSnap = await getDocs(collection(db, 'products'));
         const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-        
+
         // Auto-remove expired promos
         const now = new Date();
-        const expiredPromos = dynamicProducts.filter((p: any) => 
-          p.isPromo && 
-          p.promoEndDate && 
+        const expiredPromos = dynamicProducts.filter((p: any) =>
+          p.isPromo &&
+          p.promoEndDate &&
           new Date(p.promoEndDate) < now
         );
 
@@ -202,7 +202,7 @@ function ShopContent() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-8">
             {displayedProducts.map((product, index) => (
               <div key={product.id} className="mb-4  md:mb-0">
-                <ProductCard product={product} priority={index < 4} /> 
+                <ProductCard product={product} priority={index < 4} />
               </div>
             ))}
           </div>
@@ -212,7 +212,7 @@ function ShopContent() {
             <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
             <button
               className="border border-border hover:bg-muted text-foreground px-4 py-2 rounded-md font-semibold mt-6 inline-block transition-colors"
-              onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); setSearchQuery(''); setVisibleCount(20); }}
+              onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); setSearchQuery(''); setVisibleCount(32); }}
             >
               Reset All Filters
             </button>
@@ -220,12 +220,17 @@ function ShopContent() {
         )}
 
         {filteredProducts.length > visibleCount && (
-          <div className="text-center mt-12">
+          <div className="text-center mt-16 flex flex-col items-center justify-center gap-4 animate-[fadeIn_0.5s_ease-out]">
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">
+              Showing {displayedProducts.length} of {filteredProducts.length} items
+            </div>
             <button
-              className="border border-border hover:bg-muted text-foreground px-8 py-3 rounded-md font-semibold transition-colors"
-              onClick={() => setVisibleCount(prev => prev + 20)}
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
+              onClick={() => setVisibleCount(prev => prev + 32)}
             >
-              Load More Products
+              <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span>Load More Products</span>
+              <FaChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-y-0.5 transition-all duration-300 ease-out" />
             </button>
           </div>
         )}
