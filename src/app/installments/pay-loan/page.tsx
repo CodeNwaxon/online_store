@@ -679,14 +679,14 @@ export default function PayLoanPage() {
                         <div className="font-bold">Initial Deposit - {formatCurrency(loan.downPaymentPaid)}</div>
                         <div className="text-sm text-muted-foreground">Paid on {new Date(loan.createdAt.toDate()).toLocaleDateString('en-GB')}</div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           if (loan.payments[0]?.receiptId) {
                             setShowReceipt(loan.payments[0].receiptId);
                           } else {
                             handlePrintReceipt('Deposit', loan.downPaymentPaid, loan.payments[0]?.receiptId);
                           }
-                        }} 
+                        }}
                         className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0"
                       >
                         Receipt
@@ -723,15 +723,15 @@ export default function PayLoanPage() {
                             </div>
                           </div>
                           {payment.status === 'paid' && (
-                            <button 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (payment.receiptId) {
                                   setShowReceipt(payment.receiptId);
                                 } else {
                                   handlePrintReceipt(`Month ${payment.month - 1}`, payment.amount, payment.receiptId);
                                 }
-                              }} 
+                              }}
                               className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0"
                             >
                               Receipt
@@ -755,7 +755,7 @@ export default function PayLoanPage() {
 
         {showCancelConfirm && (
           <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-3">
-            <div className="bg-background p-4 md:p-10 rounded-[var(--radius)] max-w-[500px] w-full text-center shadow-xl">
+            <div className="bg-background p-2 md:p-10 rounded-[var(--radius)] max-w-[500px] w-full text-center shadow-xl">
               <FaExclamationTriangle size={50} color="red" className="mb-6 mx-auto" />
               <h2 className="text-2xl font-bold mb-4">Cancel Installment Plan?</h2>
               <p className="text-muted-foreground mb-6">
@@ -773,7 +773,7 @@ export default function PayLoanPage() {
                 const refundAmount = Math.max(0, totalPaid - charge);
 
                 return (
-                  <div className="text-left bg-muted/50 p-5 rounded-lg border border-border mb-8 space-y-3 text-sm">
+                  <div className="text-left bg-muted/50 p-4 rounded-lg border border-border mb-8 space-y-3 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">Total Amount You Paid</span>
                       <span className="font-bold">{formatCurrency(totalPaid)}</span>
