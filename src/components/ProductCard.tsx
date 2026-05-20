@@ -3,7 +3,7 @@
 import { Product } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingCart, FaEllipsisV } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import LikeButton from './LikeButton';
@@ -41,13 +41,13 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const CardContent = (
-    <div className={`relative h-48 max-md:h-36 w-full cursor-pointer bg-muted/20 p-1`}>
-      <div className="relative w-full h-full overflow-hidden rounded-md">
+    <div className={`relative h-48 max-md:h-40 w-full cursor-pointer bg-muted/20 p-1`}>
+      <div className="relative w-full h-full overflow-hidden md:rounded-md">
         <Image
           src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
           alt={product.name}
           fill
-          className={`${isAdmin ? 'object-contain' : 'object-cover'} transition-all duration-300 group-hover:scale-110`}
+          className={`${isAdmin ? 'object-contain' : 'object-cover object-top'} transition-all duration-300 group-hover:scale-110`}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
           loading={priority ? 'eager' : 'lazy'}
@@ -105,7 +105,7 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
   );
 
   return (
-    <div className="bg-card border border-border md:rounded-[var(--radius)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-md h-full flex flex-col group">
+    <div className="relative bg-card border border-border md:rounded-[var(--radius)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-md h-full flex flex-col group">
       {!isAdmin ? (
         <Link href={`/product/${product.id}`}>
           {CardContent}
@@ -133,30 +133,39 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           {product.name}
         </h3>
 
-        <p className="text-[0.75rem] max-md:text-[0.68rem] text-muted-foreground mb-3 h-[40px] max-md:h-[30px] overflow-y-auto leading-[1.3] pr-1">
-          {product.description}
-        </p>
+        <div className="mt-2 flex flex-col md:flex-row justify-between items-start">
+          {/* Manufacturer and warranty section */}
+          <div className="flex flex-col justify-start items-start gap-2 mb-2">
+            {product.manufacturer && (
+              <span className="text-[0.65rem] text-muted-foreground font-medium italic">
+                By {product.manufacturer.toUpperCase()}
+              </span>
+            )}
+            {product.warranty && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowWarrantyModal(true);
+                }}
+                className="text-[0.65rem] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-medium border border-emerald-100/50 hover:bg-emerald-100 transition-colors"
+              >
+                ✓ {product.warranty} {!isNaN(Number(product.warranty)) && (Number(product.warranty) > 1 ? 'Years' : 'Year')} Warranty
+              </button>
+            )}
+          </div>
 
-        <div className="flex flex-col justify-start items-start gap-2 mb-2">
-          {product.manufacturer && (
-            <span className="text-[0.65rem] text-muted-foreground font-medium italic">
-              By {product.manufacturer.toUpperCase()}
-            </span>
-          )}
-          {product.warranty && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowWarrantyModal(true);
-              }}
-              className="text-[0.65rem] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-medium border border-emerald-100/50 hover:bg-emerald-100 transition-colors"
-            >
-              ✓ {product.warranty} {!isNaN(Number(product.warranty)) && (Number(product.warranty) > 1 ? 'Years' : 'Year')} Warranty
-            </button>
-          )}
+          {/* Description button and overlay */}
+          <button
+            onClick={() => setShowDescription(true)}
+            className="mb-2 md:mb-0 text-blue-700 underline font-semibold text-[11px] md:text-xs"
+          >
+            Description
+          </button>
         </div>
+
+
 
         <WarrantyModal
           isOpen={showWarrantyModal}
@@ -164,25 +173,25 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           warrantyValue={product.warranty}
         />
 
-
-        {/* Description button and overlay */}
-        <button
-          onClick={() => setShowDescription(true)}
-          className="font-black text-[11px] md:text-xs"
-        >
-          Description
-        </button>
         {showDescription && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card p-4 rounded-md max-w-md w-full relative">
+          <div
+            className="absolute inset-0 bg-background/40 backdrop-blur-[3px] z-50 p-2 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDescription(false); }}
+          >
+            <div
+              className="bg-card w-full max-h-[90%] rounded-md shadow-xl border border-border p-3 flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                onClick={() => setShowDescription(false)}
-                className="absolute top-2 right-2 text-lg font-bold"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDescription(false); }}
+                className="absolute top-1.5 right-1.5 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
               >
                 ✕
               </button>
-              <h3 className="text-lg font-bold mb-2">{product.name}</h3>
-              <p className="text-[0.75rem] text-muted-foreground">{product.description}</p>
+              <h3 className="text-[0.75rem] font-bold mb-1.5 pr-6 text-foreground leading-tight">{product.name}</h3>
+              <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap">{product.description}</p>
+              </div>
             </div>
           </div>
         )}

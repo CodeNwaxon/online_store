@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import WarrantyModal from '@/components/WarrantyModal';
 
 
@@ -27,58 +27,63 @@ export default function ProductDetail() {
   const [contactNumber, setContactNumber] = useState('2347034632037'); // Default fallback
 
   useEffect(() => {
-    const fetchProductAndSettings = async () => {
-      setLoading(true);
+    if (!id) return;
+
+    setLoading(true);
+
+    // Fetch WhatsApp Number from Site Settings
+    const fetchSettings = async () => {
       try {
-        // 1. Fetch WhatsApp Number from Site Settings
         const settingsRef = doc(db, 'settings', 'general');
         const settingsSnap = await getDoc(settingsRef);
         if (settingsSnap.exists()) {
           const settingsData = settingsSnap.data();
           if (settingsData.phones && settingsData.phones.length > 0) {
-            // Remove non-numeric characters (except maybe +) to ensure clean URL
             const rawNumber = settingsData.phones[0].number;
             const cleanNumber = rawNumber.replace(/\D/g, '');
             setContactNumber(cleanNumber);
           }
         }
-
-        // 2. Try to find product in Firestore
-        const docRef = doc(db, 'products', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          setProduct({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          // Fallback to static products
-          const staticProd = staticProducts.find((p) => p.id === id);
-          if (staticProd) setProduct(staticProd);
-        }
-
-        // 3. Fetch all products for related section
-        const prodSnap = await getDocs(collection(db, 'products'));
-        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-
-        const parseDate = (dateVal: any) => {
-          if (!dateVal) return 0;
-          if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
-          return new Date(dateVal).getTime() || 0;
-        };
-
-        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
-          const dateA = parseDate(a.updatedAt);
-          const dateB = parseDate(b.updatedAt);
-          return dateB - dateA;
-        });
-        setAllProducts(sortedProducts);
-      } catch (error) {
-        console.error("Error fetching product or settings:", error);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.error("Error fetching settings:", e);
       }
     };
+    fetchSettings();
 
-    if (id) fetchProductAndSettings();
+    const unsubscribe = onSnapshot(collection(db, 'products'), (prodSnap) => {
+      const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      
+      const currentProduct = dynamicProducts.find(p => p.id === id);
+      if (currentProduct) {
+        setProduct(currentProduct);
+      } else {
+        const staticProd = staticProducts.find((p) => p.id === id);
+        if (staticProd) setProduct(staticProd);
+      }
+
+      const parseDate = (dateVal: any) => {
+        if (!dateVal) return 0;
+        if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+        return new Date(dateVal).getTime() || 0;
+      };
+
+      const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+        const dateA = parseDate(a.updatedAt);
+        const dateB = parseDate(b.updatedAt);
+        return dateB - dateA;
+      });
+      
+      setAllProducts(sortedProducts);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching products:", error);
+      const staticProd = staticProducts.find((p) => p.id === id);
+      if (staticProd) setProduct(staticProd);
+      setAllProducts(staticProducts);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [id]);
 
   if (loading) {

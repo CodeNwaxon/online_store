@@ -7,7 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } from 'react-icons/fa';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { useLikeStore } from '@/store/useLikeStore';
 
 function ShopContent() {
@@ -25,10 +25,9 @@ function ShopContent() {
   const { likedProductIds } = useLikeStore();
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
+    setLoading(true);
+    const unsubscribe = onSnapshot(collection(db, 'products'), async (prodSnap) => {
       try {
-        const prodSnap = await getDocs(collection(db, 'products'));
         const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
         // Auto-remove expired promos
@@ -40,6 +39,7 @@ function ShopContent() {
         );
 
         if (expiredPromos.length > 0) {
+          let hasExpired = false;
           for (const promo of expiredPromos) {
             try {
               await updateDoc(doc(db, 'products', promo.id), {
@@ -47,13 +47,13 @@ function ShopContent() {
                 promoEndDate: null,
                 updatedAt: now.toISOString()
               });
+              hasExpired = true;
             } catch (err) {
               console.error("Error auto-removing promo:", err);
             }
           }
-          // Refresh products after update
-          fetchProducts();
-          return;
+          // If we updated documents, onSnapshot will fire again automatically.
+          if (hasExpired) return;
         }
 
         const parseDate = (dateVal: any) => {
@@ -70,14 +70,18 @@ function ShopContent() {
 
         setProducts(sortedProducts);
       } catch (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error processing products:", error);
         setProducts(staticProducts);
       } finally {
         setLoading(false);
       }
-    };
+    }, (error) => {
+      console.error("Error fetching products:", error);
+      setProducts(staticProducts);
+      setLoading(false);
+    });
 
-    fetchProducts();
+    return () => unsubscribe();
   }, []);
 
   // Reset category when group changes
@@ -230,9 +234,9 @@ function ShopContent() {
 
         {/* Product lists */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
             {displayedProducts.map((product, index) => (
-              <div key={product.id} className="mb-4  md:mb-0">
+              <div key={product.id} className="mb-4  md:mb-8">
                 <ProductCard product={product} priority={index < 4} />
               </div>
             ))}
