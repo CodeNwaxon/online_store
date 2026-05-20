@@ -8,7 +8,7 @@ import {
   FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { usePathname, useParams } from 'next/navigation';
+import { usePathname, useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import CartSlider from './CartSlider';
 import { auth, db } from '@/lib/firebase';
@@ -38,8 +38,26 @@ const adminLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const params = useParams();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    const lastPage = localStorage.getItem('lastVisitedPage');
+    const hasRedirected = sessionStorage.getItem('hasRedirectedLastPage');
+
+    if (pathname === '/' && lastPage && lastPage !== '/' && !hasRedirected) {
+      sessionStorage.setItem('hasRedirectedLastPage', 'true');
+      router.push(lastPage);
+    } else {
+      if (pathname !== '/') {
+        sessionStorage.setItem('hasRedirectedLastPage', 'true');
+      }
+      if (!pathname.startsWith('/admin') && !pathname.startsWith('/checkout') && pathname !== '/') {
+        localStorage.setItem('lastVisitedPage', pathname + window.location.search);
+      }
+    }
+  }, [pathname, router]);
   const { user, isAdmin, isCEO, adminData } = useAdmin();
   const [siteName, setSiteName] = useState('');
   const [mounted, setMounted] = useState(false);

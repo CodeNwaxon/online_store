@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus } from 'react-icons/fa';
+import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -20,7 +20,7 @@ function AdminStatsContent() {
   const [cartOrders, setCartOrders] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [visibleInventory, setVisibleInventory] = useState(25);
+  const [visibleInventory, setVisibleInventory] = useState(40);
 
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
@@ -395,12 +395,17 @@ function AdminStatsContent() {
           </div>
 
           {filteredInventory.length > visibleInventory && (
-            <div className="p-4 md:p-6 border-t border-border bg-muted/5 flex justify-center">
-              <button 
-                onClick={() => setVisibleInventory(prev => prev + 25)}
-                className="px-8 py-2 bg-primary text-white rounded-full font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+            <div className="text-center p-6 border-t border-border flex flex-col items-center justify-center gap-4 animate-[fadeIn_0.5s_ease-out]">
+              <div className="text-xs text-muted-foreground font-medium tracking-wide">
+                Showing {Math.min(visibleInventory, filteredInventory.length)} of {filteredInventory.length} items
+              </div>
+              <button
+                className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
+                onClick={() => setVisibleInventory(prev => prev + 40)}
               >
-                Load More Products ({filteredInventory.length - visibleInventory} remaining)
+                <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <span>Load More Products</span>
+                <FaChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-y-0.5 transition-all duration-300 ease-out" />
               </button>
             </div>
           )}

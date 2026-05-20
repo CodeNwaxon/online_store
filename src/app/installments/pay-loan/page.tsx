@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
-import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint } from 'react-icons/fa';
+import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint, FaTimes } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function PayLoanPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,6 +24,32 @@ export default function PayLoanPage() {
   const [confirmHistoryDelete, setConfirmHistoryDelete] = useState<string | null>(null);
   const [instSettings, setInstSettings] = useState<any>({ withdrawalFeePercent: 15 });
   const router = useRouter();
+
+  const [showReceipt, setShowReceipt] = useState<string | null>(null);
+  const [showFinalReceipt, setShowFinalReceipt] = useState<any | null>(null);
+  const [receiptData, setReceiptData] = useState<any>(null);
+  const [loadingReceipt, setLoadingReceipt] = useState(false);
+
+  useEffect(() => {
+    if (showReceipt) {
+      const fetchReceipt = async () => {
+        setLoadingReceipt(true);
+        try {
+          const docSnap = await getDoc(doc(db, 'receipts', showReceipt));
+          if (docSnap.exists()) {
+            setReceiptData({ id: docSnap.id, ...docSnap.data() });
+          }
+        } catch (error) {
+          console.error("Error fetching receipt:", error);
+        } finally {
+          setLoadingReceipt(false);
+        }
+      };
+      fetchReceipt();
+    } else {
+      setReceiptData(null);
+    }
+  }, [showReceipt]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -50,15 +77,16 @@ export default function PayLoanPage() {
     const q = query(
       collection(db, 'installments'),
       where('userEmail', '==', email),
-      where('status', 'in', ['active', 'cancelling', 'cleared'])
+      where('status', 'in', ['active', 'cancelling', 'cleared', 'completed'])
     );
     const querySnapshot = await getDocs(q);
     const docsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     const active = docsData.find((d: any) => d.status === 'active' || d.status === 'cancelling');
     const cleared = docsData.find((d: any) => d.status === 'cleared' && !d.dismissedRefund);
+    const completed = docsData.find((d: any) => d.status === 'completed' && !d.dismissedCompletion);
 
-    if (active || cleared) {
-      setLoan(active || cleared);
+    if (active || cleared || completed) {
+      setLoan(active || cleared || completed);
     } else {
       setLoan(null);
     }
@@ -454,7 +482,7 @@ export default function PayLoanPage() {
                         <div className="flex gap-2">
                           {item.status === 'completed' && (
                             <button
-                              onClick={() => handlePrintFinalReceipt(item)}
+                              onClick={() => setShowFinalReceipt(item)}
                               className="border border-emerald-500 text-emerald-600 hover:bg-emerald-50 p-2 rounded-md transition-colors flex items-center gap-2 text-xs font-bold"
                             >
                               <FaPrint size={14} /> Final Receipt
@@ -523,6 +551,60 @@ export default function PayLoanPage() {
                   Acknowledged
                 </button>
               </div>
+            </div>
+          ) : loan.status === 'completed' && !loan.dismissedCompletion ? (
+            <div className="bg-card border border-green-200 p-8 rounded-[var(--radius)] text-center max-w-[600px] mx-auto mt-10 shadow-lg">
+              {/* Confetti icon row */}
+              <div className="flex justify-center gap-2 text-2xl mb-4">🎉 🏆 🎊</div>
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FaCheckCircle size={40} />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 text-foreground">Installment Fully Paid! 🎉</h2>
+              <p className="text-muted-foreground mb-6 text-sm">
+                Congratulations! You have successfully completed all payments for <strong>{loan.productName}</strong>.
+                Your product will be delivered to you as per our policy. Contact us at{' '}
+                <a href={`tel:${customerCare}`} className="text-primary underline font-bold">{customerCare}</a> if you need assistance.
+              </p>
+
+              {/* Product image + summary */}
+              {loan.productImage && (
+                <div className="mb-6">
+                  <img src={loan.productImage} alt={loan.productName} className="w-32 h-32 object-cover rounded-xl mx-auto border border-border shadow-sm" />
+                </div>
+              )}
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Plan Duration</span>
+                  <span className="font-bold">{loan.planMonths} Months</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Paid</span>
+                  <span className="font-bold text-green-700">{formatCurrency(loan.totalAmountPaid || loan.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Delivery Method</span>
+                  <span className="font-bold">{loan.shippingMethod || 'Office Pickup'}</span>
+                </div>
+                {loan.shippingAddress && loan.shippingMethod !== 'Office Pickup' && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Delivery Address</span>
+                    <span className="font-bold text-right max-w-[200px]">{loan.shippingAddress}</span>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={async () => {
+                  const toastId = toast.loading('Acknowledging...');
+                  await updateDoc(doc(db, 'installments', loan.id), { dismissedCompletion: true });
+                  setLoan(null);
+                  toast.success('Thank you! We look forward to serving you again.', { id: toastId });
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md font-bold transition-colors w-full"
+              >
+                ✓ Acknowledged — Thank You!
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-12">
@@ -597,7 +679,18 @@ export default function PayLoanPage() {
                         <div className="font-bold">Initial Deposit - {formatCurrency(loan.downPaymentPaid)}</div>
                         <div className="text-sm text-muted-foreground">Paid on {new Date(loan.createdAt.toDate()).toLocaleDateString('en-GB')}</div>
                       </div>
-                      <button onClick={() => handlePrintReceipt('Deposit', loan.downPaymentPaid, loan.payments[0].receiptId)} className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0">Receipt</button>
+                      <button 
+                        onClick={() => {
+                          if (loan.payments[0]?.receiptId) {
+                            setShowReceipt(loan.payments[0].receiptId);
+                          } else {
+                            handlePrintReceipt('Deposit', loan.downPaymentPaid, loan.payments[0]?.receiptId);
+                          }
+                        }} 
+                        className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0"
+                      >
+                        Receipt
+                      </button>
                     </div>
 
                     {loan.payments.filter((p: any) => p.month > 1).map((payment: any, index: number) => {
@@ -630,7 +723,19 @@ export default function PayLoanPage() {
                             </div>
                           </div>
                           {payment.status === 'paid' && (
-                            <button onClick={(e) => { e.stopPropagation(); handlePrintReceipt(`Month ${payment.month - 1}`, payment.amount, payment.receiptId); }} className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0">Receipt</button>
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (payment.receiptId) {
+                                  setShowReceipt(payment.receiptId);
+                                } else {
+                                  handlePrintReceipt(`Month ${payment.month - 1}`, payment.amount, payment.receiptId);
+                                }
+                              }} 
+                              className="border border-border text-foreground hover:bg-muted text-xs px-3 py-1.5 rounded-md transition-colors shrink-0"
+                            >
+                              Receipt
+                            </button>
                           )}
                         </div>
                       );
@@ -777,6 +882,156 @@ export default function PayLoanPage() {
                 >
                   {confirmHistoryDelete === 'ALL' ? 'Yes, Clear All' : 'Yes, Delete'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── RECEIPT MODAL ── */}
+        {showReceipt && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:bg-white print:p-0 print:block">
+            <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-border print:border-none print:shadow-none print:mx-auto print:rounded-none print-modal-content">
+              {loadingReceipt ? (
+                <div className="p-20 flex flex-col items-center justify-center bg-card">
+                  <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                  <p className="text-sm text-muted-foreground">Loading receipt...</p>
+                </div>
+              ) : receiptData ? (
+                <div className="relative bg-card text-foreground">
+                  <div className="p-6 bg-slate-50 border-b border-dashed border-slate-200 relative dark:bg-slate-900 dark:border-slate-800">
+                    <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
+                    <div className="text-center">
+                      <div className="relative w-12 h-12 mx-auto mb-1">
+                        <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                      </div>
+                      <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
+                      <div className="flex items-center justify-center gap-2 mt-3">
+                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">ID: {receiptData.id?.substring(0, 10).toUpperCase()}</span>
+                        <div className="bg-primary text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                          Customer Copy
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Customer:</div>
+                      <div className="font-bold text-xs text-slate-800 dark:text-slate-200 text-right max-w-[180px] break-all">{receiptData.userEmail || receiptData.email}</div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Reference:</div>
+                      <div className="font-bold text-xs text-slate-800 dark:text-slate-200">{receiptData.paymentName === 'Initial Deposit' ? 'Deposit' : receiptData.paymentName}</div>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Product:</div>
+                      <div className="font-bold text-xs text-slate-800 dark:text-slate-200 text-right max-w-[180px]">{receiptData.productName}</div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Date:</div>
+                      <div className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                        {new Date(receiptData.createdAt?.seconds ? receiptData.createdAt.seconds * 1000 : receiptData.createdAt).toLocaleDateString('en-GB')}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t-2 border-slate-800 dark:border-slate-700 flex justify-between items-center">
+                      <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
+                      <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-100 dark:border-green-900/50 mt-2">
+                      <FaCheckCircle className="text-green-500" size={12} />
+                      <span className="text-[9px] font-black text-green-700 dark:text-green-400 uppercase tracking-widest">Payment Verified</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-slate-50 dark:bg-slate-900/50 text-center space-y-1 border-t border-slate-200 dark:border-slate-850">
+                    <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}®!</p>
+                    <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+                    <button onClick={() => handlePrintReceipt(receiptData.paymentName, receiptData.amount, receiptData.id)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
+                      <FaPrint size={12} /> Print Receipt
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-10 text-center bg-card text-foreground">
+                  <p>Receipt not found.</p>
+                  <button onClick={() => setShowReceipt(null)} className="mt-4 text-primary font-bold">Close</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── FINAL COMPLETION RECEIPT MODAL ── */}
+        {showFinalReceipt && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl border border-border">
+              <div className="relative bg-card text-foreground">
+                <div className="p-6 bg-slate-50 border-b border-dashed border-slate-200 relative dark:bg-slate-900 dark:border-slate-800">
+                  <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
+                  <div className="text-center">
+                    <div className="relative w-12 h-12 mx-auto mb-1">
+                      <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                    </div>
+                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                      <span className="text-[8px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">ID: FINAL-{showFinalReceipt.id?.substring(0, 6).toUpperCase()}</span>
+                      <div className="bg-primary text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                        Customer Copy
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Customer:</span>
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200 text-right max-w-[200px] break-all">{showFinalReceipt.userEmail || showFinalReceipt.payerInfo?.email}</span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Product:</span>
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200 text-right">{showFinalReceipt.productName}</span>
+                    </div>
+                    <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Plan:</span>
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">{showFinalReceipt.planMonths} Months</span>
+                    </div>
+
+                    <div className="pt-2 space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
+                        <span className="font-bold text-slate-600 dark:text-slate-300">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
+                        <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800 dark:border-slate-700">
+                        <span className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px]">Total Paid:</span>
+                        <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-4 flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-[10px] uppercase tracking-widest">
+                      <FaCheckCircle size={14} /> Loan Fully Cleared
+                    </div>
+                    <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Completed on: {new Date(showFinalReceipt.completedAt?.seconds ? showFinalReceipt.completedAt.seconds * 1000 : (showFinalReceipt.completedAt || Date.now())).toLocaleDateString('en-GB')}</span>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-900/50 text-center space-y-1 border-t border-slate-200 dark:border-slate-800">
+                  <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}®!</p>
+                  <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
+                  <button onClick={() => handlePrintFinalReceipt(showFinalReceipt)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
+                    <FaPrint size={12} /> Print Final Receipt
+                  </button>
+                </div>
               </div>
             </div>
           </div>

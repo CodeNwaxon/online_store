@@ -250,7 +250,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         </p>
         <div className="flex gap-4">
           <button onClick={onClose} className="border border-border text-foreground hover:bg-muted font-semibold px-4 py-2 rounded flex-1 transition-colors">Close</button>
-          <button onClick={() => router.push('/installments/pay-loan')} className="bg-primary text-white hover:bg-primary-hover font-semibold px-4 py-2 rounded flex-1 transition-colors">Go to My Plan</button>
+          <button onClick={() => router.push('/installments/pay-loan')} className="bg-primary text-white hover:bg-primary-hover font-semibold px-4 py-2 rounded flex-1 transition-colors">Check Plan</button>
         </div>
       </div>
     </Backdrop>

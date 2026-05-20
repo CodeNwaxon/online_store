@@ -3,10 +3,10 @@
 import { useParams } from 'next/navigation';
 import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
@@ -149,7 +149,7 @@ export default function ProductDetail() {
             <div className="text-sm text-primary font-semibold uppercase mb-2">
               {product.group} / {product.category}
             </div>
-            <h1 className="text-2xl md:text-4xl font-bold mb-2">{product.name}</h1>
+            <h1 className="text-xl md:text-3xl font-bold mb-2">{product.name}</h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
                 Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
@@ -220,25 +220,163 @@ export default function ProductDetail() {
           onClose={() => setShowWarrantyModal(false)}
           warrantyValue={product.warranty}
         />
+      </div>
 
-        {/* Related Products */}
-        <div className="mt-24 max-md:mt-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-8">
-            {allProducts
-              .filter(p => p.id !== product.id)
-              .sort((a, b) => {
-                if (a.subcategory === product.subcategory && b.subcategory !== product.subcategory) return -1;
-                if (b.subcategory === product.subcategory && a.subcategory !== product.subcategory) return 1;
-                if (a.category === product.category && b.category !== product.category) return -1;
-                if (b.category === product.category && a.category !== product.category) return 1;
-                return 0;
-              })
-              .slice(0, 4)
-              .map(relatedProduct => (
-                <ProductCard key={relatedProduct.id} product={relatedProduct} />
-              ))}
+      {/* Related Products Carousel (Independent Container) */}
+      <div className="max-w-[1600px] mx-auto w-full px-2 md:px-6 mt-12">
+        <RelatedCarousel
+          allProducts={allProducts}
+          currentProductId={product.id}
+          currentCategory={product.category}
+          currentSubcategory={product.subcategory}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RelatedCarousel({
+  allProducts,
+  currentProductId,
+  currentCategory,
+  currentSubcategory,
+}: {
+  allProducts: any[];
+  currentProductId: string;
+  currentCategory: string;
+  currentSubcategory: string;
+}) {
+  const related = allProducts
+    .filter(p => p.id !== currentProductId)
+    .sort((a, b) => {
+      if (a.subcategory === currentSubcategory && b.subcategory !== currentSubcategory) return -1;
+      if (b.subcategory === currentSubcategory && a.subcategory !== currentSubcategory) return 1;
+      if (a.category === currentCategory && b.category !== currentCategory) return -1;
+      if (b.category === currentCategory && a.category !== currentCategory) return 1;
+      return 0;
+    })
+    .slice(0, 16);
+
+  const [startIndex, setStartIndex] = useState(0);
+  const [activeMobileIndex, setActiveMobileIndex] = useState(0);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+
+  // Determine items visible per breakpoint
+  const [itemsToShow, setItemsToShow] = useState(6);
+
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth >= 1024) setItemsToShow(6);
+      else if (window.innerWidth >= 768) setItemsToShow(5);
+      else if (window.innerWidth >= 640) setItemsToShow(4);
+      else setItemsToShow(2);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const totalItems = related.length;
+  const maxIndex = Math.max(0, totalItems - itemsToShow);
+
+  const next = useCallback(() => setStartIndex(prev => Math.min(prev + 1, maxIndex)), [maxIndex]);
+  const prev = useCallback(() => setStartIndex(prev => Math.max(prev - 1, 0)), []);
+
+  const handleMobileScroll = () => {
+    if (mobileScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = mobileScrollRef.current;
+      if (scrollLeft + clientWidth >= scrollWidth - 5) {
+        setActiveMobileIndex(totalItems - 1);
+      } else {
+        const itemWidth = mobileScrollRef.current.scrollWidth / totalItems;
+        setActiveMobileIndex(Math.round(scrollLeft / itemWidth));
+      }
+    }
+  };
+
+  const displayedProducts = related.slice(startIndex, startIndex + itemsToShow);
+
+  const gridCols = itemsToShow === 6
+    ? 'grid-cols-6'
+    : itemsToShow === 5
+      ? 'grid-cols-5'
+      : itemsToShow === 4
+        ? 'grid-cols-4'
+        : itemsToShow === 3
+          ? 'grid-cols-3'
+          : 'grid-cols-2';
+
+  if (related.length === 0) return null;
+
+  return (
+    <div className="mt-24 max-md:mt-16">
+      <h2 className="md:px-8 text-2xl font-bold mb-10 max-md:mb-6">You May Also Like</h2>
+
+      {/* Desktop Carousel */}
+      <div className="relative hidden sm:block px-8">
+        <div className={`grid ${gridCols} gap-3 transition-all duration-500 ease-in-out`}>
+          {displayedProducts.map((p, i) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+
+        {totalItems > itemsToShow && (
+          <>
+            <button
+              onClick={prev}
+              disabled={startIndex === 0}
+              className="absolute -left-2 top-1/2 -translate-y-1/2 text-primary opacity-60 hover:opacity-100 disabled:opacity-10 transition-opacity duration-200 cursor-pointer"
+              title="Previous"
+            >
+              <FaChevronLeft size={40} />
+            </button>
+            <button
+              onClick={next}
+              disabled={startIndex >= maxIndex}
+              className="absolute -right-2 top-1/2 -translate-y-1/2 text-primary opacity-60 hover:opacity-100 disabled:opacity-10 transition-opacity duration-200 cursor-pointer"
+              title="Next"
+            >
+              <FaChevronRight size={40} />
+            </button>
+          </>
+        )}
+
+        {/* Desktop Dot Indicators */}
+        {totalItems > itemsToShow && (
+          <div className="flex justify-center gap-2 mt-8 flex-wrap">
+            {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setStartIndex(i)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${startIndex === i ? 'bg-primary w-8' : 'bg-border w-2 hover:bg-primary/40'}`}
+              />
+            ))}
           </div>
+        )}
+      </div>
+
+      {/* Mobile Swipe View */}
+      <div className="block sm:hidden px-2">
+        <div
+          ref={mobileScrollRef}
+          onScroll={handleMobileScroll}
+          className="flex overflow-x-auto gap-2 snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          {related.map(p => (
+            <div key={p.id} className="min-w-[48%] w-[48%] shrink-0 snap-start">
+              <ProductCard product={p} />
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile Dots */}
+        <div className="flex justify-center gap-1.5 mt-2 flex-wrap">
+          {related.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1 rounded-full transition-all duration-300 ${activeMobileIndex === i ? 'bg-primary w-4' : 'bg-border w-1'}`}
+            />
+          ))}
         </div>
       </div>
     </div>

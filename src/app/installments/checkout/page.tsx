@@ -47,9 +47,15 @@ function LoanCheckoutContent() {
   const totalAmount = baseAmount + shippingFee;
 
   const handleFinalPayment = async () => {
-    if (isLastPayment && !isOfficePickup && !address) {
-      toast.error('Please provide a shipping address.');
-      return;
+    if (isLastPayment && !isOfficePickup) {
+      if (!address) {
+        toast.error('Please provide a shipping address.');
+        return;
+      }
+      if (!phone) {
+        toast.error('Please provide a phone number.');
+        return;
+      }
     }
     
     setIsProcessing(true);
@@ -205,6 +211,7 @@ function LoanCheckoutContent() {
               <h3 className="font-bold text-xl mb-6">Shipping Information</h3>
               <div className="flex flex-col gap-4">
                 <input 
+                  required
                   type="text" 
                   placeholder="Full Delivery Address" 
                   value={address}
@@ -212,6 +219,7 @@ function LoanCheckoutContent() {
                   className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors"
                 />
                 <input 
+                  required
                   type="tel" 
                   placeholder="Phone Number" 
                   value={phone}

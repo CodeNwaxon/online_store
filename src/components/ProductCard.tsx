@@ -41,7 +41,7 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
   const [imgError, setImgError] = useState(false);
 
   const CardContent = (
-    <div className={`relative h-[280px] max-md:h-[200px] w-full cursor-pointer bg-muted/20 p-1`}>
+    <div className={`relative h-[200px] max-md:h-[160px] w-full cursor-pointer bg-muted/20 p-1`}>
       <div className="relative w-full h-full overflow-hidden rounded-md">
         <Image
           src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}

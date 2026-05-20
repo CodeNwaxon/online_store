@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { products as staticProducts, Product, Category } from '@/data/products';
-import { FaSearch, FaInfoCircle, FaCreditCard, FaTimes, FaGoogle } from 'react-icons/fa';
+import { FaSearch, FaInfoCircle, FaCreditCard, FaTimes, FaGoogle, FaChevronDown } from 'react-icons/fa';
 import { Toaster, toast } from 'react-hot-toast';
 import InstallmentOverlay from '@/components/InstallmentOverlay';
 import Link from 'next/link';
@@ -77,7 +77,7 @@ function InstallmentsContent() {
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [activeLoan, setActiveLoan] = useState<any | null>(null);
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(40);
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: number} | null>(null);
 
@@ -223,7 +223,7 @@ function InstallmentsContent() {
               {groups.map(group => (
                 <button
                   key={group}
-                  onClick={() => { setSelectedGroup(group); setVisibleCount(20); }}
+                  onClick={() => { setSelectedGroup(group); setVisibleCount(40); }}
                   className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {group}
@@ -262,7 +262,7 @@ function InstallmentsContent() {
                 type="text"
                 placeholder="Search for an item to start a plan..."
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(20); }}
+                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(40); }}
                 className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background font-sans outline-none focus:border-primary"
               />
               <FaSearch
@@ -312,12 +312,17 @@ function InstallmentsContent() {
         </div>
 
         {filteredProducts.length > visibleCount && (
-          <div className="text-center mt-12">
+          <div className="text-center mt-12 flex flex-col items-center justify-center gap-4 animate-[fadeIn_0.5s_ease-out]">
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">
+              Showing {Math.min(visibleCount, filteredProducts.length)} of {filteredProducts.length} items
+            </div>
             <button
-              className="border border-border text-foreground hover:bg-muted px-8 py-3 rounded-md font-semibold transition-colors"
-              onClick={() => setVisibleCount(prev => prev + 20)}
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
+              onClick={() => setVisibleCount(prev => prev + 40)}
             >
-              Load More Products
+              <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <span>Load More Products</span>
+              <FaChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-y-0.5 transition-all duration-300 ease-out" />
             </button>
           </div>
         )}
