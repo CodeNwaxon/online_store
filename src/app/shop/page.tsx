@@ -168,7 +168,7 @@ function ShopContent() {
                 <button
                   key={group}
                   onClick={() => setSelectedGroup(group)}
-                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  className={`px-5 py-2 text-xs md:text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {group}
                 </button>
@@ -176,14 +176,14 @@ function ShopContent() {
 
               <button
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
-                className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-4 py-2 text-xs md:text-sm border rounded-md flex items-center gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 Promos
               </button>
 
               <button
                 onClick={() => setShowLikedOnly(!showLikedOnly)}
-                className={`px-4 py-2 text-sm border rounded-md flex items-center gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-4 py-2 text-xs md:text-sm border rounded-md flex items-center gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
                 Favorites
@@ -230,7 +230,7 @@ function ShopContent() {
 
         {/* Product lists */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-8">
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
             {displayedProducts.map((product, index) => (
               <div key={product.id} className="mb-4  md:mb-0">
                 <ProductCard product={product} priority={index < 4} />

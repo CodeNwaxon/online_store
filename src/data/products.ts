@@ -3,6 +3,8 @@ export type Category = 'Electronics' | 'Furniture';
 export interface Product {
   id: string;
   name: string;
+  productCode: string;
+  rdpPrice: number;
   price: number;
   description: string;
   category: Category;
@@ -24,6 +26,8 @@ export const products: Product[] = [
   {
     id: 'e1',
     name: 'Smart 4K UHD TV - 55"',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 450,
     description: 'Immersive 4K resolution with HDR and smart features for your home entertainment.',
     category: 'Electronics',
@@ -42,6 +46,8 @@ export const products: Product[] = [
   {
     id: 'e2',
     name: 'Double Door Refrigerator',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 750,
     description: 'Energy-efficient cooling with a spacious interior and frost-free technology.',
     category: 'Electronics',
@@ -60,6 +66,8 @@ export const products: Product[] = [
   {
     id: 'e3',
     name: 'Front Load Washing Machine',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 580,
     description: 'Quiet and powerful washing with multiple modes for all fabric types.',
     category: 'Electronics',
@@ -78,6 +86,8 @@ export const products: Product[] = [
   {
     id: 'e4',
     name: 'High-Speed Standing Fan',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 45,
     description: 'Powerful airflow to keep you cool during the warmest days.',
     category: 'Electronics',
@@ -96,6 +106,8 @@ export const products: Product[] = [
   {
     id: 'e5',
     name: 'Digital Microwave Oven',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 120,
     description: 'Fast and even heating with pre-programmed cooking modes.',
     category: 'Electronics',
@@ -112,6 +124,8 @@ export const products: Product[] = [
   {
     id: 'e6',
     name: 'Portable Gasoline Generator',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 850,
     description: 'Reliable power backup for your home or small business.',
     category: 'Electronics',
@@ -130,6 +144,8 @@ export const products: Product[] = [
   {
     id: 'e7',
     name: 'Inverter Air Conditioner',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 620,
     description: 'Energy-saving cooling with quiet operation and smart temperature control.',
     category: 'Electronics',
@@ -146,6 +162,8 @@ export const products: Product[] = [
   {
     id: 'e8',
     name: 'Solar Power Bank 20000mAh',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 35,
     description: 'Charge your devices on the go with sustainable solar energy.',
     category: 'Electronics',
@@ -159,11 +177,13 @@ export const products: Product[] = [
     manufacturer: 'Oraimo',
     shipping: 3
   },
-  
+
   // Furniture
   {
     id: 'f1',
     name: 'Handcrafted Mahogany Dining Set',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 1200,
     description: 'A beautiful 6-seater dining set made from premium mahogany wood with traditional carvings.',
     category: 'Furniture',
@@ -182,6 +202,8 @@ export const products: Product[] = [
   {
     id: 'f2',
     name: 'Modern Velvet Sofa',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 950,
     description: 'Comfortable and stylish 3-seater sofa with vibrant patterns.',
     category: 'Furniture',
@@ -198,6 +220,8 @@ export const products: Product[] = [
   {
     id: 'f3',
     name: 'Solid Oak Coffee Table',
+    productCode: '12345',
+    rdpPrice: 450,
     price: 280,
     description: 'Durable and elegant coffee table with a natural finish.',
     category: 'Furniture',

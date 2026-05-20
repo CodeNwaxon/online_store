@@ -168,31 +168,40 @@ export default function ProductDetail() {
             </div>
 
             {/* CTA Buttons */}
-            <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
-              <button
-                className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors"
-                onClick={() => addItem(product)}
-              >
-                <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
-              </button>
+            {(product.quantity ?? 0) <= 0 ? (
+              <div className="bg-red-50 border border-red-200 text-red-800 p-6 rounded-md text-sm w-full font-bold flex flex-col items-center justify-center gap-3">
+                <span className="text-lg md:text-xl">⚠️ Product Out of Stock</span>
+                <span className="font-normal text-xs text-muted-foreground text-center">
+                  This product has just sold out. Another customer completed their payment first.
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
+                <button
+                  className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors"
+                  onClick={() => addItem(product)}
+                >
+                  <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
+                </button>
 
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="col-span-2 md:flex-[1] order-3 md:order-2 bg-[#25D366] hover:bg-[#1DA851] text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded-md transition-colors font-semibold"
-                title="WhatsApp"
-              >
-                <FaWhatsapp size={18} /> <span className="md:hidden">Contact via WhatsApp</span>
-              </a>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="col-span-2 md:flex-[1] order-3 md:order-2 bg-[#25D366] hover:bg-[#1DA851] text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded-md transition-colors font-semibold"
+                  title="WhatsApp"
+                >
+                  <FaWhatsapp size={18} /> <span className="md:hidden">Contact via WhatsApp</span>
+                </a>
 
-              <Link
-                href={`/installments?search=${encodeURIComponent(product.name)}`}
-                className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
-              >
-                <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
-              </Link>
-            </div>
+                <Link
+                  href={`/installments?search=${encodeURIComponent(product.name)}`}
+                  className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
+                >
+                  <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
+                </Link>
+              </div>
+            )}
 
             <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm space-y-2">
               <div><strong>Group:</strong> {product.group}</div>

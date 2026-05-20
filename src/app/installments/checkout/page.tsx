@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, addDoc, collection, increment } from 'firebase/firestore';
 import { products } from '@/data/products';
 import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
@@ -116,6 +116,16 @@ function LoanCheckoutContent() {
           createdAt: new Date().toISOString(),
         };
         await addDoc(collection(db, 'orders'), orderData);
+
+        // Deduct 1 from product quantity in Firestore
+        try {
+          const productRef = doc(db, 'products', loan.productId);
+          await updateDoc(productRef, {
+            quantity: increment(-1)
+          });
+        } catch (err) {
+          console.error("Error deducting product quantity on final installment payment:", err);
+        }
       }
 
       await updateDoc(loanRef, updateData);

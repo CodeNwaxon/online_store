@@ -778,7 +778,7 @@ export default function PayLoanPage() {
                       <span className="text-muted-foreground">Total Amount You Paid</span>
                       <span className="font-bold">{formatCurrency(totalPaid)}</span>
                     </div>
-                    <div className="grid grid-cols-2  justify-between items-center text-red-500">
+                    <div className="grid grid-cols-2 justify-between items-center text-red-500">
                       <span className="text-left">Cancellation Fee <br />({withdrawalPercent}% of {formatCurrency(loan.totalAmount)})</span>
                       <span className="text-right font-bold">- {formatCurrency(charge)}</span>
                     </div>
@@ -800,7 +800,7 @@ export default function PayLoanPage() {
 
         {showRefundForm && (
           <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4">
-            <div className="bg-background p-8 rounded-[var(--radius)] max-w-[500px] w-full shadow-xl">
+            <div className="bg-background md:p-8 px-4 py-6 rounded-[var(--radius)] max-w-[500px] w-full shadow-xl">
               <h2 className="text-2xl font-bold mb-6">Refund Account Details</h2>
               <p className="text-sm text-muted-foreground mb-6">Enter the account where you want to receive your refund.</p>
 
@@ -841,7 +841,7 @@ export default function PayLoanPage() {
 
               <div className="flex gap-4">
                 <button onClick={() => setShowRefundForm(false)} className="flex-1 border border-border hover:bg-muted text-foreground py-3 rounded-md font-semibold transition-colors">Cancel</button>
-                <button onClick={handleSubmitRefund} className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-md font-semibold transition-colors">Submit & Confirm</button>
+                <button onClick={handleSubmitRefund} className="flex-1 bg-primary hover:bg-primary-hover text-white py-3 rounded-md font-semibold transition-colors">Confirm</button>
               </div>
             </div>
           </div>

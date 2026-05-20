@@ -71,6 +71,8 @@ function AdminProductsContent() {
   const [promoEndDate, setPromoEndDate] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [warranty, setWarranty] = useState('');
+  const [rdpPrice, setRdpPrice] = useState('');
+  const [productCode, setProductCode] = useState('');
   
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -245,6 +247,8 @@ function AdminProductsContent() {
     setPromoEndDate('');
     setManufacturer('');
     setWarranty('');
+    setRdpPrice('');
+    setProductCode('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -261,6 +265,50 @@ function AdminProductsContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+// Basic required field validation
+if (!name.trim()) {
+  toast.error('Product name is required.');
+  return;
+}
+if (!group) {
+  toast.error('Please select a group.');
+  return;
+}
+if (!category) {
+  toast.error('Please select a category.');
+  return;
+}
+if (!price.trim()) {
+  toast.error('Sales price is required.');
+  return;
+}
+if (!rdpPrice.trim()) {
+  toast.error('RDP price (Cost Price) is required.');
+  return;
+}
+
+// Duplicate product code check
+const isCodeDuplicate = productCode.trim() !== '' && products.some(p =>
+  p.id !== editingId &&
+  p.productCode &&
+  p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase()
+);
+if (isCodeDuplicate) {
+  toast.error('This product code has already been added to another product.');
+  return;
+}
+
+// Price relationship validation
+const parsedRdp = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
+if (parsedRdp > parsedPrice) {
+  toast.error('RDP Price (Cost Price) cannot be higher than Sales Price (Selling Price).');
+  return;
+}
+    
+
+
     if (images.length === 0) {
       toast.error('Please add at least one image');
       return;
@@ -287,6 +335,8 @@ function AdminProductsContent() {
       const productData = {
         name: formatName(name),
         price: isPromo ? Number(parsePriceInput(oldPrice)) : Number(parsePriceInput(price)),
+        rdpPrice: Number(parsePriceInput(rdpPrice)) || 0,
+        productCode: productCode.trim().toUpperCase(),
         description,
         group: formatStructure(group),
         category: formatStructure(category),
@@ -337,6 +387,8 @@ function AdminProductsContent() {
     setPromoEndDate(product.promoEndDate || '');
     setManufacturer(product.manufacturer || '');
     setWarranty(product.warranty || '');
+    setRdpPrice(product.rdpPrice ? formatPriceInput(product.rdpPrice.toString()) : '');
+    setProductCode(product.productCode || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -442,16 +494,60 @@ function AdminProductsContent() {
               <p className="text-[0.65rem] text-muted-foreground">Warranty period or terms for this product.</p>
             </div>
 
-            {/* Price */}
+            {/* Product Code */}
             <div className="space-y-2">
-              <label className="text-xs md:text-sm font-bold text-primary">Price (₦)</label>
+              <label className="text-xs md:text-sm font-bold text-teal-600 flex justify-between items-center">
+                Product Code
+                {productCode.trim() !== '' && products.some(p => p.id !== editingId && p.productCode && p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase()) && (
+                  <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Code already added</span>
+                )}
+              </label>
+              <input 
+                required 
+                value={productCode} 
+                onChange={e => setProductCode(e.target.value)} 
+                type="text" 
+                placeholder="e.g. ELEC-AC-001"
+                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${
+                  productCode.trim() !== '' && products.some(p => p.id !== editingId && p.productCode && p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase())
+                    ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                    : 'border-teal-300 focus:border-teal-500'
+                }`}
+              />
+            </div>
+
+            {/* RDP Price (Cost Price) */}
+            <div className="space-y-2">
+              <label className="text-xs md:text-sm font-bold text-red-700">RDP Price (Cost Price) (₦)</label>
+              <input 
+                required 
+                value={rdpPrice} 
+                onChange={e => setRdpPrice(formatPriceInput(e.target.value))} 
+                type="text" 
+                placeholder="e.g. 40,000"
+                className="w-full p-3 rounded-md border border-red-300 bg-background text-sm focus:border-red-500 outline-none transition-all font-bold" 
+              />
+            </div>
+
+            {/* Sales Price (Selling Price) */}
+            <div className="space-y-2">
+              <label className="text-xs md:text-sm font-bold text-primary flex justify-between items-center">
+                <span>Sales Price (Selling Price) (₦)</span>
+                {rdpPrice.trim() !== '' && price.trim() !== '' && (parseFloat(rdpPrice.replace(/,/g, '')) || 0) > (parseFloat(price.replace(/,/g, '')) || 0) && (
+                  <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ RDP Price cannot be higher than Sales Price</span>
+                )}
+              </label>
               <input 
                 required 
                 value={price} 
                 onChange={e => setPrice(formatPriceInput(e.target.value))} 
                 type="text" 
                 placeholder="e.g. 50,000"
-                className="w-full p-3 rounded-md border border-primary/30 bg-background text-sm focus:border-primary outline-none transition-all font-bold" 
+                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${
+                  rdpPrice.trim() !== '' && price.trim() !== '' && (parseFloat(rdpPrice.replace(/,/g, '')) || 0) > (parseFloat(price.replace(/,/g, '')) || 0)
+                    ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                    : 'border-primary/30 focus:border-primary'
+                }`}
               />
             </div>
 

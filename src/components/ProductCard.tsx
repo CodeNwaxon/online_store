@@ -39,9 +39,9 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
   };
 
   const [imgError, setImgError] = useState(false);
-
+  const [showDescription, setShowDescription] = useState(false);
   const CardContent = (
-    <div className={`relative h-[200px] max-md:h-[160px] w-full cursor-pointer bg-muted/20 p-1`}>
+    <div className={`relative h-48 max-md:h-36 w-full cursor-pointer bg-muted/20 p-1`}>
       <div className="relative w-full h-full overflow-hidden rounded-md">
         <Image
           src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
@@ -53,6 +53,13 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
         />
+        {!isAdmin && (product.quantity ?? 0) <= 0 && (
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 p-2 text-center select-none">
+            <div className="bg-red-600/90 text-white font-black text-[10px] md:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg border border-white/20 transform rotate-[-5deg] animate-pulse">
+              Out of Stock
+            </div>
+          </div>
+        )}
         {product.isPromo && (
           <span className="absolute top-0.5 left-0.5 bg-secondary text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center">
             <span>SPECIAL PROMO</span>
@@ -112,6 +119,11 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider">
             {product.category}
           </div>
+          {isAdmin && (
+            <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider">
+              {product.productCode}
+            </div>
+          )}
           {!isAdmin && <LikeButton productId={product.id} />}
         </div>
         <h3
@@ -121,7 +133,7 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
           {product.name}
         </h3>
 
-        <p className="text-[0.75rem] max-md:text-[0.68rem] text-muted-foreground mb-3 h-[60px] max-md:h-[40px] overflow-y-auto leading-[1.3] pr-1">
+        <p className="text-[0.75rem] max-md:text-[0.68rem] text-muted-foreground mb-3 h-[40px] max-md:h-[30px] overflow-y-auto leading-[1.3] pr-1">
           {product.description}
         </p>
 
@@ -153,35 +165,67 @@ export default function ProductCard({ product, isAdmin, priority = false }: Prod
         />
 
 
-        <div className="flex justify-between items-center mt-auto pt-2 border-t border-border/50">
-          <div className="flex flex-col">
-            {product.oldPrice && (
-              <span className="text-[0.75rem] text-muted-foreground line-through -mb-1 opacity-70">
-                ₦{product.oldPrice.toLocaleString()}
-              </span>
-            )}
-            <span className="text-lg max-md:text-[0.95rem] font-bold text-primary">
-              ₦{product.price.toLocaleString()}
-            </span>
-          </div>
-          {isAdmin && (
-            <div className={`px-2 py-0.5 rounded-full text-[0.65rem] font-black border transition-colors ${
-              (product.quantity ?? 0) <= 5 
-                ? 'bg-red-50 text-red-600 border-red-200' 
-                : 'bg-muted text-muted-foreground border-border'
-            }`}>
-              Stock: {product.quantity}
+        {/* Description button and overlay */}
+        <button
+          onClick={() => setShowDescription(true)}
+          className="font-black text-[11px] md:text-xs"
+        >
+          Description
+        </button>
+        {showDescription && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-card p-4 rounded-md max-w-md w-full relative">
+              <button
+                onClick={() => setShowDescription(false)}
+                className="absolute top-2 right-2 text-lg font-bold"
+              >
+                ✕
+              </button>
+              <h3 className="text-lg font-bold mb-2">{product.name}</h3>
+              <p className="text-[0.75rem] text-muted-foreground">{product.description}</p>
             </div>
+          </div>
+        )}
+        {/* Price section */}
+        <div className="flex flex-col">
+          {product.oldPrice && (
+            <span className="text-[0.75rem] text-muted-foreground line-through -mb-1 opacity-70">
+              &#8358;{product.oldPrice.toLocaleString()}
+            </span>
           )}
-          {!isAdmin && (
-            <button
-              className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-1.5 rounded-md font-bold transition-all duration-200 px-3 py-1.5 max-md:px-2 max-md:py-1 max-md:text-[0.65rem] text-[0.8rem]"
-              onClick={() => addItem(product)}
-            >
-              <FaShoppingCart size={13} /> Add
-            </button>
+          <span className="text-lg max-md:text-[0.95rem] font-bold text-primary">
+            &#8358;{product.price.toLocaleString()}
+          </span>
+          {isAdmin && product.rdpPrice && (
+            <span className="text-[11px] md:text-xs font-bold text-black">
+              RDP: &#8358;{product.rdpPrice.toLocaleString()}
+            </span>
           )}
         </div>
+        {isAdmin && (
+          <div className={`px-2 py-0.5 rounded-full text-[0.65rem] font-black border transition-colors ${(product.quantity ?? 0) <= 5
+            ? 'bg-red-50 text-red-600 border-red-200'
+            : 'bg-muted text-muted-foreground border-border'
+            }`}>
+            Stock: {product.quantity}
+          </div>
+        )}
+        {!isAdmin && (
+          <button
+            disabled={(product.quantity ?? 0) <= 0}
+            className={`flex items-center justify-center gap-1.5 rounded-md font-bold transition-all duration-200 px-3 py-1.5 max-md:px-2 max-md:py-1 max-md:text-[0.65rem] text-[0.8rem] ${(product.quantity ?? 0) <= 0
+              ? 'bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-50'
+              : 'bg-primary hover:bg-primary-hover text-white'
+              }`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addItem(product);
+            }}
+          >
+            <FaShoppingCart size={13} /> Add
+          </button>
+        )}
       </div>
     </div>
   );

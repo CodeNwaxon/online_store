@@ -144,7 +144,9 @@ export default function Home() {
       images: slide.images || [slide.image],
       category: slide.category,
       manufacturer: slide.manufacturer || siteName,
-      shipping: slide.shipping || 0
+      shipping: slide.shipping || 0,
+      productCode: slide.productCode || '',
+      rdpPrice: slide.rdpPrice || 0
     };
     addItem(product);
     router.push('/checkout');

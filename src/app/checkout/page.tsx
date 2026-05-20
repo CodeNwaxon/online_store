@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -77,6 +77,18 @@ export default function Checkout() {
 
       const { collection, addDoc } = await import('firebase/firestore');
       const docRef = await addDoc(collection(db, 'orders'), orderData);
+
+      // Deduct product quantities in Firestore
+      for (const item of items) {
+        try {
+          const productRef = doc(db, 'products', item.id);
+          await updateDoc(productRef, {
+            quantity: increment(-item.quantity)
+          });
+        } catch (err) {
+          console.error("Error deducting quantity for product:", item.id, err);
+        }
+      }
 
       // Save to local history for customer
       const history = JSON.parse(localStorage.getItem('purchase_history') || '[]');

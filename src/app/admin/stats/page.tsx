@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown } from 'react-icons/fa';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -14,13 +14,16 @@ import { Suspense } from 'react';
 function AdminStatsContent() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as 'stats' | 'inventory') || 'stats';
-  const [view, setView] = useState<'stats' | 'inventory'>(initialTab);
+  const [view, setView] = useState<'stats' | 'inventory' | 'history'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [cartOrders, setCartOrders] = useState<any[]>([]);
+  const [historyList, setHistoryList] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [visibleInventory, setVisibleInventory] = useState(40);
+  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
+  const [passkeyInput, setPasskeyInput] = useState('');
 
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
@@ -28,67 +31,130 @@ function AdminStatsContent() {
     }, (error) => {
       console.warn("Stats products listener error:", error);
     });
-    // Assuming a 'sales' or 'orders' collection exists or we derive from completed installments
+
     const unsubSales = onSnapshot(collection(db, 'installments'), (snap) => {
       setSales(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       console.warn("Stats sales listener error:", error);
     });
-    
+
     const unsubOrders = onSnapshot(collection(db, 'orders'), (snap) => {
       setCartOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((o: any) => o.type !== 'installment'));
     }, (error) => {
       console.warn("Stats orders listener error:", error);
     });
 
-    return () => { unsubProds(); unsubSales(); unsubOrders(); };
+    const unsubHistory = onSnapshot(query(collection(db, 'stats_history'), orderBy('createdAt', 'desc')), (snap) => {
+      setHistoryList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats history listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); };
   }, []);
 
-  // Calculate Stats
-  const completedInstallments = sales.filter(s => s.status === 'completed');
-  const cancelledInstallments = sales.filter(s => s.status === 'cleared' && s.refundDetails); // 'cleared' often means refund processed
-  
-  const cartRevenue = cartOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+  // Helper to check if a date is within the current calendar month
+  const isCurrentMonth = (dateVal: any) => {
+    if (!dateVal) return false;
+    let d: Date;
+    if (typeof dateVal.toDate === 'function') {
+      d = dateVal.toDate();
+    } else {
+      d = new Date(dateVal);
+    }
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  };
+
+  // Calculate Stats (Current Calendar Month Only)
+  const completedInstallments = sales.filter(s => s.status === 'completed' && isCurrentMonth(s.updatedAt || s.createdAt));
+  const cancelledInstallments = sales.filter(s => s.status === 'cleared' && s.refundDetails && isCurrentMonth(s.refundDetails.clearedAt || s.updatedAt || s.createdAt));
+  const cartOrdersCurrentMonth = cartOrders.filter(o => isCurrentMonth(o.createdAt || o.updatedAt));
+
+  const cartRevenue = cartOrdersCurrentMonth.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
   const installmentRevenue = completedInstallments.reduce((acc, s) => acc + (s.totalAmountPaid || s.totalAmount || s.product?.price || 0), 0);
   const cancelledRevenue = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
-  
+
   const totalRevenue = cartRevenue + installmentRevenue + cancelledRevenue;
 
-  const revenueByGroup = [...completedInstallments, ...cartOrders].reduce((acc: any, s) => {
-    // For installments, product group might be in s.product.group. For orders, we'd need to check items.
-    let group = 'Other';
+  const revenueByGroup = [...completedInstallments, ...cartOrdersCurrentMonth].reduce((acc: any, s) => {
+    let group = 'OTHER';
     let amount = 0;
-    
-    if (s.product?.group) {
-      group = s.product.group;
-      amount = s.totalAmountPaid || s.totalAmount || s.product.price || 0;
+
+    const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
+
+    if (isInstallment) {
+      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
+      const groupName = liveProduct?.group || s.product?.group || s.productGroup || 'OTHER';
+      group = groupName.toUpperCase();
+      amount = s.totalAmountPaid || s.totalAmount || s.product?.price || 0;
       acc[group] = (acc[group] || 0) + amount;
     } else if (s.items && Array.isArray(s.items)) {
       s.items.forEach((item: any) => {
-        let itemGroup = 'Other';
+        let itemGroup = 'OTHER';
         const foundProduct = products.find(p => p.id === item.id);
-        if (foundProduct?.group) itemGroup = foundProduct.group;
+        if (foundProduct?.group) itemGroup = foundProduct.group.toUpperCase();
         acc[itemGroup] = (acc[itemGroup] || 0) + (item.price * item.quantity);
       });
     }
-    
+
     return acc;
   }, {});
+
+  const rdpCostByGroup = [...completedInstallments, ...cartOrdersCurrentMonth].reduce((acc: any, s) => {
+    let group = 'OTHER';
+    let cost = 0;
+
+    const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
+
+    if (isInstallment) {
+      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
+      const groupName = liveProduct?.group || s.product?.group || s.productGroup || 'OTHER';
+      group = groupName.toUpperCase();
+      cost = liveProduct?.rdpPrice || s.product?.rdpPrice || 0;
+      acc[group] = (acc[group] || 0) + cost;
+    } else if (s.items && Array.isArray(s.items)) {
+      s.items.forEach((item: any) => {
+        let itemGroup = 'OTHER';
+        const foundProduct = products.find(p => p.id === item.id);
+        if (foundProduct?.group) itemGroup = foundProduct.group.toUpperCase();
+        const itemCost = (foundProduct?.rdpPrice || item.rdpPrice || 0) * item.quantity;
+        acc[itemGroup] = (acc[itemGroup] || 0) + itemCost;
+      });
+    }
+
+    return acc;
+  }, {});
+
+  const totalRdpCost = Object.values(rdpCostByGroup).reduce((sum: number, c: any) => sum + c, 0);
+  const totalProfit = totalRevenue - totalRdpCost;
+
+  const activeAndCompletedInstallments = sales.filter(s => s.status !== 'cleared');
+  const totalInstallmentDealsAmount = activeAndCompletedInstallments.reduce((acc, s) => acc + (s.totalAmount || s.product?.price || 0), 0);
+  const totalInstallmentDealsRdpCost = activeAndCompletedInstallments.reduce((acc, s) => {
+    const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
+    const cost = liveProduct?.rdpPrice || s.product?.rdpPrice || 0;
+    return acc + cost;
+  }, 0);
+  const totalInstallmentDealsProfit = totalInstallmentDealsAmount - totalInstallmentDealsRdpCost;
+
+  const totalCancelledDealsAmount = cancelledInstallments.reduce((acc, s) => acc + (s.totalAmount || s.product?.price || 0), 0);
+  const totalCancelledDealsProfit = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
 
   const salesCountByProduct = [...completedInstallments].reduce((acc: any, s) => {
     const pid = s.product?.id || s.productId;
     if (pid) acc[pid] = (acc[pid] || 0) + 1;
     return acc;
   }, {});
-  
-  cartOrders.forEach(o => {
+
+  cartOrdersCurrentMonth.forEach(o => {
     if (o.items && Array.isArray(o.items)) {
       o.items.forEach((item: any) => {
         accSalesCount(item.id, item.quantity);
       });
     }
   });
-  
+
   function accSalesCount(pid: string, qty: number) {
     if (pid) salesCountByProduct[pid] = (salesCountByProduct[pid] || 0) + qty;
   }
@@ -102,9 +168,120 @@ function AdminStatsContent() {
     .sort((a, b) => b.count - a.count);
 
   const getTopByGroup = (groupName: string, limit: number) => {
-    return topProducts
-      .filter(item => item.product.group === groupName)
+    const upperGroup = groupName.toUpperCase();
+    const items = topProducts.filter(item => (item.product.group || '').toUpperCase() === upperGroup);
+    if (items.length > 0) return items.slice(0, limit);
+
+    // Fallback: list products of this group from backend (with 0 sold count) so the card shows up immediately
+    return products
+      .filter(p => (p.group || '').toUpperCase() === upperGroup)
+      .map(p => ({ product: p, count: 0 }))
       .slice(0, limit);
+  };
+
+  // Automatically save current month's calculated stats to the stats_history Firestore collection
+  useEffect(() => {
+    if (products.length === 0) return; // wait until data loads
+
+    const now = new Date();
+    const docId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const dateLabel = `${monthNames[now.getMonth()]}, ${now.getFullYear()}`;
+
+    const salesCount = completedInstallments.length + cartOrdersCurrentMonth.length;
+
+    // Top 10 selling snapshot
+    const top10SellingSnapshot = topProducts.slice(0, 10).map(item => ({
+      name: item.product?.name || 'Unknown Product',
+      count: item.count
+    }));
+
+    // Top 5 Electronics snapshot
+    const top5ElectronicsSnapshot = getTopByGroup('ELECTRONICS', 5).map(item => ({
+      name: item.product?.name || 'Unknown Product',
+      count: item.count
+    }));
+
+    // Top 5 Furniture snapshot
+    const top5FurnitureSnapshot = getTopByGroup('FURNITURE', 5).map(item => ({
+      name: item.product?.name || 'Unknown Product',
+      count: item.count
+    }));
+
+    // Top 5 for other groups snapshot
+    const otherGroupsSnapshots = otherGroups.reduce((acc: any, g: string) => {
+      acc[g] = getTopByGroup(g, 5).map(item => ({
+        name: item.product?.name || 'Unknown Product',
+        count: item.count
+      }));
+      return acc;
+    }, {});
+
+    // Groups revenue/profit array
+    const groupsSnapshot = ['ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
+      const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
+      const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
+      const profit = rev - cost;
+      return { name: group, revenue: rev, profit };
+    });
+
+    const timer = setTimeout(async () => {
+      try {
+        await setDoc(doc(db, 'stats_history', docId), {
+          id: docId,
+          date: dateLabel,
+          revenue: totalRevenue,
+          profit: totalProfit,
+          cancelledInstallment: cancelledRevenue,
+          sales: salesCount,
+          groups: groupsSnapshot,
+          topSelling: top10SellingSnapshot,
+          topElectronics: top5ElectronicsSnapshot,
+          topFurniture: top5FurnitureSnapshot,
+          topOtherGroups: otherGroupsSnapshots,
+          createdAt: now.toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.error("Error auto-updating stats history in Firestore:", err);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [totalRevenue, totalProfit, cancelledRevenue, completedInstallments.length, cartOrdersCurrentMonth.length, products, revenueByGroup]);
+
+  // Passkey Actions
+  const handleActionWithPasskey = (type: 'delete' | 'clear_all', id?: string) => {
+    setShowPasskeyModal({ type, id });
+    setPasskeyInput('');
+  };
+
+  const verifyPasskey = async () => {
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
+
+      if (passkeyInput === correctPasskey) {
+        if (showPasskeyModal?.type === 'delete' && showPasskeyModal.id) {
+          await deleteDoc(doc(db, 'stats_history', showPasskeyModal.id));
+          toast.success('History record deleted successfully');
+        } else if (showPasskeyModal?.type === 'clear_all') {
+          for (const item of historyList) {
+            await deleteDoc(doc(db, 'stats_history', item.id));
+          }
+          toast.success('All history records cleared');
+        }
+        setShowPasskeyModal(null);
+        setPasskeyInput('');
+      } else {
+        toast.error('Incorrect CEO Passkey');
+      }
+    } catch (err) {
+      console.error("Verification failed:", err);
+      toast.error('Authorization failed');
+    }
   };
 
   const updateQuantity = async (productId: string, newQuantity: number) => {
@@ -161,6 +338,66 @@ function AdminStatsContent() {
 
   const uniqueCategoriesCount = new Set(products.map(p => p.category)).size;
 
+  const otherGroups = Array.from(new Set(
+    products
+      .map(p => (p.group || '').trim().toUpperCase())
+      .filter(g => g !== '' && g !== 'ELECTRONICS' && g !== 'FURNITURE')
+  ));
+
+  // Dynamic top cards list
+  const cardsList = [
+    {
+      id: 'revenue',
+      title: 'Revenue',
+      value: `₦${totalRevenue.toLocaleString()}`,
+      sub: `Profit: ₦${totalProfit.toLocaleString()}`,
+      iconBg: 'bg-green-100 text-green-600',
+      icon: <FaChartLine size={18} className="md:size-[24px]" />
+    },
+    // Dynamic Group Cards
+    ...['ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
+      const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
+      const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
+      const profit = rev - cost;
+      const displayName = group.charAt(0).toUpperCase() + group.slice(1).toLowerCase();
+
+      let icon = <FaBolt size={18} className="md:size-[24px]" />;
+      let iconBg = 'bg-blue-100 text-blue-600';
+      if (group === 'FURNITURE') {
+        icon = <FaCouch size={18} className="md:size-[24px]" />;
+        iconBg = 'bg-orange-100 text-orange-600';
+      } else if (group !== 'ELECTRONICS') {
+        icon = <FaBoxOpen size={18} className="md:size-[24px]" />;
+        iconBg = 'bg-teal-100 text-teal-600';
+      }
+
+      return {
+        id: `group-${group}`,
+        title: displayName,
+        value: `₦${rev.toLocaleString()}`,
+        sub: `Profit: ₦${profit.toLocaleString()}`,
+        iconBg,
+        icon
+      };
+    }),
+    {
+      id: 'cancelled',
+      title: 'Cancelled Inst.',
+      value: `₦${cancelledRevenue.toLocaleString()}`,
+      sub: `Profit: ₦${cancelledRevenue.toLocaleString()}`,
+      iconBg: 'bg-red-100 text-red-600',
+      icon: <FaTimes size={18} className="md:size-[24px]" />
+    },
+    {
+      id: 'sales',
+      title: 'Sales',
+      value: `${completedInstallments.length + cartOrdersCurrentMonth.length}`,
+      sub: null,
+      iconBg: 'bg-purple-100 text-purple-600',
+      icon: <FaShoppingCart size={18} className="md:size-[24px]" />
+    }
+  ];
+
   return (
     <div className="space-y-10 pb-20">
       <Toaster position="top-center" />
@@ -169,54 +406,109 @@ function AdminStatsContent() {
           <h1 className="text-xl md:text-2xl font-bold">Store Insights</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Track your performance and inventory.</p>
         </div>
-        <div className="flex bg-muted p-1 rounded-lg border border-border w-full md:w-auto">
+        <div className="flex bg-muted p-0.5 md:p-1 rounded-md md:rounded-lg border border-border w-full md:w-auto gap-0.5 md:gap-1">
           <button
             onClick={() => setView('stats')}
-            className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-xs md:text-sm transition-all ${view === 'stats' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground'}`}
+            className={`flex-1 md:flex-none px-2 md:px-6 py-1.5 md:py-2 rounded-md font-bold text-[10px] md:text-sm transition-all whitespace-nowrap ${view === 'stats' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground'}`}
           >
-            <FaChartPie className="inline mr-2" /> Stats
+            <FaChartPie className="inline mr-1 md:mr-2 text-[10px] md:text-sm" /> Stats
           </button>
           <button
             onClick={() => setView('inventory')}
-            className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-xs md:text-sm transition-all ${view === 'inventory' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground'}`}
+            className={`flex-1 md:flex-none px-2 md:px-6 py-1.5 md:py-2 rounded-md font-bold text-[10px] md:text-sm transition-all whitespace-nowrap ${view === 'inventory' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground'}`}
           >
-            <FaBoxOpen className="inline mr-2" /> Inventory
+            <FaBoxOpen className="inline mr-1 md:mr-2 text-[10px] md:text-sm" /> Inventory
+          </button>
+          <button
+            onClick={() => setView('history')}
+            className={`flex-1 md:flex-none px-2 md:px-6 py-1.5 md:py-2 rounded-md font-bold text-[10px] md:text-sm transition-all whitespace-nowrap ${view === 'history' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground'}`}
+          >
+            <FaHistory className="inline mr-1 md:mr-2 text-[10px] md:text-sm" /> History
           </button>
         </div>
       </header>
 
-      {view === 'stats' ? (
+      {view === 'stats' && (
         <div className="space-y-10">
           {/* TOP CARDS */}
           {/* TOP CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 px-3 md:px-0">
-            <div className="bg-card p-3 md:p-6 md:rounded-xl border border-border shadow-sm">
-              <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
-                <div className="p-1.5 md:p-3 bg-green-100 text-green-600 rounded-lg"><FaChartLine size={18} className="md:size-[24px]" /></div>
-                <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight">Revenue</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 px-3 md:px-0">
+            {cardsList.map((card, index) => {
+              const isLast = index === cardsList.length - 1;
+              const isOdd = cardsList.length % 2 !== 0;
+              const mobileSpanClass = (isLast && isOdd) ? 'col-span-2' : 'col-span-1';
+
+              const isSales = card.id === 'sales';
+              const paddingClass = isSales ? 'p-2 md:p-6' : 'p-3 md:p-6';
+
+              return (
+                <div
+                  key={card.id}
+                  className={`bg-card ${paddingClass} md:rounded-xl border border-border shadow-sm ${mobileSpanClass} md:col-span-1 flex flex-col justify-between`}
+                >
+                  <div>
+                    <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
+                      <div className={`p-1.5 md:p-3 ${card.iconBg} rounded-lg shrink-0`}>{card.icon}</div>
+                      <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight truncate">{card.title}</h3>
+                    </div>
+                    <p className="text-base md:text-2xl font-black text-primary px-1 md:px-0 truncate">{card.value}</p>
+                  </div>
+                  {card.sub && (
+                    <p className="text-[0.7rem] md:text-xs font-bold text-green-700 mt-1 truncate">{card.sub}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* INSTALLMENT REVENUE & PROFITS SUMMARY */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 px-3 md:px-0">
+            {/* Total Installment Revenue Card */}
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block mb-1">Installment Deals Total Volume</span>
+                <h4 className="text-2xl font-black text-foreground">₦{totalInstallmentDealsAmount.toLocaleString()}</h4>
+                <p className="text-xs font-bold text-green-700 mt-1">Profit: ₦{totalInstallmentDealsProfit.toLocaleString()}</p>
               </div>
-              <p className="text-base md:text-2xl font-black text-primary">₦{totalRevenue.toLocaleString()}</p>
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>Margin Profitability</span>
+                  <span className="font-bold text-foreground">
+                    {totalInstallmentDealsAmount > 0 ? Math.round((totalInstallmentDealsProfit / totalInstallmentDealsAmount) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${totalInstallmentDealsAmount > 0 ? Math.min(100, Math.round((totalInstallmentDealsProfit / totalInstallmentDealsAmount) * 100)) : 0}%` }}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="bg-card p-3 md:p-6 md:rounded-xl border border-border shadow-sm">
-              <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
-                <div className="p-1.5 md:p-3 bg-blue-100 text-blue-600 rounded-lg"><FaBolt size={18} className="md:size-[24px]" /></div>
-                <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight">Electronics</h3>
+
+            {/* Cancelled Installment Profits Card */}
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-2 h-full bg-red-500" />
+              <div>
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block mb-1">Cancelled Installment Deals Volume</span>
+                <h4 className="text-2xl font-black text-foreground">₦{totalCancelledDealsAmount.toLocaleString()}</h4>
+                <p className="text-xs font-bold text-green-700 mt-1">Cancellation Profit: ₦{totalCancelledDealsProfit.toLocaleString()}</p>
               </div>
-              <p className="text-base md:text-2xl font-black text-primary">₦{(revenueByGroup['Electronics'] || 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-card p-3 md:p-6 md:rounded-xl border border-border shadow-sm">
-              <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
-                <div className="p-1.5 md:p-3 bg-orange-100 text-orange-600 rounded-lg"><FaCouch size={18} className="md:size-[24px]" /></div>
-                <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight">Furniture</h3>
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>Cancellation Penalty Fee Profit Rate</span>
+                  <span className="font-bold text-foreground">
+                    {totalCancelledDealsAmount > 0 ? ((totalCancelledDealsProfit / totalCancelledDealsAmount) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-red-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${totalCancelledDealsAmount > 0 ? Math.min(100, Math.round((totalCancelledDealsProfit / totalCancelledDealsAmount) * 100)) : 0}%` }}
+                  />
+                </div>
               </div>
-              <p className="text-base md:text-2xl font-black text-primary">₦{(revenueByGroup['Furniture'] || 0).toLocaleString()}</p>
-            </div>
-            <div className="bg-card p-3 md:p-6 md:rounded-xl border border-border shadow-sm">
-              <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4">
-                <div className="p-1.5 md:p-3 bg-purple-100 text-purple-600 rounded-lg"><FaShoppingCart size={18} className="md:size-[24px]" /></div>
-                <h3 className="font-bold text-muted-foreground text-[0.6rem] md:text-sm uppercase tracking-tight">Sales</h3>
-              </div>
-              <p className="text-base md:text-2xl font-black text-primary">{completedInstallments.length + cartOrders.length}</p>
             </div>
           </div>
 
@@ -273,12 +565,33 @@ function AdminStatsContent() {
                   ))}
                 </div>
               </section>
+
+              {otherGroups.map(group => {
+                const topItems = getTopByGroup(group, 5);
+                if (topItems.length === 0) return null;
+                const displayName = group.charAt(0).toUpperCase() + group.slice(1).toLowerCase();
+                return (
+                  <section key={group} className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
+                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 {displayName}</h2>
+                    <div className="space-y-3">
+                      {topItems.map((item, i) => (
+                        <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
+                          <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
+                          <span className="font-bold">{item.count} units</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {view === 'inventory' && (
         /* INVENTORY VIEW */
-        <section className="bg-card md:rounded-xl border border-border shadow-sm overflow-hidden">
+        <section className="bg-card rounded-md md:rounded-xl border border-border shadow-sm overflow-hidden">
           <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
               <h2 className="font-bold text-lg text-center md:text-left">Product Inventory</h2>
@@ -329,11 +642,10 @@ function AdminStatsContent() {
                       type="number"
                       value={product.quantity}
                       onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
-                      className={`w-12 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${
-                        product.quantity <= 5
-                          ? 'border-secondary/30 bg-secondary/5 text-secondary'
-                          : 'border-green-200 bg-green-50 text-green-700'
-                      } focus:border-primary`}
+                      className={`w-12 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${product.quantity <= 5
+                        ? 'border-secondary/30 bg-secondary/5 text-secondary'
+                        : 'border-green-200 bg-green-50 text-green-700'
+                        } focus:border-primary`}
                     />
                     <button
                       onClick={() => updateQuantity(product.id, (product.quantity || 0) + 1)}
@@ -392,11 +704,10 @@ function AdminStatsContent() {
                           type="number"
                           value={product.quantity}
                           onChange={(e) => updateQuantity(product.id, parseInt(e.target.value) || 0)}
-                          className={`w-14 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${
-                            product.quantity <= 5
-                              ? 'border-secondary/30 bg-secondary/5 text-secondary'
-                              : 'border-green-200 bg-green-50 text-green-700'
-                          } focus:border-primary`}
+                          className={`w-14 text-center py-1 rounded border-2 text-xs font-black outline-none transition-all ${product.quantity <= 5
+                            ? 'border-secondary/30 bg-secondary/5 text-secondary'
+                            : 'border-green-200 bg-green-50 text-green-700'
+                            } focus:border-primary`}
                         />
                         <button
                           onClick={() => updateQuantity(product.id, (product.quantity || 0) + 1)}
@@ -438,6 +749,221 @@ function AdminStatsContent() {
             </div>
           )}
         </section>
+      )}
+
+      {view === 'history' && (
+        <section className="bg-card md:rounded-xl border border-border shadow-sm overflow-hidden animate-in fade-in duration-200">
+          <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+              <h2 className="font-bold text-lg text-center md:text-left flex items-center justify-center md:justify-start gap-2">
+                <FaHistory className="text-primary size-5" /> Store Performance History
+              </h2>
+              <p className="text-[10px] md:text-xs text-muted-foreground text-center md:text-left mt-0.5">
+                Archived performance snapshots of completed months.
+              </p>
+            </div>
+            {historyList.length > 0 && (
+              <button
+                onClick={() => handleActionWithPasskey('clear_all')}
+                className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-md md:rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-600/20"
+              >
+                Clear All History
+              </button>
+            )}
+          </div>
+
+          <div className="p-2 md:p-6 space-y-6">
+            {historyList.length === 0 ? (
+              <div className="py-24 text-center space-y-4">
+                <div className="w-16 h-16 bg-muted text-muted-foreground rounded-full flex items-center justify-center mx-auto">
+                  <FaHistory size={28} />
+                </div>
+                <h3 className="font-black text-xl text-foreground uppercase tracking-tight">No History Found</h3>
+                <p className="text-xs md:text-sm text-muted-foreground max-w-sm mx-auto">
+                  Monthly performance history cards will automatically generate at the start of each new month.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-8">
+                {historyList.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-card border-2 border-border rounded-md md:rounded-xl p-2 md:p-8 shadow-sm relative overflow-hidden flex flex-col gap-6"
+                  >
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
+
+                    <div className="flex justify-between items-center pb-4 border-b border-border/80">
+                      <div>
+                        <h3 className="hidden md:block text-base font-black text-foreground">{item.date}</h3>
+                        <h3 className="md:hidden text-xs font-black text-foreground">{item.date}</h3>
+                      </div>
+                      <button
+                        onClick={() => handleActionWithPasskey('delete', item.id)}
+                        className="p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-105"
+                        title="Delete record"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-bold uppercase tracking-wider">
+                      <div className="bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/50 p-4 rounded-md md:rounded-lg">
+                        <span className="block text-[8px] md:text-[9px] text-green-700/80 mb-1">Total Revenue</span>
+                        <strong className="text-xs md:text-base text-green-600 font-black">₦{(item.revenue || 0).toLocaleString()}</strong>
+                      </div>
+                      <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-md md:rounded-lg">
+                        <span className="block text-[8px] md:text-[9px] text-blue-700/80 mb-1">Total Profit</span>
+                        <strong className="text-xs md:text-base text-blue-600 font-black">₦{(item.profit || 0).toLocaleString()}</strong>
+                      </div>
+                      <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 p-4 rounded-md md:rounded-lg">
+                        <span className="block text-[8px] md:text-[9px] text-red-700/80 mb-1">Cancelled Installments</span>
+                        <strong className="text-xs md:text-base text-red-600 font-black">₦{(item.cancelledInstallment || 0).toLocaleString()}</strong>
+                      </div>
+                      <div className="bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/50 p-4 rounded-md md:rounded-lg">
+                        <span className="block text-[8px] md:text-[9px] text-purple-700/80 mb-1">Completed Sales</span>
+                        <strong className="text-xs md:text-base text-purple-600 font-black">{item.sales || 0} Units</strong>
+                      </div>
+                    </div>
+
+                    {item.groups && item.groups.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">Group Sales & Profits</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[9px] md:text-xs">
+                          {item.groups.map((g: any, i: number) => (
+                            <div key={i} className="bg-muted/40 p-3 rounded-md md:rounded-lg border border-border/40">
+                              <span className="block text-[8px] font-bold text-muted-foreground mb-0.5">{g.name}</span>
+                              <div className="font-bold text-foreground">Rev: <span className="font-black">₦{(g.revenue || 0).toLocaleString()}</span></div>
+                              <div className="text-green-700 font-bold">Profit: <span className="font-black">₦{(g.profit || 0).toLocaleString()}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-border/80">
+                      {item.topSelling && item.topSelling.length > 0 && (
+                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                            <FaShoppingCart className="text-purple-600 size-3" /> Top 10 Selling Products
+                          </h4>
+                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                            {item.topSelling.map((prod: any, idx: number) => (
+                              <li key={idx} className="leading-tight">
+                                <span className="text-foreground font-black">{prod.name}</span>
+                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
+                      {item.topElectronics && item.topElectronics.length > 0 && (
+                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                            <FaBolt className="text-blue-600 size-3" /> Top 5 Electronics
+                          </h4>
+                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                            {item.topElectronics.map((prod: any, idx: number) => (
+                              <li key={idx} className="leading-tight">
+                                <span className="text-foreground font-black">{prod.name}</span>
+                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
+                      {item.topFurniture && item.topFurniture.length > 0 && (
+                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                            <FaCouch className="text-orange-600 size-3" /> Top 5 Furniture
+                          </h4>
+                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                            {item.topFurniture.map((prod: any, idx: number) => (
+                              <li key={idx} className="leading-tight">
+                                <span className="text-foreground font-black">{prod.name}</span>
+                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
+                      {item.topOtherGroups && Object.keys(item.topOtherGroups).length > 0 && (
+                        <>
+                          {Object.entries(item.topOtherGroups).map(([groupName, prodList]: [string, any]) => (
+                            <div key={groupName} className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                              <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                                <FaBoxOpen className="text-teal-600 size-3" /> Top 5 {groupName.charAt(0).toUpperCase() + groupName.slice(1).toLowerCase()}
+                              </h4>
+                              {prodList && prodList.length > 0 ? (
+                                <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                  {prodList.map((prod: any, idx: number) => (
+                                    <li key={idx} className="leading-tight">
+                                      <span className="text-foreground font-black">{prod.name}</span>
+                                      <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : (
+                                <p className="text-[9px] text-muted-foreground">No units sold yet.</p>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {showPasskeyModal && (
+        <div className="fixed inset-0 z-[3000] bg-black/80 flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-card p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border-2 border-red-500/20 animate-in slide-in-from-bottom duration-300">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FaLock size={28} />
+            </div>
+            <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">
+              {showPasskeyModal.type === 'clear_all' ? 'Confirm Global Clear' : 'Confirm Deletion'}
+            </h3>
+            <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-4">
+              Warning: Action Cannot Be Undone
+            </p>
+            <p className="text-muted-foreground mb-6 text-xs font-semibold leading-relaxed">
+              {showPasskeyModal.type === 'clear_all'
+                ? 'Are you absolutely sure you want to permanently delete all archived history records? Enter the CEO passcode below to authorize.'
+                : 'Are you absolutely sure you want to permanently delete this monthly history snapshot? Enter the CEO passcode below to authorize.'
+              }
+            </p>
+            <input
+              type="password"
+              className="w-full bg-muted border border-border rounded-2xl p-4 text-center text-xl font-black tracking-[1em] mb-6 focus:border-red-600 outline-none transition-all shadow-inner"
+              placeholder="••••"
+              autoFocus
+              value={passkeyInput}
+              onChange={(e) => setPasskeyInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && verifyPasskey()}
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); }}
+                className="flex-1 py-3 font-bold text-xs uppercase border border-border rounded-2xl hover:bg-muted transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={verifyPasskey}
+                className="flex-1 py-3 font-bold text-xs uppercase bg-red-600 text-white rounded-2xl hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

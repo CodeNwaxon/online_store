@@ -20,6 +20,28 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [siteName, setSiteName] = useState('Quick Choice');
+  const [exceededStockItem, setExceededStockItem] = useState<{ id: string; name: string; available: number } | null>(null);
+
+  const handleIncreaseQuantity = async (item: any) => {
+    try {
+      const docSnap = await getDoc(doc(db, 'products', item.id));
+      if (docSnap.exists()) {
+        const liveQty = Number(docSnap.data().quantity) || 0;
+        if (item.quantity + 1 > liveQty) {
+          setExceededStockItem({
+            id: item.id,
+            name: item.name,
+            available: liveQty
+          });
+          return;
+        }
+      }
+      updateQuantity(item.id, item.quantity + 1);
+    } catch (error) {
+      console.error("Error verifying quantity:", error);
+      updateQuantity(item.id, item.quantity + 1);
+    }
+  };
 
   // Handle animation timing
   useEffect(() => {
@@ -162,6 +184,25 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         className={`relative w-full max-w-[400px] h-full bg-card shadow-[-4px_0_15px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         onTransitionEnd={handleAnimationEnd}
       >
+        {exceededStockItem && (
+          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-[210] flex items-center justify-center p-6 text-center">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200 max-w-[320px]">
+              <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+                <svg className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-base font-black uppercase text-foreground mb-2">Quantity Limit</h3>
+              <p className="text-xs text-muted-foreground mb-6 font-medium leading-relaxed">
+                We only have <span className="font-bold text-amber-600 text-sm">{exceededStockItem.available}</span> quantity left of <span className="font-bold text-foreground">{exceededStockItem.name}</span> in stock.
+              </p>
+              <button 
+                onClick={() => setExceededStockItem(null)} 
+                className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-black uppercase transition-colors shadow-md"
+              >
+                Okay, I understand
+              </button>
+            </div>
+          </div>
+        )}
         <div className="p-6 border-b border-border flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button 
@@ -281,7 +322,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                         <span className="text-sm font-medium">{item.quantity}</span>
                         <button 
                           className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => handleIncreaseQuantity(item)}
                         >
                           <FaPlus size={14} />
                         </button>
