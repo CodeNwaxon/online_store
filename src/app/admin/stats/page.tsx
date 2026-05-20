@@ -124,9 +124,37 @@ function AdminStatsContent() {
     }
   };
 
-  const filteredInventory = products.filter(p => 
-    p.name.toLowerCase().includes(searchQueryInventory.toLowerCase())
-  ).sort((a, b) => {
+  const filteredInventory = products.filter(p => {
+    const searchTerms = searchQueryInventory.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (searchTerms.length === 0) return true;
+
+    const normalize = (str: string) => {
+      if (!str) return '';
+      return str.toLowerCase()
+        .replace(/sh/g, 'ch')
+        .replace(/s/g, 'c')
+        .replace(/ph/g, 'f')
+        .replace(/k/g, 'c')
+        .replace(/\s/g, '');
+    };
+
+    return searchTerms.every(term => {
+      const normTerm = normalize(term);
+      const checkField = (fieldVal: string) => {
+        if (!fieldVal) return false;
+        const lowerVal = fieldVal.toLowerCase();
+        const normVal = normalize(fieldVal);
+        return lowerVal.includes(term) || normVal.includes(normTerm);
+      };
+
+      return (
+        checkField(p.name) ||
+        checkField(p.group || '') ||
+        checkField(p.category || '') ||
+        checkField(p.manufacturer || '')
+      );
+    });
+  }).sort((a, b) => {
     const parseDate = (v: any) => { if (!v) return 0; if (typeof v?.toDate === 'function') return v.toDate().getTime(); return new Date(v).getTime() || 0; };
     return parseDate(b.updatedAt) - parseDate(a.updatedAt);
   });

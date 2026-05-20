@@ -98,10 +98,41 @@ function ShopContent() {
   const filteredProducts = products.filter(product => {
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
     const isVisible = (product.quantity ?? 0) > 0;
+
+    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    let matchesSearch = true;
+    if (searchTerms.length > 0) {
+      const normalize = (str: string) => {
+        if (!str) return '';
+        return str.toLowerCase()
+          .replace(/sh/g, 'ch')
+          .replace(/s/g, 'c')
+          .replace(/ph/g, 'f')
+          .replace(/k/g, 'c')
+          .replace(/\s/g, '');
+      };
+
+      matchesSearch = searchTerms.every(term => {
+        const normTerm = normalize(term);
+        const checkField = (fieldVal: string) => {
+          if (!fieldVal) return false;
+          const lowerVal = fieldVal.toLowerCase();
+          const normVal = normalize(fieldVal);
+          return lowerVal.includes(term) || normVal.includes(normTerm);
+        };
+
+        return (
+          checkField(product.name) ||
+          checkField(product.group || '') ||
+          checkField(product.category || '') ||
+          checkField(product.manufacturer || '')
+        );
+      });
+    }
+
     return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo && isVisible;
   });
 

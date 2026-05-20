@@ -358,7 +358,39 @@ function AdminProductsContent() {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    if (searchTerms.length === 0) {
+      const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
+      return matchesGroup;
+    }
+
+    const normalize = (str: string) => {
+      if (!str) return '';
+      return str.toLowerCase()
+        .replace(/sh/g, 'ch')
+        .replace(/s/g, 'c')
+        .replace(/ph/g, 'f')
+        .replace(/k/g, 'c')
+        .replace(/\s/g, '');
+    };
+
+    const matchesSearch = searchTerms.every(term => {
+      const normTerm = normalize(term);
+      const checkField = (fieldVal: string) => {
+        if (!fieldVal) return false;
+        const lowerVal = fieldVal.toLowerCase();
+        const normVal = normalize(fieldVal);
+        return lowerVal.includes(term) || normVal.includes(normTerm);
+      };
+
+      return (
+        checkField(p.name) ||
+        checkField(p.group) ||
+        checkField(p.category) ||
+        checkField(p.manufacturer)
+      );
+    });
+
     const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
     return matchesSearch && matchesGroup;
   }).sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));

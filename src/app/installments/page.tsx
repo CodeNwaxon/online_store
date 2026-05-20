@@ -107,14 +107,42 @@ function InstallmentsContent() {
   }, []);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.manufacturer && product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (product.group && product.group.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     const isVisible = (product.quantity ?? 0) > 0;
-    return matchesSearch && matchesGroup && matchesCategory && isVisible;
+
+    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    let matchesSearch = true;
+    if (searchTerms.length > 0) {
+      const normalize = (str: string) => {
+        if (!str) return '';
+        return str.toLowerCase()
+          .replace(/sh/g, 'ch')
+          .replace(/s/g, 'c')
+          .replace(/ph/g, 'f')
+          .replace(/k/g, 'c')
+          .replace(/\s/g, '');
+      };
+
+      matchesSearch = searchTerms.every(term => {
+        const normTerm = normalize(term);
+        const checkField = (fieldVal: string) => {
+          if (!fieldVal) return false;
+          const lowerVal = fieldVal.toLowerCase();
+          const normVal = normalize(fieldVal);
+          return lowerVal.includes(term) || normVal.includes(normTerm);
+        };
+
+        return (
+          checkField(product.name) ||
+          checkField(product.group || '') ||
+          checkField(product.category || '') ||
+          checkField(product.manufacturer || '')
+        );
+      });
+    }
+
+    return matchesGroup && matchesCategory && matchesSearch && isVisible;
   });
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);

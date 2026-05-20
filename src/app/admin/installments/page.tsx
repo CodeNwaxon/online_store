@@ -44,6 +44,67 @@ import {
 } from 'react-icons/fa';
 import Image from 'next/image';
 
+interface PastDueStatus {
+  isPastDue: boolean;
+  daysPastDue: number;
+  isWithinGrace: boolean;
+  graceDaysLeft: number;
+  deadlineDate: Date | null;
+}
+
+const getPastDueStatus = (inst: any, gracePeriodDaysSetting: number = 5): PastDueStatus => {
+  if (inst.status !== 'active') {
+    return { isPastDue: false, daysPastDue: 0, isWithinGrace: false, graceDaysLeft: 0, deadlineDate: null };
+  }
+
+  const payments = inst.payments || [];
+  const pendingPayments = payments.filter((p: any) => p.status === 'pending');
+  if (pendingPayments.length === 0) {
+    return { isPastDue: false, daysPastDue: 0, isWithinGrace: false, graceDaysLeft: 0, deadlineDate: null };
+  }
+
+  const getDeadline = (p: any) => {
+    if (!p.deadline) return null;
+    if (typeof p.deadline.toDate === 'function') return p.deadline.toDate();
+    if (p.deadline.seconds) return new Date(p.deadline.seconds * 1000);
+    return new Date(p.deadline);
+  };
+
+  const sortedPending = pendingPayments
+    .map((p: any) => ({ ...p, parsedDeadline: getDeadline(p) }))
+    .filter((p: any) => p.parsedDeadline !== null)
+    .sort((a: any, b: any) => a.parsedDeadline.getTime() - b.parsedDeadline.getTime());
+
+  if (sortedPending.length === 0) {
+    return { isPastDue: false, daysPastDue: 0, isWithinGrace: false, graceDaysLeft: 0, deadlineDate: null };
+  }
+
+  const firstPending = sortedPending[0];
+  const deadline = firstPending.parsedDeadline;
+  const now = new Date();
+
+  const dDate = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+  const nDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (nDate > dDate) {
+    const diffTime = nDate.getTime() - dDate.getTime();
+    const daysPastDue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const gracePeriod = inst.gracePeriodDays ?? gracePeriodDaysSetting;
+    const isWithinGrace = daysPastDue < gracePeriod;
+    const graceDaysLeft = isWithinGrace ? (gracePeriod - daysPastDue) : 0;
+
+    return {
+      isPastDue: true,
+      daysPastDue,
+      isWithinGrace,
+      graceDaysLeft,
+      deadlineDate: deadline
+    };
+  }
+
+  return { isPastDue: false, daysPastDue: 0, isWithinGrace: false, graceDaysLeft: 0, deadlineDate: deadline };
+};
+
 export default function AdminInstallments() {
   const [activeTab, setActiveTab] = useState<'installments' | 'complaints' | 'settings'>('installments');
   const [installments, setInstallments] = useState<any[]>([]);
@@ -76,7 +137,7 @@ export default function AdminInstallments() {
   });
 
   // Filters for installments
-  const [filter, setFilter] = useState<'all' | 'unsettled' | 'cleared' | 'vip'>('all');
+  const [filter, setFilter] = useState<'all' | 'unsettled' | 'cleared' | 'vip' | 'past_due'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -401,12 +462,46 @@ export default function AdminInstallments() {
   }, [showReceipt]);
 
   const filteredInstallments = installments.filter(inst => {
-    const matchesSearch = (inst.product?.name || inst.productName || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    let matchesSearch = true;
+    if (searchTerms.length > 0) {
+      const normalize = (str: string) => {
+        if (!str) return '';
+        return str.toLowerCase()
+          .replace(/sh/g, 'ch')
+          .replace(/s/g, 'c')
+          .replace(/ph/g, 'f')
+          .replace(/k/g, 'c')
+          .replace(/\s/g, '');
+      };
+
+      matchesSearch = searchTerms.every(term => {
+        const normTerm = normalize(term);
+        const checkField = (fieldVal: string) => {
+          if (!fieldVal) return false;
+          const lowerVal = fieldVal.toLowerCase();
+          const normVal = normalize(fieldVal);
+          return lowerVal.includes(term) || normVal.includes(normTerm);
+        };
+
+        return (
+          checkField(inst.product?.name || '') ||
+          checkField(inst.productName || '') ||
+          checkField(inst.customerName || '') ||
+          checkField(inst.payerInfo?.fullName || '') ||
+          checkField(inst.userEmail || '')
+        );
+      });
+    }
+
     if (!matchesSearch) return false;
 
     if (filter === 'unsettled') return inst.status === 'cancelled' || inst.status === 'cancelling';
     if (filter === 'cleared') return inst.status === 'cleared' || inst.status === 'completed' || (inst.status === 'cancelled' && inst.isRefunded);
     if (filter === 'vip') return inst.status === 'completed';
+    if (filter === 'past_due') {
+      return getPastDueStatus(inst, instSettings.gracePeriodDays).isPastDue;
+    }
     return true;
   });
 
@@ -450,13 +545,17 @@ export default function AdminInstallments() {
           {/* INSTALLMENT FILTERS & SEARCH */}
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between px-4 md:px-0">
             <div className="flex flex-wrap gap-2">
-              {['all', 'unsettled', 'cleared', 'vip'].map((f) => (
+              {['all', 'unsettled', 'cleared', 'vip', 'past_due'].map((f) => (
                 <button
                   key={f}
-                  onClick={() => setFilter(f as any)}
-                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full border text-[0.7rem] md:text-sm font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary'}`}
+                  onClick={() => { setFilter(f as any); setVisibleCards(40); }}
+                  className={`px-3 md:px-4 py-1.5 md:py-2 rounded-full border text-[0.7rem] md:text-sm font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white border-primary shadow-md' : 'bg-card border-border text-muted-foreground hover:border-primary'}`}
                 >
-                  {f === 'unsettled' ? 'Unsettled' : f}
+                  {f === 'all' && 'All'}
+                  {f === 'unsettled' && 'Pending Refund'}
+                  {f === 'cleared' && 'Cleared/Cancelled'}
+                  {f === 'vip' && 'Completed (VIP)'}
+                  {f === 'past_due' && 'Past Due'}
                 </button>
               ))}
             </div>
@@ -552,6 +651,37 @@ export default function AdminInstallments() {
                           Mark as Read
                         </button>
                       )}
+
+                      {(() => {
+                        const status = getPastDueStatus(inst, instSettings.gracePeriodDays);
+                        if (!status.isPastDue) return null;
+
+                        if (status.isWithinGrace) {
+                          return (
+                            <div className="w-full mt-3 p-3 bg-gradient-to-r from-amber-500/10 to-amber-600/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 rounded-md font-bold text-xs flex flex-col items-center gap-1 text-center">
+                              <span className="flex items-center gap-1.5">
+                                <FaExclamationCircle className="text-amber-500 animate-pulse size-3.5" />
+                                5-Day Grace Period
+                              </span>
+                              <span className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-400">
+                                {status.graceDaysLeft} Day{status.graceDaysLeft !== 1 ? 's' : ''} Left
+                              </span>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="w-full mt-3 p-3 bg-gradient-to-r from-red-500/10 to-red-600/15 border-2 border-red-500 text-red-600 dark:text-red-400 rounded-md font-bold text-xs flex flex-col items-center gap-1 text-center shadow-sm">
+                              <span className="flex items-center gap-1.5">
+                                <FaExclamationCircle className="text-red-600 animate-bounce size-3.5" />
+                                OVERDUE LOAN
+                              </span>
+                              <span className="text-[10px] font-extrabold uppercase tracking-wide bg-red-600 text-white px-2 py-0.5 rounded-full mt-0.5">
+                                Past Due Date: {status.daysPastDue} Day{status.daysPastDue !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 ))}
