@@ -271,7 +271,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
 
                     <div className="mt-auto pt-3 border-t border-border grid grid-cols-2 gap-2">
                       {Object.entries(area.prices).map(([size, price]) => (
-                        <div key={size} className="flex justify-between items-center text-xs">
+                        <div key={size} className="flex justify-start gap-2 items-center text-xs">
                           <span className="text-muted-foreground capitalize">{size.replace('-', ' ')}</span>
                           <span className="font-bold">₦{price.toLocaleString()}</span>
                         </div>
