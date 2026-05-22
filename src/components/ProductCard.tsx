@@ -46,7 +46,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   const addItem = useCartStore((state) => state.addItem);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
-  
+
   const theme = cardThemes[index % 12];
 
 
@@ -231,11 +231,16 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             )}
           </div>
           {isAdmin && (
-            <div className={`px-2 py-0.5 rounded-full text-[0.65rem] font-black border transition-colors ${(product.quantity ?? 0) <= 5
-              ? 'bg-red-50 text-red-600 border-red-200'
-              : 'bg-muted text-muted-foreground border-border'
-              }`}>
-              Stock: {product.quantity}
+            <div className="flex flex-col">
+              <div className="text-[0.55rem] text-muted-foreground uppercase">
+                <span className="text-black font-bold">kg: </span>{product.size}
+              </div>
+              <div className={`px-2 py-0.5 rounded-full text-[0.65rem] font-black border transition-colors ${(product.quantity ?? 0) <= 5
+                ? 'bg-red-50 text-red-600 border-red-200'
+                : 'bg-muted text-muted-foreground border-border'
+                }`}>
+                Stock: {product.quantity}
+              </div>
             </div>
           )}
           {!isAdmin && (

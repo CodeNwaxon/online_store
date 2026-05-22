@@ -9,6 +9,8 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc, increment, collection, onSnapshot } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
+import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -37,6 +39,11 @@ export default function Checkout() {
   });
 
   const [siteName, setSiteName] = useState('');
+
+  // Shipping Breakdown State
+  const [shippingBreakdown, setShippingBreakdown] = useState<any>(null);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -91,27 +98,87 @@ export default function Checkout() {
     return areas.filter(a => normalizeCity(a.city).includes(norm));
   }, [formData.city, areas]);
 
-  // Calculate Shipping Cost
+  // Calculate Shipping with New System
+  useEffect(() => {
+    if (deliveryMethod === 'pickup' || !formData.city.trim()) {
+      setShippingBreakdown(null);
+      setShippingError(null);
+      return;
+    }
+
+    const calculateShipping = async () => {
+      setCalculatingShipping(true);
+      setShippingError(null);
+
+      try {
+        // Find matching area
+        const normInput = normalizeCity(formData.city);
+        const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
+
+        if (!matchedArea) {
+          setShippingError('City not found in our delivery areas');
+          setShippingBreakdown(null);
+          setCalculatingShipping(false);
+          return;
+        }
+
+        if (matchedArea.isActive === false) {
+          setShippingError('Pickup only available for this location');
+          setShippingBreakdown(null);
+          setCalculatingShipping(false);
+          return;
+        }
+
+        // Convert cart items to CartItem format
+        const cartItems: CartItem[] = items.map(item => ({
+          id: item.id,
+          name: item.name,
+          size: (item.size || 'medium') as any,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+
+        // Calculate shipping
+        const breakdown = await calculateCartShipping(cartItems, matchedArea.id || normalizeCity(formData.city));
+        setShippingBreakdown(breakdown);
+        setCalculatingShipping(false);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to calculate shipping';
+        setShippingError(message);
+        setShippingBreakdown(null);
+        setCalculatingShipping(false);
+      }
+    };
+
+    calculateShipping();
+  }, [deliveryMethod, formData.city, areas, items]);
+
+  // Calculate Shipping Cost (fallback for compatibility)
   const shippingCost = useMemo(() => {
+    if (shippingBreakdown) return shippingBreakdown.totalShipping;
     if (deliveryMethod === 'pickup') return 0;
     if (!formData.city.trim()) return 0;
-    
+
     const normInput = normalizeCity(formData.city);
     const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
-    if (!matchedArea) return -1; // -1 indicates city not found
-    
-    // Check if area is explicitly set to inactive
-    if (matchedArea.isActive === false) return -2; // -2 indicates office pickup only
+    if (!matchedArea) return -1;
+    if (matchedArea.isActive === false) return -2;
 
     let totalShipping = 0;
-    items.forEach(item => {
-      const size = item.size || 'medium';
-      const costForSize = matchedArea.prices[size] || 0;
-      totalShipping += (costForSize * item.quantity);
-    });
+    const cartItems: CartItem[] = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      size: (item.size || 'medium') as any,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+
+    if (matchedArea) {
+      totalShipping = calculateCartShippingForArea(cartItems, matchedArea).totalShipping;
+    }
 
     return totalShipping;
-  }, [deliveryMethod, formData.city, areas, items]);
+  }, [shippingBreakdown, deliveryMethod, formData.city, areas, items]);
 
   const finalTotalAmount = getTotalPrice() + (shippingCost > 0 ? shippingCost : 0);
 
@@ -328,7 +395,7 @@ export default function Checkout() {
 
   return (
     <div className="py-16">
-      
+
       {/* City Not Found Overlay */}
       {showCityError && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
@@ -379,9 +446,9 @@ export default function Checkout() {
         </div>
 
         <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12 items-start">
-          
+
           <div className="flex flex-col gap-10">
-            
+
             {/* Delivery Method Selection */}
             <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
@@ -417,7 +484,7 @@ export default function Checkout() {
               <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
                 <FaShieldAlt size={24} className="text-primary" /> Customer Information
               </h3>
-              
+
               <div className="flex flex-col gap-5">
                 <div>
                   <label htmlFor="fullName" className="block mb-2 text-sm font-semibold">Full Name</label>
@@ -536,7 +603,7 @@ export default function Checkout() {
                   !formData.city ? (
                     <span className="text-red-700 font-semibold">No Address Selected</span>
                   ) : shippingCost === -1 ? (
-                    <span className="text-red-700 font-semibold">Address Not Found</span>
+                    <span className="text-red-700 font-semibold">City Not Found</span>
                   ) : !formData.address ? (
                     <span className="text-muted-foreground">Calculating...</span>
                   ) : shippingCost === -2 ? (
@@ -548,6 +615,18 @@ export default function Checkout() {
                   )
                 )}
               </div>
+
+              {/* Shipping Breakdown Component */}
+              {deliveryMethod === 'ship' && formData.city && shippingCost > 0 && (
+                <div className="mb-6">
+                  <ShippingBreakdownComponent
+                    breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
+                    isLoading={calculatingShipping}
+                    error={shippingError || undefined}
+                  />
+                </div>
+              )}
+
               <div className="flex justify-between text-xl font-bold border-t border-border pt-6">
                 <span>Total Amount</span>
                 <span className="text-primary">₦{finalTotalAmount.toLocaleString()}</span>
@@ -588,7 +667,7 @@ export default function Checkout() {
                     return;
                   }
                 }
-                
+
                 setShowPaymentOverlay(true);
               }}
               className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
