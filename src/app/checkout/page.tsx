@@ -15,6 +15,7 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
 
   // Delivery State
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
@@ -439,27 +440,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-                <FaCreditCard size={24} className="text-primary" /> Payment Details (Demo)
-              </h3>
-              <div className="flex flex-col gap-5">
-                <div>
-                  <label htmlFor="cardNum" className="block mb-2 text-sm font-semibold">Card Number</label>
-                  <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="expiry" className="block mb-2 text-sm font-semibold">Expiry Date</label>
-                    <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
-                  </div>
-                  <div>
-                    <label htmlFor="cvv" className="block mb-2 text-sm font-semibold">CVV</label>
-                    <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </div>
 
           {/* Order Summary */}
@@ -499,8 +480,15 @@ export default function Checkout() {
               </div>
             </div>
             <button
-              type="submit"
+              type="button"
               disabled={loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2))}
+              onClick={() => {
+                // Validate required fields before showing payment overlay
+                if (!formData.fullName || !formData.phone) return;
+                if (deliveryMethod === 'ship' && (!formData.city || !formData.address)) return;
+                if (deliveryMethod === 'pickup' && !selectedPickupArea) return;
+                setShowPaymentOverlay(true);
+              }}
               className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Processing...' : `Pay ₦${finalTotalAmount.toLocaleString()}`}
@@ -511,6 +499,59 @@ export default function Checkout() {
           </div>
         </form>
       </div>
+
+      {/* Payment Details Overlay */}
+      {showPaymentOverlay && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-3">
+                <FaCreditCard size={24} className="text-primary" /> Payment Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPaymentOverlay(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground text-sm font-bold transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleCheckout} className="flex flex-col gap-5">
+              <div>
+                <label htmlFor="cardNum" className="block mb-2 text-sm font-semibold">Card Number</label>
+                <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="expiry" className="block mb-2 text-sm font-semibold">Expiry Date</label>
+                  <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                </div>
+                <div>
+                  <label htmlFor="cvv" className="block mb-2 text-sm font-semibold">CVV</label>
+                  <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4 mt-2">
+                <div className="flex justify-between text-lg font-bold mb-4">
+                  <span>Total</span>
+                  <span className="text-primary">₦{finalTotalAmount.toLocaleString()}</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {loading ? 'Processing...' : 'Confirm & Pay'}
+                </button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                <FaShieldAlt className="inline mr-1" /> Secure payment powered by {siteName}.
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
