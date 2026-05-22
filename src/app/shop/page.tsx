@@ -159,7 +159,7 @@ function ShopContent() {
             <h1 className="text-4xl font-bold mb-4">Our Collection</h1>
             <p className="text-muted-foreground">Explore our range of premium African-inspired goods.</p>
           </div>
-          <Link href="/installments" className="bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
+          <Link href="/installments" className="text-xs md:text-base bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
             <FaCreditCard /> Installmental Payment
           </Link>
         </header>
