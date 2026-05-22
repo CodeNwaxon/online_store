@@ -47,7 +47,7 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
       <div className="hidden md:block">
         <div className="grid grid-cols-4 gap-4 transition-all duration-500 ease-in-out">
           {displayedProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} priority={index < 4} />
+            <ProductCard key={product.id} product={product} priority={index < 4} index={startIndex + index} />
           ))}
         </div>
 
@@ -80,7 +80,7 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
         >
           {products.map((product, index) => (
             <div key={product.id} className="min-w-[11rem] w-[11rem] shrink-0 snap-start">
-              <ProductCard product={product} priority={index < 2} />
+              <ProductCard product={product} priority={index < 2} index={index} />
             </div>
           ))}
         </div>

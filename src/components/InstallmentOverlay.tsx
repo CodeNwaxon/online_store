@@ -98,8 +98,12 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   if (deliveryMethod === 'ship' && city.trim()) {
     const matchedArea = areas.find(a => a.city.toLowerCase() === city.trim().toLowerCase());
     if (matchedArea) {
-      const pSize = product.size || 'medium';
-      shippingCost = matchedArea.prices[pSize] || 0;
+      if (matchedArea.isActive === false) {
+        shippingCost = -2;
+      } else {
+        const pSize = product.size || 'medium';
+        shippingCost = matchedArea.prices[pSize] || 0;
+      }
     } else {
       shippingCost = -1; // Not found
     }
@@ -133,7 +137,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   };
 
   const handleProceed = async () => {
-    if (deliveryMethod === 'ship' && shippingCost === -1) return;
+    if (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) return;
     if (deliveryMethod === 'pickup' && !selectedPickupArea) {
       toast.error('Please select a pickup location.');
       return;
@@ -331,6 +335,29 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
             <button onClick={() => setCity('')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
               Go Back
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Office Pickup Only Overlay in Installment Modal */}
+      {deliveryMethod === 'ship' && shippingCost === -2 && (
+        <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200 shadow-2xl">
+            <div className="w-16 h-16 mx-auto mb-4 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Office Pick-up Only</h3>
+            <p className="text-muted-foreground mb-6">
+              Only office pick-up is available for this city.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button type="button" onClick={() => setDeliveryMethod('pickup')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+                Switch to Pick-up
+              </button>
+              <button type="button" onClick={() => setCity('')} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
+                Change City
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -588,7 +615,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           </div>
 
           <button
-            disabled={isProcessing || (deliveryMethod === 'ship' && shippingCost === -1)}
+            disabled={isProcessing || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2))}
             onClick={handleProceed}
             className="bg-primary hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-auto w-full p-4 text-lg flex items-center justify-center gap-3 rounded-lg font-bold transition-colors"
           >

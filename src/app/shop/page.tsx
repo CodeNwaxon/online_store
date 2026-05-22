@@ -19,7 +19,7 @@ function ShopContent() {
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [visibleCount, setVisibleCount] = useState(40);
+  const [visibleCount, setVisibleCount] = useState(42);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
   const { likedProductIds } = useLikeStore();
@@ -172,7 +172,7 @@ function ShopContent() {
                 <button
                   key={group}
                   onClick={() => setSelectedGroup(group)}
-                  className={`px-5 py-2 text-xs md:text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {group}
                 </button>
@@ -180,14 +180,14 @@ function ShopContent() {
 
               <button
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
-                className={`px-4 py-2 text-xs md:text-sm border rounded-md flex items-center gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 Promos
               </button>
 
               <button
                 onClick={() => setShowLikedOnly(!showLikedOnly)}
-                className={`px-4 py-2 text-xs md:text-sm border rounded-md flex items-center gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
                 Favorites
@@ -215,7 +215,7 @@ function ShopContent() {
             <div className="flex gap-3 flex-wrap p-4 bg-muted rounded-[var(--radius)] border border-border animate-[fadeIn_0.3s_ease-out]">
               <button
                 onClick={() => setSelectedCategory('All')}
-                className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                className={`px-3 py-1 md:px-4 md:py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
               >
                 All {selectedGroup}
               </button>
@@ -223,7 +223,7 @@ function ShopContent() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                  className={`px-3 py-1 md:px-4 md:py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
                   {cat}
                 </button>
@@ -237,7 +237,7 @@ function ShopContent() {
           <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
             {displayedProducts.map((product, index) => (
               <div key={product.id} className="mb-4  md:mb-8">
-                <ProductCard product={product} priority={index < 4} />
+                <ProductCard product={product} priority={index < 4} index={index} />
               </div>
             ))}
           </div>
@@ -261,7 +261,7 @@ function ShopContent() {
             </div>
             <button
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
-              onClick={() => setVisibleCount(prev => prev + 40)}
+              onClick={() => setVisibleCount(prev => prev + 42)}
             >
               <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <span>Load More Products</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -12,10 +12,29 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import WarrantyModal from '@/components/WarrantyModal';
 
+const cardThemes = [
+  { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
+  { accent: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700', lightBg: 'bg-blue-50', lightBorder: 'border-blue-100' },
+  { accent: 'text-rose-600', btn: 'bg-rose-600 hover:bg-rose-700', lightBg: 'bg-rose-50', lightBorder: 'border-rose-100' },
+  { accent: 'text-teal-600', btn: 'bg-teal-600 hover:bg-teal-700', lightBg: 'bg-teal-50', lightBorder: 'border-teal-100' },
+  { accent: 'text-amber-600', btn: 'bg-amber-600 hover:bg-amber-700', lightBg: 'bg-amber-50', lightBorder: 'border-amber-100' },
+  { accent: 'text-violet-600', btn: 'bg-violet-600 hover:bg-violet-700', lightBg: 'bg-violet-50', lightBorder: 'border-violet-100' },
+  { accent: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700', lightBg: 'bg-emerald-50', lightBorder: 'border-emerald-100' },
+  { accent: 'text-orange-600', btn: 'bg-orange-600 hover:bg-orange-700', lightBg: 'bg-orange-50', lightBorder: 'border-orange-100' },
+  { accent: 'text-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700', lightBg: 'bg-indigo-50', lightBorder: 'border-indigo-100' },
+  { accent: 'text-fuchsia-600', btn: 'bg-fuchsia-600 hover:bg-fuchsia-700', lightBg: 'bg-fuchsia-50', lightBorder: 'border-fuchsia-100' },
+  { accent: 'text-lime-600', btn: 'bg-lime-600 hover:bg-lime-700', lightBg: 'bg-lime-50', lightBorder: 'border-lime-100' },
+  { accent: 'text-cyan-600', btn: 'bg-cyan-600 hover:bg-cyan-700', lightBg: 'bg-cyan-50', lightBorder: 'border-cyan-100' },
+];
+
 
 export default function ProductDetail() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+  const themeParam = searchParams.get('theme');
+  const themeIndex = themeParam ? parseInt(themeParam, 10) : 0;
+  const theme = !isNaN(themeIndex) ? cardThemes[themeIndex % 12] : cardThemes[0];
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
@@ -140,7 +159,7 @@ export default function ProductDetail() {
                   <button
                     key={index}
                     onClick={() => setActiveImageIndex(index)}
-                    className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? 'border-2 border-primary' : 'border border-border'}`}
+                    className={`relative w-[80px] h-[80px] rounded overflow-hidden shrink-0 transition-colors ${activeImageIndex === index ? `border-2 border-current ${theme.accent}` : 'border border-border'}`}
                   >
                     <Image src={img} alt={`${product.name} ${index}`} fill className="object-contain" sizes="(max-width: 768px) 100vw, 50vw" />
                   </button>
@@ -151,17 +170,17 @@ export default function ProductDetail() {
 
           {/* Details Section */}
           <div>
-            <div className="text-sm text-primary font-semibold uppercase mb-2">
+            <div className={`text-sm font-semibold uppercase mb-2 ${theme.accent}`}>
               {product.group} / {product.category}
             </div>
-            <h1 className="text-xl md:text-3xl font-bold mb-2">{product.name}</h1>
+            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${theme.accent}`}>{product.name}</h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
                 Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>
               </div>
             )}
 
-            <div className="text-2xl font-bold text-primary mb-8">
+            <div className={`text-2xl font-bold mb-8 ${theme.accent}`}>
               ₦{product.price.toLocaleString()}
             </div>
 
@@ -183,7 +202,7 @@ export default function ProductDetail() {
             ) : (
               <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
                 <button
-                  className="text-sm md:text-base col-span-1 md:flex-[2] order-1 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors"
+                  className={`text-sm md:text-base col-span-1 md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={() => addItem(product)}
                 >
                   <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
@@ -219,7 +238,7 @@ export default function ProductDetail() {
                   <strong>Warranty:</strong>
                   <button
                     onClick={() => setShowWarrantyModal(true)}
-                    className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full hover:bg-emerald-200 transition-colors"
+                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full transition-colors border ${theme.accent} ${theme.lightBg} ${theme.lightBorder} hover:opacity-80`}
                   >
                     ✓ {product.warranty} {!isNaN(Number(product.warranty)) && (Number(product.warranty) > 1 ? 'years' : 'year')}
                   </button>

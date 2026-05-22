@@ -240,7 +240,7 @@ export default function Home() {
                       <div className="flex-1 flex justify-center items-center h-full max-md:h-auto w-full max-md:px-3 max-md:mt-4">
                         <div className="relative w-full aspect-square md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero max-md:rounded-sm">
                           {slide.isPromo && (
-                            <span className="absolute top-4 left-4 bg-secondary text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm flex flex-col items-center">
+                            <span className={`absolute top-4 left-4 ${theme.viewBtn.split(' ')[0]} text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm flex flex-col items-center`}>
                               <span>SPECIAL PROMO</span>
                               {slide.promoEndDate && (
                                 <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded-sm mt-1 border border-white/20 whitespace-nowrap">

@@ -70,6 +70,9 @@ export default function Checkout() {
     
     const matchedArea = areas.find(a => a.city.toLowerCase() === formData.city.trim().toLowerCase());
     if (!matchedArea) return -1; // -1 indicates city not found
+    
+    // Check if area is explicitly set to inactive
+    if (matchedArea.isActive === false) return -2; // -2 indicates office pickup only
 
     let totalShipping = 0;
     items.forEach(item => {
@@ -85,7 +88,7 @@ export default function Checkout() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (deliveryMethod === 'ship' && shippingCost === -1) return;
+    if (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) return;
     if (deliveryMethod === 'pickup' && !selectedPickupArea) return;
 
     setLoading(true);
@@ -315,6 +318,29 @@ export default function Checkout() {
         </div>
       )}
 
+      {/* Office Pickup Only Overlay */}
+      {deliveryMethod === 'ship' && shippingCost === -2 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
+            <div className="w-16 h-16 mx-auto mb-4 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Office Pick-up Only</h3>
+            <p className="text-muted-foreground mb-6">
+              Only office pick-up is available for this city.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button type="button" onClick={() => setDeliveryMethod('pickup')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+                Switch to Pick-up
+              </button>
+              <button type="button" onClick={() => setFormData({...formData, city: ''})} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
+                Change City
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="mb-12">
           <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-4 hover:text-foreground transition-colors w-fit">
@@ -474,8 +500,8 @@ export default function Checkout() {
             </div>
             <button
               type="submit"
-              disabled={loading || (deliveryMethod === 'ship' && shippingCost === -1)}
-              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading || (deliveryMethod === 'ship' && shippingCost === -1) ? 'opacity-70 cursor-not-allowed' : ''}`}
+              disabled={loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2))}
+              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Processing...' : `Pay ₦${finalTotalAmount.toLocaleString()}`}
             </button>

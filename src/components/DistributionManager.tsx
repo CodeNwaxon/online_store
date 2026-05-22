@@ -19,6 +19,7 @@ interface Area {
     'small': number;
     'extra-small': number;
   };
+  isActive?: boolean;
 }
 
 interface DistributionManagerProps {
@@ -30,7 +31,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
   const [areas, setAreas] = useState<Area[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [editFormData, setEditFormData] = useState({ state: '', city: '', address: '', mapLocation: '' });
+  const [editFormData, setEditFormData] = useState({ state: '', city: '', address: '', mapLocation: '', isActive: true });
   const [editPrices, setEditPrices] = useState({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '' });
   const [editLoading, setEditLoading] = useState(false);
 
@@ -44,6 +45,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
     city: '',
     address: '',
     mapLocation: '',
+    isActive: true,
   });
 
   const [prices, setPrices] = useState({
@@ -103,13 +105,14 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
           'medium': Number(prices['medium']),
           'small': Number(prices['small']),
           'extra-small': Number(prices['extra-small'])
-        }
+        },
+        isActive: formData.isActive
       };
 
       await addDoc(collection(db, 'distribution_areas'), newArea);
       toast.success('Area created successfully!');
       setIsCreating(false);
-      setFormData({ state: '', city: '', address: '', mapLocation: '' });
+      setFormData({ state: '', city: '', address: '', mapLocation: '', isActive: true });
       setPrices({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '' });
     } catch (error) {
       console.error("Error creating area:", error);
@@ -130,7 +133,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
 
   const openEditArea = (area: Area) => {
     setEditingArea(area);
-    setEditFormData({ state: area.state, city: area.city, address: area.address, mapLocation: area.mapLocation });
+    setEditFormData({ state: area.state, city: area.city, address: area.address, mapLocation: area.mapLocation, isActive: area.isActive ?? true });
     setEditPrices({
       'extra-large': area.prices['extra-large'].toString(),
       'large': area.prices['large'].toString(),
@@ -156,7 +159,8 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
           'medium': Number(editPrices['medium']),
           'small': Number(editPrices['small']),
           'extra-small': Number(editPrices['extra-small']),
-        }
+        },
+        isActive: editFormData.isActive
       });
       toast.success('Area updated successfully!');
       setEditingArea(null);
@@ -219,6 +223,16 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                     <label className="block text-xs font-bold mb-1">Google Map Location Link</label>
                     <input value={formData.mapLocation} onChange={e => setFormData({ ...formData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
                   </div>
+                  <div className="md:col-span-2 flex items-center gap-2 mt-2">
+                    <input 
+                      type="checkbox" 
+                      id="isActive" 
+                      checked={formData.isActive} 
+                      onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <label htmlFor="isActive" className="text-sm font-bold cursor-pointer">Active (Enable Shipping for this Area)</label>
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4 mt-4">
@@ -265,8 +279,13 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                     </div>
 
                     <div className="mb-3 pr-8">
-                      <h4 className="text-xs font-bold text-primary uppercase">{area.city}, {area.state}</h4>
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{area.address}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-xs font-bold text-primary uppercase">{area.city}, {area.state}</h4>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm ${area.isActive !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                          {area.isActive !== false ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{area.address}</p>
                     </div>
 
                     <div className="mt-auto pt-3 border-t border-border grid grid-cols-2 gap-2">
@@ -311,6 +330,16 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold mb-1">Google Map Location Link</label>
                   <input value={editFormData.mapLocation} onChange={e => setEditFormData({ ...editFormData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
+                </div>
+                <div className="md:col-span-2 flex items-center gap-2 mt-2">
+                  <input 
+                    type="checkbox" 
+                    id="editIsActive" 
+                    checked={editFormData.isActive} 
+                    onChange={e => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <label htmlFor="editIsActive" className="text-sm font-bold cursor-pointer">Active (Enable Shipping for this Area)</label>
                 </div>
               </div>
               <div className="border-t border-border pt-4">
