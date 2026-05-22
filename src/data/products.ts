@@ -18,6 +18,7 @@ export interface Product {
   quantity?: number;
   group?: string;
   promoEndDate?: string;
+  size?: string;
   warranty?: string;
 }
 

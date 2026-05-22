@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/data/products';
-import { FaTimes, FaCreditCard, FaUser, FaPhone } from 'react-icons/fa';
+import { FaTimes, FaCreditCard, FaUser, FaPhone, FaMapMarkerAlt, FaTruck } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, onSnapshot, doc, writeBatch } from 'firebase/firestore';
@@ -23,9 +23,16 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [userEmail, setUserEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
   const [loanStatus, setLoanStatus] = useState<'checking' | 'none' | 'active' | 'cancelling'>('checking');
   const [instSettings, setInstSettings] = useState<any>(null);
   const router = useRouter();
+
+  // Delivery State
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
+  const [areas, setAreas] = useState<any[]>([]);
+  const [selectedPickupArea, setSelectedPickupArea] = useState<string>('');
 
   useEffect(() => {
     // Real-time settings listener
@@ -44,6 +51,10 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       }
     });
 
+    const unsubAreas = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
+      setAreas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
     if (auth.currentUser?.email) {
       setUserEmail(auth.currentUser.email);
       checkExistingLoan(auth.currentUser.email);
@@ -51,7 +62,10 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       setLoanStatus('none');
     }
 
-    return () => unsubSettings();
+    return () => {
+      unsubSettings();
+      unsubAreas();
+    };
   }, []);
 
   const checkExistingLoan = async (email: string) => {
@@ -78,7 +92,21 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const currentPlanConfig = plan === instSettings.shortPlan.months ? instSettings.shortPlan : instSettings.longPlan;
   const increaseRate = currentPlanConfig.increase / 100;
   const increaseAmount = product.price * increaseRate;
-  const totalAmount = product.price + increaseAmount;
+
+  // Shipping calculation
+  let shippingCost = 0;
+  if (deliveryMethod === 'ship' && city.trim()) {
+    const matchedArea = areas.find(a => a.city.toLowerCase() === city.trim().toLowerCase());
+    if (matchedArea) {
+      const pSize = product.size || 'medium';
+      shippingCost = matchedArea.prices[pSize] || 0;
+    } else {
+      shippingCost = -1; // Not found
+    }
+  }
+
+  // Base + Interest + Shipping
+  const totalAmount = product.price + increaseAmount + (shippingCost > 0 ? shippingCost : 0);
 
   // Down payment rules - based on price threshold
   const applicableRate = product.price >= (instSettings.downpaymentThreshold || 1000000)
@@ -105,6 +133,12 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   };
 
   const handleProceed = async () => {
+    if (deliveryMethod === 'ship' && shippingCost === -1) return;
+    if (deliveryMethod === 'pickup' && !selectedPickupArea) {
+      toast.error('Please select a pickup location.');
+      return;
+    }
+
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));
 
     if (!fullName || fullName.length < 3) {
@@ -176,12 +210,13 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           userEmail: userEmail || currentUser.email,
           customerName: fullName,
           customerPhone: phone,
+          deliveryAddress: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${address}, ${city}`,
           productId: product.id,
           productName: product.name,
           productCategory: product.category,
           productImage: product.image,
           basePrice: product.price,
-          shippingFee: product.shipping || 0,
+          shippingFee: shippingCost > 0 ? shippingCost : 0,
           totalAmount: totalAmount,
           monthlyAmount: recalculatedMonthlyAmount,
           planMonths: plan,
@@ -281,6 +316,25 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-1">
+      
+      {/* City Not Found Overlay in Installment Modal */}
+      {deliveryMethod === 'ship' && shippingCost === -1 && (
+        <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200 shadow-2xl">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">City Not Found</h3>
+            <p className="text-muted-foreground mb-6">
+              City not found for now!!!! We will get to your city soon.
+            </p>
+            <button onClick={() => setCity('')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-background rounded-[var(--radius)] w-full max-w-[1000px] max-h-[90vh] overflow-y-auto relative grid grid-cols-1 md:grid-cols-2 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <button
           onClick={onClose}
@@ -317,45 +371,79 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           <p className="text-muted-foreground mb-6">{product.description}</p>
 
           <div className="mb-8">
-            <div className="flex justify-between mb-2">
+            <div className="flex justify-between mb-2 text-sm">
               <span>Base Price</span>
               <span className="font-bold">{formatCurrency(product.price)}</span>
             </div>
-            <div className="flex justify-between mb-2 text-primary">
+            <div className="flex justify-between mb-2 text-sm text-primary">
               <span>{plan}-months Plan Interest ({increaseRate * 100}%)</span>
               <span className="font-bold">+ {formatCurrency(increaseAmount)}</span>
             </div>
+            {deliveryMethod === 'ship' && shippingCost > 0 && (
+              <div className="flex justify-between mb-2 text-sm text-primary">
+                <span>Shipping Fee</span>
+                <span className="font-bold">+ {formatCurrency(shippingCost)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-2 border-t border-border text-xl font-bold">
               <span>Total Plan Cost</span>
               <span>{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 
+          {/* Delivery Method Selection */}
+          <div className="mb-6">
+            <h3 className="font-bold mb-3">Delivery Options</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod('pickup')}
+                className={`p-3 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'pickup' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              >
+                <div className="absolute top-1 right-1 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                  Free
+                </div>
+                <FaMapMarkerAlt className={`mb-2 text-xl ${deliveryMethod === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <h4 className="font-bold text-sm mb-1">Office Pick Up</h4>
+                <p className="text-[10px] text-muted-foreground leading-tight">Pick up your item from our locations.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod('ship')}
+                className={`p-3 border-2 rounded-xl text-left transition-all ${deliveryMethod === 'ship' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+              >
+                <FaTruck className={`mb-2 text-xl ${deliveryMethod === 'ship' ? 'text-primary' : 'text-muted-foreground'}`} />
+                <h4 className="font-bold text-sm mb-1">Ship to Address</h4>
+                <p className="text-[10px] text-muted-foreground leading-tight">We deliver right to your doorstep.</p>
+              </button>
+            </div>
+          </div>
+
           {/* Customer Info Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <h3 className="font-bold mb-2">Full Name</h3>
+              <h3 className="text-xs font-bold mb-1">Full Name</h3>
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Your Full Name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full py-3 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                  className="w-full py-2.5 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
                   required
                 />
                 <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs" />
               </div>
             </div>
             <div>
-              <h3 className="font-bold mb-2">Phone Number</h3>
+              <h3 className="text-xs font-bold mb-1">Phone Number</h3>
               <div className="relative">
                 <input
                   type="tel"
-                  placeholder="080... or +234..."
+                  placeholder="080..."
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full py-3 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                  className="w-full py-2.5 pr-4 pl-10 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
                   required
                 />
                 <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs" />
@@ -363,22 +451,65 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
             </div>
           </div>
 
-          {/* Email Section */}
-          <div className="mb-6">
-            <h3 className="font-bold mb-2">Account Email</h3>
-            <input
-              type="email"
-              readOnly
-              value={userEmail}
-              className="w-full p-3 rounded-lg border border-border text-sm bg-muted text-muted-foreground cursor-not-allowed outline-none"
-            />
-            <p className="text-[0.65rem] text-muted-foreground mt-1">
-              * Linked to your account for receipts and tracking.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="md:col-span-2">
+              <h3 className="text-xs font-bold mb-1">Account Email</h3>
+              <input
+                type="email"
+                readOnly
+                value={userEmail}
+                className="w-full p-2.5 rounded-lg border border-border text-sm bg-muted text-muted-foreground cursor-not-allowed outline-none"
+              />
+            </div>
+            
+            {deliveryMethod === 'ship' ? (
+              <>
+                <div>
+                  <h3 className="text-xs font-bold mb-1">City</h3>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ikeja"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full py-2.5 px-3 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold mb-1">House Address</h3>
+                  <input
+                    type="text"
+                    placeholder="Full address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full py-2.5 px-3 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="md:col-span-2">
+                <h3 className="text-xs font-bold mb-1">Select Pickup Location</h3>
+                <select
+                  required
+                  value={selectedPickupArea}
+                  onChange={(e) => setSelectedPickupArea(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
+                >
+                  <option value="">Select a location...</option>
+                  {areas.map(area => (
+                    <option key={area.id} value={`${area.address}, ${area.city}, ${area.state}`}>
+                      {area.city}, {area.state} - {area.address}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
+
           {/* Down Payment Section */}
-          <div className="mb-8">
+          <div className="mb-8 border-t border-border pt-6">
             <h3 className="font-bold mb-4">Enter Down Payment</h3>
 
             {downPaymentDisplay && Number(parseWithCommas(downPaymentDisplay)) < minRequiredDownPayment && (
@@ -457,7 +588,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           </div>
 
           <button
-            disabled={isProcessing}
+            disabled={isProcessing || (deliveryMethod === 'ship' && shippingCost === -1)}
             onClick={handleProceed}
             className="bg-primary hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-auto w-full p-4 text-lg flex items-center justify-center gap-3 rounded-lg font-bold transition-colors"
           >

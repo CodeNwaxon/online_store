@@ -2,14 +2,14 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
-  query, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
   where,
   onSnapshot,
   getDoc,
@@ -20,6 +20,7 @@ import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaC
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import { useSearchParams, useRouter } from 'next/navigation';
+import DistributionManager from '@/components/DistributionManager';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -73,16 +74,17 @@ function AdminProductsContent() {
   const [warranty, setWarranty] = useState('');
   const [rdpPrice, setRdpPrice] = useState('');
   const [productCode, setProductCode] = useState('');
-  
+  const [size, setSize] = useState('');
+
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
-  
+
   // Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState('All');
   const [visibleCount, setVisibleCount] = useState(40);
-  
+
   // Meta lists
   const [groups, setGroups] = useState<string[]>(['ELECTRONICS', 'FURNITURE']);
   const [categoriesByGroup, setCategoriesByGroup] = useState<Record<string, string[]>>({
@@ -99,15 +101,18 @@ function AdminProductsContent() {
   // Delete confirmation state
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
+  // Distribution Manager State
+  const [isDistributionOpen, setIsDistributionOpen] = useState(false);
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), async (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      
+
       // Auto-remove expired promos
       const now = new Date();
-      const expiredPromos = prods.filter((p: any) => 
-        p.isPromo && 
-        p.promoEndDate && 
+      const expiredPromos = prods.filter((p: any) =>
+        p.isPromo &&
+        p.promoEndDate &&
         new Date(p.promoEndDate) < now
       );
 
@@ -135,11 +140,11 @@ function AdminProductsContent() {
       });
 
       setProducts(sortedProds);
-      
+
       // Dynamically extract groups and categories from products to stay updated
       const newMap: Record<string, string[]> = { ...categoriesByGroup };
       const uniqueGroups = Array.from(new Set(prods.map((p: any) => p.group))).filter(Boolean);
-      
+
       uniqueGroups.forEach((g: any) => {
         const groupUpper = g.toUpperCase();
         if (!newMap[groupUpper]) newMap[groupUpper] = [];
@@ -147,7 +152,7 @@ function AdminProductsContent() {
         newMap[groupUpper] = Array.from(new Set([...newMap[groupUpper], ...catsForGroup as string[]]));
       });
 
-      setGroups(Array.from(new Set([...groups, ...uniqueGroups.map((g:any) => g.toUpperCase())])));
+      setGroups(Array.from(new Set([...groups, ...uniqueGroups.map((g: any) => g.toUpperCase())])));
       setCategoriesByGroup(newMap);
     }, (error) => {
       console.warn("Products listener error:", error);
@@ -220,7 +225,7 @@ function AdminProductsContent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
+
     if (images.length + files.length > 4) {
       toast.error('Maximum 4 images allowed');
       return;
@@ -249,6 +254,7 @@ function AdminProductsContent() {
     setWarranty('');
     setRdpPrice('');
     setProductCode('');
+    setSize('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -266,47 +272,51 @@ function AdminProductsContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-// Basic required field validation
-if (!name.trim()) {
-  toast.error('Product name is required.');
-  return;
-}
-if (!group) {
-  toast.error('Please select a group.');
-  return;
-}
-if (!category) {
-  toast.error('Please select a category.');
-  return;
-}
-if (!price.trim()) {
-  toast.error('Sales price is required.');
-  return;
-}
-if (!rdpPrice.trim()) {
-  toast.error('RDP price (Cost Price) is required.');
-  return;
-}
+    // Basic required field validation
+    if (!name.trim()) {
+      toast.error('Product name is required.');
+      return;
+    }
+    if (!group) {
+      toast.error('Please select a group.');
+      return;
+    }
+    if (!category) {
+      toast.error('Please select a category.');
+      return;
+    }
+    if (!price.trim()) {
+      toast.error('Sales price is required.');
+      return;
+    }
+    if (!rdpPrice.trim()) {
+      toast.error('RDP price (Cost Price) is required.');
+      return;
+    }
+    if (!size) {
+      toast.error('Please select a product size.');
+      return;
+    }
 
-// Duplicate product code check
-const isCodeDuplicate = productCode.trim() !== '' && products.some(p =>
-  p.id !== editingId &&
-  p.productCode &&
-  p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase()
-);
-if (isCodeDuplicate) {
-  toast.error('This product code has already been added to another product.');
-  return;
-}
+    // Duplicate product code check
+    const isCodeDuplicate = productCode.trim() !== '' && products.some(p =>
+      p.id !== editingId &&
+      p.productCode &&
+      p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase()
+    );
+    if (isCodeDuplicate) {
+      toast.error('This product code has already been added to another product.');
+      return;
+    }
 
-// Price relationship validation
-const parsedRdp = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
-const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
-if (parsedRdp > parsedPrice) {
-  toast.error('RDP Price (Cost Price) cannot be higher than Sales Price (Selling Price).');
-  return;
-}
-    
+    // Price relationship validation
+    const parsedRdp = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+    const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
+    if (parsedRdp > parsedPrice) {
+      toast.error('RDP Price (Cost Price) cannot be higher than Sales Price (Selling Price).');
+      return;
+    }
+
 
 
     if (images.length === 0) {
@@ -319,11 +329,11 @@ if (parsedRdp > parsedPrice) {
       // 1. Upload files to Cloudinary
       const uploadedUrls = await Promise.all(images.map(async (img) => {
         if (img.type === 'url') return img.value as string;
-        
+
         const formData = new FormData();
         formData.append('file', img.value);
         formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-        
+
         const res = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
           { method: 'POST', body: formData }
@@ -344,6 +354,7 @@ if (parsedRdp > parsedPrice) {
         isPromo,
         oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
         promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
+        size: size || 'medium',
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: manufacturer.trim() || 'Unknown',
@@ -389,6 +400,7 @@ if (parsedRdp > parsedPrice) {
     setWarranty(product.warranty || '');
     setRdpPrice(product.rdpPrice ? formatPriceInput(product.rdpPrice.toString()) : '');
     setProductCode(product.productCode || '');
+    setSize(product.size || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -451,12 +463,20 @@ if (parsedRdp > parsedPrice) {
 
   return (
     <div className="space-y-8 md:space-y-12">
-      <header className="px-4 md:px-0">
+      <header className="px-4 md:px-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Product Management</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage your store inventory and promos.</p>
         </div>
+        <button
+          onClick={() => setIsDistributionOpen(true)}
+          className="bg-secondary text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-secondary/90 transition-colors"
+        >
+          Distribution fee
+        </button>
       </header>
+
+      <DistributionManager isOpen={isDistributionOpen} onClose={() => setIsDistributionOpen(false)} />
 
       {/* PRODUCT FORM */}
       <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
@@ -502,30 +522,29 @@ if (parsedRdp > parsedPrice) {
                   <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Code already added</span>
                 )}
               </label>
-              <input 
-                required 
-                value={productCode} 
-                onChange={e => setProductCode(e.target.value)} 
-                type="text" 
+              <input
+                required
+                value={productCode}
+                onChange={e => setProductCode(e.target.value)}
+                type="text"
                 placeholder="e.g. ELEC-AC-001"
-                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${
-                  productCode.trim() !== '' && products.some(p => p.id !== editingId && p.productCode && p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase())
-                    ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
-                    : 'border-teal-300 focus:border-teal-500'
-                }`}
+                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${productCode.trim() !== '' && products.some(p => p.id !== editingId && p.productCode && p.productCode.trim().toUpperCase() === productCode.trim().toUpperCase())
+                  ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                  : 'border-teal-300 focus:border-teal-500'
+                  }`}
               />
             </div>
 
             {/* RDP Price (Cost Price) */}
             <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold text-red-700">RDP Price (Cost Price) (₦)</label>
-              <input 
-                required 
-                value={rdpPrice} 
-                onChange={e => setRdpPrice(formatPriceInput(e.target.value))} 
-                type="text" 
+              <input
+                required
+                value={rdpPrice}
+                onChange={e => setRdpPrice(formatPriceInput(e.target.value))}
+                type="text"
                 placeholder="e.g. 40,000"
-                className="w-full p-3 rounded-md border border-red-300 bg-background text-sm focus:border-red-500 outline-none transition-all font-bold" 
+                className="w-full p-3 rounded-md border border-red-300 bg-background text-sm focus:border-red-500 outline-none transition-all font-bold"
               />
             </div>
 
@@ -537,17 +556,16 @@ if (parsedRdp > parsedPrice) {
                   <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ RDP Price cannot be higher than Sales Price</span>
                 )}
               </label>
-              <input 
-                required 
-                value={price} 
-                onChange={e => setPrice(formatPriceInput(e.target.value))} 
-                type="text" 
+              <input
+                required
+                value={price}
+                onChange={e => setPrice(formatPriceInput(e.target.value))}
+                type="text"
                 placeholder="e.g. 50,000"
-                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${
-                  rdpPrice.trim() !== '' && price.trim() !== '' && (parseFloat(rdpPrice.replace(/,/g, '')) || 0) > (parseFloat(price.replace(/,/g, '')) || 0)
-                    ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
-                    : 'border-primary/30 focus:border-primary'
-                }`}
+                className={`w-full p-3 rounded-md border bg-background text-sm outline-none transition-all font-bold ${rdpPrice.trim() !== '' && price.trim() !== '' && (parseFloat(rdpPrice.replace(/,/g, '')) || 0) > (parseFloat(price.replace(/,/g, '')) || 0)
+                  ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                  : 'border-primary/30 focus:border-primary'
+                  }`}
               />
             </div>
 
@@ -561,16 +579,16 @@ if (parsedRdp > parsedPrice) {
               </label>
               {isAddingGroup ? (
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     autoFocus
-                    placeholder="Type new group name..." 
-                    value={newGroupName} 
-                    onChange={e => setNewGroupName(e.target.value)} 
-                    className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm" 
+                    placeholder="Type new group name..."
+                    value={newGroupName}
+                    onChange={e => setNewGroupName(e.target.value)}
+                    className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm"
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => { if(newGroupName){ const formatted = formatStructure(newGroupName); setGroup(formatted); setGroups([...groups, formatted]); setIsAddingGroup(false); } }}
+                  <button
+                    type="button"
+                    onClick={() => { if (newGroupName) { const formatted = formatStructure(newGroupName); setGroup(formatted); setGroups([...groups, formatted]); setIsAddingGroup(false); } }}
                     className="bg-primary text-white px-4 rounded-md text-xs font-bold"
                   >
                     Add
@@ -588,10 +606,10 @@ if (parsedRdp > parsedPrice) {
             <div className="space-y-2">
               <label className="text-sm font-bold flex justify-between items-center">
                 Category
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   disabled={!group}
-                  onClick={() => setIsAddingCategory(!isAddingCategory)} 
+                  onClick={() => setIsAddingCategory(!isAddingCategory)}
                   className="text-primary text-[0.7rem] flex items-center gap-1 hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   <FaPlus size={10} /> {isAddingCategory ? 'Cancel' : 'Add New'}
@@ -599,22 +617,22 @@ if (parsedRdp > parsedPrice) {
               </label>
               {isAddingCategory ? (
                 <div className="flex gap-2">
-                  <input 
+                  <input
                     autoFocus
-                    placeholder="Type new category..." 
-                    value={newCategoryName} 
-                    onChange={e => setNewCategoryName(e.target.value)} 
-                    className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm" 
+                    placeholder="Type new category..."
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm"
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => { 
-                      if(newCategoryName && group){ 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newCategoryName && group) {
                         const formatted = formatStructure(newCategoryName);
-                        setCategory(formatted); 
+                        setCategory(formatted);
                         setCategoriesByGroup({ ...categoriesByGroup, [group]: [...(categoriesByGroup[group] || []), formatted] });
-                        setIsAddingCategory(false); 
-                      } 
+                        setIsAddingCategory(false);
+                      }
                     }}
                     className="bg-primary text-white px-4 rounded-md text-xs font-bold"
                   >
@@ -622,11 +640,11 @@ if (parsedRdp > parsedPrice) {
                   </button>
                 </div>
               ) : (
-                <select 
-                  required 
+                <select
+                  required
                   disabled={!group}
-                  value={category} 
-                  onChange={e => setCategory(e.target.value)} 
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
                   className="w-full p-3 rounded-md border border-border bg-background text-sm disabled:bg-muted"
                 >
                   <option value="">{group ? 'Select Category' : 'Choose Group First'}</option>
@@ -635,8 +653,21 @@ if (parsedRdp > parsedPrice) {
               )}
             </div>
 
+            {/* Product Size */}
+            <div className="space-y-2">
+              <label className="text-xs md:text-sm font-bold">Product Size</label>
+              <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-sm">
+                <option value="">Select Size</option>
+                <option value="extra-large">Extra Large</option>
+                <option value="large">Large</option>
+                <option value="medium">Medium</option>
+                <option value="small">Small</option>
+                <option value="extra-small">Extra Small</option>
+              </select>
+            </div>
+
             {/* Promotion */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold">Promotion</label>
               <div className="pt-1">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
@@ -653,21 +684,21 @@ if (parsedRdp > parsedPrice) {
                     </div>
                     <div className="flex-1">
                       <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">Promo Price (₦)</label>
-                      <input 
-                        required 
-                        value={oldPrice} 
-                        onChange={e => setOldPrice(formatPriceInput(e.target.value))} 
-                        type="text" 
+                      <input
+                        required
+                        value={oldPrice}
+                        onChange={e => setOldPrice(formatPriceInput(e.target.value))}
+                        type="text"
                         placeholder="e.g. 45,000"
-                        className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none" 
+                        className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none"
                       />
                     </div>
                   </div>
                   <div>
                     <label className="text-[0.65rem] font-bold block mb-1 text-secondary uppercase">Promo End Date (Optional)</label>
-                    <input 
-                      type="date" 
-                      value={promoEndDate} 
+                    <input
+                      type="date"
+                      value={promoEndDate}
                       onChange={e => setPromoEndDate(e.target.value)}
                       className="w-full p-2 rounded-md border border-border bg-background text-sm"
                     />
@@ -688,9 +719,9 @@ if (parsedRdp > parsedPrice) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Paste Image URL..." 
+                  <input
+                    type="text"
+                    placeholder="Paste Image URL..."
                     className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
                     value={imageUrlInput}
                     onChange={e => setImageUrlInput(e.target.value)}
@@ -707,9 +738,9 @@ if (parsedRdp > parsedPrice) {
                 </div>
                 {imageUrlInput && (
                   <div className="mt-1 h-12 w-20 rounded border border-border overflow-hidden bg-muted animate-in fade-in slide-in-from-top-1">
-                    <img 
-                      src={imageUrlInput} 
-                      alt="Live Preview" 
+                    <img
+                      src={imageUrlInput}
+                      alt="Live Preview"
                       className="w-full h-full object-cover"
                       onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                     />
@@ -729,17 +760,17 @@ if (parsedRdp > parsedPrice) {
               {images.map((img, i) => (
                 <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border group bg-muted">
                   {/* Use standard img for preview to avoid Next.js Image component hostname restriction crashes in admin */}
-                  <img 
-                    src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)} 
-                    alt="preview" 
+                  <img
+                    src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
+                    alt="preview"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Invalid+Image';
                       toast.error('One of your images failed to load.');
                     }}
                   />
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => removeImage(i)}
                     className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10"
                   >
@@ -754,21 +785,21 @@ if (parsedRdp > parsedPrice) {
               <div className="max-w-[200px] space-y-2">
                 <label className="text-xs md:text-sm font-bold text-primary">Quantity In Stock</label>
                 <div className="flex items-center gap-3">
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setQuantity(Math.max(0, Number(quantity) - 1).toString())}
                     className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
                   >
                     -
                   </button>
-                  <input 
-                    required 
-                    value={quantity} 
-                    onChange={e => setQuantity(e.target.value)} 
-                    type="number" 
-                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold" 
+                  <input
+                    required
+                    value={quantity}
+                    onChange={e => setQuantity(e.target.value)}
+                    type="number"
+                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setQuantity((Number(quantity) + 1).toString())}
                     className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
@@ -781,8 +812,8 @@ if (parsedRdp > parsedPrice) {
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="flex-1 bg-primary text-white py-4 rounded-md font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
             >
@@ -804,7 +835,7 @@ if (parsedRdp > parsedPrice) {
                 <FaStar className="text-primary" /> Home Hero Slides
                 <FaChevronDown className={`transition-transform duration-300 text-muted-foreground ${isHeroExpanded ? 'rotate-180' : ''}`} size={16} />
               </h2>
-            <p className="text-xs text-muted-foreground mt-1">Select up to 12 products to feature on the home page carousel. <span className="font-bold text-primary">{heroSlides.length}/12 selected</span></p>
+              <p className="text-xs text-muted-foreground mt-1">Select up to 12 products to feature on the home page carousel. <span className="font-bold text-primary">{heroSlides.length}/12 selected</span></p>
             </div>
           </div>
           <button
@@ -816,7 +847,7 @@ if (parsedRdp > parsedPrice) {
             {heroSaving ? 'Saving...' : 'Save Hero Slides'}
           </button>
         </div>
-        
+
         <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isHeroExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
           <div className="p-4 md:p-8 border-t border-border/50 bg-muted/5">
             {products.length === 0 ? (
@@ -836,11 +867,10 @@ if (parsedRdp > parsedPrice) {
                         key={product.id}
                         type="button"
                         onClick={() => handleToggleHero(product.id)}
-                        className={`relative rounded-[var(--radius)] border-2 overflow-hidden transition-all text-left group ${
-                          isSelected
-                            ? 'border-primary shadow-lg shadow-primary/20'
-                            : 'border-border hover:border-primary/50'
-                        }`}
+                        className={`relative rounded-[var(--radius)] border-2 overflow-hidden transition-all text-left group ${isSelected
+                          ? 'border-primary shadow-lg shadow-primary/20'
+                          : 'border-border hover:border-primary/50'
+                          }`}
                       >
                         {/* Thumbnail */}
                         <div className="relative aspect-square bg-muted">
@@ -860,9 +890,8 @@ if (parsedRdp > parsedPrice) {
                             </div>
                           )}
                           {/* Overlay */}
-                          <div className={`absolute inset-0 flex items-center justify-center transition-all ${
-                            isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
-                          }`}>
+                          <div className={`absolute inset-0 flex items-center justify-center transition-all ${isSelected ? 'bg-primary/10' : 'bg-black/0 group-hover:bg-black/5'
+                            }`}>
                             {isSelected && (
                               <div className="bg-primary text-white rounded-full p-1.5">
                                 <FaCheck size={12} />
@@ -891,16 +920,16 @@ if (parsedRdp > parsedPrice) {
           <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
             <div className="relative w-full sm:w-64">
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                placeholder="Search..."
                 className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
               <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
             </div>
-            <select 
+            <select
               className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
               value={filterGroup}
               onChange={e => setFilterGroup(e.target.value)}
@@ -915,22 +944,22 @@ if (parsedRdp > parsedPrice) {
           {displayedProducts.map(product => (
             <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
               <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
-                <button 
-                  onClick={() => handleEdit(product)} 
+                <button
+                  onClick={() => handleEdit(product)}
                   className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
                   title="Edit Product"
                 >
                   <FaEdit size={14} />
                 </button>
-                <button 
-                  onClick={() => handleDelete(product.id)} 
+                <button
+                  onClick={() => handleDelete(product.id)}
                   className="bg-red-500 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
                   title="Delete Product"
                 >
                   <FaTrash size={14} />
                 </button>
               </div>
-              
+
               <div className="relative flex-1 flex flex-col">
                 <ProductCard product={product} isAdmin={true} />
               </div>
@@ -967,13 +996,13 @@ if (parsedRdp > parsedPrice) {
               <p className="text-sm text-muted-foreground">This action cannot be undone. The product will be permanently removed from your store.</p>
             </div>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-bold transition-colors"
               >
                 Yes, Delete
               </button>
-              <button 
+              <button
                 onClick={() => setProductToDelete(null)}
                 className="w-full bg-muted hover:bg-muted/80 text-foreground py-3 rounded-md font-bold transition-colors border border-border"
               >

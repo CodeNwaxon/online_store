@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft, FaPrint } from 'react-icons/fa';
+import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft, FaPrint, FaMapMarkerAlt, FaTruck } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, onSnapshot } from 'firebase/firestore';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -16,11 +16,17 @@ export default function Checkout() {
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Delivery State
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
+  const [areas, setAreas] = useState<any[]>([]);
+  const [selectedPickupArea, setSelectedPickupArea] = useState<string>('');
+
   // Form State
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     email: '',
+    city: '',
     address: ''
   });
 
@@ -45,13 +51,43 @@ export default function Checkout() {
     return () => unsubscribe();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
+      setAreas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
+  // Calculate Shipping Cost
+  const shippingCost = useMemo(() => {
+    if (deliveryMethod === 'pickup') return 0;
+    if (!formData.city.trim()) return 0;
+    
+    const matchedArea = areas.find(a => a.city.toLowerCase() === formData.city.trim().toLowerCase());
+    if (!matchedArea) return -1; // -1 indicates city not found
+
+    let totalShipping = 0;
+    items.forEach(item => {
+      const size = item.size || 'medium';
+      const costForSize = matchedArea.prices[size] || 0;
+      totalShipping += (costForSize * item.quantity);
+    });
+
+    return totalShipping;
+  }, [deliveryMethod, formData.city, areas, items]);
+
+  const finalTotalAmount = getTotalPrice() + (shippingCost > 0 ? shippingCost : 0);
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (deliveryMethod === 'ship' && shippingCost === -1) return;
+    if (deliveryMethod === 'pickup' && !selectedPickupArea) return;
+
     setLoading(true);
 
     try {
@@ -60,15 +96,18 @@ export default function Checkout() {
         customerName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        address: formData.address,
+        address: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${formData.address}, ${formData.city}`,
         items: items.map(item => ({
           id: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity,
-          image: item.image
+          image: item.image,
+          size: item.size || 'medium'
         })),
-        totalAmount: getTotalPrice(),
+        totalAmount: finalTotalAmount,
+        shippingFee: shippingCost > 0 ? shippingCost : 0,
+        deliveryMethod,
         status: 'paid',
         type: 'normal',
         isNew: true,
@@ -93,7 +132,7 @@ export default function Checkout() {
       // Save to local history for customer
       const history = JSON.parse(localStorage.getItem('purchase_history') || '[]');
       history.unshift({ id: docRef.id, ...orderData });
-      localStorage.setItem('purchase_history', JSON.stringify(history.slice(0, 50))); // Keep last 50
+      localStorage.setItem('purchase_history', JSON.stringify(history.slice(0, 50)));
 
       setOrderId(docRef.id);
       setFinalOrderData(orderData);
@@ -177,7 +216,7 @@ export default function Checkout() {
                 <div class="value">${finalOrderData.phone}</div>
               </div>
               <div class="row">
-                <div class="label">Address:</div>
+                <div class="label">Delivery:</div>
                 <div class="value">${finalOrderData.address}</div>
               </div>
 
@@ -188,6 +227,13 @@ export default function Checkout() {
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
+              
+              ${finalOrderData.shippingFee > 0 ? `
+              <div class="item-row" style="margin-top: 8px; color: #D48806;">
+                <span class="item-name">Shipping Fee</span>
+                <span class="item-price">₦${finalOrderData.shippingFee.toLocaleString()}</span>
+              </div>
+              ` : ''}
 
               <div class="total-row">
                 <div class="total-label">Amount Paid:</div>
@@ -250,6 +296,25 @@ export default function Checkout() {
 
   return (
     <div className="py-16">
+      
+      {/* City Not Found Overlay */}
+      {deliveryMethod === 'ship' && shippingCost === -1 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">City Not Found</h3>
+            <p className="text-muted-foreground mb-6">
+              City not found for now!!!! We will get to your city soon.
+            </p>
+            <button onClick={() => setFormData({...formData, city: ''})} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="mb-12">
           <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-4 hover:text-foreground transition-colors w-fit">
@@ -259,12 +324,45 @@ export default function Checkout() {
         </div>
 
         <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12 items-start">
-          {/* Shipping & Payment Form */}
+          
           <div className="flex flex-col gap-10">
+            
+            {/* Delivery Method Selection */}
             <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-                <FaShieldAlt size={24} className="text-primary" /> Shipping Information
+                <FaTruck size={24} className="text-primary" /> Delivery Options
               </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod('pickup')}
+                  className={`p-4 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'pickup' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                >
+                  <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                    Free Delivery
+                  </div>
+                  <FaMapMarkerAlt className={`mb-3 text-2xl ${deliveryMethod === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <h4 className="font-bold mb-1">Office Pick Up</h4>
+                  <p className="text-xs text-muted-foreground">Pick up your item from our designated locations.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryMethod('ship')}
+                  className={`p-4 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'ship' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                >
+                  <FaTruck className={`mb-3 text-2xl ${deliveryMethod === 'ship' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <h4 className="font-bold mb-1">Ship to My Address</h4>
+                  <p className="text-xs text-muted-foreground">We deliver right to your doorstep.</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Shipping & Payment Form */}
+            <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                <FaShieldAlt size={24} className="text-primary" /> Customer Information
+              </h3>
+              
               <div className="flex flex-col gap-5">
                 <div>
                   <label htmlFor="fullName" className="block mb-2 text-sm font-semibold">Full Name</label>
@@ -280,10 +378,38 @@ export default function Checkout() {
                     <input type="email" id="email" value={formData.email} onChange={handleInputChange} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="address" className="block mb-2 text-sm font-semibold">House Address</label>
-                  <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-none"></textarea>
-                </div>
+
+                {deliveryMethod === 'ship' ? (
+                  <>
+                    <div>
+                      <label htmlFor="city" className="block mb-2 text-sm font-semibold">City</label>
+                      <input type="text" id="city" value={formData.city} onChange={handleInputChange} required placeholder="e.g. Ikeja" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                    </div>
+                    <div>
+                      <label htmlFor="address" className="block mb-2 text-sm font-semibold">House Address</label>
+                      <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-none"></textarea>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label htmlFor="pickupArea" className="block mb-2 text-sm font-semibold">Select Pickup Location</label>
+                    <select
+                      id="pickupArea"
+                      required
+                      value={selectedPickupArea}
+                      onChange={(e) => setSelectedPickupArea(e.target.value)}
+                      className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
+                    >
+                      <option value="">Select a location...</option>
+                      {areas.map(area => (
+                        <option key={area.id} value={`${area.address}, ${area.city}, ${area.state}`}>
+                          {area.city}, {area.state} - {area.address}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
               </div>
             </div>
 
@@ -333,19 +459,25 @@ export default function Checkout() {
               </div>
               <div className="flex justify-between mb-6">
                 <span>Shipping</span>
-                <span className="text-[#059669] font-semibold">FREE</span>
+                {deliveryMethod === 'pickup' ? (
+                  <span className="text-[#059669] font-semibold">FREE</span>
+                ) : shippingCost > 0 ? (
+                  <span className="text-primary font-semibold">+₦{shippingCost.toLocaleString()}</span>
+                ) : (
+                  <span className="text-muted-foreground">Calculated...</span>
+                )}
               </div>
               <div className="flex justify-between text-xl font-bold border-t border-border pt-6">
                 <span>Total Amount</span>
-                <span className="text-primary">₦{getTotalPrice().toLocaleString()}</span>
+                <span className="text-primary">₦{finalTotalAmount.toLocaleString()}</span>
               </div>
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              disabled={loading || (deliveryMethod === 'ship' && shippingCost === -1)}
+              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading || (deliveryMethod === 'ship' && shippingCost === -1) ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {loading ? 'Processing...' : `Pay ₦${getTotalPrice().toLocaleString()}`}
+              {loading ? 'Processing...' : `Pay ₦${finalTotalAmount.toLocaleString()}`}
             </button>
             <p className="text-center text-xs text-muted-foreground mt-4">
               Secure payment powered by {siteName}.
