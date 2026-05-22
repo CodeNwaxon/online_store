@@ -345,7 +345,7 @@ export default function PayLoanPage() {
         : (instSettings.withdrawalFeePercent || 15);
 
       const withdrawalFee = withdrawalPercent / 100;
-      const charge = loan.totalAmount * withdrawalFee;
+      const charge = totalPaid * withdrawalFee;
       const refundAmount = totalPaid - charge;
 
       const loanRef = doc(db, 'installments', loan.id);
@@ -769,7 +769,7 @@ export default function PayLoanPage() {
                 const withdrawalPercent = loan.withdrawalFeePercent !== undefined
                   ? loan.withdrawalFeePercent
                   : (instSettings.withdrawalFeePercent || 15);
-                const charge = loan.totalAmount * (withdrawalPercent / 100);
+                const charge = totalPaid * (withdrawalPercent / 100);
                 const refundAmount = Math.max(0, totalPaid - charge);
 
                 return (
@@ -779,7 +779,7 @@ export default function PayLoanPage() {
                       <span className="font-bold">{formatCurrency(totalPaid)}</span>
                     </div>
                     <div className="grid grid-cols-2 justify-between items-center text-red-500">
-                      <span className="text-left">Cancellation Fee <br />({withdrawalPercent}% of {formatCurrency(loan.totalAmount)})</span>
+                      <span className="text-left">Cancellation Fee <br />({withdrawalPercent}% of {formatCurrency(totalPaid)})</span>
                       <span className="text-right font-bold">- {formatCurrency(charge)}</span>
                     </div>
                     <div className="flex justify-between items-center border-t border-border pt-3 font-bold text-base">

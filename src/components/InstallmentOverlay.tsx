@@ -29,10 +29,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [instSettings, setInstSettings] = useState<any>(null);
   const router = useRouter();
 
-  // Delivery State
-  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
+  // Removed Delivery State
   const [areas, setAreas] = useState<any[]>([]);
-  const [selectedPickupArea, setSelectedPickupArea] = useState<string>('');
 
   useEffect(() => {
     // Real-time settings listener
@@ -93,24 +91,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const increaseRate = currentPlanConfig.increase / 100;
   const increaseAmount = product.price * increaseRate;
 
-  // Shipping calculation
-  let shippingCost = 0;
-  if (deliveryMethod === 'ship' && city.trim()) {
-    const matchedArea = areas.find(a => a.city.toLowerCase() === city.trim().toLowerCase());
-    if (matchedArea) {
-      if (matchedArea.isActive === false) {
-        shippingCost = -2;
-      } else {
-        const pSize = product.size || 'medium';
-        shippingCost = matchedArea.prices[pSize] || 0;
-      }
-    } else {
-      shippingCost = -1; // Not found
-    }
-  }
-
-  // Base + Interest + Shipping
-  const totalAmount = product.price + increaseAmount + (shippingCost > 0 ? shippingCost : 0);
+  // Base + Interest
+  const totalAmount = product.price + increaseAmount;
 
   // Down payment rules - based on price threshold
   const applicableRate = product.price >= (instSettings.downpaymentThreshold || 1000000)
@@ -137,12 +119,6 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   };
 
   const handleProceed = async () => {
-    if (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) return;
-    if (deliveryMethod === 'pickup' && !selectedPickupArea) {
-      toast.error('Please select a pickup location.');
-      return;
-    }
-
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));
 
     if (!fullName || fullName.length < 3) {
@@ -214,13 +190,13 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           userEmail: userEmail || currentUser.email,
           customerName: fullName,
           customerPhone: phone,
-          deliveryAddress: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${address}, ${city}`,
+          deliveryAddress: "Pending (To be provided upon completion)",
           productId: product.id,
           productName: product.name,
           productCategory: product.category,
           productImage: product.image,
           basePrice: product.price,
-          shippingFee: shippingCost > 0 ? shippingCost : 0,
+          shippingFee: 0,
           totalAmount: totalAmount,
           monthlyAmount: recalculatedMonthlyAmount,
           planMonths: plan,
@@ -321,47 +297,6 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   return (
     <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-1">
       
-      {/* City Not Found Overlay in Installment Modal */}
-      {deliveryMethod === 'ship' && shippingCost === -1 && (
-        <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/80 p-4">
-          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200 shadow-2xl">
-            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
-              <FaMapMarkerAlt size={32} />
-            </div>
-            <h3 className="text-xl font-bold mb-2">City Not Found</h3>
-            <p className="text-muted-foreground mb-6">
-              City not found for now!!!! We will get to your city soon.
-            </p>
-            <button onClick={() => setCity('')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
-              Go Back
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Office Pickup Only Overlay in Installment Modal */}
-      {deliveryMethod === 'ship' && shippingCost === -2 && (
-        <div className="absolute inset-0 z-[1100] flex items-center justify-center bg-black/80 p-4">
-          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200 shadow-2xl">
-            <div className="w-16 h-16 mx-auto mb-4 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
-              <FaMapMarkerAlt size={32} />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Office Pick-up Only</h3>
-            <p className="text-muted-foreground mb-6">
-              Only office pick-up is available for this city.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button type="button" onClick={() => setDeliveryMethod('pickup')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
-                Switch to Pick-up
-              </button>
-              <button type="button" onClick={() => setCity('')} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
-                Change City
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="bg-background rounded-[var(--radius)] w-full max-w-[1000px] max-h-[90vh] overflow-y-auto relative grid grid-cols-1 md:grid-cols-2 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
         <button
           onClick={onClose}
@@ -406,43 +341,9 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
               <span>{plan}-months Plan Interest ({increaseRate * 100}%)</span>
               <span className="font-bold">+ {formatCurrency(increaseAmount)}</span>
             </div>
-            {deliveryMethod === 'ship' && shippingCost > 0 && (
-              <div className="flex justify-between mb-2 text-sm text-primary">
-                <span>Shipping Fee</span>
-                <span className="font-bold">+ {formatCurrency(shippingCost)}</span>
-              </div>
-            )}
             <div className="flex justify-between pt-2 border-t border-border text-xl font-bold">
               <span>Total Plan Cost</span>
               <span>{formatCurrency(totalAmount)}</span>
-            </div>
-          </div>
-
-          {/* Delivery Method Selection */}
-          <div className="mb-6">
-            <h3 className="font-bold mb-3">Delivery Options</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setDeliveryMethod('pickup')}
-                className={`p-3 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'pickup' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              >
-                <div className="absolute top-1 right-1 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
-                  Free
-                </div>
-                <FaMapMarkerAlt className={`mb-2 text-xl ${deliveryMethod === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
-                <h4 className="font-bold text-sm mb-1">Office Pick Up</h4>
-                <p className="text-[10px] text-muted-foreground leading-tight">Pick up your item from our locations.</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeliveryMethod('ship')}
-                className={`p-3 border-2 rounded-xl text-left transition-all ${deliveryMethod === 'ship' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
-              >
-                <FaTruck className={`mb-2 text-xl ${deliveryMethod === 'ship' ? 'text-primary' : 'text-muted-foreground'}`} />
-                <h4 className="font-bold text-sm mb-1">Ship to Address</h4>
-                <p className="text-[10px] text-muted-foreground leading-tight">We deliver right to your doorstep.</p>
-              </button>
             </div>
           </div>
 
@@ -478,8 +379,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            <div>
               <h3 className="text-xs font-bold mb-1">Account Email</h3>
               <input
                 type="email"
@@ -488,50 +389,6 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
                 className="w-full p-2.5 rounded-lg border border-border text-sm bg-muted text-muted-foreground cursor-not-allowed outline-none"
               />
             </div>
-            
-            {deliveryMethod === 'ship' ? (
-              <>
-                <div>
-                  <h3 className="text-xs font-bold mb-1">City</h3>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ikeja"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full py-2.5 px-3 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
-                    required
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold mb-1">House Address</h3>
-                  <input
-                    type="text"
-                    placeholder="Full address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full py-2.5 px-3 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
-                    required
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="md:col-span-2">
-                <h3 className="text-xs font-bold mb-1">Select Pickup Location</h3>
-                <select
-                  required
-                  value={selectedPickupArea}
-                  onChange={(e) => setSelectedPickupArea(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-border text-sm bg-background outline-none focus:border-primary"
-                >
-                  <option value="">Select a location...</option>
-                  {areas.map(area => (
-                    <option key={area.id} value={`${area.address}, ${area.city}, ${area.state}`}>
-                      {area.city}, {area.state} - {area.address}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
 
 
@@ -615,7 +472,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           </div>
 
           <button
-            disabled={isProcessing || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2))}
+            disabled={isProcessing}
             onClick={handleProceed}
             className="bg-primary hover:bg-primary-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-auto w-full p-4 text-lg flex items-center justify-center gap-3 rounded-lg font-bold transition-colors"
           >

@@ -171,7 +171,7 @@ function LoanCheckoutContent() {
               <div>
                 <div className="font-bold">{loan.productName}</div>
                 <div className="text-sm text-muted-foreground">
-                  Paying for: {monthsToPay.map(idx => `Month ${loan.payments[idx].month}`).join(', ')}
+                  Paying for: {monthsToPay.map(idx => `Month ${loan.payments[idx].month - 1}`).join(', ')}
                 </div>
               </div>
             </div>
@@ -241,24 +241,33 @@ function LoanCheckoutContent() {
           )}
 
           {/* Card Form Mockup */}
-          <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
-             <h3 className="font-bold text-xl mb-6">Card Information</h3>
-             <div className="flex flex-col gap-4">
-                <input type="text" placeholder="Card Number" className="w-full p-4 rounded-lg border border-border bg-background" disabled />
-                <div className="flex gap-4">
-                  <input type="text" placeholder="MM/YY" className="flex-1 p-4 rounded-lg border border-border bg-background" disabled />
-                  <input type="text" placeholder="CVV" className="flex-1 p-4 rounded-lg border border-border bg-background" disabled />
+          <div className="bg-card p-5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
+             <h3 className="font-bold text-lg md:text-xl mb-4 md:mb-6">Card Information</h3>
+             <div className="flex flex-col gap-3 md:gap-4">
+                <div>
+                  <label className="block mb-1.5 text-sm font-semibold">Card Number</label>
+                  <input type="text" placeholder="0000 0000 0000 0000" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+                </div>
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                  <div>
+                    <label className="block mb-1.5 text-sm font-semibold">Expiry Date</label>
+                    <input type="text" placeholder="MM/YY" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 text-sm font-semibold">CVV</label>
+                    <input type="text" placeholder="CVV" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+                  </div>
                 </div>
              </div>
              
              <button 
               disabled={isProcessing}
               onClick={handleFinalPayment}
-              className="w-full bg-primary hover:bg-primary-hover text-white mt-8 p-4 text-lg rounded-md font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-primary hover:bg-primary-hover text-white mt-6 md:mt-8 p-3.5 md:p-4 text-sm md:text-lg rounded-md font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
              >
                {isProcessing ? 'Processing Securely...' : `Pay ${formatCurrency(totalAmount)}`}
              </button>
-             <p className="text-center text-xs text-muted-foreground mt-4">
+             <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-3 md:mt-4">
                Payments are processed securely via Paystack.
              </p>
           </div>

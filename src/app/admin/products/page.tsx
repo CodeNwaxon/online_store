@@ -100,6 +100,7 @@ function AdminProductsContent() {
 
   // Delete confirmation state
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Distribution Manager State
   const [isDistributionOpen, setIsDistributionOpen] = useState(false);
@@ -411,12 +412,14 @@ function AdminProductsContent() {
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'products', productToDelete));
       toast.success('Product deleted.');
     } catch (error) {
       toast.error('Failed to delete.');
     } finally {
+      setIsDeleting(false);
       setProductToDelete(null);
     }
   };
@@ -815,7 +818,7 @@ function AdminProductsContent() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-primary text-white py-4 rounded-md font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              className={`flex-1 bg-primary text-white py-4 rounded-md font-bold flex items-center justify-center gap-2 text-sm transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-hover'}`}
             >
               {loading ? 'Processing...' : (editingId ? 'Update Product' : 'Add Product')}
             </button>
@@ -997,10 +1000,11 @@ function AdminProductsContent() {
             </div>
             <div className="flex flex-col gap-3">
               <button
+                disabled={isDeleting}
                 onClick={confirmDelete}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-md font-bold transition-colors"
+                className={`w-full bg-red-600 text-white py-3 rounded-md font-bold transition-colors ${isDeleting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-700'}`}
               >
-                Yes, Delete
+                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
               </button>
               <button
                 onClick={() => setProductToDelete(null)}

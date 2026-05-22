@@ -46,6 +46,7 @@ export default function AdminOrders() {
   const [passkeyInput, setPasskeyInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmUnmark, setConfirmUnmark] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [visibleCards, setVisibleCards] = useState(40);
 
   useEffect(() => {
@@ -65,23 +66,28 @@ export default function AdminOrders() {
   };
 
   const verifyPasskey = async () => {
-    const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
-    const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
+    setIsVerifying(true);
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
 
-    if (passkeyInput === correctPasskey) {
-      if (confirmDelete) {
-        await deleteDoc(doc(db, 'orders', confirmDelete));
-        toast.success('Order deleted successfully');
-      } else if (confirmUnmark) {
-        await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
-        toast.success('Order marked as undelivered');
+      if (passkeyInput === correctPasskey) {
+        if (confirmDelete) {
+          await deleteDoc(doc(db, 'orders', confirmDelete));
+          toast.success('Order deleted successfully');
+        } else if (confirmUnmark) {
+          await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
+          toast.success('Order marked as undelivered');
+        }
+        setShowPasskeyModal(null);
+        setConfirmDelete(null);
+        setConfirmUnmark(null);
+        setPasskeyInput('');
+      } else {
+        toast.error('Incorrect CEO Passkey');
       }
-      setShowPasskeyModal(null);
-      setConfirmDelete(null);
-      setConfirmUnmark(null);
-      setPasskeyInput('');
-    } else {
-      toast.error('Incorrect CEO Passkey');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -462,10 +468,11 @@ export default function AdminOrders() {
                 Cancel
               </button>
               <button
+                disabled={isVerifying}
                 onClick={verifyPasskey}
-                className="flex-1 py-4 font-black text-xs uppercase bg-primary text-white rounded-2xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
+                className={`flex-1 py-4 font-black text-xs uppercase bg-primary text-white rounded-2xl shadow-lg shadow-primary/20 transition-all ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-hover'}`}
               >
-                Authorize
+                {isVerifying ? 'Verifying...' : 'Authorize'}
               </button>
             </div>
           </div>

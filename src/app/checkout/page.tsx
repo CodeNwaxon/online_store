@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft, FaPrint, FaMapMarkerAlt, FaTruck } from 'react-icons/fa';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc, increment, collection, onSnapshot } from 'firebase/firestore';
+import { toast } from 'react-hot-toast';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -16,11 +17,15 @@ export default function Checkout() {
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
+  const [showCityError, setShowCityError] = useState(false);
+  const [showPickupOnlyError, setShowPickupOnlyError] = useState(false);
 
   // Delivery State
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
   const [areas, setAreas] = useState<any[]>([]);
   const [selectedPickupArea, setSelectedPickupArea] = useState<string>('');
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const citySuggestionsRef = useRef<HTMLDivElement>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -59,17 +64,40 @@ export default function Checkout() {
     return () => unsub();
   }, []);
 
+  // Close city suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (citySuggestionsRef.current && !citySuggestionsRef.current.contains(e.target as Node)) {
+        setShowCitySuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
+    if (id === 'city') setShowCitySuggestions(true);
   };
+
+  // Normalize city names for fuzzy matching (strips hyphens, spaces, lowercases)
+  const normalizeCity = (name: string) => name.toLowerCase().replace(/[-\s]/g, '');
+
+  // Filter city suggestions based on user input
+  const citySuggestions = useMemo(() => {
+    if (!formData.city.trim()) return areas;
+    const norm = normalizeCity(formData.city);
+    return areas.filter(a => normalizeCity(a.city).includes(norm));
+  }, [formData.city, areas]);
 
   // Calculate Shipping Cost
   const shippingCost = useMemo(() => {
     if (deliveryMethod === 'pickup') return 0;
     if (!formData.city.trim()) return 0;
     
-    const matchedArea = areas.find(a => a.city.toLowerCase() === formData.city.trim().toLowerCase());
+    const normInput = normalizeCity(formData.city);
+    const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
     if (!matchedArea) return -1; // -1 indicates city not found
     
     // Check if area is explicitly set to inactive
@@ -302,7 +330,7 @@ export default function Checkout() {
     <div className="py-16">
       
       {/* City Not Found Overlay */}
-      {deliveryMethod === 'ship' && shippingCost === -1 && (
+      {showCityError && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
           <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
             <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
@@ -312,7 +340,7 @@ export default function Checkout() {
             <p className="text-muted-foreground mb-6">
               City not found for now!!!! We will get to your city soon.
             </p>
-            <button onClick={() => setFormData({...formData, city: ''})} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+            <button onClick={() => setShowCityError(false)} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
               Go Back
             </button>
           </div>
@@ -320,7 +348,7 @@ export default function Checkout() {
       )}
 
       {/* Office Pickup Only Overlay */}
-      {deliveryMethod === 'ship' && shippingCost === -2 && (
+      {showPickupOnlyError && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
           <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
             <div className="w-16 h-16 mx-auto mb-4 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
@@ -331,10 +359,10 @@ export default function Checkout() {
               Only office pick-up is available for this city.
             </p>
             <div className="flex flex-col gap-3">
-              <button type="button" onClick={() => setDeliveryMethod('pickup')} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+              <button type="button" onClick={() => { setDeliveryMethod('pickup'); setShowPickupOnlyError(false); }} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
                 Switch to Pick-up
               </button>
-              <button type="button" onClick={() => setFormData({...formData, city: ''})} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
+              <button type="button" onClick={() => setShowPickupOnlyError(false)} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
                 Change City
               </button>
             </div>
@@ -408,9 +436,41 @@ export default function Checkout() {
 
                 {deliveryMethod === 'ship' ? (
                   <>
-                    <div>
+                    <div ref={citySuggestionsRef} className="relative">
                       <label htmlFor="city" className="block mb-2 text-sm font-semibold">City</label>
-                      <input type="text" id="city" value={formData.city} onChange={handleInputChange} required placeholder="e.g. Ikeja" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                      <input
+                        type="text"
+                        id="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        onFocus={() => setShowCitySuggestions(true)}
+                        required
+                        placeholder="Start typing your city..."
+                        autoComplete="off"
+                        className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
+                      />
+                      {showCitySuggestions && citySuggestions.length > 0 && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                          {citySuggestions.map(area => (
+                            <button
+                              key={area.id}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, city: area.city }));
+                                setShowCitySuggestions(false);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-primary/10 transition-colors border-b border-border last:border-b-0 flex justify-between items-center"
+                            >
+                              <span className="font-semibold capitalize">{area.city}, <span className="text-muted-foreground capitalize">{area.state}</span></span>
+                              {area.isActive === false ? (
+                                <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Pickup Only</span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Delivery Available</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label htmlFor="address" className="block mb-2 text-sm font-semibold">House Address</label>
@@ -467,11 +527,25 @@ export default function Checkout() {
               <div className="flex justify-between mb-6">
                 <span>Shipping</span>
                 {deliveryMethod === 'pickup' ? (
-                  <span className="text-[#059669] font-semibold">FREE</span>
-                ) : shippingCost > 0 ? (
-                  <span className="text-primary font-semibold">+₦{shippingCost.toLocaleString()}</span>
+                  !selectedPickupArea ? (
+                    <span className="text-red-700 font-semibold">No Address Selected</span>
+                  ) : (
+                    <span className="text-[#059669] font-semibold">FREE</span>
+                  )
                 ) : (
-                  <span className="text-muted-foreground">Calculated...</span>
+                  !formData.city ? (
+                    <span className="text-red-700 font-semibold">No Address Selected</span>
+                  ) : shippingCost === -1 ? (
+                    <span className="text-red-700 font-semibold">Address Not Found</span>
+                  ) : !formData.address ? (
+                    <span className="text-muted-foreground">Calculating...</span>
+                  ) : shippingCost === -2 ? (
+                    <span className="text-muted-foreground">Office Pick Up Only</span>
+                  ) : shippingCost > 0 ? (
+                    <span className="text-primary font-semibold">+₦{shippingCost.toLocaleString()}</span>
+                  ) : (
+                    <span className="text-[#059669] font-semibold">FREE</span>
+                  )
                 )}
               </div>
               <div className="flex justify-between text-xl font-bold border-t border-border pt-6">
@@ -481,15 +555,43 @@ export default function Checkout() {
             </div>
             <button
               type="button"
-              disabled={loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2))}
+              disabled={loading}
               onClick={() => {
                 // Validate required fields before showing payment overlay
-                if (!formData.fullName || !formData.phone) return;
-                if (deliveryMethod === 'ship' && (!formData.city || !formData.address)) return;
-                if (deliveryMethod === 'pickup' && !selectedPickupArea) return;
+                if (!formData.fullName.trim()) {
+                  toast.error('Please enter your full name.');
+                  return;
+                }
+                if (!formData.phone.trim()) {
+                  toast.error('Please enter your phone number.');
+                  return;
+                }
+                if (deliveryMethod === 'pickup' && !selectedPickupArea) {
+                  toast.error('Please select a pick-up location.');
+                  return;
+                }
+                if (deliveryMethod === 'ship') {
+                  if (!formData.city.trim()) {
+                    toast.error('Please enter your city.');
+                    return;
+                  }
+                  if (shippingCost === -1) {
+                    setShowCityError(true);
+                    return;
+                  }
+                  if (shippingCost === -2) {
+                    setShowPickupOnlyError(true);
+                    return;
+                  }
+                  if (!formData.address.trim()) {
+                    toast.error('Please enter your house address.');
+                    return;
+                  }
+                }
+                
                 setShowPaymentOverlay(true);
               }}
-              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading || (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Processing...' : `Pay ₦${finalTotalAmount.toLocaleString()}`}
             </button>
@@ -502,11 +604,11 @@ export default function Checkout() {
 
       {/* Payment Details Overlay */}
       {showPaymentOverlay && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4">
-          <div className="bg-background rounded-xl p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-3">
-                <FaCreditCard size={24} className="text-primary" /> Payment Details
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-2 md:p-4">
+          <div className="bg-background rounded-xl p-5 md:p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5 md:mb-6">
+              <h3 className="text-lg md:text-xl font-bold flex items-center gap-2 md:gap-3">
+                <FaCreditCard size={20} className="text-primary" /> Payment Details
               </h3>
               <button
                 type="button"
@@ -516,36 +618,36 @@ export default function Checkout() {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleCheckout} className="flex flex-col gap-5">
+            <form onSubmit={handleCheckout} className="flex flex-col gap-4 md:gap-5">
               <div>
-                <label htmlFor="cardNum" className="block mb-2 text-sm font-semibold">Card Number</label>
-                <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                <label htmlFor="cardNum" className="block mb-1.5 md:mb-2 text-sm font-semibold">Card Number</label>
+                <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div>
-                  <label htmlFor="expiry" className="block mb-2 text-sm font-semibold">Expiry Date</label>
-                  <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                  <label htmlFor="expiry" className="block mb-1.5 md:mb-2 text-sm font-semibold">Expiry Date</label>
+                  <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
                 </div>
                 <div>
-                  <label htmlFor="cvv" className="block mb-2 text-sm font-semibold">CVV</label>
-                  <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                  <label htmlFor="cvv" className="block mb-1.5 md:mb-2 text-sm font-semibold">CVV</label>
+                  <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
                 </div>
               </div>
 
-              <div className="border-t border-border pt-4 mt-2">
-                <div className="flex justify-between text-lg font-bold mb-4">
+              <div className="border-t border-border pt-4 mt-1 md:mt-2">
+                <div className="flex justify-between text-base md:text-lg font-bold mb-4">
                   <span>Total</span>
                   <span className="text-primary">₦{finalTotalAmount.toLocaleString()}</span>
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  className={`w-full p-3.5 md:p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors text-sm md:text-base ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   {loading ? 'Processing...' : 'Confirm & Pay'}
                 </button>
               </div>
-              <p className="text-center text-xs text-muted-foreground">
+              <p className="text-center text-[11px] md:text-xs text-muted-foreground">
                 <FaShieldAlt className="inline mr-1" /> Secure payment powered by {siteName}.
               </p>
             </form>

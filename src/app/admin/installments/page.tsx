@@ -117,6 +117,7 @@ export default function AdminInstallments() {
   const [loadingReceipt, setLoadingReceipt] = useState(false);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: string, id: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ type: string, id: string } | null>(null);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'plans' | 'fees' | 'policy'>('plans');
   const [visibleCards, setVisibleCards] = useState(40);
@@ -190,11 +191,13 @@ export default function AdminInstallments() {
   };
 
   const verifyPasskey = async (actionType: string, id: string) => {
-    const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
-    const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
+    setIsVerifying(true);
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
 
-    if (passkeyInput === correctPasskey) {
-      if (actionType === 'deleteComplaint') {
+      if (passkeyInput === correctPasskey) {
+        if (actionType === 'deleteComplaint') {
         await deleteDoc(doc(db, 'complaints', id));
         toast.success('Complaint deleted.');
       } else if (actionType === 'clearPayment') {
@@ -240,6 +243,9 @@ export default function AdminInstallments() {
       setPasskeyInput('');
     } else {
       toast.error('Incorrect Passkey');
+    }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -1218,7 +1224,13 @@ export default function AdminInstallments() {
             />
             <div className="flex gap-4">
               <button onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); }} className="flex-1 py-3 font-bold border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} className="flex-1 py-3 font-bold bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">Confirm</button>
+              <button 
+                disabled={isVerifying}
+                onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} 
+                className={`flex-1 py-3 font-bold bg-primary text-white rounded-md transition-colors ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-hover'}`}
+              >
+                {isVerifying ? 'Verifying...' : 'Confirm'}
+              </button>
             </div>
           </div>
         </div>

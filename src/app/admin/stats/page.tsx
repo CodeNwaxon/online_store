@@ -24,6 +24,7 @@ function AdminStatsContent() {
   const [visibleInventory, setVisibleInventory] = useState(40);
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
@@ -259,6 +260,7 @@ function AdminStatsContent() {
   };
 
   const verifyPasskey = async () => {
+    setIsVerifying(true);
     try {
       const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
       const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
@@ -281,6 +283,8 @@ function AdminStatsContent() {
     } catch (err) {
       console.error("Verification failed:", err);
       toast.error('Authorization failed');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -956,10 +960,11 @@ function AdminStatsContent() {
                 Cancel
               </button>
               <button
+                disabled={isVerifying}
                 onClick={verifyPasskey}
-                className="flex-1 py-3 font-bold text-xs uppercase bg-red-600 text-white rounded-2xl hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all"
+                className={`flex-1 py-3 font-bold text-xs uppercase bg-red-600 text-white rounded-2xl shadow-lg shadow-red-600/20 transition-all ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-700'}`}
               >
-                Confirm
+                {isVerifying ? 'Verifying...' : 'Confirm'}
               </button>
             </div>
           </div>

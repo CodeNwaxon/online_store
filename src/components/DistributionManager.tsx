@@ -38,6 +38,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
   // Password protection state
   const [passwordPrompt, setPasswordPrompt] = useState<{ isOpen: boolean, action: 'create' | 'delete', targetId?: string }>({ isOpen: false, action: 'create' });
   const [password, setPassword] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -71,6 +72,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsVerifying(true);
     try {
       const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
       const currentPasskey = settingsDoc.data()?.passkey || 'admin1234';
@@ -87,6 +89,8 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
       }
     } catch (error) {
       toast.error('Failed to verify password');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -389,8 +393,8 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                 <button type="button" onClick={() => { setPasswordPrompt({ isOpen: false, action: 'create' }); setPassword(''); }} className="flex-1 p-3 rounded-lg border border-border font-bold text-sm hover:bg-muted transition-colors">
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 p-3 rounded-lg bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors">
-                  Authorize
+                <button type="submit" disabled={isVerifying} className={`flex-1 p-3 rounded-lg bg-red-600 text-white font-bold text-sm transition-colors ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-700'}`}>
+                  {isVerifying ? 'Verifying...' : 'Authorize'}
                 </button>
               </div>
             </form>
