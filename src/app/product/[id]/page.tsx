@@ -349,7 +349,7 @@ function RelatedCarousel({
       <div className="relative hidden sm:block px-8">
         <div className={`grid ${gridCols} gap-3 transition-all duration-500 ease-in-out`}>
           {displayedProducts.map((p, i) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard key={p.id} product={p} index={startIndex + i} />
           ))}
         </div>
 
@@ -395,9 +395,9 @@ function RelatedCarousel({
           onScroll={handleMobileScroll}
           className="flex overflow-x-auto gap-2 snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
-          {related.map(p => (
+          {related.map((p, index) => (
             <div key={p.id} className="min-w-[48%] w-[48%] shrink-0 snap-start">
-              <ProductCard product={p} />
+              <ProductCard product={p} index={index} />
             </div>
           ))}
         </div>
