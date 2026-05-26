@@ -464,24 +464,11 @@ export default function AdminOrders() {
                   <span className="text-sm text-muted-foreground font-bold">Payment Method</span>
                   <span className="text-sm font-black uppercase">{selectedOrder.type === 'installment' ? 'Installments (Completed)' : 'Online Cart Payment'}</span>
                 </div>
-                <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
+                <div className="flex flex-col pt-4 border-t border-border/50">
                   <div className="flex justify-between items-center text-[11px] text-gray-400 font-bold uppercase tracking-[0.2em]">
                     <span>Shipping Fee</span>
                     <span>₦{(selectedOrder.shippingFee || 0).toLocaleString()}</span>
                   </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
                   <div className="flex justify-between items-center">
                     <span className="text-xs md:text-sm font-black uppercase">Total Amount Paid</span>
