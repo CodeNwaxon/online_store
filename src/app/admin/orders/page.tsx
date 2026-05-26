@@ -17,21 +17,19 @@ import { toast, Toaster } from 'react-hot-toast';
 import {
   FaShoppingBag,
   FaSearch,
-  FaFilter,
   FaTrash,
   FaCheckCircle,
-  FaUser,
   FaPhoneAlt,
   FaEnvelope,
   FaMapMarkerAlt,
   FaCalendarAlt,
   FaCreditCard,
   FaTimes,
-  FaArrowRight,
   FaLock,
-  FaReceipt,
   FaPrint,
-  FaChevronDown
+  FaChevronDown,
+  FaTruck,
+  FaBuilding
 } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -95,6 +93,97 @@ export default function AdminOrders() {
     e.stopPropagation();
     await updateDoc(doc(db, 'orders', orderId), { delivered: true });
     toast.success('Order marked as delivered');
+  };
+
+  const getOrderCity = (order: any) => {
+    if (!order) return '';
+    if (order.city) return order.city;
+
+    const addressParts = order.address?.split(',').map((part: string) => part.trim()).filter(Boolean) || [];
+    if (order.deliveryMethod === 'pickup') {
+      return addressParts[1] ?? addressParts[addressParts.length - 1] ?? order.address;
+    }
+    return addressParts[addressParts.length - 1] ?? order.address;
+  };
+
+  const handlePrintOrderDetails = (order: any) => {
+    if (!order) return;
+    const displayUid = order.id?.substring(0, 10).toUpperCase();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const deliveryLabel = order.deliveryMethod === 'pickup' ? 'Pick Up Location' : "Ship To Customer's Address";
+    const deliveryValue = getOrderCity(order);
+    const shippingFee = order.shippingFee || 0;
+
+    const receiptHtml = `
+      <html>
+        <head>
+          <title>Order Receipt - ${displayUid}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 20px; margin: 0; display: flex; justify-content: center; background: #f8fafc; }
+            .receipt { width: 380px; background: #fff; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #e2e8f0; }
+            .header { padding: 24px; background: #f8fafc; border-bottom: 1px dashed #e2e8f0; text-align: center; }
+            .title { font-size: 16px; font-weight: 900; letter-spacing: -0.03em; margin: 0; color: #0f172a; }
+            .subheading { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 8px; letter-spacing: 0.15em; }
+            .content { padding: 24px; }
+            .row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+            .label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+            .value { font-size: 12px; font-weight: 700; color: #0f172a; text-align: right; }
+            .item-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 11px; }
+            .item-name { color: #475569; max-width: 190px; }
+            .item-price { font-weight: 900; }
+            .divider { border-top: 1px solid #e2e8f0; margin: 18px 0; }
+            .total-row { display: flex; justify-content: space-between; align-items: center; }
+            .total-label { font-size: 10px; font-weight: 900; color: #334155; text-transform: uppercase; }
+            .total-value { font-size: 24px; font-weight: 900; color: #D48806; }
+            .footer { padding: 20px 24px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; }
+            .footer-text { font-size: 10px; color: #64748b; font-weight: 700; }
+            @media print {
+              body { background: #fff; padding: 0; }
+              .receipt { box-shadow: none; margin: 0; border: 1px solid #e2e8f0; width: 100%; }
+              .no-print { display: none; }
+              html, body { height: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="header">
+              <h1 class="title">Order Receipt</h1>
+              <div class="subheading">ID: ${displayUid}</div>
+            </div>
+            <div class="content">
+              <div class="row"><span class="label">Customer</span><span class="value">${order.customerName || 'N/A'}</span></div>
+              <div class="row"><span class="label">Date</span><span class="value">${new Date(order.createdAt).toLocaleString()}</span></div>
+              <div class="row"><span class="label">${deliveryLabel}</span><span class="value">${deliveryValue}</span></div>
+              <div class="row"><span class="label">Address</span><span class="value">${order.address || 'N/A'}</span></div>
+              <div class="divider"></div>
+              ${order.items.map((item: any) => `
+                <div class="item-row">
+                  <span class="item-name">${item.name} x${item.quantity}</span>
+                  <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              `).join('')}
+              <div class="divider"></div>
+              <div class="row"><span class="label">Shipping Fee</span><span class="value">₦${shippingFee.toLocaleString()}</span></div>
+              <div class="total-row">
+                <span class="total-label">Total Paid</span>
+                <span class="total-value">₦${order.totalAmount?.toLocaleString()}</span>
+              </div>
+            </div>
+            <div class="footer">
+              <p class="footer-text">Thank you for shopping with us.</p>
+            </div>
+          </div>
+          <script>window.onload = () => { window.print(); };</script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
   };
 
   const filteredOrders = orders.filter(order => {
@@ -164,8 +253,8 @@ export default function AdminOrders() {
                 key={order.id}
                 onClick={() => markAsRead(order)}
                 className={`group relative bg-card p-6 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 ${order.type === 'installment'
-                    ? 'border-primary/20 hover:border-primary/50'
-                    : 'border-border hover:border-border'
+                  ? 'border-primary/20 hover:border-primary/50'
+                  : 'border-border hover:border-border'
                   } ${order.isNew ? 'ring-2 ring-green-500 animate-[pulse_3s_infinite]' : ''}`}
               >
                 {order.isNew && (
@@ -283,10 +372,10 @@ export default function AdminOrders() {
 
       {/* ── ORDER DETAILS OVERLAY ── */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-card w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+        <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-2">
+          <div className="bg-card w-full max-w-2xl max-h-[90vh] rounded-md md:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
             {/* Header */}
-            <div className={`p-8 ${selectedOrder.type === 'installment' ? 'bg-primary text-white' : 'bg-foreground text-background'}`}>
+            <div className={`p-6 md:p-8 ${selectedOrder.type === 'installment' ? 'bg-primary text-white' : 'bg-foreground text-background'}`}>
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -309,26 +398,35 @@ export default function AdminOrders() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+            <div className="flex-1 overflow-y-auto px-6 py-8 md:px-8 space-y-8">
               {/* Customer Info */}
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Customer Contact</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-2xl">
+                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-md md:rounded-2xl">
                     <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm"><FaPhoneAlt /></div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Phone</p>
                       <p className="font-bold text-sm">{selectedOrder.phone}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-2xl">
+                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-md md:rounded-2xl">
                     <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm"><FaEnvelope /></div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Email</p>
                       <p className="font-bold text-sm truncate max-w-[150px]">{selectedOrder.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-2xl md:col-span-2">
+                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-md md:rounded-2xl">
+                    <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm">
+                      {selectedOrder.deliveryMethod === 'pickup' ? <FaBuilding /> : <FaTruck />}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">{selectedOrder.deliveryMethod === 'pickup' ? 'Pick Up' : "Ship To Customer\'s Address"}</p>
+                      <p className="font-bold text-sm">{getOrderCity(selectedOrder)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-md md:rounded-2xl">
                     <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm"><FaMapMarkerAlt /></div>
                     <div>
                       <p className="text-[10px] text-muted-foreground uppercase font-bold">Shipping Address</p>
@@ -343,7 +441,7 @@ export default function AdminOrders() {
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Ordered Items</h4>
                 <div className="space-y-3">
                   {selectedOrder.items.map((item: any, i: number) => (
-                    <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-2xl border border-border/50">
+                    <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-md md:rounded-2xl border border-border/50">
                       <div className="relative w-16 h-16 rounded-xl border border-border overflow-hidden shrink-0">
                         <Image src={item.image} alt={item.name} fill className="object-cover" sizes="120px" />
                       </div>
@@ -361,14 +459,34 @@ export default function AdminOrders() {
               </div>
 
               {/* Summary */}
-              <div className="bg-muted/50 p-6 rounded-3xl border-2 border-border/50">
+              <div className="bg-muted/50 p-4 md:p-6 rounded-md md:rounded-3xl border-2 border-border/50">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-muted-foreground font-bold">Payment Method</span>
                   <span className="text-sm font-black uppercase">{selectedOrder.type === 'installment' ? 'Installments (Completed)' : 'Online Cart Payment'}</span>
                 </div>
-                <div className="flex justify-between items-center pt-4 border-t border-border/50">
-                  <span className="text-sm md:text-lg font-black uppercase">Total Amount Paid</span>
-                  <span className="text-2xl md:text-3xl font-black text-primary">₦{selectedOrder.totalAmount?.toLocaleString()}</span>
+                <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
+                  <div className="flex justify-between items-center text-[11px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+                    <span>Shipping Fee</span>
+                    <span>₦{(selectedOrder.shippingFee || 0).toLocaleString()}</span>
+                  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs md:text-sm font-black uppercase">Total Amount Paid</span>
+                    <span className="text-xl md:text-2xl font-black text-primary">₦{selectedOrder.totalAmount?.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
@@ -390,7 +508,7 @@ export default function AdminOrders() {
 
             {/* Footer Actions */}
             <div className="p-4 md:p-6 bg-muted border-t border-border flex gap-3 md:gap-4">
-              <button onClick={() => window.print()} className="flex-1 py-3 md:py-4 bg-card border border-border rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-muted/50 transition-all">
+              <button onClick={() => handlePrintOrderDetails(selectedOrder)} className="flex-1 py-3 md:py-4 bg-card border border-border rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2 hover:bg-muted/50 transition-all">
                 <FaPrint className="text-sm md:text-base" />
                 <span className="md:hidden">Print</span>
                 <span className="hidden md:inline">Print Order Details</span>
@@ -481,3 +599,4 @@ export default function AdminOrders() {
     </div>
   );
 }
+

@@ -198,6 +198,9 @@ export default function Checkout() {
         email: formData.email,
         phone: formData.phone,
         address: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${formData.address}, ${formData.city}`,
+        city: deliveryMethod === 'pickup'
+          ? selectedPickupArea.split(',').map(part => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
+          : formData.city,
         items: items.map(item => ({
           id: item.id,
           name: item.name,
