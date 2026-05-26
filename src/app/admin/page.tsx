@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaUserTie, FaShoppingCart } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function AdminDashboard() {
   const { adminData, isCEO } = useAdmin();
@@ -13,21 +14,45 @@ export default function AdminDashboard() {
   const [unreadOrders, setUnreadOrders] = useState(0);
 
   useEffect(() => {
-    const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-      setUnreadOrders(snap.size);
+    // Check auth state and only set up listeners if authenticated
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setUnreadCount(0);
+        setUnreadOrders(0);
+        return;
+      }
+
+      let instCount = 0;
+      let compCount = 0;
+
+      const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
+        setUnreadOrders(snap.size);
+      }, (error) => {
+        console.warn("Admin page orders listener error:", error);
+      });
+
+      const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
+        instCount = snap.size;
+        setUnreadCount(instCount + compCount);
+      }, (error) => {
+        console.warn("Admin page installments listener error:", error);
+      });
+
+      const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
+        compCount = snap.size;
+        setUnreadCount(instCount + compCount);
+      }, (error) => {
+        console.warn("Admin page complaints listener error:", error);
+      });
+
+      return () => {
+        unsubOrders();
+        unsubInst();
+        unsubComp();
+      };
     });
 
-    const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
-      const instCount = snap.size;
-      const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (compSnap) => {
-        setUnreadCount(instCount + compSnap.size);
-      });
-      return () => unsubComp();
-    });
-    return () => {
-      unsubOrders();
-      unsubInst();
-    };
+    return () => unsubAuth();
   }, []);
 
   const routeCards = [

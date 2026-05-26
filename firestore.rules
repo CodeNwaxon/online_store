@@ -58,6 +58,12 @@ service cloud.firestore {
       allow write: if isCEO();
     }
 
+    // Distribution Areas (Pickup/Delivery Zones)
+    match /distribution_areas/{areaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Products
     match /products/{id} {
       allow read: if true;

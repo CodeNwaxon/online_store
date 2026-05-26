@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
@@ -25,8 +26,19 @@ function AdminStatsContent() {
   const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check authentication state
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribeAuth();
+  }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) return; // Don't set up listeners if not authenticated
+
     const unsubProds = onSnapshot(collection(db, 'products'), (snap) => {
       setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
@@ -52,7 +64,7 @@ function AdminStatsContent() {
     });
 
     return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); };
-  }, []);
+  }, [isAuthenticated]);
 
   // Helper to check if a date is within the current calendar month
   const isCurrentMonth = (dateVal: any) => {

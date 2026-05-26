@@ -67,6 +67,8 @@ export default function Checkout() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
       setAreas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.warn("Distribution areas listener error:", error);
     });
     return () => unsub();
   }, []);
@@ -601,10 +603,10 @@ export default function Checkout() {
                   )
                 ) : (
                   !formData.city ? (
-                    <span className="text-red-700 font-semibold">No Address Selected</span>
+                    <span className="text-red-700 font-semibold">No City Selected</span>
                   ) : shippingCost === -1 ? (
                     <span className="text-red-700 font-semibold">City Not Found</span>
-                  ) : !formData.address ? (
+                  ) : calculatingShipping ? (
                     <span className="text-muted-foreground">Calculating...</span>
                   ) : shippingCost === -2 ? (
                     <span className="text-muted-foreground">Office Pick Up Only</span>

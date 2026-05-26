@@ -12,7 +12,7 @@ import { usePathname, useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import CartSlider from './CartSlider';
 import { auth, db } from '@/lib/firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'react-hot-toast';
@@ -46,15 +46,19 @@ export default function Navbar() {
     const lastPage = localStorage.getItem('lastVisitedPage');
     const hasRedirected = sessionStorage.getItem('hasRedirectedLastPage');
 
+    // If we're on the site root and have a saved last page, redirect once per tab
     if (pathname === '/' && lastPage && lastPage !== '/' && !hasRedirected) {
       sessionStorage.setItem('hasRedirectedLastPage', 'true');
       router.push(lastPage);
-    } else {
-      if (pathname !== '/') {
-        sessionStorage.setItem('hasRedirectedLastPage', 'true');
-      }
-      if (!pathname.startsWith('/admin') && !pathname.startsWith('/checkout') && pathname !== '/') {
+      return;
+    }
+
+    // Save the user's current page (except admin, checkout, or root)
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/checkout') && pathname !== '/') {
+      try {
         localStorage.setItem('lastVisitedPage', pathname + window.location.search);
+      } catch (e) {
+        // ignore storage errors (e.g., private mode)
       }
     }
   }, [pathname, router]);
@@ -75,24 +79,41 @@ export default function Navbar() {
     };
     fetchSettings();
 
-    if (isAdmin || isCEO) {
-      const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-        setUnreadOrders(snap.size);
-      });
-
-      const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
-        const instCount = snap.size;
-        const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (compSnap) => {
-          setUnreadCount(instCount + compSnap.size);
-        });
-        return () => unsubComp();
-      });
-
-      return () => {
-        unsubOrders();
-        unsubInst();
-      };
+    // Setup listeners only if authenticated and is admin
+    if (!isAdmin && !isCEO) {
+      setUnreadCount(0);
+      setUnreadOrders(0);
+      return;
     }
+
+    let instCount = 0;
+    let compCount = 0;
+
+    const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
+      setUnreadOrders(snap.size);
+    }, (error) => {
+      console.warn("Navbar orders listener error:", error);
+    });
+
+    const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
+      instCount = snap.size;
+      setUnreadCount(instCount + compCount);
+    }, (error) => {
+      console.warn("Navbar installments listener error:", error);
+    });
+
+    const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
+      compCount = snap.size;
+      setUnreadCount(instCount + compCount);
+    }, (error) => {
+      console.warn("Navbar complaints listener error:", error);
+    });
+
+    return () => {
+      unsubOrders();
+      unsubInst();
+      unsubComp();
+    };
   }, [isAdmin, isCEO]);
 
   // Close drawer on route change
