@@ -161,7 +161,7 @@ function InstallmentsContent() {
   const handleSignIn = async () => {
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
-      toast.success('Signed in successfully!');
+      toast.success('Signed in successfully!', { duration: 3000 });
       setShowAuthOverlay(false);
       if (pendingPlanSelection) {
         setSelectedProduct(pendingPlanSelection.product);
@@ -170,7 +170,7 @@ function InstallmentsContent() {
         setPendingPlanSelection(null);
       }
     } catch {
-      toast.error('Sign in failed. Please try again.');
+      toast.error('Sign in failed. Please try again.', { duration: 3000 });
     }
   };
 

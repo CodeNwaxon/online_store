@@ -1,13 +1,17 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, addDoc, collection, increment } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, updateDoc, addDoc, collection, increment, onSnapshot } from 'firebase/firestore';
 import { products } from '@/data/products';
-import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft } from 'react-icons/fa';
+import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft, FaMapMarkerAlt, FaShieldAlt } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
+import Image from 'next/image';
+import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
+import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
 
 function LoanCheckoutContent() {
   const searchParams = useSearchParams();
@@ -15,55 +19,225 @@ function LoanCheckoutContent() {
   const loanId = searchParams.get('loanId');
   const monthsToPay = searchParams.get('months')?.split(',').map(Number) || [];
 
+  const [user, setUser] = useState<User | null>(null);
   const [loan, setLoan] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
-  const [isOfficePickup, setIsOfficePickup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
+  const [siteName, setSiteName] = useState('');
 
-  // Address fields for last payment
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
+  // Form State
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    city: '',
+    address: ''
+  });
+
+  // Delivery State
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
+  const [areas, setAreas] = useState<any[]>([]);
+  const [selectedPickupArea, setSelectedPickupArea] = useState<string>('');
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const citySuggestionsRef = useRef<HTMLDivElement>(null);
+  
+  const [showCityError, setShowCityError] = useState(false);
+  const [showPickupOnlyError, setShowPickupOnlyError] = useState(false);
+
+  // Shipping Breakdown State
+  const [shippingBreakdown, setShippingBreakdown] = useState<any>(null);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loanId) fetchLoan();
-  }, [loanId]);
+    const fetchSettings = async () => {
+      const docSnap = await getDoc(doc(db, 'settings', 'general'));
+      if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
+    };
+    fetchSettings();
 
-  const fetchLoan = async () => {
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        toast.error('You must be signed in.');
+        router.push('/installments');
+      } else {
+        setUser(u);
+        setFormData(prev => ({
+          ...prev,
+          email: u.email || '',
+          fullName: u.displayName || ''
+        }));
+      }
+    });
+    return () => unsubAuth();
+  }, [router]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
+      setAreas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.warn("Distribution areas listener error:", error);
+    });
+    return () => unsub();
+  }, []);
+
+  // Close city suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (citySuggestionsRef.current && !citySuggestionsRef.current.contains(e.target as Node)) {
+        setShowCitySuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (loanId && user) {
+      fetchLoan(user);
+    } else if (!loanId) {
+      setLoading(false);
+    }
+  }, [loanId, user]);
+
+  const fetchLoan = async (currentUser: User) => {
     const docRef = doc(db, 'installments', loanId!);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
+      if (data.userEmail !== currentUser.email) {
+        toast.error('Unauthorized access to this installment.');
+        router.push('/installments');
+        return;
+      }
       setLoan({ id: docSnap.id, ...data });
-      const p = products.find(prod => prod.id === data.productId);
-      setProduct(p);
+      
+      const productRef = doc(db, 'products', data.productId);
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists()) {
+        setProduct({ id: productSnap.id, ...productSnap.data() });
+      } else {
+        setProduct({ id: data.productId, name: data.productName, size: 'medium' });
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        fullName: data.customerName || currentUser.displayName || '',
+        phone: data.phone || prev.phone
+      }));
+    } else {
+      toast.error('Loan not found.');
     }
     setLoading(false);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+    if (id === 'city') setShowCitySuggestions(true);
+  };
+
+  // Normalize city names for fuzzy matching
+  const normalizeCity = (name: string) => name.toLowerCase().replace(/[-\s]/g, '');
+
+  const citySuggestions = useMemo(() => {
+    if (!formData.city.trim()) return areas;
+    const norm = normalizeCity(formData.city);
+    return areas.filter(a => normalizeCity(a.city).includes(norm));
+  }, [formData.city, areas]);
+
   const isLastPayment = loan && (loan.monthsPaid + monthsToPay.length >= loan.planMonths);
   const baseAmount = loan ? monthsToPay.reduce((sum: number, idx: number) => sum + loan.payments[idx].amount, 0) : 0;
-  const shippingFee = (product && !isOfficePickup && isLastPayment) ? product.shipping : 0;
-  const totalAmount = baseAmount + shippingFee;
 
-  const handleFinalPayment = async () => {
-    if (isLastPayment && !isOfficePickup) {
-      if (!address) {
-        toast.error('Please provide a shipping address.');
-        return;
-      }
-      if (!phone) {
-        toast.error('Please provide a phone number.');
-        return;
-      }
+  // Calculate Shipping with New System
+  useEffect(() => {
+    if (!isLastPayment || deliveryMethod === 'pickup' || !formData.city.trim() || !product) {
+      setShippingBreakdown(null);
+      setShippingError(null);
+      return;
     }
-    
+
+    const calculateShipping = async () => {
+      setCalculatingShipping(true);
+      setShippingError(null);
+
+      try {
+        const normInput = normalizeCity(formData.city);
+        const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
+
+        if (!matchedArea) {
+          setShippingError('City not found in our delivery areas');
+          setShippingBreakdown(null);
+          setCalculatingShipping(false);
+          return;
+        }
+
+        if (matchedArea.isActive === false) {
+          setShippingError('Pickup only available for this location');
+          setShippingBreakdown(null);
+          setCalculatingShipping(false);
+          return;
+        }
+
+        const cartItems: CartItem[] = [{
+          id: product.id,
+          name: product.name,
+          size: 'medium',
+          quantity: 1,
+          price: loan.totalAmount,
+        }];
+
+        const breakdown = await calculateCartShipping(cartItems, matchedArea.id || normalizeCity(formData.city));
+        setShippingBreakdown(breakdown);
+        setCalculatingShipping(false);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to calculate shipping';
+        setShippingError(message);
+        setShippingBreakdown(null);
+        setCalculatingShipping(false);
+      }
+    };
+
+    calculateShipping();
+  }, [isLastPayment, deliveryMethod, formData.city, areas, product, loan]);
+
+  // Calculate Shipping Cost
+  const shippingCost = useMemo(() => {
+    if (!isLastPayment) return 0;
+    if (shippingBreakdown) return shippingBreakdown.totalShipping;
+    if (deliveryMethod === 'pickup') return 0;
+    if (!formData.city.trim()) return 0;
+
+    const normInput = normalizeCity(formData.city);
+    const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
+    if (!matchedArea) return -1;
+    if (matchedArea.isActive === false) return -2;
+
+    let totalShipping = 0;
+    if (product) {
+      const cartItems: CartItem[] = [{
+        id: product.id,
+        name: product.name,
+        size: 'medium',
+        quantity: 1,
+        price: loan.totalAmount,
+      }];
+      totalShipping = calculateCartShippingForArea(cartItems, matchedArea).totalShipping;
+    }
+
+    return totalShipping;
+  }, [isLastPayment, shippingBreakdown, deliveryMethod, formData.city, areas, product, loan]);
+
+  const totalAmount = baseAmount + (shippingCost > 0 ? shippingCost : 0);
+
+  const handleFinalPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsProcessing(true);
     try {
       const updatedPayments = [...loan.payments];
-      const receiptIds: string[] = [];
 
-      // Create receipts for each month being paid
       for (const idx of monthsToPay) {
         const receiptRef = await addDoc(collection(db, 'receipts'), {
           userId: loan.userId,
@@ -85,22 +259,27 @@ function LoanCheckoutContent() {
       const updateData: any = {
         payments: updatedPayments,
         monthsPaid: loan.monthsPaid + monthsToPay.length,
-        totalAmountPaid: newTotalPaid,   // running total paid underground
+        totalAmountPaid: newTotalPaid,
       };
 
       if (isLastPayment) {
         updateData.status = 'completed';
-        updateData.shippingMethod = isOfficePickup ? 'Office Pickup' : 'Delivery';
-        updateData.shippingAddress = address;
-        updateData.phone = phone;
+        updateData.completedAt = new Date();
+        updateData.shippingMethod = deliveryMethod === 'pickup' ? 'Office Pickup' : 'Delivery';
+        updateData.shippingAddress = deliveryMethod === 'pickup' 
+            ? `Pickup at: ${selectedPickupArea}` 
+            : `${formData.address}, ${formData.city}`;
+        updateData.phone = formData.phone;
 
-        // Create Order document
         const orderData = {
           userId: loan.userId,
-          customerName: loan.customerName,
-          email: loan.userEmail,
-          phone: phone,
-          address: address || 'Office Pickup',
+          customerName: formData.fullName || loan.customerName,
+          email: formData.email || loan.userEmail,
+          phone: formData.phone,
+          address: updateData.shippingAddress,
+          city: deliveryMethod === 'pickup'
+            ? selectedPickupArea.split(',').map((part: string) => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
+            : formData.city,
           items: [{
             id: loan.productId,
             name: loan.productName,
@@ -108,7 +287,9 @@ function LoanCheckoutContent() {
             quantity: 1,
             image: loan.productImage
           }],
-          totalAmount: loan.totalAmount,
+          totalAmount: loan.totalAmount + (shippingCost > 0 ? shippingCost : 0),
+          shippingFee: shippingCost > 0 ? shippingCost : 0,
+          deliveryMethod,
           status: 'paid',
           type: 'installment',
           isNew: true,
@@ -117,7 +298,6 @@ function LoanCheckoutContent() {
         };
         await addDoc(collection(db, 'orders'), orderData);
 
-        // Deduct 1 from product quantity in Firestore
         try {
           const productRef = doc(db, 'products', loan.productId);
           await updateDoc(productRef, {
@@ -133,9 +313,23 @@ function LoanCheckoutContent() {
       router.push('/installments/pay-loan');
     } catch (error) {
       toast.error('Payment failed.');
-    } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleInitiatePayment = () => {
+    if (isLastPayment) {
+      if (!formData.fullName.trim()) { toast.error('Please enter your full name.'); return; }
+      if (!formData.phone.trim()) { toast.error('Please enter your phone number.'); return; }
+      if (deliveryMethod === 'pickup' && !selectedPickupArea) { toast.error('Please select a pick-up location.'); return; }
+      if (deliveryMethod === 'ship') {
+        if (!formData.city.trim()) { toast.error('Please enter your city.'); return; }
+        if (shippingCost === -1) { setShowCityError(true); return; }
+        if (shippingCost === -2) { setShowPickupOnlyError(true); return; }
+        if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
+      }
+    }
+    setShowPaymentOverlay(true);
   };
 
   const formatCurrency = (amount: number) => {
@@ -146,133 +340,330 @@ function LoanCheckoutContent() {
   };
 
   if (loading) return <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-16">Loading payment details...</div>;
-  if (!loan) return <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-16">Loan not found.</div>;
+  if (!loan) return null;
 
   return (
     <div className="py-16 bg-muted min-h-screen">
-      <div className="max-w-[800px] mx-auto px-4 md:px-6">
+      
+      {/* City Not Found Overlay */}
+      {showCityError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">City Not Found</h3>
+            <p className="text-muted-foreground mb-6">
+              City not found for now!!!! We will get to your city soon.
+            </p>
+            <button onClick={() => setShowCityError(false)} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+              Go Back
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Office Pickup Only Overlay */}
+      {showPickupOnlyError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+          <div className="bg-background rounded-xl p-8 max-w-sm text-center animate-in zoom-in duration-200">
+            <div className="w-16 h-16 mx-auto mb-4 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
+              <FaMapMarkerAlt size={32} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Office Pick-up Only</h3>
+            <p className="text-muted-foreground mb-6">
+              Only office pick-up is available for this city.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button type="button" onClick={() => { setDeliveryMethod('pickup'); setShowPickupOnlyError(false); }} className="w-full bg-primary text-white py-3 rounded-md font-bold hover:bg-primary-hover transition-colors">
+                Switch to Pick-up
+              </button>
+              <button type="button" onClick={() => setShowPickupOnlyError(false)} className="w-full bg-muted text-foreground py-3 rounded-md font-bold hover:bg-muted/80 transition-colors border border-border">
+                Change City
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <Toaster position="top-center" />
         
         <Link href="/installments/pay-loan" className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
           <FaChevronLeft /> Back to Loan Tracking
         </Link>
 
-        <h1 className="text-3xl font-bold mb-8 text-center">Secure Payment</h1>
+        <h1 className="text-3xl font-bold mb-8">Secure Payment</h1>
 
-        <div className="grid grid-cols-1 gap-8">
-          {/* Order Summary */}
-          <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
-            <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
-              <FaLock size={16} /> Payment Summary
-            </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
+          
+          {/* Main Content (Delivery & Customer Info if last payment) */}
+          <div className="flex flex-col gap-8">
+            {isLastPayment ? (
+              <>
+                {/* Delivery Method Selection */}
+                <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                    <FaTruck size={24} className="text-primary" /> Delivery Options
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('pickup')}
+                      className={`p-4 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'pickup' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                    >
+                      <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                        Free Delivery
+                      </div>
+                      <FaMapMarkerAlt className={`mb-3 text-2xl ${deliveryMethod === 'pickup' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <h4 className="font-bold mb-1">Office Pick Up</h4>
+                      <p className="text-xs text-muted-foreground">Pick up your item from our designated locations.</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryMethod('ship')}
+                      className={`p-4 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'ship' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
+                    >
+                      <FaTruck className={`mb-3 text-2xl ${deliveryMethod === 'ship' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <h4 className="font-bold mb-1">Ship to My Address</h4>
+                      <p className="text-xs text-muted-foreground">We deliver right to your doorstep.</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Customer Info Form */}
+                <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                    <FaShieldAlt size={24} className="text-primary" /> Customer Information
+                  </h3>
+
+                  <div className="flex flex-col gap-5">
+                    <div>
+                      <label htmlFor="fullName" className="block mb-2 text-sm font-semibold">Full Name</label>
+                      <input type="text" id="fullName" value={formData.fullName} readOnly className="w-full p-3 rounded-[var(--radius)] border border-border bg-muted text-muted-foreground outline-none cursor-not-allowed" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="phone" className="block mb-2 text-sm font-semibold">Phone Number</label>
+                        <input type="tel" id="phone" value={formData.phone} onChange={handleInputChange} required className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors" />
+                      </div>
+                      <div>
+                        <label htmlFor="email" className="block mb-2 text-sm font-semibold">Email</label>
+                        <input type="email" id="email" value={formData.email} readOnly className="w-full p-3 rounded-[var(--radius)] border border-border bg-muted text-muted-foreground outline-none cursor-not-allowed" />
+                      </div>
+                    </div>
+
+                    {deliveryMethod === 'ship' ? (
+                      <>
+                        <div ref={citySuggestionsRef} className="relative">
+                          <label htmlFor="city" className="block mb-2 text-sm font-semibold">City</label>
+                          <input
+                            type="text"
+                            id="city"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            onFocus={() => setShowCitySuggestions(true)}
+                            required
+                            placeholder="Start typing your city..."
+                            autoComplete="off"
+                            className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
+                          />
+                          {showCitySuggestions && citySuggestions.length > 0 && (
+                            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                              {citySuggestions.map(area => (
+                                <button
+                                  key={area.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({ ...prev, city: area.city }));
+                                    setShowCitySuggestions(false);
+                                  }}
+                                  className="w-full text-left px-4 py-3 text-sm hover:bg-primary/10 transition-colors border-b border-border last:border-b-0 flex justify-between items-center"
+                                >
+                                  <span className="font-semibold capitalize">{area.city}, <span className="text-muted-foreground capitalize">{area.state}</span></span>
+                                  {area.isActive === false ? (
+                                    <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Pickup Only</span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Delivery Available</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label htmlFor="address" className="block mb-2 text-sm font-semibold">House Address</label>
+                          <textarea id="address" value={formData.address} onChange={handleInputChange} required rows={3} className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors resize-none"></textarea>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <label htmlFor="pickupArea" className="block mb-2 text-sm font-semibold">Select Pickup Location</label>
+                        <select
+                          id="pickupArea"
+                          required
+                          value={selectedPickupArea}
+                          onChange={(e) => setSelectedPickupArea(e.target.value)}
+                          className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors"
+                        >
+                          <option value="">Select a location...</option>
+                          {areas.map(area => (
+                            <option key={area.id} value={`${area.address}, ${area.city}, ${area.state}`}>
+                              {area.city}, {area.state} - {area.address}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm flex flex-col items-center justify-center text-center py-24">
+                <FaLock size={48} className="text-muted-foreground mb-4 opacity-50" />
+                <h3 className="text-2xl font-bold mb-2">Ongoing Installment</h3>
+                <p className="text-muted-foreground max-w-md">
+                  You are paying for Month(s): {monthsToPay.map(idx => `${loan.payments[idx].month - 1}`).join(', ')}. Delivery options will be available on your final payment.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar (Order Summary) */}
+          <div className="bg-card p-8 rounded-[var(--radius)] sticky top-[100px] border border-border shadow-sm h-fit">
+            <h3 className="text-xl font-bold mb-6">Order Summary</h3>
             
             <div className="flex gap-4 mb-6 items-center">
-              <img src={loan.productImage} className="w-20 h-20 rounded-lg object-cover" />
+              <div className="relative w-16 h-16 rounded overflow-hidden shrink-0">
+                <Image src={loan.productImage} alt={loan.productName} fill className="object-cover" sizes="64px" />
+              </div>
               <div>
-                <div className="font-bold">{loan.productName}</div>
-                <div className="text-sm text-muted-foreground">
-                  Paying for: {monthsToPay.map(idx => `Month ${loan.payments[idx].month - 1}`).join(', ')}
+                <div className="font-bold text-sm">{loan.productName}</div>
+                <div className="text-xs text-muted-foreground">
+                  Months: {monthsToPay.map(idx => `${loan.payments[idx].month - 1}`).join(', ')}
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-border pt-4 flex flex-col gap-3">
-              <div className="flex justify-between">
+            <div className="border-t border-border pt-6">
+              <div className="flex justify-between mb-3 text-sm">
                 <span>Installment Amount</span>
                 <span>{formatCurrency(baseAmount)}</span>
               </div>
               
               {isLastPayment && (
                 <>
-                  <div className="flex justify-between text-primary">
-                    <span className="flex items-center gap-2"><FaTruck /> Shipping Fee</span>
-                    <span>{isOfficePickup ? 'FREE' : formatCurrency(shippingFee)}</span>
+                  <div className="flex justify-between mb-6 text-sm">
+                    <span>Shipping</span>
+                    {deliveryMethod === 'pickup' ? (
+                      !selectedPickupArea ? (
+                        <span className="text-red-700 font-semibold">No Address Selected</span>
+                      ) : (
+                        <span className="text-[#059669] font-semibold">FREE</span>
+                      )
+                    ) : (
+                      !formData.city ? (
+                        <span className="text-red-700 font-semibold">No City Selected</span>
+                      ) : shippingCost === -1 ? (
+                        <span className="text-red-700 font-semibold">City Not Found</span>
+                      ) : calculatingShipping ? (
+                        <span className="text-muted-foreground">Calculating...</span>
+                      ) : shippingCost === -2 ? (
+                        <span className="text-muted-foreground">Office Pick Up Only</span>
+                      ) : shippingCost > 0 ? (
+                        <span className="text-primary font-semibold">+ {formatCurrency(shippingCost)}</span>
+                      ) : (
+                        <span className="text-[#059669] font-semibold">FREE</span>
+                      )
+                    )}
                   </div>
 
-                  <div className="flex gap-4 mt-2">
-                    <button 
-                      onClick={() => setIsOfficePickup(false)}
-                      className={`flex-1 p-4 rounded-lg flex flex-col items-center gap-2 cursor-pointer transition-colors ${!isOfficePickup ? 'border-2 border-primary bg-primary/5' : 'border border-border bg-card hover:bg-muted'}`}
-                    >
-                      <FaTruck size={20} color={!isOfficePickup ? 'var(--primary)' : '#666'} />
-                      <span className="text-sm font-bold">Home Delivery</span>
-                    </button>
-                    <button 
-                      onClick={() => setIsOfficePickup(true)}
-                      className={`flex-1 p-4 rounded-lg flex flex-col items-center gap-2 cursor-pointer transition-colors ${isOfficePickup ? 'border-2 border-primary bg-primary/5' : 'border border-border bg-card hover:bg-muted'}`}
-                    >
-                      <FaStore size={20} color={isOfficePickup ? 'var(--primary)' : '#666'} />
-                      <span className="text-sm font-bold">Office Pick Up</span>
-                    </button>
-                  </div>
+                  {deliveryMethod === 'ship' && formData.city && shippingCost > 0 && (
+                    <div className="mb-6">
+                      <ShippingBreakdownComponent
+                        breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
+                        isLoading={calculatingShipping}
+                        error={shippingError || undefined}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
-              <div className="flex justify-between text-xl font-bold mt-4 border-t-2 border-border pt-4">
-                <span>Total to Pay</span>
-                <span>{formatCurrency(totalAmount)}</span>
+              <div className="flex justify-between text-xl font-bold border-t border-border pt-6 mt-4">
+                <span>Total Amount</span>
+                <span className="text-primary">{formatCurrency(totalAmount)}</span>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleInitiatePayment}
+              className="w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors"
+            >
+              Pay {formatCurrency(totalAmount)}
+            </button>
+            <p className="text-center text-xs text-muted-foreground mt-4">
+              Secure payment powered by {siteName || 'Quick Choice'}.
+            </p>
           </div>
 
-          {/* Shipping Details (Last Payment Only) */}
-          {isLastPayment && !isOfficePickup && (
-            <div className="bg-card p-8 rounded-[var(--radius)] border border-border shadow-sm">
-              <h3 className="font-bold text-xl mb-6">Shipping Information</h3>
-              <div className="flex flex-col gap-4">
-                <input 
-                  required
-                  type="text" 
-                  placeholder="Full Delivery Address" 
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors"
-                />
-                <input 
-                  required
-                  type="tel" 
-                  placeholder="Phone Number" 
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Card Form Mockup */}
-          <div className="bg-card p-5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-             <h3 className="font-bold text-lg md:text-xl mb-4 md:mb-6">Card Information</h3>
-             <div className="flex flex-col gap-3 md:gap-4">
-                <div>
-                  <label className="block mb-1.5 text-sm font-semibold">Card Number</label>
-                  <input type="text" placeholder="0000 0000 0000 0000" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-                </div>
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-sm font-semibold">Expiry Date</label>
-                    <input type="text" placeholder="MM/YY" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-sm font-semibold">CVV</label>
-                    <input type="text" placeholder="CVV" className="w-full p-3 md:p-4 rounded-lg border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-                  </div>
-                </div>
-             </div>
-             
-             <button 
-              disabled={isProcessing}
-              onClick={handleFinalPayment}
-              className="w-full bg-primary hover:bg-primary-hover text-white mt-6 md:mt-8 p-3.5 md:p-4 text-sm md:text-lg rounded-md font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-             >
-               {isProcessing ? 'Processing Securely...' : `Pay ${formatCurrency(totalAmount)}`}
-             </button>
-             <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-3 md:mt-4">
-               Payments are processed securely via Paystack.
-             </p>
-          </div>
         </div>
       </div>
+
+      {/* Payment Details Overlay */}
+      {showPaymentOverlay && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-2 md:p-4">
+          <div className="bg-background rounded-xl p-5 md:p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5 md:mb-6">
+              <h3 className="text-lg md:text-xl font-bold flex items-center gap-2 md:gap-3">
+                <FaCreditCard size={20} className="text-primary" /> Payment Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPaymentOverlay(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground text-sm font-bold transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleFinalPayment} className="flex flex-col gap-4 md:gap-5">
+              <div>
+                <label htmlFor="cardNum" className="block mb-1.5 md:mb-2 text-sm font-semibold">Card Number</label>
+                <input type="text" id="cardNum" placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div>
+                  <label htmlFor="expiry" className="block mb-1.5 md:mb-2 text-sm font-semibold">Expiry Date</label>
+                  <input type="text" id="expiry" placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+                </div>
+                <div>
+                  <label htmlFor="cvv" className="block mb-1.5 md:mb-2 text-sm font-semibold">CVV</label>
+                  <input type="text" id="cvv" placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4 mt-1 md:mt-2">
+                <div className="flex justify-between text-base md:text-lg font-bold mb-4">
+                  <span>Total</span>
+                  <span className="text-primary">{formatCurrency(totalAmount)}</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className={`w-full p-3.5 md:p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors text-sm md:text-base ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isProcessing ? 'Processing Securely...' : 'Confirm & Pay'}
+                </button>
+              </div>
+              <p className="text-center text-[11px] md:text-xs text-muted-foreground">
+                <FaShieldAlt className="inline mr-1" /> Secure payment powered by {siteName || 'Quick Choice'}.
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

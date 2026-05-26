@@ -70,6 +70,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Orders
+    match /orders/{id} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if true;
+      allow update: if isAdmin();
+      allow delete: if isCEO();
+    }
+
     // Complaints
     match /complaints/{id} {
       allow read: if isAdmin();

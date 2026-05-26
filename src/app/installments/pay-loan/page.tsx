@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
 import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint, FaTimes } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
@@ -412,9 +412,20 @@ export default function PayLoanPage() {
     </div>
   );
 
+  const handleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      toast.success('Signed in successfully!', { duration: 3000 });
+    } catch {
+      toast.error('Sign in failed. Please try again.', { duration: 3000 });
+    }
+  };
+
   if (!user) return (
     <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-16 text-center">
-      <h2 className="text-2xl font-bold">Please sign in to view your loans.</h2>
+      <h2 className="text-2xl font-bold">
+        Please <button onClick={handleSignIn} className="text-blue-600 font-semibold hover:underline">sign in</button> to view your loans.
+      </h2>
       <button className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold mt-4 inline-block transition-colors" onClick={() => router.push('/installments')}>Go to Installments</button>
     </div>
   );
