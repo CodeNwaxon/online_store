@@ -18,6 +18,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
+import { uploadImageToCloudinary } from '@/actions/upload';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/PRODUCTS',
@@ -268,13 +269,7 @@ export default function AdminManagement() {
       if (imageFile) {
         const formData = new FormData();
         formData.append('file', imageFile);
-        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-
-        const res = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          { method: 'POST', body: formData }
-        );
-        const data = await res.json();
+        const data = await uploadImageToCloudinary(formData);
         imageUrl = data.secure_url;
       }
 

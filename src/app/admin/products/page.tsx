@@ -21,6 +21,7 @@ import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DistributionManager from '@/components/DistributionManager';
+import { uploadImageToCloudinary } from '@/actions/upload';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -333,13 +334,7 @@ function AdminProductsContent() {
 
         const formData = new FormData();
         formData.append('file', img.value);
-        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-
-        const res = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          { method: 'POST', body: formData }
-        );
-        const data = await res.json();
+        const data = await uploadImageToCloudinary(formData);
         return data.secure_url;
       }));
 
