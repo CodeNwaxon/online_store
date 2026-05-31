@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-[72px] h-[calc(100vh-72px)] z-[100] overflow-hidden">
           <div className="p-6 border-b border-border">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-black italic">QC</div>
+              <div className="w-10 h-8 bg-primary rounded flex items-center justify-center text-white font-semibold text-[11px] italic">Nomo</div>
               <h2 className="text-lg font-bold text-primary tracking-tight">
                 {isCEO ? 'CEO Dashboard' : 'Admin Dashboard'}
               </h2>
