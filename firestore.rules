@@ -30,18 +30,18 @@ service cloud.firestore {
 
     // ─── 3. COLLECTIONS ───────────────────────────────────────────
 
-    // Installments
+    // Installments — create is blocked client-side; only server (Admin SDK) can create
     match /installments/{id} {
       allow read: if isAdmin() || (request.auth != null && (resource == null || resource.data.userEmail == request.auth.token.email));
-      allow create: if request.auth != null;
+      allow create: if false; // Only the server (Admin SDK) can create installments
       allow update: if isAdmin() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
       allow delete: if isCEO();
     }
 
-    // Receipts
+    // Receipts — create is blocked client-side; only server (Admin SDK) can create
     match /receipts/{id} {
       allow read: if isAdmin() || (request.auth != null && (resource == null || resource.data.userEmail == request.auth.token.email));
-      allow create: if request.auth != null;
+      allow create: if false; // Only the server (Admin SDK) can create receipts
       allow update: if isAdmin() || (request.auth != null && resource.data.userEmail == request.auth.token.email);
       allow delete: if isCEO();
     }
@@ -70,10 +70,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Orders
+    // Orders — create is blocked client-side; only server (Admin SDK) can create
     match /orders/{id} {
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
-      allow create: if true;
+      allow create: if false; // Only the server (Admin SDK) can create orders
       allow update: if isAdmin();
       allow delete: if isCEO();
     }

@@ -5,10 +5,11 @@ import { Product } from '@/data/products';
 import { FaTimes, FaCreditCard, FaUser, FaPhone, FaMapMarkerAlt, FaTruck } from 'react-icons/fa';
 import { auth, db } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, onSnapshot, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { usePaystackPayment } from 'react-paystack';
+import { usePaystack } from '@/hooks/usePaystack';
+import { verifyAndCreateInstallment } from '@/actions/verifyPayment';
 
 interface InstallmentOverlayProps {
   product: Product;
@@ -123,6 +124,12 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));
     setIsProcessing(true);
     try {
+      if (!reference?.reference) {
+        toast.error('No payment reference found.');
+        setIsProcessing(false);
+        return;
+      }
+
       let currentUser = auth.currentUser;
 
       if (!currentUser) {
@@ -150,67 +157,30 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           return;
         }
 
-        const remainingBalance = totalAmount - amountToPay;
-        const recalculatedMonthlyAmount = remainingBalance / plan;
-
-        const batch = writeBatch(db);
-        const receiptRef = doc(collection(db, 'receipts'));
-        const installmentRef = doc(collection(db, 'installments'));
-
-        batch.set(receiptRef, {
+        // Send the reference to the SERVER for verification
+        const result = await verifyAndCreateInstallment(reference.reference, {
           userId: currentUser.uid,
-          userEmail: userEmail || currentUser.email,
-          productName: product.name,
-          paymentName: 'Initial Deposit',
-          amount: amountToPay,
-          createdAt: serverTimestamp(),
-          installmentId: installmentRef.id,
-        });
-
-        batch.set(installmentRef, {
-          userId: currentUser.uid,
-          userEmail: userEmail || currentUser.email,
+          userEmail: userEmail || currentUser.email || '',
           customerName: fullName,
           customerPhone: phone,
-          deliveryAddress: "Pending (To be provided upon completion)",
           productId: product.id,
           productName: product.name,
           productCategory: product.category,
           productImage: product.image,
           basePrice: product.price,
-          shippingFee: 0,
           totalAmount: totalAmount,
-          monthlyAmount: recalculatedMonthlyAmount,
+          downPaymentAmount: amountToPay,
           planMonths: plan,
-          downPaymentPaid: amountToPay,
-          totalAmountPaid: amountToPay,
-          monthsPaid: 0,
           lateFeePercent: instSettings.lateFeePercent || 5,
           withdrawalFeePercent: instSettings.withdrawalFeePercent || 15,
           gracePeriodDays: instSettings.gracePeriodDays || 5,
-          payments: [
-            {
-              month: 1,
-              amount: amountToPay,
-              status: 'paid',
-              paidAt: new Date(),
-              deadline: new Date(),
-              receiptId: receiptRef.id
-            },
-            ...Array.from({ length: plan }).map((_, i) => ({
-              month: i + 2,
-              amount: recalculatedMonthlyAmount,
-              status: 'pending',
-              deadline: new Date(Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000)
-            }))
-          ],
-          status: 'active',
-          isNew: true,
-          paystackReference: reference?.reference || null,
-          createdAt: serverTimestamp(),
         });
 
-        await batch.commit();
+        if (!result.success) {
+          toast.error(result.error || 'Payment verification failed.');
+          setIsProcessing(false);
+          return;
+        }
 
         toast.success('Initial payment successful! Loan session created.');
         router.push('/installments/pay-loan');
@@ -223,13 +193,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     }
   };
 
-  const paystackConfig = {
-    reference: (new Date()).getTime().toString(),
-    email: userEmail || "customer@example.com",
-    amount: (Number(parseWithCommas(downPaymentDisplay)) || 0) * 100, // Amount is in kobo
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-  };
-  const initializePayment = usePaystackPayment(paystackConfig);
+  const pay = usePaystack();
 
   const handleProceed = async () => {
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));
@@ -252,7 +216,14 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       return;
     }
 
-    initializePayment({ onSuccess: processInitialDeposit, onClose: () => toast.error('Payment cancelled') });
+    pay({
+      reference: (new Date()).getTime().toString(),
+      email: userEmail || 'customer@example.com',
+      amount: amountToPay * 100,
+      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+      onSuccess: processInitialDeposit,
+      onClose: () => toast.error('Payment cancelled'),
+    });
   };
 
   const Backdrop = ({ children }: { children: React.ReactNode }) => (

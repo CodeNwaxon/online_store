@@ -4,14 +4,15 @@ import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, updateDoc, addDoc, collection, increment, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft, FaMapMarkerAlt, FaShieldAlt } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
 import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
-import { usePaystackPayment } from 'react-paystack';
+import { usePaystack } from '@/hooks/usePaystack';
+import { verifyAndProcessInstallmentPayment } from '@/actions/verifyPayment';
 
 function LoanCheckoutContent() {
   const searchParams = useSearchParams();
@@ -241,81 +242,44 @@ function LoanCheckoutContent() {
   const processFinalPayment = async (reference?: any) => {
     setIsProcessing(true);
     try {
-      const updatedPayments = [...loan.payments];
-
-      for (const idx of monthsToPay) {
-        const receiptRef = await addDoc(collection(db, 'receipts'), {
-          userId: loan.userId,
-          userEmail: loan.userEmail,
-          productName: loan.productName,
-          paymentName: `Month ${loan.payments[idx].month - 1}`,
-          amount: loan.payments[idx].amount,
-          createdAt: new Date(),
-          installmentId: loan.id,
-          paystackReference: reference?.reference || null
-        });
-        
-        updatedPayments[idx].status = 'paid';
-        updatedPayments[idx].paidAt = new Date();
-        updatedPayments[idx].receiptId = receiptRef.id;
+      if (!reference?.reference) {
+        toast.error('No payment reference found.');
+        setIsProcessing(false);
+        return;
       }
 
-      const loanRef = doc(db, 'installments', loan.id);
-      const newTotalPaid = (loan.totalAmountPaid || loan.downPaymentPaid || 0) + baseAmount;
-      const updateData: any = {
-        payments: updatedPayments,
-        monthsPaid: loan.monthsPaid + monthsToPay.length,
-        totalAmountPaid: newTotalPaid,
-      };
+      const shippingAddress = deliveryMethod === 'pickup'
+        ? `Pickup at: ${selectedPickupArea}`
+        : `${formData.address}, ${formData.city}`;
 
-      if (isLastPayment) {
-        updateData.status = 'completed';
-        updateData.completedAt = new Date();
-        updateData.shippingMethod = deliveryMethod === 'pickup' ? 'Office Pickup' : 'Delivery';
-        updateData.shippingAddress = deliveryMethod === 'pickup' 
-            ? `Pickup at: ${selectedPickupArea}` 
-            : `${formData.address}, ${formData.city}`;
-        updateData.phone = formData.phone;
+      const city = deliveryMethod === 'pickup'
+        ? selectedPickupArea.split(',').map((part: string) => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
+        : formData.city;
 
-        const orderData = {
-          userId: loan.userId,
-          customerName: formData.fullName || loan.customerName,
-          email: formData.email || loan.userEmail,
-          phone: formData.phone,
-          address: updateData.shippingAddress,
-          city: deliveryMethod === 'pickup'
-            ? selectedPickupArea.split(',').map((part: string) => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
-            : formData.city,
-          items: [{
-            id: loan.productId,
-            name: loan.productName,
-            price: loan.totalAmount,
-            quantity: 1,
-            image: loan.productImage
-          }],
-          totalAmount: loan.totalAmount + (shippingCost > 0 ? shippingCost : 0),
-          shippingFee: shippingCost > 0 ? shippingCost : 0,
-          deliveryMethod,
-          status: 'paid',
-          type: 'installment',
-          isNew: true,
-          installmentId: loan.id,
-          paystackReference: reference?.reference || null,
-          createdAt: new Date().toISOString(),
-        };
-        await addDoc(collection(db, 'orders'), orderData);
+      // Send the reference to the SERVER for verification
+      const result = await verifyAndProcessInstallmentPayment(reference.reference, {
+        loanId: loan.id,
+        userId: loan.userId,
+        userEmail: loan.userEmail,
+        monthsToPay: monthsToPay,
+        baseAmount: baseAmount,
+        totalAmount: totalAmount,
+        isLastPayment: isLastPayment,
+        deliveryMethod: deliveryMethod,
+        shippingAddress: shippingAddress,
+        shippingFee: shippingCost > 0 ? shippingCost : 0,
+        phone: formData.phone,
+        city: city,
+        customerName: formData.fullName || loan.customerName,
+        email: formData.email || loan.userEmail,
+      });
 
-        try {
-          const productRef = doc(db, 'products', loan.productId);
-          await updateDoc(productRef, {
-            quantity: increment(-1)
-          });
-        } catch (err) {
-          console.error("Error deducting product quantity on final installment payment:", err);
-        }
+      if (!result.success) {
+        toast.error(result.error || 'Payment verification failed.');
+        setIsProcessing(false);
+        return;
       }
 
-      await updateDoc(loanRef, updateData);
       toast.success('Payment successful!');
       router.push('/installments/pay-loan');
     } catch (error) {
@@ -324,13 +288,7 @@ function LoanCheckoutContent() {
     }
   };
 
-  const paystackConfig = {
-    reference: (new Date()).getTime().toString(),
-    email: formData.email || loan?.userEmail || "customer@example.com",
-    amount: totalAmount * 100, // Amount is in kobo
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-  };
-  const initializePayment = usePaystackPayment(paystackConfig);
+  const pay = usePaystack();
 
   const handleInitiatePayment = () => {
     if (isLastPayment) {
@@ -344,7 +302,14 @@ function LoanCheckoutContent() {
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
       }
     }
-    initializePayment({ onSuccess: processFinalPayment, onClose: () => toast.error('Payment cancelled') });
+    pay({
+      reference: (new Date()).getTime().toString(),
+      email: formData.email || loan?.userEmail || 'customer@example.com',
+      amount: totalAmount * 100,
+      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+      onSuccess: processFinalPayment,
+      onClose: () => toast.error('Payment cancelled'),
+    });
   };
 
   const formatCurrency = (amount: number) => {

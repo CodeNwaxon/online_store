@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { FaDownload } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 export default function FooterInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -15,25 +15,24 @@ export default function FooterInstall() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
-    // Check if installed
-    if (localStorage.getItem('app_installed') === 'true') {
-      setIsInstalled(true);
-    }
-
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      toast('To install the app, tap "Share" and "Add to Home Screen" on iOS, or use your browser menu on Android/Desktop.', {
+        icon: 'ℹ️',
+        duration: 5000,
+      });
+      return;
+    }
+    
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       localStorage.setItem('app_installed', 'true');
-      setIsInstalled(true);
     }
   };
-
-  if (isInstalled || !deferredPrompt) return null;
 
   return (
     <li>

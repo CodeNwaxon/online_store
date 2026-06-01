@@ -7,11 +7,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, increment, collection, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
-import { usePaystackPayment } from 'react-paystack';
+import { usePaystack } from '@/hooks/usePaystack';
+import { verifyAndFulfillOrder } from '@/actions/verifyPayment';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -201,6 +202,12 @@ export default function Checkout() {
     setLoading(true);
 
     try {
+      if (!reference?.reference) {
+        toast.error('No payment reference found.');
+        setLoading(false);
+        return;
+      }
+
       const orderData = {
         userId: auth.currentUser?.uid || 'guest',
         customerName: formData.fullName,
@@ -221,51 +228,36 @@ export default function Checkout() {
         totalAmount: finalTotalAmount,
         shippingFee: shippingCost > 0 ? shippingCost : 0,
         deliveryMethod,
-        status: 'paid',
-        type: 'normal',
-        isNew: true,
-        paystackReference: reference?.reference || null,
-        createdAt: new Date().toISOString(),
       };
 
-      const { collection, addDoc } = await import('firebase/firestore');
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      // Send the reference to the SERVER for verification
+      const result = await verifyAndFulfillOrder(reference.reference, orderData);
 
-      // Deduct product quantities in Firestore
-      for (const item of items) {
-        try {
-          const productRef = doc(db, 'products', item.id);
-          await updateDoc(productRef, {
-            quantity: increment(-item.quantity)
-          });
-        } catch (err) {
-          console.error("Error deducting quantity for product:", item.id, err);
-        }
+      if (!result.success) {
+        toast.error(result.error || 'Payment verification failed.');
+        setLoading(false);
+        return;
       }
 
       // Save to local history for customer
+      const fullOrderData = { ...orderData, status: 'paid', type: 'normal', paystackReference: reference.reference, createdAt: new Date().toISOString() };
       const history = JSON.parse(localStorage.getItem('purchase_history') || '[]');
-      history.unshift({ id: docRef.id, ...orderData });
+      history.unshift({ id: result.orderId, ...fullOrderData });
       localStorage.setItem('purchase_history', JSON.stringify(history.slice(0, 50)));
 
-      setOrderId(docRef.id);
-      setFinalOrderData(orderData);
+      setOrderId(result.orderId || null);
+      setFinalOrderData(fullOrderData);
       setLoading(false);
       setIsSuccess(true);
       clearCart();
     } catch (error) {
       console.error("Checkout error:", error);
+      toast.error('Something went wrong. Please try again.');
       setLoading(false);
     }
   };
 
-  const config = {
-    reference: (new Date()).getTime().toString(),
-    email: formData.email || "customer@example.com",
-    amount: finalTotalAmount * 100, // Amount is in kobo
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-  };
-  const initializePayment = usePaystackPayment(config);
+  const pay = usePaystack();
 
   const handlePrintReceipt = () => {
     if (!finalOrderData || !orderId) return;
@@ -691,7 +683,14 @@ export default function Checkout() {
                   }
                 }
 
-                initializePayment({ onSuccess: processOrder, onClose: () => toast.error('Payment cancelled') });
+                pay({
+                  reference: (new Date()).getTime().toString(),
+                  email: formData.email || 'customer@example.com',
+                  amount: finalTotalAmount * 100,
+                  publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+                  onSuccess: processOrder,
+                  onClose: () => toast.error('Payment cancelled'),
+                });
               }}
               className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
