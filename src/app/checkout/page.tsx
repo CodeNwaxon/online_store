@@ -286,7 +286,7 @@ export default function Checkout() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
+              <img src="/logo_nomo.png" class="logo" />
               <h1 class="store-name">${siteName.toUpperCase()}®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -45,7 +45,7 @@ export default function Footer() {
   }, []);
 
   const siteName = settings?.siteName || '';
-  const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}]®.`;
+  const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}].`;
 
   // Function to highlight text in brackets [Like This]
   const renderMessage = (msg: string) => {
@@ -66,11 +66,11 @@ export default function Footer() {
           <div>
             <div className="flex gap-4 items-start">
               <Image
-                src="/nomo_lg.png"
+                src="/logo_nomo.png"
                 alt="Logo"
                 width={40}
                 height={40}
-                className="object-contain shrink-0 border-2 border-primary rounded p-0.5"
+                className="object-contain shrink-0 p-0.5"
               />
               <p className="text-muted-foreground text-[0.9rem] m-0">
                 {renderMessage(footerMessage)}

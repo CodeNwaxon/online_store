@@ -8,13 +8,13 @@
   "theme_color": "#D48806",
   "icons": [
     {
-      "src": "/nomo_logo_192.png",
+      "src": "/logo_nomo_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/nomo_logo_512.png",
+      "src": "/logo_nomo_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

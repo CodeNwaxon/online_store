@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
@@ -151,8 +151,8 @@ export default function PayLoanPage() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
-              <h1 class="store-name">${siteName.toUpperCase()}®</h1>
+              <img src="/logo_nomo.png" class="logo" />
+              <h1 class="store-name">${siteName.toUpperCase()}</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
                 <span class="id-badge">ID: ${displayUid}</span>
@@ -186,7 +186,7 @@ export default function PayLoanPage() {
               </div>
             </div>
             <div class="footer">
-              <p class="footer-thanks">Thank you for choosing ${siteName}®!</p>
+              <p class="footer-thanks">Thank you for choosing ${siteName}!</p>
               <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
@@ -245,8 +245,8 @@ export default function PayLoanPage() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
-              <h1 class="store-name">${siteName.toUpperCase()}®</h1>
+              <img src="/logo_nomo.png" class="logo" />
+              <h1 class="store-name">${siteName.toUpperCase()}</h1>
               <div class="official">Official Completion Receipt</div>
               <div class="copy-container">
                 <span class="id-badge">ID: ${displayUid}</span>
@@ -298,7 +298,7 @@ export default function PayLoanPage() {
               <p style="text-align: center; font-size: 8px; color: #94a3b8; margin-top: 8px; font-weight: bold; text-transform: uppercase;">Completed on: ${new Date(loanData.completedAt?.seconds ? loanData.completedAt.seconds * 1000 : (loanData.completedAt || Date.now())).toLocaleDateString('en-GB')}</p>
             </div>
             <div class="footer">
-              <p class="footer-thanks">Thank you for choosing ${siteName}®!</p>
+              <p class="footer-thanks">Thank you for choosing ${siteName}!</p>
               <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
@@ -355,9 +355,9 @@ export default function PayLoanPage() {
         refundDetails: {
           ...refundDetails,
           requestedAt: new Date(),
-          totalPaid: totalPaid,                            // e.g. ₦50
-          cancellationFee: charge,                         // e.g. ₦15 (15% of loan total)
-          refundAmount: Math.max(0, refundAmount),         // e.g. ₦35 (never negative)
+          totalPaid: totalPaid,                            // e.g. ?50
+          cancellationFee: charge,                         // e.g. ?15 (15% of loan total)
+          refundAmount: Math.max(0, refundAmount),         // e.g. ?35 (never negative)
           status: 'pending'
         }
       });
@@ -403,7 +403,7 @@ export default function PayLoanPage() {
       <div className="relative w-20 h-20">
         <div className="absolute inset-0 border-4 border-muted rounded-full"></div>
         <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-        <img src="/nomo_lg.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35px] h-[35px]" />
+        <img src="/logo_nomo.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35px] h-[35px]" />
       </div>
       <div className="text-center">
         <h3 className="font-bold text-xl mb-1">{siteName}</h3>
@@ -566,11 +566,11 @@ export default function PayLoanPage() {
           ) : loan.status === 'completed' && !loan.dismissedCompletion ? (
             <div className="bg-card border border-green-200 p-8 rounded-[var(--radius)] text-center max-w-[600px] mx-auto mt-10 shadow-lg">
               {/* Confetti icon row */}
-              <div className="flex justify-center gap-2 text-2xl mb-4">🎉 🏆 🎊</div>
+              <div className="flex justify-center gap-2 text-2xl mb-4">?? ?? ??</div>
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <FaCheckCircle size={40} />
               </div>
-              <h2 className="text-2xl font-bold mb-2 text-foreground">Installment Fully Paid! 🎉</h2>
+              <h2 className="text-2xl font-bold mb-2 text-foreground">Installment Fully Paid! ??</h2>
               <p className="text-muted-foreground mb-6 text-sm">
                 Congratulations! You have successfully completed all payments for <strong>{loan.productName}</strong>.
                 Your product will be delivered to you as per our policy. Contact us at{' '}
@@ -614,7 +614,7 @@ export default function PayLoanPage() {
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md font-bold transition-colors w-full"
               >
-                ✓ Acknowledged — Thank You!
+                ? Acknowledged  Thank You!
               </button>
             </div>
           ) : (
@@ -662,7 +662,7 @@ export default function PayLoanPage() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground m-0">
-                      To: <strong>{loan.refundDetails?.bankName} — {loan.refundDetails?.accountNumber}</strong>
+                      To: <strong>{loan.refundDetails?.bankName}  {loan.refundDetails?.accountNumber}</strong>
                     </p>
                   </div>
                 )}
@@ -898,7 +898,7 @@ export default function PayLoanPage() {
           </div>
         )}
 
-        {/* ── RECEIPT MODAL ── */}
+        {/* -- RECEIPT MODAL -- */}
         {showReceipt && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:bg-white print:p-0 print:block">
             <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-border print:border-none print:shadow-none print:mx-auto print:rounded-none print-modal-content">
@@ -913,9 +913,9 @@ export default function PayLoanPage() {
                     <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
                     <div className="text-center">
                       <div className="relative w-12 h-12 mx-auto mb-1">
-                        <Image src="/nomo_lg.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                        <Image src="/logo_nomo.png" alt="Logo" fill className="object-contain" sizes="48px" />
                       </div>
-                      <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
+                      <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}</h2>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
                       <div className="flex items-center justify-center gap-2 mt-3">
                         <span className="text-[8px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">ID: {receiptData.id?.substring(0, 10).toUpperCase()}</span>
@@ -948,7 +948,7 @@ export default function PayLoanPage() {
 
                     <div className="mt-6 pt-4 border-t-2 border-slate-800 dark:border-slate-700 flex justify-between items-center">
                       <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
-                      <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="text-2xl font-black text-primary">?{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
 
                     <div className="flex items-center justify-center gap-2 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-100 dark:border-green-900/50 mt-2">
@@ -958,7 +958,7 @@ export default function PayLoanPage() {
                   </div>
 
                   <div className="p-6 bg-slate-50 dark:bg-slate-900/50 text-center space-y-1 border-t border-slate-200 dark:border-slate-850">
-                    <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}®!</p>
+                    <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}!</p>
                     <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
                     <button onClick={() => handlePrintReceipt(receiptData.paymentName, receiptData.amount, receiptData.id)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
                       <FaPrint size={12} /> Print Receipt
@@ -975,7 +975,7 @@ export default function PayLoanPage() {
           </div>
         )}
 
-        {/* ── FINAL COMPLETION RECEIPT MODAL ── */}
+        {/* -- FINAL COMPLETION RECEIPT MODAL -- */}
         {showFinalReceipt && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-card rounded-2xl w-full max-w-[420px] overflow-hidden shadow-2xl border border-border">
@@ -984,9 +984,9 @@ export default function PayLoanPage() {
                   <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
                   <div className="text-center">
                     <div className="relative w-12 h-12 mx-auto mb-1">
-                      <Image src="/nomo_lg.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                      <Image src="/logo_nomo.png" alt="Logo" fill className="object-contain" sizes="48px" />
                     </div>
-                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
+                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}</h2>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span className="text-[8px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">ID: FINAL-{showFinalReceipt.id?.substring(0, 6).toUpperCase()}</span>
@@ -1015,15 +1015,15 @@ export default function PayLoanPage() {
                     <div className="pt-2 space-y-3">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
-                        <span className="font-bold text-slate-600 dark:text-slate-300">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                        <span className="font-bold text-slate-600 dark:text-slate-300">?{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
-                        <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                        <span className="font-bold text-secondary text-[11px]">+?{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800 dark:border-slate-700">
                         <span className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px]">Total Paid:</span>
-                        <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                        <span className="font-black text-[#D48806] text-xl">?{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -1037,7 +1037,7 @@ export default function PayLoanPage() {
                 </div>
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-900/50 text-center space-y-1 border-t border-slate-200 dark:border-slate-800">
-                  <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}®!</p>
+                  <p className="text-[9px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">Thank you for choosing {siteName || 'Quick Choice'}!</p>
                   <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
                   <button onClick={() => handlePrintFinalReceipt(showFinalReceipt)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
                     <FaPrint size={12} /> Print Final Receipt

@@ -283,7 +283,7 @@ export default function AdminInstallments() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
+              <img src="/logo_nomo.png" class="logo" />
               <h1 class="store-name">NOMO STOREZ®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
@@ -370,7 +370,7 @@ export default function AdminInstallments() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
+              <img src="/logo_nomo.png" class="logo" />
               <h1 class="store-name">Nomo Storez®</h1>
               <div class="official">Official Completion Receipt</div>
               <div class="copy-container">
@@ -1246,7 +1246,7 @@ export default function AdminInstallments() {
                   <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
                   <div className="text-center">
                     <div className="relative w-12 h-12 mx-auto mb-1">
-                      <Image src="/nomo_lg.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                      <Image src="/logo_nomo.png" alt="Logo" fill className="object-contain" sizes="48px" />
                     </div>
                     <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Nomo Storez®</h2>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
@@ -1317,7 +1317,7 @@ export default function AdminInstallments() {
                 <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
                 <div className="text-center">
                   <div className="relative w-12 h-12 mx-auto mb-1">
-                    <Image src="/nomo_lg.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                    <Image src="/logo_nomo.png" alt="Logo" fill className="object-contain" sizes="48px" />
                   </div>
                   <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Nomo Storez®</h2>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>

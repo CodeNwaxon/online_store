@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -34,7 +34,7 @@ export default function Loading() {
         {/* Small Logo in Center */}
         <div className="rounded-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55px] h-[55px] overflow-hidden p-1 bg-white">
           <Image
-            src="/nomo_lg.png"
+            src="/logo_nomo.png"
             alt="Loading..."
             width={47}
             height={47}

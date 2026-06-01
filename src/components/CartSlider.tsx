@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCartStore } from '@/store/useCartStore';
 import { useEffect, useState } from 'react';
@@ -123,8 +123,8 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_lg.png" class="logo" />
-              <h1 class="store-name">${siteName.toUpperCase()}®</h1>
+              <img src="/logo_nomo.png" class="logo" />
+              <h1 class="store-name">${siteName.toUpperCase()}</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
                 <span class="id-badge">ID: ${displayUid}</span>
@@ -156,7 +156,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               </div>
             </div>
             <div class="footer">
-              <p class="footer-thanks">Thank you for choosing ${siteName}®!</p>
+              <p class="footer-thanks">Thank you for choosing ${siteName}!</p>
               <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
@@ -338,13 +338,13 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         {items.length > 0 && (
           <div className="p-6 border-t border-border bg-muted">
             <div className="flex justify-between mb-6 text-[1.1rem] font-bold">
-              <span className="text-foreground">Total Amount:</span>
+              <span>Total:</span>
               <span className="text-primary">₦{getTotalPrice().toLocaleString()}</span>
             </div>
             <Link 
               href="/checkout" 
               onClick={onClose}
-              className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center rounded-md font-semibold px-6 py-3 w-full text-center transition-colors" 
+              className="block w-full py-3 bg-primary text-white text-center font-bold rounded-lg hover:bg-primary-hover transition-colors"
             >
               Proceed to Checkout
             </Link>
@@ -354,4 +354,3 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
     </div>
   );
 }
-

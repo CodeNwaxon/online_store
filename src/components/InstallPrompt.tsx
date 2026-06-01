@@ -71,7 +71,7 @@ export default function InstallPrompt() {
         <FaTimes />
       </button>
       <h4 className="mb-2 flex items-center gap-3 font-bold">
-        <img src="/nomo_lg.png" alt="Logo" className="w-8 h-8 object-contain border border-primary rounded p-0.5" />
+        <img src="/logo_nomo.png" alt="Logo" className="w-8 h-8 object-contain p-0.5" />
         Install Nomo Storez
       </h4>
       <p className="text-[0.85rem] text-muted-foreground mb-4">

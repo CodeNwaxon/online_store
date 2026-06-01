@@ -6,12 +6,9 @@ export const viewport: Viewport = {
   themeColor: "#D48806",
 };
 
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-
 export async function generateMetadata(): Promise<Metadata> {
   let siteName = '';
-  
+
   try {
     // Using fetch REST API to avoid GRPC errors in server-side metadata generation
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
@@ -19,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/general`,
       { next: { revalidate: 3600 } } // Cache for 1 hour
     );
-    
+
     if (response.ok) {
       const data = await response.json();
       siteName = data.fields?.siteName?.stringValue || '';
@@ -32,10 +29,13 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `${siteName} | Premium African Inspired Goods`,
     description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
     manifest: "/manifest.json",
+    icons: {
+      icon: "/favicon.png",
+    },
     openGraph: {
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      url: "https://quick-choice",
+      url: "https://nomo-store.vercel.app",
       siteName: siteName,
       images: [
         {

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -158,14 +158,14 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ─── NAV BAR ─────────────────────────────────────── */}
+      {/* --- NAV BAR --------------------------------------- */}
       <nav className="bg-card border-b border-border sticky top-0 z-[200] py-[0.875rem]">
         <div className="container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px]">
 
-          {/* Logo — always visible */}
+          {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
-            <Image src="/nomo_lg.png" alt="Logo" width={38} height={38}
-              className="object-contain border-2 border-primary rounded p-0.5" />
+            <Image src="/logo_nomo.png" alt="Logo" width={38} height={38}
+              className="object-contain p-0.5" />
             <span className="text-[0.8rem] md:text-[1.2rem] font-bold text-primary">{siteName}&reg;</span>
           </Link>
 
@@ -201,7 +201,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* RIGHT ICONS — Cart always visible, hamburger only on mobile */}
+          {/* RIGHT ICONS  Cart always visible, hamburger only on mobile */}
           <div className="flex items-center gap-3">
             {/* Cart */}
             <button onClick={() => setIsCartOpen(true)} className="relative flex items-center p-1">
@@ -213,7 +213,7 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Hamburger — only on mobile */}
+            {/* Hamburger  only on mobile */}
             <button className="flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
               <FaBars size={24} />
             </button>
@@ -221,16 +221,16 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* ─── DRAWER BACKDROP ─────────────────────────────── */}
+      {/* --- DRAWER BACKDROP ------------------------------- */}
       <div onClick={() => setIsMenuOpen(false)} className={`fixed inset-0 z-[300] bg-black/60 transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} />
 
-      {/* ─── DRAWER PANEL (slides right → left) ──────────── */}
+      {/* --- DRAWER PANEL (slides right ? left) ------------ */}
       <div className={`fixed top-0 right-0 h-full w-[min(290px,82vw)] bg-card z-[400] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col shadow-[-6px_0_30px_rgba(0,0,0,0.15)] overflow-y-auto ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         {/* Drawer header */}
         <div className="flex justify-between items-center px-[1.25rem] py-[1.1rem] border-b border-border">
           <div className="flex items-center gap-2">
-            <Image src="/nomo_lg.png" alt="logo" width={28} height={28} className="rounded border-[1.5px] border-primary p-0.5" />
-            <span className="font-bold text-primary text-[0.95rem]">{isAdminRoute ? (isCEO ? 'CEO Dashboard' : 'Admin Staff') : siteName + '®'}</span>
+            <Image src="/logo_nomo.png" alt="logo" width={28} height={28} className="p-0.5" />
+            <span className="font-bold text-primary text-[0.95rem]">{isAdminRoute ? (isCEO ? 'CEO Dashboard' : 'Admin Staff') : siteName + ''}</span>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="text-foreground p-1"><FaTimes size={22} /></button>
         </div>

@@ -278,7 +278,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
         <div className="w-[60px] h-[60px] relative mx-auto mb-6">
           <div className="absolute inset-0 border-4 border-muted rounded-full" />
           <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin" />
-          <img src="/nomo_lg.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28px] h-[28px]" />
+          <img src="/logo_nomo.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28px] h-[28px]" />
         </div>
         <h2 className="font-bold text-2xl mb-3">Refund Pending Clearance</h2>
         <p className="text-muted-foreground mb-3 leading-relaxed">
