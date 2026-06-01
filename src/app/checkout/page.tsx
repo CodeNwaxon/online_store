@@ -64,6 +64,19 @@ export default function Checkout() {
     return () => unsubscribe();
   }, []);
 
+  const [dbProducts, setDbProducts] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'products'), (snap) => {
+      const prodMap: Record<string, any> = {};
+      snap.forEach(doc => {
+        prodMap[doc.id] = doc.data();
+      });
+      setDbProducts(prodMap);
+    });
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
       setAreas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -135,9 +148,9 @@ export default function Checkout() {
         const cartItems: CartItem[] = items.map(item => ({
           id: item.id,
           name: item.name,
-          size: (item.size || 'medium') as any,
+          size: (dbProducts[item.id]?.size || item.size || 'medium') as any,
           quantity: item.quantity,
-          price: item.price,
+          price: dbProducts[item.id]?.price || item.price,
         }));
 
         // Calculate shipping
@@ -153,7 +166,7 @@ export default function Checkout() {
     };
 
     calculateShipping();
-  }, [deliveryMethod, formData.city, areas, items]);
+  }, [deliveryMethod, formData.city, areas, items, dbProducts]);
 
   // Calculate Shipping Cost (fallback for compatibility)
   const shippingCost = useMemo(() => {
@@ -170,9 +183,9 @@ export default function Checkout() {
     const cartItems: CartItem[] = items.map(item => ({
       id: item.id,
       name: item.name,
-      size: (item.size || 'medium') as any,
+      size: (dbProducts[item.id]?.size || item.size || 'medium') as any,
       quantity: item.quantity,
-      price: item.price,
+      price: dbProducts[item.id]?.price || item.price,
     }));
 
     if (matchedArea) {
@@ -180,7 +193,7 @@ export default function Checkout() {
     }
 
     return totalShipping;
-  }, [shippingBreakdown, deliveryMethod, formData.city, areas, items]);
+  }, [shippingBreakdown, deliveryMethod, formData.city, areas, items, dbProducts]);
 
   const finalTotalAmount = getTotalPrice() + (shippingCost > 0 ? shippingCost : 0);
 
@@ -204,10 +217,10 @@ export default function Checkout() {
         items: items.map(item => ({
           id: item.id,
           name: item.name,
-          price: item.price,
+          price: dbProducts[item.id]?.price || item.price,
           quantity: item.quantity,
           image: item.image,
-          size: item.size || 'medium'
+          size: dbProducts[item.id]?.size || item.size || 'medium'
         })),
         totalAmount: finalTotalAmount,
         shippingFee: shippingCost > 0 ? shippingCost : 0,

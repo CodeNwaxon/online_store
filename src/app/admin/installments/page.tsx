@@ -43,6 +43,7 @@ import {
   FaShoppingBag
 } from 'react-icons/fa';
 import Image from 'next/image';
+import { uploadImageToCloudinary } from '@/actions/upload';
 
 interface PastDueStatus {
   isPastDue: boolean;
@@ -207,13 +208,7 @@ export default function AdminInstallments() {
           try {
             const formData = new FormData();
             formData.append('file', receiptFile);
-            formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-
-            const res = await fetch(
-              `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-              { method: 'POST', body: formData }
-            );
-            const data = await res.json();
+            const data = await uploadImageToCloudinary(formData);
             receiptUrl = data.secure_url;
             toast.success('Receipt uploaded successfully!', { id: toastId });
           } catch (error) {

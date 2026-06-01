@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
+import { verifyCEO } from '@/actions/admin';
 
 export interface AdminData {
   uid: string;
@@ -37,29 +38,38 @@ export function useAdmin() {
         }, { merge: true });
         
         // Realtime listener for the admin document
-        unsubAdmin = onSnapshot(doc(db, 'admins', authUser.uid), (docSnap) => {
+        unsubAdmin = onSnapshot(doc(db, 'admins', authUser.uid), async (docSnap) => {
           if (docSnap.exists()) {
             setAdminData(docSnap.data() as AdminData);
-          } else if (authUser.uid === process.env.NEXT_PUBLIC_ADMIN_KEY) {
-            // Hardcoded CEO fallback
-            setAdminData({
-              uid: authUser.uid,
-              email: authUser.email || '',
-              role: 'CEO',
-              assignedRoutes: [
-                '/ADMIN/MANAGEMENT',
-                '/ADMIN/PRODUCTS',
-                '/ADMIN/INSTALLMENTS',
-                '/ADMIN/ORDERS',
-                '/ADMIN/SETTINGS',
-                '/ADMIN/STATS',
-                '/ADMIN/ABOUT'
-              ]
-            });
+            setLoading(false);
           } else {
-            setAdminData(null);
+            try {
+              const isCEO = await verifyCEO(authUser.uid);
+              if (isCEO) {
+                // Hardcoded CEO fallback
+                setAdminData({
+                  uid: authUser.uid,
+                  email: authUser.email || '',
+                  role: 'CEO',
+                  assignedRoutes: [
+                    '/ADMIN/MANAGEMENT',
+                    '/ADMIN/PRODUCTS',
+                    '/ADMIN/INSTALLMENTS',
+                    '/ADMIN/ORDERS',
+                    '/ADMIN/SETTINGS',
+                    '/ADMIN/STATS',
+                    '/ADMIN/ABOUT'
+                  ]
+                });
+              } else {
+                setAdminData(null);
+              }
+            } catch (err) {
+              console.error("verifyCEO error:", err);
+              setAdminData(null);
+            }
+            setLoading(false);
           }
-          setLoading(false);
         }, (error) => {
           console.warn("Admin record listener error:", error);
           setLoading(false);

@@ -55,10 +55,10 @@ Quick Choice is a state-of-the-art E-commerce platform built with Next.js 15, Fi
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
    NEXT_PUBLIC_FIREBASE_APP_ID=...
    
-   NEXT_PUBLIC_ADMIN_KEY=your_ceo_uid_here
+   ADMIN_KEY=your_ceo_uid_here
    
-   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=...
-   NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=...
+   CLOUDINARY_CLOUD_NAME=...
+   CLOUDINARY_UPLOAD_PRESET=...
    ```
 4. Run the development server:
    ```bash
@@ -80,7 +80,7 @@ Ensure your Firestore rules allow:
 - Read-only access for public product data.
 
 ### Admin Access
-Admin access is restricted based on the `NEXT_PUBLIC_ADMIN_KEY` which should match the UID of the primary CEO account. Additional staff can be added via the **Admin Management** panel.
+Admin access is restricted based on the `ADMIN_KEY` which should match the UID of the primary CEO account. Additional staff can be added via the **Admin Management** panel.
 
 ---
 *Built with ❤️ for Quick Choice Online Store.*

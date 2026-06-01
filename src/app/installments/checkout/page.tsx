@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, updateDoc, addDoc, collection, increment, onSnapshot } from 'firebase/firestore';
-import { products } from '@/data/products';
 import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft, FaMapMarkerAlt, FaShieldAlt } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
@@ -102,6 +101,21 @@ function LoanCheckoutContent() {
     }
   }, [loanId, user]);
 
+  useEffect(() => {
+    if (!loan?.productId) return;
+
+    const productRef = doc(db, 'products', loan.productId);
+    const unsub = onSnapshot(productRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setProduct({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        setProduct({ id: loan.productId, name: loan.productName, size: 'medium' });
+      }
+    });
+
+    return () => unsub();
+  }, [loan?.productId, loan?.productName]);
+
   const fetchLoan = async (currentUser: User) => {
     const docRef = doc(db, 'installments', loanId!);
     const docSnap = await getDoc(docRef);
@@ -113,14 +127,6 @@ function LoanCheckoutContent() {
         return;
       }
       setLoan({ id: docSnap.id, ...data });
-      
-      const productRef = doc(db, 'products', data.productId);
-      const productSnap = await getDoc(productRef);
-      if (productSnap.exists()) {
-        setProduct({ id: productSnap.id, ...productSnap.data() });
-      } else {
-        setProduct({ id: data.productId, name: data.productName, size: 'medium' });
-      }
       
       setFormData(prev => ({
         ...prev,
@@ -184,7 +190,7 @@ function LoanCheckoutContent() {
         const cartItems: CartItem[] = [{
           id: product.id,
           name: product.name,
-          size: 'medium',
+          size: (product.size || 'medium') as any,
           quantity: 1,
           price: loan.totalAmount,
         }];
@@ -220,7 +226,7 @@ function LoanCheckoutContent() {
       const cartItems: CartItem[] = [{
         id: product.id,
         name: product.name,
-        size: 'medium',
+        size: (product.size || 'medium') as any,
         quantity: 1,
         price: loan.totalAmount,
       }];

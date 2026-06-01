@@ -83,10 +83,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
-      <div className="flex min-h-screen bg-muted/30">
+      <div className="flex min-h-[calc(100vh-72px)] bg-muted/30">
 
         {/* Desktop Sidebar */}
-        <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-0 h-screen">
+        <aside className="w-64 bg-card border-r border-border hidden md:flex flex-col sticky top-[72px] h-[calc(100vh-72px)] z-[100] overflow-hidden">
           <div className="p-6 border-b border-border">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-black italic">QC</div>
@@ -114,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          <nav className="flex-1 p-4 flex flex-col gap-1">
+          <nav className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto">
             {filteredNav.map(item => (
               <Link
                 key={item.href}
