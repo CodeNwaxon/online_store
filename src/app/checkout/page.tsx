@@ -13,6 +13,7 @@ import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
 import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndFulfillOrder } from '@/actions/verifyPayment';
+import { createPendingTransaction } from '@/actions/pendingTransactions';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -208,30 +209,8 @@ export default function Checkout() {
         return;
       }
 
-      const orderData = {
-        userId: auth.currentUser?.uid || 'guest',
-        customerName: formData.fullName,
-        email: formData.email || "customer@example.com",
-        phone: formData.phone,
-        address: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${formData.address}, ${formData.city}`,
-        city: deliveryMethod === 'pickup'
-          ? selectedPickupArea.split(',').map(part => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
-          : formData.city,
-        items: items.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: dbProducts[item.id]?.price || item.price,
-          quantity: item.quantity,
-          image: item.image,
-          size: dbProducts[item.id]?.size || item.size || 'medium'
-        })),
-        totalAmount: finalTotalAmount,
-        shippingFee: shippingCost > 0 ? shippingCost : 0,
-        deliveryMethod,
-      };
-
-      // Send the reference to the SERVER for verification
-      const result = await verifyAndFulfillOrder(reference.reference, orderData);
+      // Send the reference to the SERVER for verification (which reads from pending_transactions)
+      const result = await verifyAndFulfillOrder(reference.reference);
 
       if (!result.success) {
         toast.error(result.error || 'Payment verification failed.');
@@ -240,7 +219,7 @@ export default function Checkout() {
       }
 
       // Save to local history for customer
-      const fullOrderData = { ...orderData, status: 'paid', type: 'normal', paystackReference: reference.reference, createdAt: new Date().toISOString() };
+      const fullOrderData = { ...result.orderData, status: 'paid', type: 'normal', paystackReference: reference.reference, createdAt: new Date().toISOString() };
       const history = JSON.parse(localStorage.getItem('purchase_history') || '[]');
       history.unshift({ id: result.orderId, ...fullOrderData });
       localStorage.setItem('purchase_history', JSON.stringify(history.slice(0, 50)));
@@ -650,7 +629,7 @@ export default function Checkout() {
             <button
               type="button"
               disabled={loading}
-              onClick={() => {
+              onClick={async () => {
                 // Validate required fields before showing payment overlay
                 if (!formData.fullName.trim()) {
                   toast.error('Please enter your full name.');
@@ -683,13 +662,46 @@ export default function Checkout() {
                   }
                 }
 
+                setLoading(true);
+                const orderData = {
+                  userId: auth.currentUser?.uid || 'guest',
+                  customerName: formData.fullName,
+                  email: formData.email || "customer@example.com",
+                  phone: formData.phone,
+                  address: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${formData.address}, ${formData.city}`,
+                  city: deliveryMethod === 'pickup'
+                    ? selectedPickupArea.split(',').map(part => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
+                    : formData.city,
+                  items: items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: dbProducts[item.id]?.price || item.price,
+                    quantity: item.quantity,
+                    image: item.image,
+                    size: dbProducts[item.id]?.size || item.size || 'medium'
+                  })),
+                  totalAmount: finalTotalAmount,
+                  shippingFee: shippingCost > 0 ? shippingCost : 0,
+                  deliveryMethod,
+                };
+
+                const res = await createPendingTransaction('checkout', orderData);
+                if (!res.success || !res.reference) {
+                  toast.error(res.error || 'Failed to initialize payment');
+                  setLoading(false);
+                  return;
+                }
+
                 pay({
-                  reference: (new Date()).getTime().toString(),
+                  reference: res.reference,
                   email: formData.email || 'customer@example.com',
                   amount: finalTotalAmount * 100,
                   publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
                   onSuccess: processOrder,
-                  onClose: () => toast.error('Payment cancelled'),
+                  onClose: () => {
+                    toast.error('Payment cancelled');
+                    setLoading(false);
+                  },
                 });
               }}
               className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}

@@ -13,6 +13,7 @@ import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
 import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndProcessInstallmentPayment } from '@/actions/verifyPayment';
+import { createPendingTransaction } from '@/actions/pendingTransactions';
 
 function LoanCheckoutContent() {
   const searchParams = useSearchParams();
@@ -257,22 +258,8 @@ function LoanCheckoutContent() {
         : formData.city;
 
       // Send the reference to the SERVER for verification
-      const result = await verifyAndProcessInstallmentPayment(reference.reference, {
-        loanId: loan.id,
-        userId: loan.userId,
-        userEmail: loan.userEmail,
-        monthsToPay: monthsToPay,
-        baseAmount: baseAmount,
-        totalAmount: totalAmount,
-        isLastPayment: isLastPayment,
-        deliveryMethod: deliveryMethod,
-        shippingAddress: shippingAddress,
-        shippingFee: shippingCost > 0 ? shippingCost : 0,
-        phone: formData.phone,
-        city: city,
-        customerName: formData.fullName || loan.customerName,
-        email: formData.email || loan.userEmail,
-      });
+      // Send the reference to the SERVER for verification (reads from pending_transactions)
+      const result = await verifyAndProcessInstallmentPayment(reference.reference);
 
       if (!result.success) {
         toast.error(result.error || 'Payment verification failed.');
@@ -302,14 +289,55 @@ function LoanCheckoutContent() {
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
       }
     }
-    pay({
-      reference: (new Date()).getTime().toString(),
-      email: formData.email || loan?.userEmail || 'customer@example.com',
-      amount: totalAmount * 100,
-      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-      onSuccess: processFinalPayment,
-      onClose: () => toast.error('Payment cancelled'),
-    });
+    const initiatePayment = async () => {
+      setIsProcessing(true);
+
+      const shippingAddress = deliveryMethod === 'pickup'
+        ? `Pickup at: ${selectedPickupArea}`
+        : `${formData.address}, ${formData.city}`;
+
+      const city = deliveryMethod === 'pickup'
+        ? selectedPickupArea.split(',').map((part: string) => part.trim()).filter(Boolean)[1] ?? selectedPickupArea
+        : formData.city;
+
+      const dataToSave = {
+        loanId: loan.id,
+        userId: loan.userId,
+        userEmail: loan.userEmail,
+        monthsToPay: monthsToPay,
+        baseAmount: baseAmount,
+        totalAmount: totalAmount,
+        isLastPayment: isLastPayment,
+        deliveryMethod: deliveryMethod,
+        shippingAddress: shippingAddress,
+        shippingFee: shippingCost > 0 ? shippingCost : 0,
+        phone: formData.phone,
+        city: city,
+        customerName: formData.fullName || loan.customerName,
+        email: formData.email || loan.userEmail,
+      };
+
+      const res = await createPendingTransaction('installment_repayment', dataToSave);
+      if (!res.success || !res.reference) {
+        toast.error(res.error || 'Failed to initialize payment');
+        setIsProcessing(false);
+        return;
+      }
+
+      pay({
+        reference: res.reference,
+        email: formData.email || loan?.userEmail || 'customer@example.com',
+        amount: totalAmount * 100,
+        publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+        onSuccess: processFinalPayment,
+        onClose: () => {
+          toast.error('Payment cancelled');
+          setIsProcessing(false);
+        },
+      });
+    };
+
+    initiatePayment();
   };
 
   const formatCurrency = (amount: number) => {

@@ -13,10 +13,9 @@ export default function InstallPrompt() {
       e.preventDefault();
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      
-      // Check if already installed or dismissed in this session
-      const isInstalled = localStorage.getItem('app_installed');
-      if (!isInstalled) {
+      // Check if dismissed in this session
+      const isDismissed = sessionStorage.getItem('install_prompt_dismissed');
+      if (!isDismissed) {
         // Show the prompt with a small delay
         setTimeout(() => {
           setShowPrompt(true);
@@ -27,7 +26,7 @@ export default function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     window.addEventListener('appinstalled', () => {
-      localStorage.setItem('app_installed', 'true');
+      sessionStorage.setItem('install_prompt_dismissed', 'true');
       setShowPrompt(false);
       setDeferredPrompt(null);
     });
@@ -49,12 +48,16 @@ export default function InstallPrompt() {
     
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
     if (outcome === 'accepted') {
-      localStorage.setItem('app_installed', 'true');
+      sessionStorage.setItem('install_prompt_dismissed', 'true');
     }
     setShowPrompt(false);
     setDeferredPrompt(null);
+  };
+
+  const handleDismiss = () => {
+    sessionStorage.setItem('install_prompt_dismissed', 'true');
+    setShowPrompt(false);
   };
 
   if (!showPrompt) return null;
@@ -62,7 +65,7 @@ export default function InstallPrompt() {
   return (
     <div className="fixed top-5 right-5 bg-card border border-primary rounded-[var(--radius)] p-5 shadow-md z-[1000] max-w-[300px] animate-slide-in overflow-hidden">
       <button 
-        onClick={() => setShowPrompt(false)}
+        onClick={handleDismiss}
         className="absolute top-2.5 right-2.5 text-muted-foreground z-10 hover:text-foreground transition-colors"
       >
         <FaTimes />

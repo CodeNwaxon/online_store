@@ -71,9 +71,25 @@ interface OrderData {
 }
 
 export async function verifyAndFulfillOrder(
-  reference: string,
-  orderData: OrderData
-): Promise<{ success: boolean; orderId?: string; error?: string }> {
+  reference: string
+): Promise<{ success: boolean; orderId?: string; orderData?: any; error?: string }> {
+  // Step 0: Fetch Pending Transaction
+  const pendingTxRef = adminDb.collection('pending_transactions').doc(reference);
+  const pendingTxSnap = await pendingTxRef.get();
+  
+  if (!pendingTxSnap.exists) {
+    return { success: false, error: 'Transaction record not found.' };
+  }
+
+  const pendingTx = pendingTxSnap.data()!;
+  
+  // Idempotency: If already completed, just return success and the orderId
+  if (pendingTx.status === 'completed') {
+    return { success: true, orderId: pendingTx.orderId, orderData: pendingTx.data };
+  }
+
+  const orderData = pendingTx.data as OrderData;
+
   // Step 1: Verify with Paystack
   const verification = await verifyPaystackTransaction(reference);
 
@@ -149,7 +165,14 @@ export async function verifyAndFulfillOrder(
       }
     }
 
-    return { success: true, orderId: orderRef.id };
+    // Mark pending transaction as completed
+    await pendingTxRef.update({
+      status: 'completed',
+      orderId: orderRef.id,
+      completedAt: FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, orderId: orderRef.id, orderData };
   } catch (error) {
     console.error('Error creating order:', error);
     return { success: false, error: 'Failed to create order.' };
@@ -178,9 +201,25 @@ interface InstallmentData {
 }
 
 export async function verifyAndCreateInstallment(
-  reference: string,
-  data: InstallmentData
+  reference: string
 ): Promise<{ success: boolean; error?: string }> {
+  // Step 0: Fetch Pending Transaction
+  const pendingTxRef = adminDb.collection('pending_transactions').doc(reference);
+  const pendingTxSnap = await pendingTxRef.get();
+
+  if (!pendingTxSnap.exists) {
+    return { success: false, error: 'Transaction record not found.' };
+  }
+
+  const pendingTx = pendingTxSnap.data()!;
+
+  // Idempotency: If already completed, just return success
+  if (pendingTx.status === 'completed') {
+    return { success: true };
+  }
+
+  const data = pendingTx.data as InstallmentData;
+
   // Step 1: Verify with Paystack
   const verification = await verifyPaystackTransaction(reference);
 
@@ -302,6 +341,12 @@ export async function verifyAndCreateInstallment(
 
     await batch.commit();
 
+    // Mark pending transaction as completed
+    await pendingTxRef.update({
+      status: 'completed',
+      completedAt: FieldValue.serverTimestamp(),
+    });
+
     return { success: true };
   } catch (error) {
     console.error('Error creating installment:', error);
@@ -331,9 +376,25 @@ interface InstallmentPaymentData {
 }
 
 export async function verifyAndProcessInstallmentPayment(
-  reference: string,
-  data: InstallmentPaymentData
+  reference: string
 ): Promise<{ success: boolean; error?: string }> {
+  // Step 0: Fetch Pending Transaction
+  const pendingTxRef = adminDb.collection('pending_transactions').doc(reference);
+  const pendingTxSnap = await pendingTxRef.get();
+
+  if (!pendingTxSnap.exists) {
+    return { success: false, error: 'Transaction record not found.' };
+  }
+
+  const pendingTx = pendingTxSnap.data()!;
+
+  // Idempotency: If already completed, just return success
+  if (pendingTx.status === 'completed') {
+    return { success: true };
+  }
+
+  const data = pendingTx.data as InstallmentPaymentData;
+
   // Step 1: Verify with Paystack
   const verification = await verifyPaystackTransaction(reference);
 
@@ -457,6 +518,12 @@ export async function verifyAndProcessInstallmentPayment(
     }
 
     await adminDb.collection('installments').doc(data.loanId).update(updateData);
+
+    // Mark pending transaction as completed
+    await pendingTxRef.update({
+      status: 'completed',
+      completedAt: FieldValue.serverTimestamp(),
+    });
 
     return { success: true };
   } catch (error) {

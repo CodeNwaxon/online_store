@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndCreateInstallment } from '@/actions/verifyPayment';
+import { createPendingTransaction } from '@/actions/pendingTransactions';
 
 interface InstallmentOverlayProps {
   product: Product;
@@ -157,24 +158,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           return;
         }
 
-        // Send the reference to the SERVER for verification
-        const result = await verifyAndCreateInstallment(reference.reference, {
-          userId: currentUser.uid,
-          userEmail: userEmail || currentUser.email || '',
-          customerName: fullName,
-          customerPhone: phone,
-          productId: product.id,
-          productName: product.name,
-          productCategory: product.category,
-          productImage: product.image,
-          basePrice: product.price,
-          totalAmount: totalAmount,
-          downPaymentAmount: amountToPay,
-          planMonths: plan,
-          lateFeePercent: instSettings.lateFeePercent || 5,
-          withdrawalFeePercent: instSettings.withdrawalFeePercent || 15,
-          gracePeriodDays: instSettings.gracePeriodDays || 5,
-        });
+        // Send the reference to the SERVER for verification (which reads from pending_transactions)
+        const result = await verifyAndCreateInstallment(reference.reference);
 
         if (!result.success) {
           toast.error(result.error || 'Payment verification failed.');
@@ -216,13 +201,43 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       return;
     }
 
+    setIsProcessing(true);
+    const currentUser = auth.currentUser;
+    const dataToSave = {
+      userId: currentUser?.uid || 'guest',
+      userEmail: userEmail || currentUser?.email || '',
+      customerName: fullName,
+      customerPhone: phone,
+      productId: product.id,
+      productName: product.name,
+      productCategory: product.category,
+      productImage: product.image,
+      basePrice: product.price,
+      totalAmount: totalAmount,
+      downPaymentAmount: amountToPay,
+      planMonths: plan,
+      lateFeePercent: instSettings.lateFeePercent || 5,
+      withdrawalFeePercent: instSettings.withdrawalFeePercent || 15,
+      gracePeriodDays: instSettings.gracePeriodDays || 5,
+    };
+
+    const res = await createPendingTransaction('installment_deposit', dataToSave);
+    if (!res.success || !res.reference) {
+      toast.error(res.error || 'Failed to initialize payment');
+      setIsProcessing(false);
+      return;
+    }
+
     pay({
-      reference: (new Date()).getTime().toString(),
+      reference: res.reference,
       email: userEmail || 'customer@example.com',
       amount: amountToPay * 100,
       publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
       onSuccess: processInitialDeposit,
-      onClose: () => toast.error('Payment cancelled'),
+      onClose: () => {
+        toast.error('Payment cancelled');
+        setIsProcessing(false);
+      },
     });
   };
 
