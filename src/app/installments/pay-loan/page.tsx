@@ -151,7 +151,7 @@ export default function PayLoanPage() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo" />
+              <img src="/nomo_logo.jpg" class="logo" />
               <h1 class="store-name">${siteName.toUpperCase()}®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
@@ -245,7 +245,7 @@ export default function PayLoanPage() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo" />
+              <img src="/nomo_logo.jpg" class="logo" />
               <h1 class="store-name">${siteName.toUpperCase()}®</h1>
               <div class="official">Official Completion Receipt</div>
               <div class="copy-container">
@@ -403,7 +403,7 @@ export default function PayLoanPage() {
       <div className="relative w-20 h-20">
         <div className="absolute inset-0 border-4 border-muted rounded-full"></div>
         <div className="absolute inset-0 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-        <img src="/logos.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35px] h-[35px]" />
+        <img src="/nomo_logo.jpg" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35px] h-[35px]" />
       </div>
       <div className="text-center">
         <h3 className="font-bold text-xl mb-1">{siteName}</h3>
@@ -913,7 +913,7 @@ export default function PayLoanPage() {
                     <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
                     <div className="text-center">
                       <div className="relative w-12 h-12 mx-auto mb-1">
-                        <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                        <Image src="/nomo_logo.jpg" alt="Logo" fill className="object-contain" sizes="48px" />
                       </div>
                       <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
@@ -984,7 +984,7 @@ export default function PayLoanPage() {
                   <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors z-10"><FaTimes size={18} /></button>
                   <div className="text-center">
                     <div className="relative w-12 h-12 mx-auto mb-1">
-                      <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                      <Image src="/nomo_logo.jpg" alt="Logo" fill className="object-contain" sizes="48px" />
                     </div>
                     <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">{siteName || 'Quick Choice'}®</h2>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>
@@ -1051,3 +1051,4 @@ export default function PayLoanPage() {
     </div>
   );
 }
+

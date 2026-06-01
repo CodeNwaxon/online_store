@@ -199,46 +199,46 @@ export default function AdminInstallments() {
 
       if (passkeyInput === correctPasskey) {
         if (actionType === 'deleteComplaint') {
-        await deleteDoc(doc(db, 'complaints', id));
-        toast.success('Complaint deleted.');
-      } else if (actionType === 'clearPayment') {
-        let receiptUrl = null;
-        if (receiptFile) {
-          const toastId = toast.loading('Uploading receipt...');
-          try {
-            const formData = new FormData();
-            formData.append('file', receiptFile);
-            const data = await uploadImageToCloudinary(formData);
-            receiptUrl = data.secure_url;
-            toast.success('Receipt uploaded successfully!', { id: toastId });
-          } catch (error) {
-            toast.error('Failed to upload receipt', { id: toastId });
-            return; // stop execution if upload fails
+          await deleteDoc(doc(db, 'complaints', id));
+          toast.success('Complaint deleted.');
+        } else if (actionType === 'clearPayment') {
+          let receiptUrl = null;
+          if (receiptFile) {
+            const toastId = toast.loading('Uploading receipt...');
+            try {
+              const formData = new FormData();
+              formData.append('file', receiptFile);
+              const data = await uploadImageToCloudinary(formData);
+              receiptUrl = data.secure_url;
+              toast.success('Receipt uploaded successfully!', { id: toastId });
+            } catch (error) {
+              toast.error('Failed to upload receipt', { id: toastId });
+              return; // stop execution if upload fails
+            }
           }
+
+          const updateData: any = {
+            status: 'cleared',
+            settledAt: new Date().toISOString()
+          };
+          if (receiptUrl) updateData.adminRefundReceiptUrl = receiptUrl;
+
+          await updateDoc(doc(db, 'installments', id), updateData);
+          toast.success('Payment marked as cleared.');
+          setReceiptFile(null);
+          setShowReceiptInput(null);
+        } else if (actionType === 'deleteSettled') {
+          await deleteDoc(doc(db, 'installments', id));
+          toast.success('Record deleted.');
+        } else if (actionType === 'saveInstallmentSettings') {
+          await setDoc(doc(db, 'settings', 'installments'), instSettings);
+          toast.success('Installment settings updated successfully!');
         }
-
-        const updateData: any = {
-          status: 'cleared',
-          settledAt: new Date().toISOString()
-        };
-        if (receiptUrl) updateData.adminRefundReceiptUrl = receiptUrl;
-
-        await updateDoc(doc(db, 'installments', id), updateData);
-        toast.success('Payment marked as cleared.');
-        setReceiptFile(null);
-        setShowReceiptInput(null);
-      } else if (actionType === 'deleteSettled') {
-        await deleteDoc(doc(db, 'installments', id));
-        toast.success('Record deleted.');
-      } else if (actionType === 'saveInstallmentSettings') {
-        await setDoc(doc(db, 'settings', 'installments'), instSettings);
-        toast.success('Installment settings updated successfully!');
+        setShowPasskeyModal(null);
+        setPasskeyInput('');
+      } else {
+        toast.error('Incorrect Passkey');
       }
-      setShowPasskeyModal(null);
-      setPasskeyInput('');
-    } else {
-      toast.error('Incorrect Passkey');
-    }
     } finally {
       setIsVerifying(false);
     }
@@ -283,8 +283,8 @@ export default function AdminInstallments() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo" />
-              <h1 class="store-name">QUICK CHOICE®</h1>
+              <img src="/nomo_logo.jpg" class="logo" />
+              <h1 class="store-name">NOMO STOREZ®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
                 <span class="id-badge">ID: ${displayUid}</span>
@@ -318,7 +318,7 @@ export default function AdminInstallments() {
               </div>
             </div>
             <div class="footer">
-              <p class="footer-thanks">Thank you for choosing Quick Choice®!</p>
+              <p class="footer-thanks">Thank you for choosing Nomo Storez®!</p>
               <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
@@ -370,8 +370,8 @@ export default function AdminInstallments() {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo" />
-              <h1 class="store-name">QUICK CHOICE®</h1>
+              <img src="/nomo_logo.jpg" class="logo" />
+              <h1 class="store-name">Nomo Storez®</h1>
               <div class="official">Official Completion Receipt</div>
               <div class="copy-container">
                 <span class="id-badge">ID: ${displayUid}</span>
@@ -419,7 +419,7 @@ export default function AdminInstallments() {
               <p style="text-align: center; font-size: 8px; color: #94a3b8; margin-top: 8px; font-weight: bold; text-transform: uppercase;">Completed on: ${new Date(loanData.completedAt?.seconds ? loanData.completedAt.seconds * 1000 : (loanData.completedAt || Date.now())).toLocaleDateString('en-GB')}</p>
             </div>
             <div class="footer">
-              <p class="footer-thanks">Thank you for choosing Quick Choice®!</p>
+              <p class="footer-thanks">Thank you for choosing Nomo Storez®!</p>
               <p class="footer-addr">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
             </div>
           </div>
@@ -1219,9 +1219,9 @@ export default function AdminInstallments() {
             />
             <div className="flex gap-4">
               <button onClick={() => { setShowPasskeyModal(null); setPasskeyInput(''); }} className="flex-1 py-3 font-bold border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
-              <button 
+              <button
                 disabled={isVerifying}
-                onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)} 
+                onClick={() => verifyPasskey(showPasskeyModal.type, showPasskeyModal.id)}
                 className={`flex-1 py-3 font-bold bg-primary text-white rounded-md transition-colors ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-hover'}`}
               >
                 {isVerifying ? 'Verifying...' : 'Confirm'}
@@ -1246,9 +1246,9 @@ export default function AdminInstallments() {
                   <button onClick={() => setShowReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
                   <div className="text-center">
                     <div className="relative w-12 h-12 mx-auto mb-1">
-                      <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                      <Image src="/nomo_logo.jpg" alt="Logo" fill className="object-contain" sizes="48px" />
                     </div>
-                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Quick Choice®</h2>
+                    <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Nomo Storez®</h2>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Payment Receipt</p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: {receiptData.id?.substring(0, 10).toUpperCase()}</span>
@@ -1291,7 +1291,7 @@ export default function AdminInstallments() {
                 </div>
 
                 <div className="p-6 bg-slate-50 text-center space-y-1 border-t border-slate-200">
-                  <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Quick Choice®!</p>
+                  <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Nomo Storez®!</p>
                   <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
                   <button onClick={handlePrintAdminReceipt} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
                     <FaPrint size={12} /> Print Admin Record
@@ -1317,9 +1317,9 @@ export default function AdminInstallments() {
                 <button onClick={() => setShowFinalReceipt(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors z-10"><FaTimes size={18} /></button>
                 <div className="text-center">
                   <div className="relative w-12 h-12 mx-auto mb-1">
-                    <Image src="/logos.png" alt="Logo" fill className="object-contain" sizes="48px" />
+                    <Image src="/nomo_logo.jpg" alt="Logo" fill className="object-contain" sizes="48px" />
                   </div>
-                  <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Quick Choice®</h2>
+                  <h2 className="text-lg font-black text-[#D48806] tracking-tighter uppercase">Nomo Storez®</h2>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Official Completion Receipt</p>
                   <div className="flex items-center justify-center gap-2 mt-3">
                     <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">ID: FINAL-{showFinalReceipt.id?.substring(0, 6).toUpperCase()}</span>
@@ -1370,7 +1370,7 @@ export default function AdminInstallments() {
               </div>
 
               <div className="p-6 bg-slate-50 text-center space-y-1 border-t border-slate-200">
-                <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Quick Choice®!</p>
+                <p className="text-[9px] font-bold text-slate-800 uppercase tracking-tight">Thank you for choosing Nomo Storez®!</p>
                 <p className="text-[8px] text-slate-400 font-medium">168, Akarigbo Road, Sabo Sagamu, Ogun State.</p>
                 <button onClick={() => handlePrintFinalAdminReceipt(showFinalReceipt)} className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold transition-all hover:bg-slate-700">
                   <FaPrint size={12} /> Print Official Admin Record
@@ -1417,3 +1417,4 @@ export default function AdminInstallments() {
     </div>
   );
 }
+

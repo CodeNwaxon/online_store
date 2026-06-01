@@ -123,7 +123,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/logos.png" class="logo" />
+              <img src="/nomo_logo.jpg" class="logo" />
               <h1 class="store-name">${siteName.toUpperCase()}®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">
@@ -354,3 +354,4 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
     </div>
   );
 }
+
