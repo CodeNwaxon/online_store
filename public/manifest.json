@@ -8,14 +8,14 @@
   "theme_color": "#D48806",
   "icons": [
     {
-      "src": "/nomo_logo.jpg",
+      "src": "/nomo_lg.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
     },
     {
-      "src": "/nomo_logo.jpg",
+      "src": "/nomo_lg.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ]
 }

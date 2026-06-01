@@ -60,7 +60,7 @@ export default function InstallPrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed top-5 right-5 bg-card border border-primary rounded-[var(--radius)] p-5 shadow-md z-[1000] max-w-[300px] animate-[slideIn_0.5s_ease-out] overflow-hidden">
+    <div className="fixed top-5 right-5 bg-card border border-primary rounded-[var(--radius)] p-5 shadow-md z-[1000] max-w-[300px] animate-slide-in overflow-hidden">
       <button 
         onClick={() => setShowPrompt(false)}
         className="absolute top-2.5 right-2.5 text-muted-foreground z-10 hover:text-foreground transition-colors"
@@ -81,7 +81,7 @@ export default function InstallPrompt() {
       </button>
 
       {/* Countdown Progress Bar */}
-      <div className="absolute bottom-0 left-0 h-1 bg-primary w-full animate-[shrink_10s_linear_forwards]" />
+      <div className="absolute bottom-0 left-0 h-1 bg-primary w-full animate-shrink" />
     </div>
   );
 }

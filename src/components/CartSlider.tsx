@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCartStore } from '@/store/useCartStore';
 import { useEffect, useState } from 'react';
@@ -123,7 +123,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         <body>
           <div class="receipt">
             <div class="header">
-              <img src="/nomo_logo.jpg" class="logo" />
+              <img src="/nomo_lg.png" class="logo" />
               <h1 class="store-name">${siteName.toUpperCase()}®</h1>
               <div class="official">Official Payment Receipt</div>
               <div class="copy-container">

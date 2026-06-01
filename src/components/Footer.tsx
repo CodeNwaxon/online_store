@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -66,7 +66,7 @@ export default function Footer() {
           <div>
             <div className="flex gap-4 items-start">
               <Image
-                src="/nomo_logo.jpg"
+                src="/nomo_lg.png"
                 alt="Logo"
                 width={40}
                 height={40}
