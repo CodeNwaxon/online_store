@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCartStore } from '@/store/useCartStore';
@@ -11,6 +11,7 @@ import { doc, getDoc, updateDoc, increment, collection, onSnapshot } from 'fireb
 import { toast } from 'react-hot-toast';
 import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
+import { usePaystackPayment } from 'react-paystack';
 
 export default function Checkout() {
   const { items, getTotalPrice, clearCart } = useCartStore();
@@ -18,7 +19,6 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [showCityError, setShowCityError] = useState(false);
   const [showPickupOnlyError, setShowPickupOnlyError] = useState(false);
 
@@ -197,18 +197,14 @@ export default function Checkout() {
 
   const finalTotalAmount = getTotalPrice() + (shippingCost > 0 ? shippingCost : 0);
 
-  const handleCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (deliveryMethod === 'ship' && (shippingCost === -1 || shippingCost === -2)) return;
-    if (deliveryMethod === 'pickup' && !selectedPickupArea) return;
-
+  const processOrder = async (reference?: any) => {
     setLoading(true);
 
     try {
       const orderData = {
         userId: auth.currentUser?.uid || 'guest',
         customerName: formData.fullName,
-        email: formData.email,
+        email: formData.email || "customer@example.com",
         phone: formData.phone,
         address: deliveryMethod === 'pickup' ? `Pickup at: ${selectedPickupArea}` : `${formData.address}, ${formData.city}`,
         city: deliveryMethod === 'pickup'
@@ -228,6 +224,7 @@ export default function Checkout() {
         status: 'paid',
         type: 'normal',
         isNew: true,
+        paystackReference: reference?.reference || null,
         createdAt: new Date().toISOString(),
       };
 
@@ -261,6 +258,14 @@ export default function Checkout() {
       setLoading(false);
     }
   };
+
+  const config = {
+    reference: (new Date()).getTime().toString(),
+    email: formData.email || "customer@example.com",
+    amount: finalTotalAmount * 100, // Amount is in kobo
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+  };
+  const initializePayment = usePaystackPayment(config);
 
   const handlePrintReceipt = () => {
     if (!finalOrderData || !orderId) return;
@@ -463,7 +468,7 @@ export default function Checkout() {
           <h1 className="text-4xl font-bold">Checkout</h1>
         </div>
 
-        <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-12 items-start">
 
           <div className="flex flex-col gap-10">
 
@@ -686,71 +691,18 @@ export default function Checkout() {
                   }
                 }
 
-                setShowPaymentOverlay(true);
+                initializePayment({ onSuccess: processOrder, onClose: () => toast.error('Payment cancelled') });
               }}
               className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? 'Processing...' : `Pay ₦${finalTotalAmount.toLocaleString()}`}
             </button>
             <p className="text-center text-xs text-muted-foreground mt-4">
-              Secure payment powered by {siteName}.
+              Secure payment powered by Paystack.
             </p>
           </div>
-        </form>
-      </div>
-
-      {/* Payment Details Overlay */}
-      {showPaymentOverlay && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-2 md:p-4">
-          <div className="bg-background rounded-xl p-5 md:p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5 md:mb-6">
-              <h3 className="text-lg md:text-xl font-bold flex items-center gap-2 md:gap-3">
-                <FaCreditCard size={20} className="text-primary" /> Payment Details
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPaymentOverlay(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground text-sm font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleCheckout} className="flex flex-col gap-4 md:gap-5">
-              <div>
-                <label htmlFor="cardNum" className="block mb-1.5 md:mb-2 text-sm font-semibold">Card Number</label>
-                <input type="text" id="cardNum" required placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div>
-                  <label htmlFor="expiry" className="block mb-1.5 md:mb-2 text-sm font-semibold">Expiry Date</label>
-                  <input type="text" id="expiry" required placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
-                </div>
-                <div>
-                  <label htmlFor="cvv" className="block mb-1.5 md:mb-2 text-sm font-semibold">CVV</label>
-                  <input type="text" id="cvv" required placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" />
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 mt-1 md:mt-2">
-                <div className="flex justify-between text-base md:text-lg font-bold mb-4">
-                  <span>Total</span>
-                  <span className="text-primary">₦{finalTotalAmount.toLocaleString()}</span>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`w-full p-3.5 md:p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors text-sm md:text-base ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                  {loading ? 'Processing...' : 'Confirm & Pay'}
-                </button>
-              </div>
-              <p className="text-center text-[11px] md:text-xs text-muted-foreground">
-                <FaShieldAlt className="inline mr-1" /> Secure payment powered by {siteName}.
-              </p>
-            </form>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

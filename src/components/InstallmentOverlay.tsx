@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Product } from '@/data/products';
@@ -8,6 +8,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, onSnapshot, doc, writeBatch } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { usePaystackPayment } from 'react-paystack';
 
 interface InstallmentOverlayProps {
   product: Product;
@@ -118,27 +119,8 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     return val.replace(/\D/g, "");
   };
 
-  const handleProceed = async () => {
+  const processInitialDeposit = async (reference?: any) => {
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));
-
-    if (!fullName || fullName.length < 3) {
-      toast.error('Please enter your full name.');
-      return;
-    }
-    if (!phone || phone.length < 10) {
-      toast.error('Please enter a valid phone number.');
-      return;
-    }
-    if (!userEmail || !userEmail.includes('@')) {
-      toast.error('Please enter a valid email address.');
-      return;
-    }
-
-    if (!downPaymentDisplay || amountToPay < minRequiredDownPayment) {
-      toast.error(`Amount is below minimum down payment. Required: ${formatCurrency(minRequiredDownPayment)}`);
-      return;
-    }
-
     setIsProcessing(true);
     try {
       let currentUser = auth.currentUser;
@@ -224,6 +206,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
           ],
           status: 'active',
           isNew: true,
+          paystackReference: reference?.reference || null,
           createdAt: serverTimestamp(),
         });
 
@@ -238,6 +221,38 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const paystackConfig = {
+    reference: (new Date()).getTime().toString(),
+    email: userEmail || "customer@example.com",
+    amount: (Number(parseWithCommas(downPaymentDisplay)) || 0) * 100, // Amount is in kobo
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+  };
+  const initializePayment = usePaystackPayment(paystackConfig);
+
+  const handleProceed = async () => {
+    const amountToPay = Number(parseWithCommas(downPaymentDisplay));
+
+    if (!fullName || fullName.length < 3) {
+      toast.error('Please enter your full name.');
+      return;
+    }
+    if (!phone || phone.length < 10) {
+      toast.error('Please enter a valid phone number.');
+      return;
+    }
+    if (!userEmail || !userEmail.includes('@')) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+
+    if (!downPaymentDisplay || amountToPay < minRequiredDownPayment) {
+      toast.error(`Amount is below minimum down payment. Required: ${formatCurrency(minRequiredDownPayment)}`);
+      return;
+    }
+
+    initializePayment({ onSuccess: processInitialDeposit, onClose: () => toast.error('Payment cancelled') });
   };
 
   const Backdrop = ({ children }: { children: React.ReactNode }) => (

@@ -11,6 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ShippingBreakdownComponent from '@/components/ShippingBreakdown';
 import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@/lib/shippingCalculator';
+import { usePaystackPayment } from 'react-paystack';
 
 function LoanCheckoutContent() {
   const searchParams = useSearchParams();
@@ -23,7 +24,6 @@ function LoanCheckoutContent() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [siteName, setSiteName] = useState('');
 
   // Form State
@@ -238,8 +238,7 @@ function LoanCheckoutContent() {
 
   const totalAmount = baseAmount + (shippingCost > 0 ? shippingCost : 0);
 
-  const handleFinalPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const processFinalPayment = async (reference?: any) => {
     setIsProcessing(true);
     try {
       const updatedPayments = [...loan.payments];
@@ -252,7 +251,8 @@ function LoanCheckoutContent() {
           paymentName: `Month ${loan.payments[idx].month - 1}`,
           amount: loan.payments[idx].amount,
           createdAt: new Date(),
-          installmentId: loan.id
+          installmentId: loan.id,
+          paystackReference: reference?.reference || null
         });
         
         updatedPayments[idx].status = 'paid';
@@ -300,6 +300,7 @@ function LoanCheckoutContent() {
           type: 'installment',
           isNew: true,
           installmentId: loan.id,
+          paystackReference: reference?.reference || null,
           createdAt: new Date().toISOString(),
         };
         await addDoc(collection(db, 'orders'), orderData);
@@ -323,6 +324,14 @@ function LoanCheckoutContent() {
     }
   };
 
+  const paystackConfig = {
+    reference: (new Date()).getTime().toString(),
+    email: formData.email || loan?.userEmail || "customer@example.com",
+    amount: totalAmount * 100, // Amount is in kobo
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+  };
+  const initializePayment = usePaystackPayment(paystackConfig);
+
   const handleInitiatePayment = () => {
     if (isLastPayment) {
       if (!formData.fullName.trim()) { toast.error('Please enter your full name.'); return; }
@@ -335,7 +344,7 @@ function LoanCheckoutContent() {
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
       }
     }
-    setShowPaymentOverlay(true);
+    initializePayment({ onSuccess: processFinalPayment, onClose: () => toast.error('Payment cancelled') });
   };
 
   const formatCurrency = (amount: number) => {
@@ -604,72 +613,19 @@ function LoanCheckoutContent() {
 
             <button
               type="button"
+              disabled={isProcessing}
               onClick={handleInitiatePayment}
-              className="w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors"
+              className={`w-full mt-8 p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Pay {formatCurrency(totalAmount)}
+              {isProcessing ? 'Processing...' : `Pay ${formatCurrency(totalAmount)}`}
             </button>
             <p className="text-center text-xs text-muted-foreground mt-4">
-              Secure payment powered by {siteName || 'Quick Choice'}.
+              Secure payment powered by Paystack.
             </p>
           </div>
 
         </div>
       </div>
-
-      {/* Payment Details Overlay */}
-      {showPaymentOverlay && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-2 md:p-4">
-          <div className="bg-background rounded-xl p-5 md:p-8 max-w-md w-full animate-in zoom-in duration-200 shadow-2xl max-h-[95vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5 md:mb-6">
-              <h3 className="text-lg md:text-xl font-bold flex items-center gap-2 md:gap-3">
-                <FaCreditCard size={20} className="text-primary" /> Payment Details
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPaymentOverlay(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground text-sm font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleFinalPayment} className="flex flex-col gap-4 md:gap-5">
-              <div>
-                <label htmlFor="cardNum" className="block mb-1.5 md:mb-2 text-sm font-semibold">Card Number</label>
-                <input type="text" id="cardNum" placeholder="0000 0000 0000 0000" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-              </div>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <div>
-                  <label htmlFor="expiry" className="block mb-1.5 md:mb-2 text-sm font-semibold">Expiry Date</label>
-                  <input type="text" id="expiry" placeholder="MM/YY" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-                </div>
-                <div>
-                  <label htmlFor="cvv" className="block mb-1.5 md:mb-2 text-sm font-semibold">CVV</label>
-                  <input type="text" id="cvv" placeholder="123" className="w-full p-3 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary transition-colors text-sm" disabled />
-                </div>
-              </div>
-
-              <div className="border-t border-border pt-4 mt-1 md:mt-2">
-                <div className="flex justify-between text-base md:text-lg font-bold mb-4">
-                  <span>Total</span>
-                  <span className="text-primary">{formatCurrency(totalAmount)}</span>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isProcessing}
-                  className={`w-full p-3.5 md:p-4 bg-primary hover:bg-primary-hover text-white rounded-md font-semibold transition-colors text-sm md:text-base ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                  {isProcessing ? 'Processing Securely...' : 'Confirm & Pay'}
-                </button>
-              </div>
-              <p className="text-center text-[11px] md:text-xs text-muted-foreground">
-                <FaShieldAlt className="inline mr-1" /> Secure payment powered by {siteName || 'Quick Choice'}.
-              </p>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
