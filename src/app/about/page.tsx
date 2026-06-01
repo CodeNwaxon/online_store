@@ -31,11 +31,11 @@ export default function About() {
 
   const siteName = settings?.siteName || '';
   const ceo = settings?.ceoInfo || {
-    name: 'Kofi Mensah',
-    role: 'Founder & CEO',
-    email: 'ceo@onlinestore.com',
-    phone: '+234 800 123 4567',
-    image: 'https://picsum.photos/seed/ceo/800/1000',
+    name: 'Prince Martins',
+    role: 'CEO & Founder',
+    email: 'princenwachukwu308@yahoo.com',
+    phone: '+234 703 463 2037',
+    image: '/images/ceo.jpeg',
     message: `Founded with a vision to bring premium quality goods to every home, ${siteName} combines modern convenience with the vibrant spirit of African design.`
   };
 
@@ -70,7 +70,7 @@ export default function About() {
       <section className="py-16 max-md:py-8">
         <div className="max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className="relative h-[500px] max-md:h-[350px] rounded-[var(--radius)] overflow-hidden border-4 border-primary/20">
+            <div className="relative h-[600px] max-md:h-[350px] rounded-[var(--radius)] overflow-hidden border-4 border-primary/20">
               <Image
                 src={ceo.image}
                 alt={ceo.name}
@@ -78,13 +78,14 @@ export default function About() {
                 className="object-cover"
               />
             </div>
+
             <div className="p-8 max-md:p-0">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Message from our Founder</h2>
               <p className="text-muted-foreground mb-6 md:text-lg leading-relaxed italic border-l-4 border-primary pl-6">
                 "{ceo.message}"
               </p>
               <div className="font-bold text-2xl">{ceo.name}</div>
-              <div className="text-primary font-bold mb-6">Online Store Founder</div>
+              <div className="text-primary font-bold mb-6">CEO & Founder</div>
               <div className="flex flex-col gap-4">
                 <a href={`mailto:${ceo.email}`} className="flex items-center gap-3 hover:text-primary transition-colors">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"><FaEnvelope /></div>
