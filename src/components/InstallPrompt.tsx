@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaDownload, FaTimes } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -67,8 +67,9 @@ export default function InstallPrompt() {
       >
         <FaTimes />
       </button>
-      <h4 className="mb-2 flex items-center gap-2 font-bold">
-        <FaDownload className="text-primary" /> Install App
+      <h4 className="mb-2 flex items-center gap-3 font-bold">
+        <img src="/nomo_lg.png" alt="Logo" className="w-8 h-8 object-contain border border-primary rounded p-0.5" />
+        Install Nomo Storez
       </h4>
       <p className="text-[0.85rem] text-muted-foreground mb-4">
         Install our app for a faster shopping experience and offline access.

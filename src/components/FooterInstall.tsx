@@ -41,7 +41,7 @@ export default function FooterInstall() {
         onClick={handleInstallClick}
         className="text-primary font-bold flex items-center gap-2 text-[0.9rem]"
       >
-        <FaDownload /> Install App
+        <FaDownload /> Install Nomo Storez
       </button>
     </li>
   );
