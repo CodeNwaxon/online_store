@@ -1,6 +1,6 @@
 {
-  "name": "Quick Choice Store",
-  "short_name": "QuickChoice",
+  "name": "NOmo Store",
+  "short_name": "NOmoStore",
   "description": "Premium African-inspired E-Commerce Store",
   "start_url": "/",
   "display": "standalone",
@@ -8,14 +8,14 @@
   "theme_color": "#D48806",
   "icons": [
     {
-      "src": "/logos.png",
+      "src": "/nomo_logo.jpg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpeg"
     },
     {
-      "src": "/logos.png",
+      "src": "/nomo_logo.jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ]
 }

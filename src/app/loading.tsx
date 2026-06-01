@@ -34,7 +34,7 @@ export default function Loading() {
         {/* Small Logo in Center */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] overflow-hidden p-1 bg-white">
           <Image
-            src="/logos.png"
+            src="/nomo_logo.jpg"
             alt="Loading..."
             width={42}
             height={42}
@@ -49,3 +49,4 @@ export default function Loading() {
     </div>
   );
 }
+

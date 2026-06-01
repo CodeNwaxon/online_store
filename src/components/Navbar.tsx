@@ -164,7 +164,7 @@ export default function Navbar() {
 
           {/* Logo — always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
-            <Image src="/logos.png" alt="Logo" width={38} height={38}
+            <Image src="/nomo_logo.jpg" alt="Logo" width={38} height={38}
               className="object-contain border-2 border-primary rounded p-0.5" />
             <span className="text-[0.8rem] md:text-[1.2rem] font-bold text-primary">{siteName}&reg;</span>
           </Link>
@@ -229,7 +229,7 @@ export default function Navbar() {
         {/* Drawer header */}
         <div className="flex justify-between items-center px-[1.25rem] py-[1.1rem] border-b border-border">
           <div className="flex items-center gap-2">
-            <Image src="/logos.png" alt="logo" width={28} height={28} className="rounded border-[1.5px] border-primary p-0.5" />
+            <Image src="/nomo_logo.jpg" alt="logo" width={28} height={28} className="rounded border-[1.5px] border-primary p-0.5" />
             <span className="font-bold text-primary text-[0.95rem]">{isAdminRoute ? (isCEO ? 'CEO Dashboard' : 'Admin Staff') : siteName + '®'}</span>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="text-foreground p-1"><FaTimes size={22} /></button>
@@ -314,3 +314,4 @@ export default function Navbar() {
     </>
   );
 }
+

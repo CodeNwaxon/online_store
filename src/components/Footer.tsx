@@ -66,7 +66,7 @@ export default function Footer() {
           <div>
             <div className="flex gap-4 items-start">
               <Image
-                src="/logos.png"
+                src="/nomo_logo.jpg"
                 alt="Logo"
                 width={40}
                 height={40}
@@ -128,3 +128,4 @@ export default function Footer() {
     </footer>
   );
 }
+
