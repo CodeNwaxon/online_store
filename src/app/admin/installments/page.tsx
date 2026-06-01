@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -199,23 +199,6 @@ export default function AdminInstallments() {
 
       if (passkeyInput === correctPasskey) {
         if (actionType === 'deleteComplaint') {
-<<<<<<< HEAD
-        await deleteDoc(doc(db, 'complaints', id));
-        toast.success('Complaint deleted.');
-      } else if (actionType === 'clearPayment') {
-        let receiptUrl = null;
-        if (receiptFile) {
-          const toastId = toast.loading('Uploading receipt...');
-          try {
-            const formData = new FormData();
-            formData.append('file', receiptFile);
-            const data = await uploadImageToCloudinary(formData);
-            receiptUrl = data.secure_url;
-            toast.success('Receipt uploaded successfully!', { id: toastId });
-          } catch (error) {
-            toast.error('Failed to upload receipt', { id: toastId });
-            return; // stop execution if upload fails
-=======
           await deleteDoc(doc(db, 'complaints', id));
           toast.success('Complaint deleted.');
         } else if (actionType === 'clearPayment') {
@@ -232,7 +215,6 @@ export default function AdminInstallments() {
               toast.error('Failed to upload receipt', { id: toastId });
               return; // stop execution if upload fails
             }
->>>>>>> a3339819ae9e008f8b13bdd1ff2e93f74123dca2
           }
 
           const updateData: any = {
