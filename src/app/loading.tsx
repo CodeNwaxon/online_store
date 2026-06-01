@@ -32,12 +32,12 @@ export default function Loading() {
         <div className="absolute inset-0 rounded-full border-4 border-muted border-t-primary animate-spin" />
 
         {/* Small Logo in Center */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] overflow-hidden p-1 bg-white">
+        <div className="rounded-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55px] h-[55px] overflow-hidden p-1 bg-white">
           <Image
             src="/nomo_lg.png"
             alt="Loading..."
-            width={42}
-            height={42}
+            width={47}
+            height={47}
             className="object-contain"
           />
         </div>
