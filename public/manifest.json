@@ -4,17 +4,17 @@
   "description": "Premium African-inspired E-Commerce Store",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAFAFA",
+  "background_color": "#FFFFFF",
   "theme_color": "#D48806",
   "icons": [
     {
-      "src": "/logo_nomo_192.png",
+      "src": "/logo_pwa_192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo_nomo_512.png",
+      "src": "/logo_pwa_512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
