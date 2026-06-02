@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Product } from '@/data/products';
 import ProductCard from './ProductCard';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -12,9 +12,26 @@ interface PromoCarouselProps {
 export default function PromoCarousel({ products }: PromoCarouselProps) {
   const [startIndex, setStartIndex] = useState(0);
   const [activeMobileIndex, setActiveMobileIndex] = useState(0);
+  const [itemsToShow, setItemsToShow] = useState(5); // Default to lg (5 items)
   const scrollRef = useRef<HTMLDivElement>(null);
-  const itemsToShow = 4; // Display 4 cards at a time
   const totalItems = products.length;
+
+  // Update itemsToShow based on screen size
+  useEffect(() => {
+    const updateItemsToShow = () => {
+      if (window.innerWidth < 1024) {
+        // md screen: 4 items
+        setItemsToShow(4);
+      } else {
+        // lg screen and above: 5 items
+        setItemsToShow(5);
+      }
+    };
+
+    updateItemsToShow();
+    window.addEventListener('resize', updateItemsToShow);
+    return () => window.removeEventListener('resize', updateItemsToShow);
+  }, []);
 
   const nextSlide = () => {
     setStartIndex((prev) => (prev + 1) % (totalItems - itemsToShow + 1));
@@ -45,7 +62,7 @@ export default function PromoCarousel({ products }: PromoCarouselProps) {
     <div className="relative w-full px-2 md:px-8">
       {/* Desktop Slider View */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-4 gap-4 transition-all duration-500 ease-in-out">
+        <div className="grid md:grid-cols-4 lg:grid-cols-5 gap-4 transition-all duration-500 ease-in-out">
           {displayedProducts.map((product, index) => (
             <ProductCard key={product.id} product={product} priority={index < 4} index={startIndex + index} />
           ))}
