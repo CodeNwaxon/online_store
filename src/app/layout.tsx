@@ -60,6 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
+import Script from "next/script";
 
 export default function RootLayout({
   children,
@@ -73,6 +74,7 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
       </body>
     </html>
   );

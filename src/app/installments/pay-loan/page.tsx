@@ -393,6 +393,11 @@ export default function PayLoanPage() {
     }).format(amount);
   };
 
+  const parseDate = (dateVal: any) => {
+    if (!dateVal) return new Date();
+    return dateVal.toDate ? dateVal.toDate() : new Date(dateVal);
+  };
+
   const isExpired = (deadline: any) => {
     const d = deadline.toDate ? deadline.toDate() : new Date(deadline);
     return new Date() > d;
@@ -488,7 +493,7 @@ export default function PayLoanPage() {
                       <div className="flex gap-4 items-center max-md:w-full max-md:justify-between">
                         <div className="text-right">
                           <div className="font-bold">{formatCurrency(item.totalAmount)}</div>
-                          <div className="text-xs text-muted-foreground">{new Date(item.createdAt.toDate()).toLocaleDateString()}</div>
+                          <div className="text-xs text-muted-foreground">{parseDate(item.createdAt).toLocaleDateString()}</div>
                         </div>
                         <div className="flex gap-2">
                           {item.status === 'completed' && (
@@ -688,7 +693,7 @@ export default function PayLoanPage() {
                       </div>
                       <div className="flex-1">
                         <div className="font-bold">Initial Deposit - {formatCurrency(loan.downPaymentPaid)}</div>
-                        <div className="text-sm text-muted-foreground">Paid on {new Date(loan.createdAt.toDate()).toLocaleDateString('en-GB')}</div>
+                        <div className="text-sm text-muted-foreground">Paid on {parseDate(loan.createdAt).toLocaleDateString('en-GB')}</div>
                       </div>
                       <button
                         onClick={() => {
@@ -730,7 +735,7 @@ export default function PayLoanPage() {
                           <div className="flex-1">
                             <div className="font-bold">Month {payment.month - 1} - {formatCurrency(payment.amount)}</div>
                             <div className={`text-sm ${expired ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                              {payment.status === 'paid' ? `Paid on ${new Date(payment.paidAt.toDate()).toLocaleDateString('en-GB')}` : `Deadline: ${new Date(payment.deadline.toDate()).toLocaleDateString('en-GB')}`}
+                              {payment.status === 'paid' ? `Paid on ${parseDate(payment.paidAt).toLocaleDateString('en-GB')}` : `Deadline: ${parseDate(payment.deadline).toLocaleDateString('en-GB')}`}
                             </div>
                           </div>
                           {payment.status === 'paid' && (

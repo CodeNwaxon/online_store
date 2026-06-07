@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 interface PaystackConfig {
   reference: string;
@@ -16,11 +16,27 @@ interface PaystackConfig {
  * This avoids the "window is not defined" SSR error from react-paystack.
  */
 export function usePaystack() {
+  useEffect(() => {
+    const existingScript = document.getElementById('paystack-inline-js');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = 'paystack-inline-js';
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, []);
   const pay = useCallback((config: PaystackConfig) => {
     // Dynamically load Paystack inline script if not already loaded
     const existingScript = document.getElementById('paystack-inline-js');
 
     const initiate = () => {
+      // @ts-ignore
+      if (typeof window.PaystackPop === 'undefined') {
+        setTimeout(initiate, 100);
+        return;
+      }
+
       // @ts-ignore — PaystackPop is injected by the Paystack script
       const handler = window.PaystackPop.setup({
         key: config.publicKey,

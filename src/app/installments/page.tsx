@@ -149,12 +149,12 @@ function InstallmentsContent() {
 
   useEffect(() => {
     // Add smooth scrolling for hash navigation
-    if (window.location.hash === '#search-section') {
+    if (!loading && window.location.hash === '#search-section') {
       setTimeout(() => {
         document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 500);
     }
-  }, [searchParams]);
+  }, [loading, searchParams]);
 
   const handleSelectPlan = (product: Product, plan: number) => {
     if (!user) {

@@ -133,46 +133,57 @@ export async function verifyAndFulfillOrder(
     return { success: false, error: 'Order total does not match product prices.' };
   }
 
-  // Step 4: Everything checks out — create the order from the SERVER
+  // Step 4: Everything checks out — create the order from the SERVER using a transaction to prevent race conditions
   try {
-    const orderRef = await adminDb.collection('orders').add({
-      userId: orderData.userId,
-      customerName: orderData.customerName,
-      email: orderData.email,
-      phone: orderData.phone,
-      address: orderData.address,
-      city: orderData.city,
-      items: orderData.items,
-      totalAmount: orderData.totalAmount,
-      shippingFee: orderData.shippingFee,
-      deliveryMethod: orderData.deliveryMethod,
-      status: 'paid',
-      type: 'normal',
-      isNew: true,
-      paystackReference: reference,
-      verifiedByServer: true,
-      createdAt: new Date().toISOString(),
-    });
+    return await adminDb.runTransaction(async (transaction) => {
+      // Re-read the pending transaction to ensure it hasn't been completed by a concurrent request
+      const txDoc = await transaction.get(pendingTxRef);
+      if (!txDoc.exists) {
+        throw new Error('Transaction record not found during finalization.');
+      }
+      
+      const currentTxData = txDoc.data()!;
+      if (currentTxData.status === 'completed') {
+        return { success: true, orderId: currentTxData.orderId, orderData: currentTxData.data };
+      }
 
-    // Deduct product quantities
-    for (const item of orderData.items) {
-      try {
-        await adminDb.collection('products').doc(item.id).update({
+      const orderRef = adminDb.collection('orders').doc();
+      transaction.set(orderRef, {
+        userId: orderData.userId,
+        customerName: orderData.customerName,
+        email: orderData.email,
+        phone: orderData.phone,
+        address: orderData.address,
+        city: orderData.city,
+        items: orderData.items,
+        totalAmount: orderData.totalAmount,
+        shippingFee: orderData.shippingFee,
+        deliveryMethod: orderData.deliveryMethod,
+        status: 'paid',
+        type: 'normal',
+        isNew: true,
+        paystackReference: reference,
+        verifiedByServer: true,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Deduct product quantities
+      for (const item of orderData.items) {
+        const productRef = adminDb.collection('products').doc(item.id);
+        transaction.update(productRef, {
           quantity: FieldValue.increment(-item.quantity),
         });
-      } catch (err) {
-        console.error('Error deducting quantity for product:', item.id, err);
       }
-    }
 
-    // Mark pending transaction as completed
-    await pendingTxRef.update({
-      status: 'completed',
-      orderId: orderRef.id,
-      completedAt: FieldValue.serverTimestamp(),
+      // Mark pending transaction as completed
+      transaction.update(pendingTxRef, {
+        status: 'completed',
+        orderId: orderRef.id,
+        completedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { success: true, orderId: orderRef.id, orderData };
     });
-
-    return { success: true, orderId: orderRef.id, orderData };
   } catch (error) {
     console.error('Error creating order:', error);
     return { success: false, error: 'Failed to create order.' };
@@ -261,93 +272,103 @@ export async function verifyAndCreateInstallment(
 
   const actualPaidNaira = verification.amount / 100;
 
-  // Step 5: Check for existing active loans
-  const existingLoans = await adminDb
-    .collection('installments')
-    .where('userEmail', '==', data.userEmail)
-    .where('status', 'in', ['active', 'cancelling'])
-    .get();
-
-  if (!existingLoans.empty) {
-    return { success: false, error: 'You already have an active installment plan.' };
-  }
-
-  // Step 6: Create the installment and receipt from the SERVER
+  // Step 5: Create the installment and receipt from the SERVER using a transaction
   try {
     const remainingBalance = serverCalculatedTotalAmount - actualPaidNaira;
     const monthlyAmount = remainingBalance / data.planMonths;
 
-    const batch = adminDb.batch();
-    const receiptRef = adminDb.collection('receipts').doc();
-    const installmentRef = adminDb.collection('installments').doc();
+    return await adminDb.runTransaction(async (transaction) => {
+      // Re-read pending transaction to ensure it hasn't been completed concurrently
+      const txDoc = await transaction.get(pendingTxRef);
+      if (!txDoc.exists) {
+        throw new Error('Transaction record not found during finalization.');
+      }
+      
+      const currentTxData = txDoc.data()!;
+      if (currentTxData.status === 'completed') {
+        return { success: true };
+      }
 
-    batch.set(receiptRef, {
-      userId: data.userId,
-      userEmail: data.userEmail,
-      productName: data.productName,
-      paymentName: 'Initial Deposit',
-      amount: actualPaidNaira,
-      paystackReference: reference,
-      verifiedByServer: true,
-      createdAt: FieldValue.serverTimestamp(),
-      installmentId: installmentRef.id,
+      // Step 6: Check for existing active loans INSIDE the transaction to avoid race conditions
+      const existingLoansQuery = adminDb
+        .collection('installments')
+        .where('userEmail', '==', data.userEmail)
+        .where('status', 'in', ['active', 'cancelling']);
+      const existingSnap = await transaction.get(existingLoansQuery);
+      
+      if (!existingSnap.empty) {
+        throw new Error('You already have an active installment plan.');
+      }
+
+      const receiptRef = adminDb.collection('receipts').doc();
+      const installmentRef = adminDb.collection('installments').doc();
+
+      transaction.set(receiptRef, {
+        userId: data.userId,
+        userEmail: data.userEmail,
+        productName: data.productName,
+        paymentName: 'Initial Deposit',
+        amount: actualPaidNaira,
+        paystackReference: reference,
+        verifiedByServer: true,
+        createdAt: FieldValue.serverTimestamp(),
+        installmentId: installmentRef.id,
+      });
+
+      transaction.set(installmentRef, {
+        userId: data.userId,
+        userEmail: data.userEmail,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        deliveryAddress: 'Pending (To be provided upon completion)',
+        productId: data.productId,
+        productName: data.productName,
+        productCategory: data.productCategory,
+        productImage: data.productImage,
+        basePrice: realProductPrice,
+        shippingFee: 0,
+        totalAmount: serverCalculatedTotalAmount,
+        monthlyAmount: monthlyAmount,
+        planMonths: data.planMonths,
+        downPaymentPaid: actualPaidNaira,
+        totalAmountPaid: actualPaidNaira,
+        monthsPaid: 0,
+        lateFeePercent: data.lateFeePercent,
+        withdrawalFeePercent: data.withdrawalFeePercent,
+        gracePeriodDays: data.gracePeriodDays,
+        payments: [
+          {
+            month: 1,
+            amount: actualPaidNaira,
+            status: 'paid',
+            paidAt: new Date().toISOString(),
+            deadline: new Date().toISOString(),
+            receiptId: receiptRef.id,
+          },
+          ...Array.from({ length: data.planMonths }).map((_, i) => ({
+            month: i + 2,
+            amount: monthlyAmount,
+            status: 'pending',
+            deadline: new Date(
+              Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          })),
+        ],
+        status: 'active',
+        isNew: true,
+        paystackReference: reference,
+        verifiedByServer: true,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      // Mark pending transaction as completed
+      transaction.update(pendingTxRef, {
+        status: 'completed',
+        completedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { success: true };
     });
-
-    batch.set(installmentRef, {
-      userId: data.userId,
-      userEmail: data.userEmail,
-      customerName: data.customerName,
-      customerPhone: data.customerPhone,
-      deliveryAddress: 'Pending (To be provided upon completion)',
-      productId: data.productId,
-      productName: data.productName,
-      productCategory: data.productCategory,
-      productImage: data.productImage,
-      basePrice: realProductPrice,
-      shippingFee: 0,
-      totalAmount: serverCalculatedTotalAmount,
-      monthlyAmount: monthlyAmount,
-      planMonths: data.planMonths,
-      downPaymentPaid: actualPaidNaira,
-      totalAmountPaid: actualPaidNaira,
-      monthsPaid: 0,
-      lateFeePercent: data.lateFeePercent,
-      withdrawalFeePercent: data.withdrawalFeePercent,
-      gracePeriodDays: data.gracePeriodDays,
-      payments: [
-        {
-          month: 1,
-          amount: actualPaidNaira,
-          status: 'paid',
-          paidAt: new Date().toISOString(),
-          deadline: new Date().toISOString(),
-          receiptId: receiptRef.id,
-        },
-        ...Array.from({ length: data.planMonths }).map((_, i) => ({
-          month: i + 2,
-          amount: monthlyAmount,
-          status: 'pending',
-          deadline: new Date(
-            Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-        })),
-      ],
-      status: 'active',
-      isNew: true,
-      paystackReference: reference,
-      verifiedByServer: true,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    await batch.commit();
-
-    // Mark pending transaction as completed
-    await pendingTxRef.update({
-      status: 'completed',
-      completedAt: FieldValue.serverTimestamp(),
-    });
-
-    return { success: true };
   } catch (error) {
     console.error('Error creating installment:', error);
     return { success: false, error: 'Failed to create installment plan.' };
@@ -441,91 +462,104 @@ export async function verifyAndProcessInstallmentPayment(
     return { success: false, error: 'Payment amount does not match the required amount.' };
   }
 
-  // Step 5: Process the payment from the SERVER
+  // Step 5: Process the payment from the SERVER using a transaction
   try {
-    const updatedPayments = [...loan.payments];
+    return await adminDb.runTransaction(async (transaction) => {
+      // Re-read pending transaction to ensure it hasn't been completed concurrently
+      const txDoc = await transaction.get(pendingTxRef);
+      if (!txDoc.exists) {
+        throw new Error('Transaction record not found during finalization.');
+      }
+      
+      const currentTxData = txDoc.data()!;
+      if (currentTxData.status === 'completed') {
+        return { success: true };
+      }
 
-    for (const idx of data.monthsToPay) {
-      const receiptRef = await adminDb.collection('receipts').add({
-        userId: data.userId,
-        userEmail: data.userEmail,
-        productName: loan.productName,
-        paymentName: `Month ${loan.payments[idx].month - 1}`,
-        amount: loan.payments[idx].amount,
-        paystackReference: reference,
-        verifiedByServer: true,
-        createdAt: new Date().toISOString(),
-        installmentId: data.loanId,
-      });
+      const updatedPayments = [...loan.payments];
 
-      updatedPayments[idx].status = 'paid';
-      updatedPayments[idx].paidAt = new Date().toISOString();
-      updatedPayments[idx].receiptId = receiptRef.id;
-    }
+      for (const idx of data.monthsToPay) {
+        const receiptRef = adminDb.collection('receipts').doc();
+        transaction.set(receiptRef, {
+          userId: data.userId,
+          userEmail: data.userEmail,
+          productName: loan.productName,
+          paymentName: `Month ${loan.payments[idx].month - 1}`,
+          amount: loan.payments[idx].amount,
+          paystackReference: reference,
+          verifiedByServer: true,
+          createdAt: new Date().toISOString(),
+          installmentId: data.loanId,
+        });
 
-    const newTotalPaid = (loan.totalAmountPaid || loan.downPaymentPaid || 0) + serverCalculatedBaseAmount;
-    const updateData: any = {
-      payments: updatedPayments,
-      monthsPaid: loan.monthsPaid + data.monthsToPay.length,
-      totalAmountPaid: newTotalPaid,
-    };
+        updatedPayments[idx].status = 'paid';
+        updatedPayments[idx].paidAt = new Date().toISOString();
+        updatedPayments[idx].receiptId = receiptRef.id;
+      }
 
-    if (data.isLastPayment) {
-      updateData.status = 'completed';
-      updateData.completedAt = new Date().toISOString();
-      updateData.shippingMethod =
-        data.deliveryMethod === 'pickup' ? 'Office Pickup' : 'Delivery';
-      updateData.shippingAddress = data.shippingAddress || '';
-      updateData.phone = data.phone || '';
+      const newTotalPaid = (loan.totalAmountPaid || loan.downPaymentPaid || 0) + serverCalculatedBaseAmount;
+      const updateData: any = {
+        payments: updatedPayments,
+        monthsPaid: loan.monthsPaid + data.monthsToPay.length,
+        totalAmountPaid: newTotalPaid,
+      };
 
-      // Create the order
-      await adminDb.collection('orders').add({
-        userId: data.userId,
-        customerName: data.customerName || loan.customerName,
-        email: data.email || data.userEmail,
-        phone: data.phone || '',
-        address: data.shippingAddress || '',
-        city: data.city || '',
-        items: [
-          {
-            id: loan.productId,
-            name: loan.productName,
-            price: loan.totalAmount,
-            quantity: 1,
-            image: loan.productImage,
-          },
-        ],
-        totalAmount: loan.totalAmount + (data.isLastPayment ? clientShippingFee : 0),
-        shippingFee: data.isLastPayment ? clientShippingFee : 0,
-        deliveryMethod: data.deliveryMethod || 'pickup',
-        status: 'paid',
-        type: 'installment',
-        isNew: true,
-        installmentId: data.loanId,
-        paystackReference: reference,
-        verifiedByServer: true,
-        createdAt: new Date().toISOString(),
-      });
+      if (data.isLastPayment) {
+        updateData.status = 'completed';
+        updateData.completedAt = new Date().toISOString();
+        updateData.shippingMethod =
+          data.deliveryMethod === 'pickup' ? 'Office Pickup' : 'Delivery';
+        updateData.shippingAddress = data.shippingAddress || '';
+        updateData.phone = data.phone || '';
 
-      // Deduct product quantity
-      try {
-        await adminDb.collection('products').doc(loan.productId).update({
+        // Create the order
+        const orderRef = adminDb.collection('orders').doc();
+        transaction.set(orderRef, {
+          userId: data.userId,
+          customerName: data.customerName || loan.customerName,
+          email: data.email || data.userEmail,
+          phone: data.phone || '',
+          address: data.shippingAddress || '',
+          city: data.city || '',
+          items: [
+            {
+              id: loan.productId,
+              name: loan.productName,
+              price: loan.totalAmount,
+              quantity: 1,
+              image: loan.productImage,
+            },
+          ],
+          totalAmount: loan.totalAmount + (data.isLastPayment ? clientShippingFee : 0),
+          shippingFee: data.isLastPayment ? clientShippingFee : 0,
+          deliveryMethod: data.deliveryMethod || 'pickup',
+          status: 'paid',
+          type: 'installment',
+          isNew: true,
+          installmentId: data.loanId,
+          paystackReference: reference,
+          verifiedByServer: true,
+          createdAt: new Date().toISOString(),
+        });
+
+        // Deduct product quantity
+        const productRef = adminDb.collection('products').doc(loan.productId);
+        transaction.update(productRef, {
           quantity: FieldValue.increment(-1),
         });
-      } catch (err) {
-        console.error('Error deducting product quantity:', err);
       }
-    }
 
-    await adminDb.collection('installments').doc(data.loanId).update(updateData);
+      const loanRef = adminDb.collection('installments').doc(data.loanId);
+      transaction.update(loanRef, updateData);
 
-    // Mark pending transaction as completed
-    await pendingTxRef.update({
-      status: 'completed',
-      completedAt: FieldValue.serverTimestamp(),
+      // Mark pending transaction as completed
+      transaction.update(pendingTxRef, {
+        status: 'completed',
+        completedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { success: true };
     });
-
-    return { success: true };
   } catch (error) {
     console.error('Error processing installment payment:', error);
     return { success: false, error: 'Failed to process payment.' };
