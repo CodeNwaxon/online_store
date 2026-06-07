@@ -85,6 +85,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
     const receiptHtml = `
       <html>
         <head>
+          <meta charset="UTF-8">
           <title>Receipt - ${displayUid}</title>
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
           <style>
