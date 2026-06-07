@@ -147,6 +147,15 @@ function InstallmentsContent() {
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
+  useEffect(() => {
+    // Add smooth scrolling for hash navigation
+    if (window.location.hash === '#search-section') {
+      setTimeout(() => {
+        document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+    }
+  }, [searchParams]);
+
   const handleSelectPlan = (product: Product, plan: number) => {
     if (!user) {
       setPendingPlanSelection({ product, plan });
@@ -245,7 +254,7 @@ function InstallmentsContent() {
         </div>
 
         {/* Search & Filters */}
-        <div className="flex flex-col gap-6 mb-12">
+        <div id="search-section" className="flex flex-col gap-6 mb-12">
           <div className="flex flex-wrap gap-6 items-center justify-between p-2 md:p-6 bg-card border border-border rounded-sm md:rounded-lg">
             <div className="flex gap-3 flex-wrap">
               {groups.map(group => (

@@ -31,6 +31,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
   const [loanStatus, setLoanStatus] = useState<'checking' | 'none' | 'active' | 'cancelling'>('checking');
   const [instSettings, setInstSettings] = useState<any>(null);
   const router = useRouter();
+  const pay = usePaystack();
 
   // Removed Delivery State
   const [areas, setAreas] = useState<any[]>([]);
@@ -178,7 +179,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     }
   };
 
-  const pay = usePaystack();
+
 
   const handleProceed = async () => {
     const amountToPay = Number(parseWithCommas(downPaymentDisplay));

@@ -27,6 +27,27 @@ export default function About() {
     fetchData();
   }, []);
 
+  // Handle hash scrolling after data is fully loaded
+  useEffect(() => {
+    if (!loading && window.location.hash) {
+      const id = window.location.hash.substring(1);
+      // Retry scrolling multiple times to handle layout shifts from images/fonts
+      let attempts = 0;
+      const maxAttempts = 10;
+      const tryScroll = () => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(tryScroll, 200);
+        }
+      };
+      // Initial delay to let the DOM render
+      setTimeout(tryScroll, 300);
+    }
+  }, [loading]);
+
   if (loading) return <div className="py-20 text-center font-bold text-primary animate-pulse">Loading Our Story...</div>;
 
   const siteName = settings?.siteName || '';
@@ -146,7 +167,10 @@ export default function About() {
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
-            <div className="w-24 h-1 bg-primary mx-auto mb-8"></div>
+            <div className="w-24 h-1 bg-primary mx-auto mb-6"></div>
+            <p className="text-sm text-muted-foreground font-medium mb-8">
+              Last Updated: {aboutData?.updatedAt ? new Date(aboutData.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
 
             {/* Search Input Box */}
             <div className="max-w-md mx-auto relative group">

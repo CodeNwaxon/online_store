@@ -348,7 +348,18 @@ function LoanCheckoutContent() {
   };
 
   if (loading) return <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-16">Loading payment details...</div>;
-  if (!loan) return null;
+  if (!loan) return (
+    <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-20 text-center flex flex-col items-center justify-center">
+      <div className="w-16 h-16 bg-muted text-muted-foreground rounded-full flex items-center justify-center mx-auto mb-4">
+        <FaLock size={24} />
+      </div>
+      <h2 className="text-2xl font-bold mb-2">Installment Not Found</h2>
+      <p className="text-muted-foreground mb-6">We couldn't find the installment plan you're trying to pay for.</p>
+      <Link href="/installments/pay-loan" className="bg-primary text-white px-6 py-2 rounded-md font-bold hover:bg-primary-hover transition-colors">
+        Go to My Loans
+      </Link>
+    </div>
+  );
 
   return (
     <div className="py-16 bg-muted min-h-screen">

@@ -83,7 +83,6 @@ export default function Footer() {
               <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
               <li><Link href="/shop" className="text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
               <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact</Link></li>
               {isAdmin && (
                 <li><Link href="/admin" className="text-secondary font-bold hover:text-primary transition-colors">{isCEO ? 'CEO Panel' : 'Admin Panel'}</Link></li>
               )}
@@ -92,8 +91,8 @@ export default function Footer() {
           <div>
             <h4 className="mb-6 font-bold">Support</h4>
             <ul className="list-none flex flex-col gap-3">
-              <li><Link href="/about#faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link></li>
-              <li><Link href="/about#privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
+              <li><a href="/about#faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</a></li>
+              <li><a href="/about#privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
               {user && (
                 <li>

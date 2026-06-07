@@ -218,12 +218,12 @@ export default function ProductDetail() {
                   <FaWhatsapp size={18} /> <span className="md:hidden">Contact via WhatsApp</span>
                 </a>
 
-                <Link
-                  href={`/installments?search=${encodeURIComponent(product.name)}`}
+                <a
+                  href={`/installments?search=${encodeURIComponent(product.name)}#search-section`}
                   className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
                 >
                   <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
-                </Link>
+                </a>
               </div>
             )}
 
