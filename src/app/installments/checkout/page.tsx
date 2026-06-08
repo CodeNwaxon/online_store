@@ -277,7 +277,7 @@ function LoanCheckoutContent() {
 
   const pay = usePaystack();
 
-  const handleInitiatePayment = () => {
+  const handleInitiatePayment = async () => {
     if (isLastPayment) {
       if (!formData.fullName.trim()) { toast.error('Please enter your full name.'); return; }
       if (!formData.phone.trim()) { toast.error('Please enter your phone number.'); return; }
@@ -289,9 +289,10 @@ function LoanCheckoutContent() {
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
       }
     }
-    const initiatePayment = async () => {
-      setIsProcessing(true);
 
+    setIsProcessing(true);
+
+    try {
       const shippingAddress = deliveryMethod === 'pickup'
         ? `Pickup at: ${selectedPickupArea}`
         : `${formData.address}, ${formData.city}`;
@@ -335,9 +336,11 @@ function LoanCheckoutContent() {
           setIsProcessing(false);
         },
       });
-    };
-
-    initiatePayment();
+    } catch (error) {
+      console.error('Payment initiation error:', error);
+      toast.error('Failed to initiate payment. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {

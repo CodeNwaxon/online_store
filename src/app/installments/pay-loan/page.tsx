@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint, FaTimes } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -52,7 +52,10 @@ export default function PayLoanPage() {
   }, [showReceipt]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubLoan: (() => void) | undefined;
+    let unsubHistory: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
@@ -64,47 +67,49 @@ export default function PayLoanPage() {
         const instSnap = await getDocs(query(collection(db, 'settings'), where('__name__', '==', 'installments')));
         if (!instSnap.empty) setInstSettings(instSnap.docs[0].data());
 
-        await fetchLoan(currentUser.email!);
-        await fetchHistory(currentUser.uid);
+        const qLoan = query(
+          collection(db, 'installments'),
+          where('userEmail', '==', currentUser.email),
+          where('status', 'in', ['active', 'cancelling', 'cleared', 'completed'])
+        );
+        unsubLoan = onSnapshot(qLoan, (querySnapshot) => {
+          const docsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+          const active = docsData.find((d: any) => d.status === 'active' || d.status === 'cancelling');
+          const cleared = docsData.find((d: any) => d.status === 'cleared' && !d.dismissedRefund);
+          const completed = docsData.find((d: any) => d.status === 'completed' && !d.dismissedCompletion);
+
+          if (active || cleared || completed) {
+            setLoan(active || cleared || completed);
+          } else {
+            setLoan(null);
+          }
+          setLoading(false);
+        });
+
+        const qHistory = query(
+          collection(db, 'installments'),
+          where('userId', '==', currentUser.uid),
+          where('status', 'in', ['completed', 'cancelled', 'refunded', 'cleared'])
+        );
+        unsubHistory = onSnapshot(qHistory, (querySnapshot) => {
+          const historyData = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter((item: any) => !item.hiddenFromUsers?.includes(currentUser.uid));
+          setHistory(historyData);
+        });
+
       } else {
         setLoading(false);
+        if (unsubLoan) unsubLoan();
+        if (unsubHistory) unsubHistory();
       }
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubLoan) unsubLoan();
+      if (unsubHistory) unsubHistory();
+    };
   }, []);
-
-  const fetchLoan = async (email: string) => {
-    const q = query(
-      collection(db, 'installments'),
-      where('userEmail', '==', email),
-      where('status', 'in', ['active', 'cancelling', 'cleared', 'completed'])
-    );
-    const querySnapshot = await getDocs(q);
-    const docsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-    const active = docsData.find((d: any) => d.status === 'active' || d.status === 'cancelling');
-    const cleared = docsData.find((d: any) => d.status === 'cleared' && !d.dismissedRefund);
-    const completed = docsData.find((d: any) => d.status === 'completed' && !d.dismissedCompletion);
-
-    if (active || cleared || completed) {
-      setLoan(active || cleared || completed);
-    } else {
-      setLoan(null);
-    }
-    setLoading(false);
-  };
-
-  const fetchHistory = async (userId: string) => {
-    const q = query(
-      collection(db, 'installments'),
-      where('userId', '==', userId),
-      where('status', 'in', ['completed', 'cancelled', 'refunded', 'cleared'])
-    );
-    const querySnapshot = await getDocs(q);
-    const historyData = querySnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter((item: any) => !item.hiddenFromUsers?.includes(userId));
-    setHistory(historyData);
-  };
 
   const handlePrintReceipt = (paymentName: string, amount: number, receiptId?: string) => {
     const displayUid = receiptId ? receiptId.substring(0, 10).toUpperCase() : `REF-${loan.id.substring(0, 4)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -955,7 +960,7 @@ export default function PayLoanPage() {
 
                     <div className="mt-6 pt-4 border-t-2 border-slate-800 dark:border-slate-700 flex justify-between items-center">
                       <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
-                      <div className="text-2xl font-black text-primary">?{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
 
                     <div className="flex items-center justify-center gap-2 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-100 dark:border-green-900/50 mt-2">
@@ -1022,15 +1027,15 @@ export default function PayLoanPage() {
                     <div className="pt-2 space-y-3">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
-                        <span className="font-bold text-slate-600 dark:text-slate-300">?{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                        <span className="font-bold text-slate-600 dark:text-slate-300">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
-                        <span className="font-bold text-secondary text-[11px]">+?{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                        <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800 dark:border-slate-700">
                         <span className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px]">Total Paid:</span>
-                        <span className="font-black text-[#D48806] text-xl">?{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                        <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

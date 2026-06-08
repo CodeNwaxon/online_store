@@ -227,6 +227,7 @@ export default function AdminInstallments() {
           toast.success('Payment marked as cleared.');
           setReceiptFile(null);
           setShowReceiptInput(null);
+          setSelectedItem(null);
         } else if (actionType === 'deleteSettled') {
           await deleteDoc(doc(db, 'installments', id));
           toast.success('Record deleted.');
