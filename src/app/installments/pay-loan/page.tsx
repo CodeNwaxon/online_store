@@ -371,7 +371,6 @@ export default function PayLoanPage() {
 
       toast.success('Refund request submitted! Our admin will process it shortly.');
       setShowRefundForm(false);
-      await fetchLoan(user?.email!);
     } catch (error) {
       toast.error('Failed to submit refund request.');
     } finally {
@@ -387,7 +386,6 @@ export default function PayLoanPage() {
         hiddenFromUsers: [...currentHidden, user?.uid]
       });
       toast.success('History cleared from view.');
-      await fetchHistory(user?.uid!);
     } catch (error) {
       toast.error('Failed to clear history.');
     }
