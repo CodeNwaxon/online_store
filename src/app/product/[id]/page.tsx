@@ -125,9 +125,21 @@ export default function ProductDetail() {
     );
   }
 
-  const productImages = product.images && product.images.length > 0
+  const sanitizeImageUrl = (url: string) => {
+    if (!url) return '/images/placeholder.png';
+    try {
+      if (url.includes('_next/image?url=')) {
+        const urlObj = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+        const actualUrl = urlObj.searchParams.get('url');
+        if (actualUrl) return actualUrl;
+      }
+    } catch (e) {}
+    return url;
+  };
+
+  const productImages = (product.images && product.images.length > 0
     ? product.images
-    : [product.image];
+    : [product.image]).map(sanitizeImageUrl);
 
   const whatsappMessage = `I want to make enquiries about ${product.name}${product.manufacturer ? `, made by ${product.manufacturer}` : ''}, priced at ₦${product.price.toLocaleString()}.`;
   // Uses dynamic contactNumber from state

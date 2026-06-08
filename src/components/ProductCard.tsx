@@ -58,11 +58,27 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
 
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+
+  const sanitizeImageUrl = (url: string) => {
+    if (!url) return '/images/placeholder.png';
+    try {
+      if (url.includes('_next/image?url=')) {
+        const urlObj = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+        const actualUrl = urlObj.searchParams.get('url');
+        if (actualUrl) return actualUrl;
+      }
+    } catch (e) {}
+    return url;
+  };
+
+  const rawImgUrl = imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image);
+  const safeImgUrl = sanitizeImageUrl(rawImgUrl);
+
   const CardContent = (
     <div className={`relative h-48 max-md:h-40 w-full cursor-pointer bg-muted/20 p-1`}>
       <div className="relative w-full h-full overflow-hidden md:rounded-md">
         <Image
-          src={imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image)}
+          src={safeImgUrl}
           alt={product.name}
           fill
           className={`${isAdmin ? 'object-contain' : 'object-cover object-top'} transition-all duration-300 group-hover:scale-110`}
