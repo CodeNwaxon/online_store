@@ -271,9 +271,7 @@ export default function ProductDetail() {
       <div className="max-w-[1600px] mx-auto w-full px-2 md:px-6 mt-12">
         <RelatedCarousel
           allProducts={allProducts}
-          currentProductId={product.id}
-          currentCategory={product.category}
-          currentSubcategory={product.subcategory}
+          currentProduct={product}
         />
       </div>
     </div>
@@ -282,25 +280,37 @@ export default function ProductDetail() {
 
 function RelatedCarousel({
   allProducts,
-  currentProductId,
-  currentCategory,
-  currentSubcategory,
+  currentProduct,
 }: {
   allProducts: any[];
-  currentProductId: string;
-  currentCategory: string;
-  currentSubcategory: string;
+  currentProduct: any;
 }) {
+  const getSimilarityScore = (p: any, current: any) => {
+    let score = 0;
+    if (p.subcategory === current.subcategory && p.subcategory) score += 10;
+    if (p.category === current.category && p.category) score += 5;
+    if (p.manufacturer && current.manufacturer && p.manufacturer.toLowerCase() === current.manufacturer.toLowerCase()) score += 5;
+    if (p.size && current.size && p.size === current.size) score += 4;
+    if (p.ramRom && current.ramRom && p.ramRom === current.ramRom) score += 4;
+    if (p.group && current.group && p.group.toLowerCase() === current.group.toLowerCase()) score += 2;
+    
+    // name similarity
+    if (p.name && current.name) {
+      const currentWords = current.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      const pWords = p.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      let shared = 0;
+      for (const w of pWords) {
+        if (currentWords.includes(w)) shared += 1;
+      }
+      score += shared;
+    }
+    return score;
+  };
+
   const related = allProducts
-    .filter(p => p.id !== currentProductId)
-    .sort((a, b) => {
-      if (a.subcategory === currentSubcategory && b.subcategory !== currentSubcategory) return -1;
-      if (b.subcategory === currentSubcategory && a.subcategory !== currentSubcategory) return 1;
-      if (a.category === currentCategory && b.category !== currentCategory) return -1;
-      if (b.category === currentCategory && a.category !== currentCategory) return 1;
-      return 0;
-    })
-    .slice(0, 16);
+    .filter(p => p.id !== currentProduct.id)
+    .sort((a, b) => getSimilarityScore(b, currentProduct) - getSimilarityScore(a, currentProduct))
+    .slice(0, 30);
 
   const [startIndex, setStartIndex] = useState(0);
   const [activeMobileIndex, setActiveMobileIndex] = useState(0);

@@ -76,6 +76,7 @@ function AdminProductsContent() {
   const [rdpPrice, setRdpPrice] = useState('');
   const [productCode, setProductCode] = useState('');
   const [size, setSize] = useState('');
+  const [ramRom, setRamRom] = useState('');
 
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -257,6 +258,7 @@ function AdminProductsContent() {
     setRdpPrice('');
     setProductCode('');
     setSize('');
+    setRamRom('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -351,6 +353,7 @@ function AdminProductsContent() {
         oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
         promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
         size: size || 'medium',
+        ramRom: ramRom.trim() || '',
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: manufacturer.trim() || 'Unknown',
@@ -397,6 +400,7 @@ function AdminProductsContent() {
     setRdpPrice(product.rdpPrice ? formatPriceInput(product.rdpPrice.toString()) : '');
     setProductCode(product.productCode || '');
     setSize(product.size || '');
+    setRamRom(product.ramRom || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -650,6 +654,20 @@ function AdminProductsContent() {
                 </select>
               )}
             </div>
+
+            {/* RAM & ROM */}
+            {group && (group.toUpperCase().includes('PHONE') || group.toUpperCase().includes('PHONES')) && (
+              <div className="space-y-2">
+                <label className="text-xs md:text-sm font-bold">RAM & ROM (Optional)</label>
+                <input
+                  value={ramRom}
+                  onChange={e => setRamRom(e.target.value)}
+                  type="text"
+                  placeholder="e.g. 8/256"
+                  className="w-full p-3 rounded-md border border-border bg-background text-sm"
+                />
+              </div>
+            )}
 
             {/* Product Size */}
             <div className="space-y-2">

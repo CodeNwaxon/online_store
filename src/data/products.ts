@@ -20,6 +20,7 @@ export interface Product {
   promoEndDate?: string;
   size?: string;
   warranty?: string;
+  ramRom?: string;
 }
 
 export const products: Product[] = [

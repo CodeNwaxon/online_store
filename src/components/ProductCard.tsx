@@ -160,12 +160,19 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           )}
           {!isAdmin && <LikeButton productId={product.id} />}
         </div>
-        <h3
-          className={`text-[0.95rem] max-md:text-[0.75rem] mb-0.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis ${theme.accent}`}
-          title={product.name}
-        >
-          {product.name}
-        </h3>
+        <div className="flex flex-col mb-0.5">
+          <h3
+            className={`text-[0.95rem] max-md:text-[0.75rem] font-bold whitespace-nowrap overflow-hidden text-ellipsis ${theme.accent} leading-tight`}
+            title={product.name}
+          >
+            {product.name}
+          </h3>
+          {product.group && (product.group.toUpperCase().includes('PHONE') || product.group.toUpperCase().includes('PHONES')) && product.ramRom && (
+            <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider mt-0.5 font-bold">
+              ({product.ramRom}) GB
+            </div>
+          )}
+        </div>
 
         <div className="mt-2 flex flex-col md:flex-row justify-between items-start">
           {/* Manufacturer and warranty section */}
