@@ -190,7 +190,21 @@ function InstallmentsContent() {
     }).format(amount);
   };
 
-  const groups = ['All', ...Array.from(new Set(products.map(p => p.group))).filter(Boolean)].sort();
+  const groups = (() => {
+    const parseDate = (dateVal: any) => {
+      if (!dateVal) return 0;
+      if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+      return new Date(dateVal).getTime() || 0;
+    };
+    const uniqueGroups = Array.from(new Set(products.map(p => p.group))).filter(Boolean);
+    // Sort by earliest product in each group (oldest group first)
+    uniqueGroups.sort((a, b) => {
+      const earliestA = Math.min(...products.filter(p => p.group === a).map(p => parseDate(p.createdAt || p.updatedAt)));
+      const earliestB = Math.min(...products.filter(p => p.group === b).map(p => parseDate(p.createdAt || p.updatedAt)));
+      return earliestA - earliestB;
+    });
+    return ['All', ...uniqueGroups];
+  })();
 
   if (loading) {
     return (
@@ -325,6 +339,11 @@ function InstallmentsContent() {
               </div>
               <div className="p-6 flex flex-col flex-1">
                 <h3 className="font-bold mb-2">{product.name}</h3>
+                {product.group && (product.group.toUpperCase().includes('PHONE') || product.group.toUpperCase().includes('PHONES') || product.group.toUpperCase().includes('LAPTOP') || product.group.toUpperCase().includes('LAPTOPS')) && product.ramRom && (
+                  <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider -mt-1 mb-2 font-bold">
+                    ({product.ramRom}) GB
+                  </div>
+                )}
                 <p className="text-primary font-bold text-xl mb-4 mt-auto">
                   {formatCurrency(product.price)}
                 </p>

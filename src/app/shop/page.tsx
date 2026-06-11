@@ -89,7 +89,21 @@ function ShopContent() {
     setSelectedCategory('All');
   }, [selectedGroup]);
 
-  const groups = ['All', ...Array.from(new Set(products.map(p => p.group))).filter(Boolean)].sort();
+  const groups = (() => {
+    const parseDate = (dateVal: any) => {
+      if (!dateVal) return 0;
+      if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+      return new Date(dateVal).getTime() || 0;
+    };
+    const uniqueGroups = Array.from(new Set(products.map(p => p.group))).filter(Boolean);
+    // Sort by earliest product in each group (oldest group first)
+    uniqueGroups.sort((a, b) => {
+      const earliestA = Math.min(...products.filter(p => p.group === a).map(p => parseDate(p.createdAt || p.updatedAt)));
+      const earliestB = Math.min(...products.filter(p => p.group === b).map(p => parseDate(p.createdAt || p.updatedAt)));
+      return earliestA - earliestB;
+    });
+    return ['All', ...uniqueGroups];
+  })();
 
   // Get unique categories for the selected group
   const availableCategories = Array.from(new Set(

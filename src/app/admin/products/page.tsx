@@ -656,7 +656,7 @@ function AdminProductsContent() {
             </div>
 
             {/* RAM & ROM */}
-            {group && (group.toUpperCase().includes('PHONE') || group.toUpperCase().includes('PHONES')) && (
+            {group && (group.toUpperCase().includes('PHONE') || group.toUpperCase().includes('PHONES') || group.toUpperCase().includes('LAPTOP') || group.toUpperCase().includes('LAPTOPS')) && (
               <div className="space-y-2">
                 <label className="text-xs md:text-sm font-bold">RAM & ROM (Optional)</label>
                 <input

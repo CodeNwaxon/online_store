@@ -167,7 +167,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           >
             {product.name}
           </h3>
-          {product.group && (product.group.toUpperCase().includes('PHONE') || product.group.toUpperCase().includes('PHONES')) && product.ramRom && (
+          {product.group && (product.group.toUpperCase().includes('PHONE') || product.group.toUpperCase().includes('PHONES') || product.group.toUpperCase().includes('LAPTOP') || product.group.toUpperCase().includes('LAPTOPS')) && product.ramRom && (
             <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider mt-0.5 font-bold">
               ({product.ramRom}) GB
             </div>
