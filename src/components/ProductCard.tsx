@@ -95,12 +95,12 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           </div>
         )}
         {product.isPromo && (
-          <span className={`absolute top-0.5 left-0.5 ${theme.btn.split(' ')[0]} text-white px-2 py-0.5 rounded text-[10px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center`}>
+          <span className={`absolute top-0.5 left-0.5 ${theme.btn.split(' ')[0]} text-white px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-10 shadow-sm flex flex-col items-center`}>
             <span>SPECIAL PROMO</span>
             {product.promoEndDate && (
-              <span className="text-[10px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded mt-1 border border-white/20 whitespace-nowrap">
+              <span className="text-[8px] md:text-[11px] bg-white text-slate-800 px-1.5 py-0.5 rounded mt-1 border border-white/20 whitespace-nowrap">
                 Ends {new Date(product.promoEndDate).getDate()}
-                <span className="text-[7px] align-top font-normal">{getOrdinal(new Date(product.promoEndDate).getDate())}</span>
+                <span className="text-[5px] md:text-[7px] align-top font-normal">{getOrdinal(new Date(product.promoEndDate).getDate())}</span>
                 {' '}{new Date(product.promoEndDate).toLocaleDateString('en-GB', { month: 'short' })}
               </span>
             )}
