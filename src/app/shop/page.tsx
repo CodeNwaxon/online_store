@@ -166,9 +166,9 @@ function ShopContent() {
   }
 
   return (
-    <div className="py-16">
+    <div className="pt-8 pb-16 md:py-16">
       <div className="max-w-[1440px] mx-auto px-2 md:px-6">
-        <header className="px-2 md:px-0 mb-8 md:mb-12 flex justify-between items-center flex-wrap gap-4">
+        <header className="px-2 md:px-0 mb-4 md:mb-12 flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold mb-4">Our Collection</h1>
             <p className="text-muted-foreground">Explore our range of premium African-inspired goods.</p>
@@ -178,7 +178,7 @@ function ShopContent() {
           </Link>
         </header>
 
-        <div className="flex flex-col gap-3 md:gap-6 mb-12">
+        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12">
           {/* Main Filters Bar */}
           <div className="flex flex-wrap gap-6 items-center justify-between p-3 md:p-6 bg-card border border-border md:rounded-[var(--radius)]">
             <div className="flex gap-3 flex-wrap">
