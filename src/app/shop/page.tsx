@@ -166,7 +166,7 @@ function ShopContent() {
   }
 
   return (
-    <div className="py-16">
+    <div className="pt-8 pb-16 md:py-16">
       <div className="max-w-[1440px] mx-auto px-2 md:px-6">
         <header className="px-2 md:px-0 mb-8 md:mb-12 flex justify-between items-center flex-wrap gap-4">
           <div>
