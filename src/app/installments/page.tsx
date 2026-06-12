@@ -241,8 +241,8 @@ function InstallmentsContent() {
             <div>
               <h3 className="font-bold mb-2">Flexible Plans</h3>
               <p className="text-sm text-muted-foreground">
-                Choose between <strong>{instSettings.shortPlan.months} months</strong> ({instSettings.shortPlan.increase}% increase)
-                or <strong>{instSettings.longPlan.months} months</strong> ({instSettings.longPlan.increase}% increase).
+                Choose between <strong>{instSettings.shortPlan.months} months</strong> ({Math.round(instSettings.shortPlan.increase)}% increase)
+                or <strong>{instSettings.longPlan.months} months</strong> ({Math.round(instSettings.longPlan.increase)}% increase).
               </p>
             </div>
             <div>

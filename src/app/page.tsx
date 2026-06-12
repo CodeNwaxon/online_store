@@ -122,10 +122,10 @@ export default function Home() {
         }
 
         // Promo products for carousel
-        setPromoProducts(allProducts.filter((p: any) => p.isPromo).slice(0, 10));
+        setPromoProducts(allProducts.filter((p: any) => p.isPromo));
       } catch (error) {
         console.error("Error loading home data:", error);
-        setPromoProducts(staticProducts.filter(p => p.isPromo).slice(0, 10));
+        setPromoProducts(staticProducts.filter(p => p.isPromo));
         setHeroSlides(staticProducts.filter(p => p.isPromo).slice(0, 5));
       } finally {
         setDataLoading(false);

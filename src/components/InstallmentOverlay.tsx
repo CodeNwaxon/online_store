@@ -340,7 +340,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
               <span className="font-bold">{formatCurrency(product.price)}</span>
             </div>
             <div className="flex justify-between mb-2 text-sm text-primary">
-              <span>{plan}-months Plan Interest ({increaseRate * 100}%)</span>
+              <span>{plan}-months Plan Interest ({Math.round(increaseRate * 100)}%)</span>
               <span className="font-bold">+ {formatCurrency(increaseAmount)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-border text-xl font-bold">
