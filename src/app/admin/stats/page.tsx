@@ -22,8 +22,8 @@ function AdminStatsContent() {
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [visibleInventory, setVisibleInventory] = useState(40);
-  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
+  const [visibleInventory, setVisibleInventory] = useState(100);
+  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all' | 'delete_visitor_month' | 'clear_all_visitors'; id?: string; monthKey?: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
