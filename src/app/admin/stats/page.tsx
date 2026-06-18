@@ -22,8 +22,8 @@ function AdminStatsContent() {
   const [historyList, setHistoryList] = useState<any[]>([]);
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [visibleInventory, setVisibleInventory] = useState(100);
-  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all' | 'delete_visitor_month' | 'clear_all_visitors'; id?: string; monthKey?: string } | null>(null);
+  const [visibleInventory, setVisibleInventory] = useState(40);
+  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1069,13 +1069,13 @@ function AdminStatsContent() {
                       <span className="text-xs font-bold text-foreground capitalize">{month}:</span>
                       <span className="text-xs font-black text-primary">{visitorData[monthKey] || 0}</span>
                     </div>
-                  <button
-                    onClick={() => handleActionWithPasskey('delete_visitor_month', undefined, month)}
-                    className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
-                    title={`Reset ${month}`}
-                  >
-                    <FaTrash size={10} />
-                  </button>
+                    <button
+                      onClick={() => handleActionWithPasskey('delete_visitor_month', undefined, month)}
+                      className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
+                      title={`Reset ${month}`}
+                    >
+                      <FaTrash size={10} />
+                    </button>
                   </div>
                 );
               })}
@@ -1102,8 +1102,8 @@ function AdminStatsContent() {
             <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">
               {showPasskeyModal.type === 'clear_all' ? 'Confirm Global Clear'
                 : showPasskeyModal.type === 'clear_all_visitors' ? 'Clear All Visitors'
-                : showPasskeyModal.type === 'delete_visitor_month' ? `Reset ${showPasskeyModal.monthKey?.charAt(0).toUpperCase()}${showPasskeyModal.monthKey?.slice(1)}`
-                : 'Confirm Deletion'}
+                  : showPasskeyModal.type === 'delete_visitor_month' ? `Reset ${showPasskeyModal.monthKey?.charAt(0).toUpperCase()}${showPasskeyModal.monthKey?.slice(1)}`
+                    : 'Confirm Deletion'}
             </h3>
             <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-4">
               Warning: Action Cannot Be Undone
@@ -1112,10 +1112,10 @@ function AdminStatsContent() {
               {showPasskeyModal.type === 'clear_all'
                 ? 'Are you absolutely sure you want to permanently delete all archived history records? Enter the CEO passcode below to authorize.'
                 : showPasskeyModal.type === 'clear_all_visitors'
-                ? 'This will reset all monthly visitor counts to 0 and clear all tracked visitor IDs so counting starts fresh. Enter the CEO passcode to authorize.'
-                : showPasskeyModal.type === 'delete_visitor_month'
-                ? `This will reset the visitor count for ${showPasskeyModal.monthKey} to 0. Enter the CEO passcode to authorize.`
-                : 'Are you absolutely sure you want to permanently delete this monthly history snapshot? Enter the CEO passcode below to authorize.'
+                  ? 'This will reset all monthly visitor counts to 0 and clear all tracked visitor IDs so counting starts fresh. Enter the CEO passcode to authorize.'
+                  : showPasskeyModal.type === 'delete_visitor_month'
+                    ? `This will reset the visitor count for ${showPasskeyModal.monthKey} to 0. Enter the CEO passcode to authorize.`
+                    : 'Are you absolutely sure you want to permanently delete this monthly history snapshot? Enter the CEO passcode below to authorize.'
               }
             </p>
             <input
