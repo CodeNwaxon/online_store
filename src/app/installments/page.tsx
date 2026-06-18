@@ -77,7 +77,7 @@ function InstallmentsContent() {
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [activeLoan, setActiveLoan] = useState<any | null>(null);
-  const [visibleCount, setVisibleCount] = useState(40);
+  const [visibleCount, setVisibleCount] = useState(60);
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: number} | null>(null);
 
@@ -274,7 +274,7 @@ function InstallmentsContent() {
               {groups.map(group => (
                 <button
                   key={group}
-                  onClick={() => { setSelectedGroup(group); setVisibleCount(40); }}
+                  onClick={() => { setSelectedGroup(group); setVisibleCount(60); }}
                   className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {group}
@@ -313,7 +313,7 @@ function InstallmentsContent() {
                 type="text"
                 placeholder="Search for an item to start a plan..."
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(40); }}
+                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(60); }}
                 className="w-full py-2.5 pr-4 pl-10 rounded-[var(--radius)] border border-border bg-background font-sans outline-none focus:border-primary"
               />
               <FaSearch
@@ -374,7 +374,7 @@ function InstallmentsContent() {
             </div>
             <button
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
-              onClick={() => setVisibleCount(prev => prev + 40)}
+              onClick={() => setVisibleCount(prev => prev + 60)}
             >
               <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <span>Load More Products</span>

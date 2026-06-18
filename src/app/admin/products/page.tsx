@@ -374,9 +374,14 @@ function AdminProductsContent() {
       } else {
         resetForm();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error('Operation failed.');
+      const msg = error?.message || '';
+      if (msg.includes('upload') || msg.includes('Cloudinary') || msg.includes('fetch')) {
+        toast.error('Image upload failed. Try using smaller images or image URLs instead.');
+      } else {
+        toast.error('Operation failed. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
     }

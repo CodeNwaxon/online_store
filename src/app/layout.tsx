@@ -59,6 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import VisitorTracker from "@/components/VisitorTracker";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 
@@ -71,6 +72,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <Toaster position="top-center" reverseOrder={false} />
+        <VisitorTracker />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

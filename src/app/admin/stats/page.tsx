@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, deleteDoc, getDocs, increment } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock } from 'react-icons/fa';
+import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock, FaEye } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -23,10 +23,17 @@ function AdminStatsContent() {
   const [searchQueryInventory, setSearchQueryInventory] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [visibleInventory, setVisibleInventory] = useState(40);
-  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all'; id?: string } | null>(null);
+  const [showPasskeyModal, setShowPasskeyModal] = useState<{ type: 'delete' | 'clear_all' | 'delete_visitor_month' | 'clear_all_visitors'; id?: string; monthKey?: string } | null>(null);
   const [passkeyInput, setPasskeyInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Visitor state
+  const [visitorData, setVisitorData] = useState<Record<string, number>>({});
+  const [showVisitorOverlay, setShowVisitorOverlay] = useState(false);
+
+  // Ref to prevent auto-save feedback loop (flicker fix)
+  const lastSavedSnapshotRef = useRef<string>('');
 
   // Check authentication state
   useEffect(() => {
@@ -63,7 +70,17 @@ function AdminStatsContent() {
       console.warn("Stats history listener error:", error);
     });
 
-    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); };
+    const unsubVisitors = onSnapshot(doc(db, 'visitors', 'monthly'), (snap) => {
+      if (snap.exists()) {
+        setVisitorData(snap.data() as Record<string, number>);
+      } else {
+        setVisitorData({});
+      }
+    }, (error) => {
+      console.warn("Visitors listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); };
   }, [isAuthenticated]);
 
   // Helper to check if a date is within the current calendar month
@@ -242,6 +259,15 @@ function AdminStatsContent() {
     });
 
     const timer = setTimeout(async () => {
+      // Create a fingerprint of current values to avoid re-saving identical data
+      const snapshotFingerprint = JSON.stringify({
+        revenue: totalRevenue, profit: totalProfit, cancelled: cancelledRevenue,
+        sales: salesCount, groups: groupsSnapshot.map(g => `${g.name}:${g.revenue}:${g.profit}`),
+      });
+
+      // Skip save if values haven't changed (prevents onSnapshot feedback loop / flicker)
+      if (snapshotFingerprint === lastSavedSnapshotRef.current) return;
+
       try {
         await setDoc(doc(db, 'stats_history', docId), {
           id: docId,
@@ -257,19 +283,24 @@ function AdminStatsContent() {
           topOtherGroups: otherGroupsSnapshots,
           createdAt: now.toISOString()
         }, { merge: true });
+        lastSavedSnapshotRef.current = snapshotFingerprint;
       } catch (err) {
         console.error("Error auto-updating stats history in Firestore:", err);
       }
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [totalRevenue, totalProfit, cancelledRevenue, completedInstallments.length, cartOrdersCurrentMonth.length, products, revenueByGroup]);
 
   // Passkey Actions
-  const handleActionWithPasskey = (type: 'delete' | 'clear_all', id?: string) => {
-    setShowPasskeyModal({ type, id });
+  const handleActionWithPasskey = (type: 'delete' | 'clear_all' | 'delete_visitor_month' | 'clear_all_visitors', id?: string, monthKey?: string) => {
+    setShowPasskeyModal({ type, id, monthKey });
     setPasskeyInput('');
   };
+
+  // Visitor total count
+  const MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  const totalVisitors = visitorData.total || 0;
 
   const verifyPasskey = async () => {
     setIsVerifying(true);
@@ -286,6 +317,23 @@ function AdminStatsContent() {
             await deleteDoc(doc(db, 'stats_history', item.id));
           }
           toast.success('All history records cleared');
+        } else if (showPasskeyModal?.type === 'delete_visitor_month' && showPasskeyModal.monthKey) {
+          const currentYear = new Date().getFullYear();
+          const monthKey = `${currentYear}_${showPasskeyModal.monthKey}`;
+          await setDoc(doc(db, 'visitors', 'monthly'), { [monthKey]: 0 }, { merge: true });
+          toast.success(`${showPasskeyModal.monthKey.charAt(0).toUpperCase() + showPasskeyModal.monthKey.slice(1)} visitors reset to 0`);
+        } else if (showPasskeyModal?.type === 'clear_all_visitors') {
+          // Reset total and all months for the current year
+          const resetData: Record<string, number> = { total: 0 };
+          const currentYear = new Date().getFullYear();
+          MONTH_KEYS.forEach(key => { resetData[`${currentYear}_${key}`] = 0; });
+          await setDoc(doc(db, 'visitors', 'monthly'), resetData);
+          // Delete all visitor_ids docs so devices can be re-counted
+          const visitorIdSnap = await getDocs(collection(db, 'visitor_ids'));
+          for (const visitorDoc of visitorIdSnap.docs) {
+            await deleteDoc(doc(db, 'visitor_ids', visitorDoc.id));
+          }
+          toast.success('All visitor data cleared. Count reset to 0.');
         }
         setShowPasskeyModal(null);
         setPasskeyInput('');
@@ -421,6 +469,12 @@ function AdminStatsContent() {
         <div className="text-center md:text-left">
           <h1 className="text-xl md:text-2xl font-bold">Store Insights</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Track your performance and inventory.</p>
+          <button
+            onClick={() => setShowVisitorOverlay(true)}
+            className="text-[10px] font-bold text-red-800 hover:underline mt-0.5 inline-flex items-center gap-1 transition-colors hover:text-red-600"
+          >
+            <FaEye size={10} /> Visitors: {totalVisitors}
+          </button>
         </div>
         <div className="flex bg-muted p-0.5 md:p-1 rounded-md md:rounded-lg border border-border w-full md:w-auto gap-0.5 md:gap-1">
           <button
@@ -558,45 +612,70 @@ function AdminStatsContent() {
 
             {/* CATEGORY BREAKDOWN */}
             <div className="space-y-6 md:space-y-10">
-              <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
-                <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Electronics</h2>
-                <div className="space-y-3">
-                  {getTopByGroup('Electronics', 5).map((item, i) => (
-                    <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
-                      <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
-                      <span className="font-bold">{item.count} units</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              {(() => {
+                const electronicsItems = getTopByGroup('Electronics', 5);
+                const allElectronicsZero = electronicsItems.length === 0 || electronicsItems.every(item => item.count === 0);
+                return (
+                  <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
+                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Electronics</h2>
+                    {allElectronicsZero ? (
+                      <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {electronicsItems.map((item, i) => (
+                          <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
+                            <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
+                            <span className="font-bold">{item.count} units</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })()}
 
-              <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
-                <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Furniture</h2>
-                <div className="space-y-3">
-                  {getTopByGroup('Furniture', 5).map((item, i) => (
-                    <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
-                      <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
-                      <span className="font-bold">{item.count} units</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              {(() => {
+                const furnitureItems = getTopByGroup('Furniture', 5);
+                const allFurnitureZero = furnitureItems.length === 0 || furnitureItems.every(item => item.count === 0);
+                return (
+                  <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
+                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Furniture</h2>
+                    {allFurnitureZero ? (
+                      <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {furnitureItems.map((item, i) => (
+                          <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
+                            <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
+                            <span className="font-bold">{item.count} units</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })()}
 
               {otherGroups.map(group => {
                 const topItems = getTopByGroup(group, 5);
                 if (topItems.length === 0) return null;
+                const allZero = topItems.every(item => item.count === 0);
                 const displayName = group.charAt(0).toUpperCase() + group.slice(1).toLowerCase();
                 return (
                   <section key={group} className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
                     <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 {displayName}</h2>
-                    <div className="space-y-3">
-                      {topItems.map((item, i) => (
-                        <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
-                          <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
-                          <span className="font-bold">{item.count} units</span>
-                        </div>
-                      ))}
-                    </div>
+                    {allZero ? (
+                      <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {topItems.map((item, i) => (
+                          <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
+                            <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
+                            <span className="font-bold">{item.count} units</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
                 );
               })}
@@ -857,75 +936,99 @@ function AdminStatsContent() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-border/80">
-                      {item.topSelling && item.topSelling.length > 0 && (
-                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
-                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                            <FaShoppingCart className="text-purple-600 size-3" /> Top 10 Selling Products
-                          </h4>
-                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
-                            {item.topSelling.map((prod: any, idx: number) => (
-                              <li key={idx} className="leading-tight">
-                                <span className="text-foreground font-black">{prod.name}</span>
-                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
+                      {item.topSelling && item.topSelling.length > 0 && (() => {
+                        const allZero = item.topSelling.every((prod: any) => prod.count === 0);
+                        return (
+                          <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                              <FaShoppingCart className="text-purple-600 size-3" /> Top 10 Selling Products
+                            </h4>
+                            {allZero ? (
+                              <p className="text-[9px] md:text-xs text-muted-foreground italic">No Top 10 products found</p>
+                            ) : (
+                              <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                {item.topSelling.map((prod: any, idx: number) => (
+                                  <li key={idx} className="leading-tight">
+                                    <span className="text-foreground font-black">{prod.name}</span>
+                                    <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        );
+                      })()}
 
-                      {item.topElectronics && item.topElectronics.length > 0 && (
-                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
-                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                            <FaBolt className="text-blue-600 size-3" /> Top 5 Electronics
-                          </h4>
-                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
-                            {item.topElectronics.map((prod: any, idx: number) => (
-                              <li key={idx} className="leading-tight">
-                                <span className="text-foreground font-black">{prod.name}</span>
-                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
+                      {item.topElectronics && item.topElectronics.length > 0 && (() => {
+                        const allZero = item.topElectronics.every((prod: any) => prod.count === 0);
+                        return (
+                          <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                              <FaBolt className="text-blue-600 size-3" /> Top 5 Electronics
+                            </h4>
+                            {allZero ? (
+                              <p className="text-[9px] md:text-xs text-muted-foreground italic">No Top 5 products found</p>
+                            ) : (
+                              <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                {item.topElectronics.map((prod: any, idx: number) => (
+                                  <li key={idx} className="leading-tight">
+                                    <span className="text-foreground font-black">{prod.name}</span>
+                                    <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        );
+                      })()}
 
-                      {item.topFurniture && item.topFurniture.length > 0 && (
-                        <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
-                          <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                            <FaCouch className="text-orange-600 size-3" /> Top 5 Furniture
-                          </h4>
-                          <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
-                            {item.topFurniture.map((prod: any, idx: number) => (
-                              <li key={idx} className="leading-tight">
-                                <span className="text-foreground font-black">{prod.name}</span>
-                                <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
-                              </li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
+                      {item.topFurniture && item.topFurniture.length > 0 && (() => {
+                        const allZero = item.topFurniture.every((prod: any) => prod.count === 0);
+                        return (
+                          <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                              <FaCouch className="text-orange-600 size-3" /> Top 5 Furniture
+                            </h4>
+                            {allZero ? (
+                              <p className="text-[9px] md:text-xs text-muted-foreground italic">No Top 5 products found</p>
+                            ) : (
+                              <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                {item.topFurniture.map((prod: any, idx: number) => (
+                                  <li key={idx} className="leading-tight">
+                                    <span className="text-foreground font-black">{prod.name}</span>
+                                    <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {item.topOtherGroups && Object.keys(item.topOtherGroups).length > 0 && (
                         <>
-                          {Object.entries(item.topOtherGroups).map(([groupName, prodList]: [string, any]) => (
-                            <div key={groupName} className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
-                              <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
-                                <FaBoxOpen className="text-teal-600 size-3" /> Top 5 {groupName.charAt(0).toUpperCase() + groupName.slice(1).toLowerCase()}
-                              </h4>
-                              {prodList && prodList.length > 0 ? (
-                                <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
-                                  {prodList.map((prod: any, idx: number) => (
-                                    <li key={idx} className="leading-tight">
-                                      <span className="text-foreground font-black">{prod.name}</span>
-                                      <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
-                                    </li>
-                                  ))}
-                                </ol>
-                              ) : (
-                                <p className="text-[9px] text-muted-foreground">No units sold yet.</p>
-                              )}
-                            </div>
-                          ))}
+                          {Object.entries(item.topOtherGroups).map(([groupName, prodList]: [string, any]) => {
+                            const allZero = !prodList || prodList.length === 0 || prodList.every((prod: any) => prod.count === 0);
+                            return (
+                              <div key={groupName} className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                                <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                                  <FaBoxOpen className="text-teal-600 size-3" /> Top 5 {groupName.charAt(0).toUpperCase() + groupName.slice(1).toLowerCase()}
+                                </h4>
+                                {allZero ? (
+                                  <p className="text-[9px] md:text-xs text-muted-foreground italic">No Top 5 products found</p>
+                                ) : (
+                                  <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                    {prodList.map((prod: any, idx: number) => (
+                                      <li key={idx} className="leading-tight">
+                                        <span className="text-foreground font-black">{prod.name}</span>
+                                        <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                )}
+                              </div>
+                            );
+                          })}
                         </>
                       )}
                     </div>
@@ -937,6 +1040,59 @@ function AdminStatsContent() {
         </section>
       )}
 
+      {/* VISITOR OVERLAY MODAL */}
+      {showVisitorOverlay && (
+        <div className="fixed inset-0 z-[2500] bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom duration-300 overflow-hidden">
+            <div className="p-5 border-b border-border bg-muted/20 flex justify-between items-center">
+              <div>
+                <h3 className="font-black text-base uppercase tracking-tight flex items-center gap-2">
+                  <FaEye className="text-red-800" size={14} /> Visitor Breakdown
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Total: <span className="font-black text-red-800">{totalVisitors}</span> unique visitors</p>
+              </div>
+              <button
+                onClick={() => setShowVisitorOverlay(false)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <FaTimes size={14} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-1 max-h-[400px] overflow-y-auto">
+              {MONTH_KEYS.map((month) => {
+                const currentYear = new Date().getFullYear();
+                const monthKey = `${currentYear}_${month}`;
+                return (
+                  <div key={month} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-foreground capitalize">{month}:</span>
+                      <span className="text-xs font-black text-primary">{visitorData[monthKey] || 0}</span>
+                    </div>
+                  <button
+                    onClick={() => handleActionWithPasskey('delete_visitor_month', undefined, month)}
+                    className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
+                    title={`Reset ${month}`}
+                  >
+                    <FaTrash size={10} />
+                  </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="p-4 border-t border-border bg-muted/10">
+              <button
+                onClick={() => handleActionWithPasskey('clear_all_visitors')}
+                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-md shadow-red-600/20"
+              >
+                Clear All Visitors
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPasskeyModal && (
         <div className="fixed inset-0 z-[3000] bg-black/80 flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-card p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border-2 border-red-500/20 animate-in slide-in-from-bottom duration-300">
@@ -944,7 +1100,10 @@ function AdminStatsContent() {
               <FaLock size={28} />
             </div>
             <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">
-              {showPasskeyModal.type === 'clear_all' ? 'Confirm Global Clear' : 'Confirm Deletion'}
+              {showPasskeyModal.type === 'clear_all' ? 'Confirm Global Clear'
+                : showPasskeyModal.type === 'clear_all_visitors' ? 'Clear All Visitors'
+                : showPasskeyModal.type === 'delete_visitor_month' ? `Reset ${showPasskeyModal.monthKey?.charAt(0).toUpperCase()}${showPasskeyModal.monthKey?.slice(1)}`
+                : 'Confirm Deletion'}
             </h3>
             <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-4">
               Warning: Action Cannot Be Undone
@@ -952,6 +1111,10 @@ function AdminStatsContent() {
             <p className="text-muted-foreground mb-6 text-xs font-semibold leading-relaxed">
               {showPasskeyModal.type === 'clear_all'
                 ? 'Are you absolutely sure you want to permanently delete all archived history records? Enter the CEO passcode below to authorize.'
+                : showPasskeyModal.type === 'clear_all_visitors'
+                ? 'This will reset all monthly visitor counts to 0 and clear all tracked visitor IDs so counting starts fresh. Enter the CEO passcode to authorize.'
+                : showPasskeyModal.type === 'delete_visitor_month'
+                ? `This will reset the visitor count for ${showPasskeyModal.monthKey} to 0. Enter the CEO passcode to authorize.`
                 : 'Are you absolutely sure you want to permanently delete this monthly history snapshot? Enter the CEO passcode below to authorize.'
               }
             </p>
