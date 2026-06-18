@@ -85,7 +85,7 @@ function AdminProductsContent() {
   // Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState('All');
-  const [visibleCount, setVisibleCount] = useState(40);
+  const [visibleCount, setVisibleCount] = useState(60);
 
   // Meta lists
   const [groups, setGroups] = useState<string[]>(['ELECTRONICS', 'FURNITURE']);

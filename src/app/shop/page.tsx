@@ -19,7 +19,7 @@ function ShopContent() {
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [visibleCount, setVisibleCount] = useState(60);
+  const [visibleCount, setVisibleCount] = useState(84);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
   const { likedProductIds } = useLikeStore();
