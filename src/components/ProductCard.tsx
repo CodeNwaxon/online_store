@@ -28,18 +28,18 @@ interface ProductCardProps {
 }
 
 const cardThemes = [
-  { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
-  { accent: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700', lightBg: 'bg-blue-50', lightBorder: 'border-blue-100' },
-  { accent: 'text-rose-600', btn: 'bg-rose-600 hover:bg-rose-700', lightBg: 'bg-rose-50', lightBorder: 'border-rose-100' },
-  { accent: 'text-teal-600', btn: 'bg-teal-600 hover:bg-teal-700', lightBg: 'bg-teal-50', lightBorder: 'border-teal-100' },
-  { accent: 'text-amber-600', btn: 'bg-amber-600 hover:bg-amber-700', lightBg: 'bg-amber-50', lightBorder: 'border-amber-100' },
-  { accent: 'text-violet-600', btn: 'bg-violet-600 hover:bg-violet-700', lightBg: 'bg-violet-50', lightBorder: 'border-violet-100' },
-  { accent: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700', lightBg: 'bg-emerald-50', lightBorder: 'border-emerald-100' },
-  { accent: 'text-orange-600', btn: 'bg-orange-600 hover:bg-orange-700', lightBg: 'bg-orange-50', lightBorder: 'border-orange-100' },
-  { accent: 'text-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700', lightBg: 'bg-indigo-50', lightBorder: 'border-indigo-100' },
-  { accent: 'text-fuchsia-600', btn: 'bg-fuchsia-600 hover:bg-fuchsia-700', lightBg: 'bg-fuchsia-50', lightBorder: 'border-fuchsia-100' },
-  { accent: 'text-lime-600', btn: 'bg-lime-600 hover:bg-lime-700', lightBg: 'bg-lime-50', lightBorder: 'border-lime-100' },
-  { accent: 'text-cyan-600', btn: 'bg-cyan-600 hover:bg-cyan-700', lightBg: 'bg-cyan-50', lightBorder: 'border-cyan-100' },
+  { accent: 'text-primary', borderTop: 'border-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
+  { accent: 'text-blue-600', borderTop: 'border-blue-600', btn: 'bg-blue-600 hover:bg-blue-700', lightBg: 'bg-blue-50', lightBorder: 'border-blue-100' },
+  { accent: 'text-rose-600', borderTop: 'border-rose-600', btn: 'bg-rose-600 hover:bg-rose-700', lightBg: 'bg-rose-50', lightBorder: 'border-rose-100' },
+  { accent: 'text-teal-600', borderTop: 'border-teal-600', btn: 'bg-teal-600 hover:bg-teal-700', lightBg: 'bg-teal-50', lightBorder: 'border-teal-100' },
+  { accent: 'text-amber-600', borderTop: 'border-amber-600', btn: 'bg-amber-600 hover:bg-amber-700', lightBg: 'bg-amber-50', lightBorder: 'border-amber-100' },
+  { accent: 'text-violet-600', borderTop: 'border-violet-600', btn: 'bg-violet-600 hover:bg-violet-700', lightBg: 'bg-violet-50', lightBorder: 'border-violet-100' },
+  { accent: 'text-emerald-600', borderTop: 'border-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700', lightBg: 'bg-emerald-50', lightBorder: 'border-emerald-100' },
+  { accent: 'text-orange-600', borderTop: 'border-orange-600', btn: 'bg-orange-600 hover:bg-orange-700', lightBg: 'bg-orange-50', lightBorder: 'border-orange-100' },
+  { accent: 'text-indigo-600', borderTop: 'border-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700', lightBg: 'bg-indigo-50', lightBorder: 'border-indigo-100' },
+  { accent: 'text-fuchsia-600', borderTop: 'border-fuchsia-600', btn: 'bg-fuchsia-600 hover:bg-fuchsia-700', lightBg: 'bg-fuchsia-50', lightBorder: 'border-fuchsia-100' },
+  { accent: 'text-lime-600', borderTop: 'border-lime-600', btn: 'bg-lime-600 hover:bg-lime-700', lightBg: 'bg-lime-50', lightBorder: 'border-lime-100' },
+  { accent: 'text-cyan-600', borderTop: 'border-cyan-600', btn: 'bg-cyan-600 hover:bg-cyan-700', lightBg: 'bg-cyan-50', lightBorder: 'border-cyan-100' },
 ];
 
 export default function ProductCard({ product, isAdmin, priority = false, index = 0 }: ProductCardProps) {
@@ -67,7 +67,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
         const actualUrl = urlObj.searchParams.get('url');
         if (actualUrl) return actualUrl;
       }
-    } catch (e) {}
+    } catch (e) { }
     return url;
   };
 
@@ -139,7 +139,8 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   );
 
   return (
-    <div className="relative bg-card border border-border md:rounded-[var(--radius)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-md h-full flex flex-col group">
+    <div className={`relative bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden transition-all duration-200 hover:-translate-y-1 h-full flex flex-col group`}>
+      <div className={`w-full h-[3px] shrink-0 ${theme.btn.split(' ')[0]}`} />
       {!isAdmin ? (
         <Link href={`/product/${product.id}?theme=${index}`}>
           {CardContent}

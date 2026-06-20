@@ -23,6 +23,8 @@ function ShopContent() {
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
   const { likedProductIds } = useLikeStore();
+  const [likesCounts, setLikesCounts] = useState<Record<string, number>>({});
+  const [sortBy, setSortBy] = useState<'default' | 'top_rated' | 'newest'>('default');
 
   useEffect(() => {
     setLoading(true);
@@ -82,6 +84,17 @@ function ShopContent() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeLikes = onSnapshot(collection(db, 'product_likes'), (snap) => {
+      const counts: Record<string, number> = {};
+      snap.docs.forEach(d => {
+        counts[d.id] = d.data().count || 0;
+      });
+      setLikesCounts(counts);
+    });
+    return () => unsubscribeLikes();
   }, []);
 
   // Reset category when group changes
@@ -154,7 +167,24 @@ function ShopContent() {
     return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo && isVisible;
   });
 
-  const displayedProducts = filteredProducts.slice(0, visibleCount);
+  const sortedFilteredProducts = [...filteredProducts].sort((a, b) => {
+    if (sortBy === 'top_rated') {
+      const likesA = likesCounts[a.id] || 0;
+      const likesB = likesCounts[b.id] || 0;
+      return likesB - likesA;
+    }
+    if (sortBy === 'newest') {
+      const parseDate = (dateVal: any) => {
+        if (!dateVal) return 0;
+        if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+        return new Date(dateVal).getTime() || 0;
+      };
+      return parseDate(b.updatedAt) - parseDate(a.updatedAt);
+    }
+    return 0;
+  });
+
+  const displayedProducts = sortedFilteredProducts.slice(0, visibleCount);
 
   if (loading) {
     return (
@@ -178,15 +208,15 @@ function ShopContent() {
           </Link>
         </header>
 
-        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12">
+        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12 max-md:-mx-2">
           {/* Main Filters Bar */}
-          <div className="flex flex-wrap gap-6 items-center justify-between p-3 md:p-6 bg-card border border-border md:rounded-[var(--radius)]">
-            <div className="flex gap-3 flex-wrap">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between p-3 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
+            <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
               {groups.map(group => (
                 <button
                   key={group}
                   onClick={() => setSelectedGroup(group)}
-                  className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
                   {group}
                 </button>
@@ -194,22 +224,36 @@ function ShopContent() {
 
               <button
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
-                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 Promos
               </button>
 
               <button
                 onClick={() => setShowLikedOnly(!showLikedOnly)}
-                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
               >
                 {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
                 Favorites
               </button>
 
+              <button
+                onClick={() => setSortBy(sortBy === 'top_rated' ? 'default' : 'top_rated')}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${sortBy === 'top_rated' ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+              >
+                Top Rated
+              </button>
+
+              <button
+                onClick={() => setSortBy(sortBy === 'newest' ? 'default' : 'newest')}
+                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${sortBy === 'newest' ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-foreground border-border hover:bg-muted'}`}
+              >
+                Newest
+              </button>
+
             </div>
 
-            <div className="relative flex-1 min-w-[250px]">
+            <div className="relative flex-1 min-w-[250px] max-md:w-full max-md:px-2">
               <input
                 type="text"
                 placeholder="Search by name, brand or description..."
