@@ -8,6 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LikeButton from './LikeButton';
 import WarrantyModal from './WarrantyModal';
+import { toast } from 'react-hot-toast';
 
 
 const getOrdinal = (d: number) => {
@@ -75,8 +76,8 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   const safeImgUrl = sanitizeImageUrl(rawImgUrl);
 
   const CardContent = (
-    <div className={`relative h-48 max-md:h-40 w-full cursor-pointer bg-muted/20 p-1`}>
-      <div className="relative w-full h-full overflow-hidden md:rounded-md">
+    <div className={`relative h-45 max-md:h-40 w-full cursor-pointer bg-muted/20 p-0.5`}>
+      <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)] md:rounded-[calc(var(--radius)-1px)]">
         <Image
           src={safeImgUrl}
           alt={product.name}
@@ -139,7 +140,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   );
 
   return (
-    <div className={`relative bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden transition-all duration-200 hover:-translate-y-1 h-full flex flex-col group`}>
+    <div className={`relative bg-white border-x border-b border-muted shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-lg md:rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1 h-full flex flex-col group`}>
       <div className={`w-full h-[3px] shrink-0 ${theme.btn.split(' ')[0]}`} />
       {!isAdmin ? (
         <Link href={`/product/${product.id}?theme=${index}`}>
@@ -278,9 +279,19 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                 e.preventDefault();
                 e.stopPropagation();
                 addItem(product);
+                toast.success(`${product.name} added to cart`, {
+                  style: {
+                    fontSize: '11px',
+                    padding: '4px 8px',
+                    minWidth: '120px',
+                    marginTop: '20px'
+                  },
+                  position: 'bottom-center',
+                  duration: 2000,
+                });
               }}
             >
-              <FaShoppingCart size={13} /> Add
+              <FaShoppingCart size={13} />
             </button>
           )}
         </div>

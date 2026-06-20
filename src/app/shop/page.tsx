@@ -208,9 +208,9 @@ function ShopContent() {
           </Link>
         </header>
 
-        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12 max-md:-mx-2">
+        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12 max-md:-mx-1">
           {/* Main Filters Bar */}
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between p-3 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
+          <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between p-2 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
             <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
               {groups.map(group => (
                 <button
@@ -292,7 +292,7 @@ function ShopContent() {
 
         {/* Product lists */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-1 md:gap-3">
             {displayedProducts.map((product, index) => (
               <div key={product.id} className="mb-4  md:mb-8">
                 <ProductCard product={product} priority={index < 4} index={index} />
