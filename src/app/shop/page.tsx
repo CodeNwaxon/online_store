@@ -254,7 +254,7 @@ function ShopContent() {
                 placeholder="Search by name, brand or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-2.5 pr-4 pl-5 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
+                className="w-full py-2.5 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
               />
               <FaSearch
                 size={18}
