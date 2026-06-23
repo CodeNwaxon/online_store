@@ -238,11 +238,11 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
 
         {showDescription && (
           <div
-            className="absolute inset-0 bg-background/40 backdrop-blur-[3px] z-50 p-2 flex items-center justify-center animate-in fade-in duration-200"
+            className="absolute inset-0 bg-background/40 backdrop-blur-[3px] z-50 p-2 max-md:p-1 flex items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowDescription(false); }}
           >
             <div
-              className="bg-card w-full max-h-[90%] rounded-md shadow-xl border border-border p-3 flex flex-col relative"
+              className="bg-card w-full max-h-[90%] rounded-md shadow-xl border border-border p-3 max-md:p-2 flex flex-col relative"
               onClick={(e) => e.stopPropagation()}
             >
               <button
