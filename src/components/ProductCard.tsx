@@ -2,7 +2,7 @@
 
 import { Product } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaEllipsisV } from 'react-icons/fa';
+import { FaShoppingCart, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,6 +26,8 @@ interface ProductCardProps {
   isAdmin?: boolean;
   priority?: boolean;
   index?: number;
+  onEdit?: (product: Product) => void;
+  onDelete?: (id: string) => void;
 }
 
 const cardThemes = [
@@ -43,7 +45,7 @@ const cardThemes = [
   { accent: 'text-cyan-600', borderTop: 'border-cyan-600', btn: 'bg-cyan-600 hover:bg-cyan-700', lightBg: 'bg-cyan-50', lightBorder: 'border-cyan-100' },
 ];
 
-export default function ProductCard({ product, isAdmin, priority = false, index = 0 }: ProductCardProps) {
+export default function ProductCard({ product, isAdmin, priority = false, index = 0, onEdit, onDelete }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
@@ -88,7 +90,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
         />
-        {!isAdmin && (product.quantity ?? 0) <= 0 && (
+        {(product.quantity ?? 0) <= 0 && (
           <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 p-2 text-center select-none">
             <div className="bg-red-600/90 text-white font-black text-[10px] md:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg border border-white/20 transform rotate-[-5deg] animate-pulse">
               Out of Stock
@@ -141,6 +143,24 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
 
   return (
     <div className={`relative bg-white border-x border-b border-muted shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] rounded-lg md:rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1 h-full flex flex-col group`}>
+      {isAdmin && onEdit && onDelete && (
+        <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(product); }}
+            className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
+            title="Edit Product"
+          >
+            <FaEdit size={14} />
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(product.id); }}
+            className="bg-red-500 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
+            title="Delete Product"
+          >
+            <FaTrash size={14} />
+          </button>
+        </div>
+      )}
       <div className={`w-full h-[3px] shrink-0 ${theme.btn.split(' ')[0]}`} />
       {!isAdmin ? (
         <Link href={`/product/${product.id}?theme=${index}`}>

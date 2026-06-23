@@ -964,25 +964,8 @@ function AdminProductsContent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {displayedProducts.map(product => (
             <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
-              <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
-                <button
-                  onClick={() => handleEdit(product)}
-                  className="bg-primary text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
-                  title="Edit Product"
-                >
-                  <FaEdit size={14} />
-                </button>
-                <button
-                  onClick={() => handleDelete(product.id)}
-                  className="bg-red-500 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
-                  title="Delete Product"
-                >
-                  <FaTrash size={14} />
-                </button>
-              </div>
-
               <div className="relative flex-1 flex flex-col">
-                <ProductCard product={product} isAdmin={true} />
+                <ProductCard product={product} isAdmin={true} onEdit={handleEdit} onDelete={handleDelete} />
               </div>
             </div>
           ))}
