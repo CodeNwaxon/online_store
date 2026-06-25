@@ -19,6 +19,8 @@ export interface FoodProduct {
   quantity?: number;
   group?: string;
   category?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface FoodCardProps {
@@ -48,7 +50,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
   };
 
   const CardContent = (
-    <div className="relative h-48 max-md:h-40 w-full cursor-pointer bg-gradient-to-br from-green-50 to-emerald-100 p-1">
+    <div className="relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br from-green-50 to-emerald-100 p-1">
       <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)]">
         <Image
           src={safeImgUrl}

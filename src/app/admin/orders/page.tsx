@@ -9,7 +9,6 @@ import {
   orderBy,
   doc,
   updateDoc,
-  deleteDoc,
   getDoc,
   where
 } from 'firebase/firestore';
@@ -71,8 +70,9 @@ export default function AdminOrders() {
 
       if (passkeyInput === correctPasskey) {
         if (confirmDelete) {
-          await deleteDoc(doc(db, 'orders', confirmDelete));
-          toast.success('Order deleted successfully');
+          await updateDoc(doc(db, 'orders', confirmDelete), { deleted: true, deletedAt: new Date().toISOString() });
+          setSelectedOrder((prev: any) => prev?.id === confirmDelete ? null : prev);
+          toast.success('Order removed from view');
         } else if (confirmUnmark) {
           await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
           setSelectedOrder((prev: any) => prev?.id === confirmUnmark ? { ...prev, delivered: false } : prev);
@@ -190,6 +190,9 @@ export default function AdminOrders() {
   };
 
   const filteredOrders = orders.filter(order => {
+    // Hide soft-deleted orders from admin view
+    if (order.deleted) return false;
+
     const matchesSearch =
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));

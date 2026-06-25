@@ -8,7 +8,9 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot
+  onSnapshot,
+  query,
+  orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils } from 'react-icons/fa';
@@ -70,18 +72,26 @@ export default function AdminFoods() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'foods'), (snap) => {
+    const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
-      setFoods(prods);
+      
+      const sortedProds = [...prods].sort((a, b) => {
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      setFoods(sortedProds);
 
       // Extract unique groups and categories
-      const uniqueGroups = Array.from(new Set(prods.map(p => p.group).filter(Boolean)));
+      const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
       const newMap: Record<string, string[]> = {};
 
       uniqueGroups.forEach((g: any) => {
         const groupUpper = g.toUpperCase();
         if (!newMap[groupUpper]) newMap[groupUpper] = [];
-        const catsForGroup = Array.from(new Set(prods.filter(p => p.group && p.group.toUpperCase() === groupUpper).map(p => p.category))).filter(Boolean);
+        const catsForGroup = Array.from(new Set(sortedProds.filter(p => p.group && p.group.toUpperCase() === groupUpper).map(p => p.category))).filter(Boolean);
         newMap[groupUpper] = Array.from(new Set([...newMap[groupUpper], ...catsForGroup as string[]]));
       });
 
@@ -166,7 +176,7 @@ export default function AdminFoods() {
         return data.secure_url;
       }));
 
-      const foodData = {
+      const foodData: any = {
         name: name.trim(),
         costPrice: parsedCost,
         price: parsedPrice,
@@ -175,7 +185,6 @@ export default function AdminFoods() {
         category: formatStructure(category),
         quantity: Number(quantity),
         images: uploadedUrls,
-        createdAt: editingId ? undefined : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -183,7 +192,10 @@ export default function AdminFoods() {
         await updateDoc(doc(db, 'foods', editingId), foodData);
         toast.success('Food item updated!');
       } else {
-        await addDoc(collection(db, 'foods'), foodData);
+        await addDoc(collection(db, 'foods'), {
+          ...foodData,
+          createdAt: new Date().toISOString()
+        });
         toast.success('Food item added!');
       }
       resetForm();
