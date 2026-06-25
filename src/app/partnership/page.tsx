@@ -35,7 +35,7 @@ export default function PartnershipPage() {
   // Dashboard State
   const [showWelcome, setShowWelcome] = useState(false);
   const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalItems: 0, companyProfit: 0, partnerProfit: 0 });
+  const [stats, setStats] = useState({ totalItems: 0, totalPurchase: 0, partnerProfit: 0 });
 
   // Dark Mode State — hydrate from localStorage on mount
   useHydrateTheme();
@@ -100,7 +100,7 @@ export default function PartnershipPage() {
       const q = query(collection(db, 'orders'), where('referralCode', '==', referralCode));
       const snap = await getDocs(q);
       const items: any[] = [];
-      let totalCompany = 0;
+      let totalPurchase = 0;
       let totalPartner = 0;
 
       snap.forEach(doc => {
@@ -118,10 +118,11 @@ export default function PartnershipPage() {
               ...item,
               orderDate: order.createdAt,
               profit,
-              partnerCut
+              partnerCut,
+              cutPct
             });
 
-            totalCompany += profit;
+            totalPurchase += sellPrice;
             totalPartner += partnerCut;
           });
         }
@@ -130,7 +131,7 @@ export default function PartnershipPage() {
       setPurchasedItems(items);
       setStats({
         totalItems: items.length,
-        companyProfit: totalCompany,
+        totalPurchase: totalPurchase,
         partnerProfit: totalPartner
       });
     } catch (error) {
@@ -518,8 +519,8 @@ export default function PartnershipPage() {
             <p className={`text-4xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{stats.totalItems}</p>
           </div>
           <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
-            <p className={`text-sm font-bold uppercase mb-2 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Total Company Profit</p>
-            <p className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>₦{stats.companyProfit.toLocaleString()}</p>
+            <p className={`text-sm font-bold uppercase mb-2 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Total Product Sold Amount</p>
+            <p className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>₦{stats.totalPurchase.toLocaleString()}</p>
           </div>
           <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center relative overflow-hidden ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
             <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 ${isDarkMode ? 'bg-primary/20' : 'bg-green-500/10'}`} />
@@ -582,7 +583,7 @@ export default function PartnershipPage() {
                   <tr>
                     <th className="px-6 py-4">Product</th>
                     <th className="px-6 py-4">Price</th>
-                    <th className="px-6 py-4">Company Profit</th>
+                    <th className="px-6 py-4">Profit Percentage</th>
                     <th className="px-6 py-4 text-right">Your Cut</th>
                   </tr>
                 </thead>
@@ -596,7 +597,7 @@ export default function PartnershipPage() {
                         </div>
                       </td>
                       <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>₦{(item.price || 0).toLocaleString()}</td>
-                      <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>₦{(item.profit || 0).toLocaleString()}</td>
+                      <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>{item.cutPct || 50}%</td>
                       <td className={`px-6 py-4 text-right font-black ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(item.partnerCut || 0).toLocaleString()}</td>
                     </tr>
                   ))}
