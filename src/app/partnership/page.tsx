@@ -273,7 +273,7 @@ export default function PartnershipPage() {
         <ThemeToggle />
         <div className={`max-w-4xl w-full rounded-2xl shadow-xl overflow-hidden grid md:grid-cols-2 animate-in fade-in slide-in-from-bottom-8 ${isDarkMode ? 'bg-zinc-900 border border-zinc-800 shadow-black/50' : 'bg-white border border-border'}`}>
           <div className="px-6 py-8 md:p-14 flex flex-col justify-center">
-            <h1 className={`text-4xl font-black mb-6 leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`text-2xl md:text-4xl font-black mb-6 leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               Grow with Us. <br /><span className="text-primary">Become a Partner.</span>
             </h1>
             <p className={`mb-8 leading-relaxed ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
