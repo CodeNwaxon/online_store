@@ -214,7 +214,7 @@ export default function FoodsPage() {
             </button>
           </div>
         ) : (
-          <div className="px-1.5 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
+          <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
             {filteredFoods.map((food) => (
               <FoodCard key={food.id} food={food} />
             ))}
