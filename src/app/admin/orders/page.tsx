@@ -70,7 +70,7 @@ export default function AdminOrders() {
 
       if (passkeyInput === correctPasskey) {
         if (confirmDelete) {
-          await updateDoc(doc(db, 'orders', confirmDelete), { deleted: true, deletedAt: new Date().toISOString() });
+          await updateDoc(doc(db, 'orders', confirmDelete), { deleted: true, deletedAt: new Date().toISOString(), isNew: false });
           setSelectedOrder((prev: any) => prev?.id === confirmDelete ? null : prev);
           toast.success('Order removed from view');
         } else if (confirmUnmark) {
