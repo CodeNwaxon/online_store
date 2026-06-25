@@ -132,6 +132,7 @@ export default function FoodDetail() {
                 alt={food.name}
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
                 priority
               />
               <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm text-green-600">
