@@ -9,6 +9,8 @@ import Link from 'next/link';
 import LikeButton from './LikeButton';
 import WarrantyModal from './WarrantyModal';
 import { toast } from 'react-hot-toast';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 
 const getOrdinal = (d: number) => {
@@ -47,6 +49,7 @@ const cardThemes = [
 
 export default function ProductCard({ product, isAdmin, priority = false, index = 0, onEdit, onDelete }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const cartItems = useCartStore((state) => state.items);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
 
@@ -295,9 +298,25 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                 ? 'bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-50'
                 : `${theme.btn} text-white`
                 }`}
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                // Check quantity in cart vs available stock
+                const existing = cartItems.find(item => item.id === product.id);
+                const currentInCart = existing ? existing.quantity : 0;
+                try {
+                  const docSnap = await getDoc(doc(db, 'products', product.id));
+                  const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                  if (currentInCart + 1 > liveQty) {
+                    toast.error(`Only ${liveQty} available in stock`, { duration: 3000 });
+                    return;
+                  }
+                } catch (err) {
+                  if (currentInCart + 1 > (product.quantity ?? 0)) {
+                    toast.error(`Only ${product.quantity ?? 0} available in stock`, { duration: 3000 });
+                    return;
+                  }
+                }
                 addItem(product);
                 toast.success(`${product.name} added to cart`, {
                   style: {

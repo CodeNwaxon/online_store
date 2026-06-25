@@ -72,7 +72,9 @@ service cloud.firestore {
 
     // Orders — create is blocked client-side; only server (Admin SDK) can create
     match /orders/{id} {
-      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow read: if isAdmin() 
+                  || (request.auth != null && resource.data.userId == request.auth.uid)
+                  || (request.auth != null && exists(/databases/$(database)/documents/partners/$(request.auth.uid)) && resource.data.referralCode == get(/databases/$(database)/documents/partners/$(request.auth.uid)).data.referralCode);
       allow create: if false; // Only the server (Admin SDK) can create orders
       allow update: if isAdmin();
       allow delete: if isCEO();
@@ -110,7 +112,29 @@ service cloud.firestore {
       allow delete: if isCEO();
     }
 
-    // ─── 4. SAFETY NET ────────────────────────────────────────────
+    // ─── 4. NEW FEATURES (Foods & Partnerships) ───────────────────
+    
+    // Foods (Food Market)
+    match /foods/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Food Distribution Areas
+    match /food_distribution_areas/{areaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Partners
+    match /partners/{userId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow delete: if isCEO() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    // ─── 5. SAFETY NET ────────────────────────────────────────────
     
     match /{document=**} {
       allow read, write: if isCEO();

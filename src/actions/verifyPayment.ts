@@ -55,6 +55,7 @@ interface OrderItem {
   quantity: number;
   image: string;
   size?: string;
+  category?: string;
 }
 
 interface OrderData {
@@ -68,6 +69,7 @@ interface OrderData {
   totalAmount: number;
   shippingFee: number;
   deliveryMethod: string;
+  referralCode?: string | null;
 }
 
 export async function verifyAndFulfillOrder(
@@ -109,9 +111,10 @@ export async function verifyAndFulfillOrder(
   // Step 3: Re-verify product prices from the database to prevent price manipulation
   let serverCalculatedTotal = 0;
   for (const item of orderData.items) {
-    const productDoc = await adminDb.collection('products').doc(item.id).get();
+    const collectionName = item.category === 'Food' ? 'foods' : 'products';
+    const productDoc = await adminDb.collection(collectionName).doc(item.id).get();
     if (!productDoc.exists) {
-      return { success: false, error: `Product ${item.name} not found.` };
+      return { success: false, error: `Item ${item.name} not found in ${collectionName}.` };
     }
     const productData = productDoc.data()!;
     serverCalculatedTotal += (productData.price || 0) * item.quantity;
@@ -147,6 +150,63 @@ export async function verifyAndFulfillOrder(
         return { success: true, orderId: currentTxData.orderId, orderData: currentTxData.data };
       }
 
+      // Check for returning customer (by email or phone)
+      let isReturningCustomer = false;
+      const emailQuery = await transaction.get(adminDb.collection('orders').where('email', '==', orderData.email).limit(1));
+      const phoneQuery = await transaction.get(adminDb.collection('orders').where('phone', '==', orderData.phone).limit(1));
+      
+      if (!emailQuery.empty || !phoneQuery.empty) {
+        isReturningCustomer = true;
+      }
+
+      let finalReferralCode = orderData.referralCode;
+      let partnerCutPercentage = 50;
+
+      if (isReturningCustomer) {
+        // Referral only counts for first time buyers
+        finalReferralCode = null;
+      } else if (finalReferralCode) {
+         // Verify partner and fetch global percentage
+         const partnersQuery = await transaction.get(adminDb.collection('partners').where('referralCode', '==', finalReferralCode).where('status', '==', 'approved').limit(1));
+         if (partnersQuery.empty) {
+           finalReferralCode = null;
+         } else {
+           const partnerDoc = partnersQuery.docs[0];
+           
+           // Fetch global percentage
+           const settingsDoc = await transaction.get(adminDb.collection('settings').doc('partnership'));
+           partnerCutPercentage = settingsDoc.exists ? (settingsDoc.data()?.globalPercentage || 50) : 50;
+           
+           // Calculate total profit and earnings
+           let totalProfit = 0;
+           
+           // We need to fetch rdpPrice for each item because orderData only has selling price
+           const itemsWithCost: any[] = [];
+           for (const item of orderData.items) {
+             const sellPrice = item.price || 0;
+             const collectionName = item.category === 'Food' ? 'foods' : 'products';
+             const productDoc = await transaction.get(adminDb.collection(collectionName).doc(item.id));
+             const rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
+             totalProfit += Math.max(0, sellPrice - rdpPrice) * item.quantity;
+             
+             itemsWithCost.push({
+               ...item,
+               rdpPrice
+             });
+           }
+           
+           // Update orderData items with rdpPrice so public dashboard can see it
+           orderData.items = itemsWithCost;
+           
+           const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
+           
+           // Increment partner's totalEarnings
+           transaction.update(partnerDoc.ref, {
+             totalEarnings: FieldValue.increment(partnerEarnings)
+           });
+         }
+      }
+
       const orderRef = adminDb.collection('orders').doc();
       transaction.set(orderRef, {
         userId: orderData.userId,
@@ -164,12 +224,15 @@ export async function verifyAndFulfillOrder(
         isNew: true,
         paystackReference: reference,
         verifiedByServer: true,
+        referralCode: finalReferralCode || null,
+        partnerCutPercentage: finalReferralCode ? partnerCutPercentage : null,
         createdAt: new Date().toISOString(),
       });
 
       // Deduct product quantities
       for (const item of orderData.items) {
-        const productRef = adminDb.collection('products').doc(item.id);
+        const collectionName = item.category === 'Food' ? 'foods' : 'products';
+        const productRef = adminDb.collection(collectionName).doc(item.id);
         transaction.update(productRef, {
           quantity: FieldValue.increment(-item.quantity),
         });
@@ -209,6 +272,7 @@ interface InstallmentData {
   lateFeePercent: number;
   withdrawalFeePercent: number;
   gracePeriodDays: number;
+  referralCode?: string | null;
 }
 
 export async function verifyAndCreateInstallment(
@@ -315,6 +379,44 @@ export async function verifyAndCreateInstallment(
         installmentId: installmentRef.id,
       });
 
+      // Handle Referral Logic if applicable
+      let isReturningCustomer = false;
+      const emailQuery = await transaction.get(adminDb.collection('installments').where('userEmail', '==', data.userEmail).limit(1));
+      if (!emailQuery.empty) {
+        isReturningCustomer = true;
+      } else {
+        // Also check normal orders just in case
+        const orderEmailQuery = await transaction.get(adminDb.collection('orders').where('email', '==', data.userEmail).limit(1));
+        if (!orderEmailQuery.empty) isReturningCustomer = true;
+      }
+
+      let finalReferralCode = data.referralCode;
+      let partnerCutPercentage = 50;
+      let rdpPrice = 0;
+
+      if (isReturningCustomer) {
+        finalReferralCode = null;
+      } else if (finalReferralCode) {
+        const partnersQuery = await transaction.get(adminDb.collection('partners').where('referralCode', '==', finalReferralCode).where('status', '==', 'approved').limit(1));
+        if (partnersQuery.empty) {
+          finalReferralCode = null;
+        } else {
+          const partnerDoc = partnersQuery.docs[0];
+          
+          const settingsDoc = await transaction.get(adminDb.collection('settings').doc('partnership'));
+          partnerCutPercentage = settingsDoc.exists ? (settingsDoc.data()?.globalPercentage || 50) : 50;
+          
+          // Get rdpPrice or costPrice
+          rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
+          const totalProfit = Math.max(0, realProductPrice - rdpPrice);
+          const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
+          
+          transaction.update(partnerDoc.ref, {
+            totalEarnings: FieldValue.increment(partnerEarnings)
+          });
+        }
+      }
+
       transaction.set(installmentRef, {
         userId: data.userId,
         userEmail: data.userEmail,
@@ -326,6 +428,7 @@ export async function verifyAndCreateInstallment(
         productCategory: data.productCategory,
         productImage: data.productImage,
         basePrice: realProductPrice,
+        rdpPrice: rdpPrice,
         shippingFee: 0,
         totalAmount: serverCalculatedTotalAmount,
         monthlyAmount: monthlyAmount,
@@ -358,6 +461,8 @@ export async function verifyAndCreateInstallment(
         isNew: true,
         paystackReference: reference,
         verifiedByServer: true,
+        referralCode: finalReferralCode || null,
+        partnerCutPercentage: finalReferralCode ? partnerCutPercentage : null,
         createdAt: FieldValue.serverTimestamp(),
       });
 

@@ -57,6 +57,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import VisitorTracker from "@/components/VisitorTracker";
@@ -72,7 +73,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <Toaster position="top-center" reverseOrder={false} />
-        <VisitorTracker />
+        <Suspense><VisitorTracker /></Suspense>
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

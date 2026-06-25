@@ -16,6 +16,7 @@ interface CartSliderProps {
 export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   const { items, updateQuantity, removeItem, getTotalPrice } = useCartStore();
   const [shouldRender, setShouldRender] = useState(false);
+  const [animateIn, setAnimateIn] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -24,7 +25,8 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
 
   const handleIncreaseQuantity = async (item: any) => {
     try {
-      const docSnap = await getDoc(doc(db, 'products', item.id));
+      const collectionName = item.category === 'Food' ? 'foods' : 'products';
+      const docSnap = await getDoc(doc(db, collectionName, item.id));
       if (docSnap.exists()) {
         const liveQty = Number(docSnap.data().quantity) || 0;
         if (item.quantity + 1 > liveQty) {
@@ -47,6 +49,8 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
+      const timer = setTimeout(() => setAnimateIn(true), 10);
+
       const saved = localStorage.getItem('purchase_history');
       if (saved) setPurchaseHistory(JSON.parse(saved));
       
@@ -55,6 +59,10 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         if (docSnap.exists()) setSiteName(docSnap.data().siteName || 'Quick Choice');
       };
       fetchSettings();
+
+      return () => clearTimeout(timer);
+    } else {
+      setAnimateIn(false);
     }
   }, [isOpen]);
 
@@ -176,13 +184,13 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
     <div className="fixed inset-0 z-[200] flex justify-end">
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-black/50 cursor-pointer transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
+        className={`absolute inset-0 bg-black/50 cursor-pointer transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} 
         onClick={onClose}
       />
       
       {/* Content */}
       <div 
-        className={`relative w-full max-w-[400px] h-full bg-card shadow-[-4px_0_15px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`relative w-full max-w-[400px] h-full bg-card shadow-[-4px_0_15px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${animateIn ? 'translate-x-0' : 'translate-x-full'}`}
         onTransitionEnd={handleAnimationEnd}
       >
         {exceededStockItem && (

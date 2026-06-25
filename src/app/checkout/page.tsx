@@ -679,11 +679,13 @@ export default function Checkout() {
                     price: dbProducts[item.id]?.price || item.price,
                     quantity: item.quantity,
                     image: item.image,
-                    size: dbProducts[item.id]?.size || item.size || 'medium'
+                    size: dbProducts[item.id]?.size || item.size || 'medium',
+                    category: item.category
                   })),
                   totalAmount: finalTotalAmount,
                   shippingFee: shippingCost > 0 ? shippingCost : 0,
                   deliveryMethod,
+                  referralCode: localStorage.getItem('partner_ref_code') || null,
                 };
 
                 const res = await createPendingTransaction('checkout', orderData);

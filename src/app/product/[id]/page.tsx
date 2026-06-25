@@ -11,6 +11,7 @@ import ProductCard from '@/components/ProductCard';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import WarrantyModal from '@/components/WarrantyModal';
+import { toast } from 'react-hot-toast';
 
 const cardThemes = [
   { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
@@ -38,6 +39,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
+  const cartItems = useCartStore((state) => state.items);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
@@ -192,8 +194,13 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div className={`text-2xl font-bold mb-8 ${theme.accent}`}>
+            <div className={`text-2xl font-bold mb-8 ${theme.accent} flex items-center gap-3`}>
               ₦{product.price.toLocaleString()}
+              {product.oldPrice && (
+                <span className="text-sm line-through text-muted-foreground opacity-70">
+                  ₦{product.oldPrice.toLocaleString()}
+                </span>
+              )}
             </div>
 
             <div className="mb-10">
@@ -215,7 +222,25 @@ export default function ProductDetail() {
               <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
                 <button
                   className={`text-sm md:text-base col-span-1 md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
-                  onClick={() => addItem(product)}
+                  onClick={async () => {
+                    const existing = cartItems.find(item => item.id === product.id);
+                    const currentInCart = existing ? existing.quantity : 0;
+                    try {
+                      const docSnap = await getDoc(doc(db, 'products', product.id));
+                      const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                      if (currentInCart + 1 > liveQty) {
+                        toast.error(`Only ${liveQty} available in stock`, { duration: 3000 });
+                        return;
+                      }
+                    } catch (err) {
+                      if (currentInCart + 1 > (product.quantity ?? 0)) {
+                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { duration: 3000 });
+                        return;
+                      }
+                    }
+                    addItem(product);
+                    toast.success(`${product.name} added to cart`);
+                  }}
                 >
                   <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart
                 </button>

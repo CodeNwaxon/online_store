@@ -3,7 +3,7 @@
 import AdminGuard from '@/components/AdminGuard';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes, FaUtensils, FaHandshake } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
 import { auth, db } from '@/lib/firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { adminData, isCEO } = useAdmin();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOrders, setUnreadOrders] = useState(0);
+  const [unreadPartners, setUnreadPartners] = useState(0);
 
   useEffect(() => {
     // Check auth state and only set up listeners if authenticated
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (!user) {
         setUnreadCount(0);
         setUnreadOrders(0);
+        setUnreadPartners(0);
         return;
       }
 
@@ -49,10 +51,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         console.warn("Admin layout complaints listener error:", error);
       });
 
+      const unsubPartners = onSnapshot(query(collection(db, 'partners'), where('status', '==', 'pending')), (snap) => {
+        setUnreadPartners(snap.size);
+      }, (error) => {
+        console.warn("Admin layout partners listener error:", error);
+      });
+
       return () => {
         unsubOrders();
         unsubInst();
         unsubComp();
+        unsubPartners();
       };
     });
 
@@ -68,8 +77,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Dashboard', href: '/admin', icon: <FaHome />, id: 'dashboard' },
     { label: 'Management', href: '/admin/management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
     { label: 'Products', href: '/admin/products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
+    { label: 'Foods', href: '/admin/foods', icon: <FaUtensils />, id: '/ADMIN/FOODS' },
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
     { label: 'Orders', href: '/admin/orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
+    { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
     { label: 'Settings', href: '/admin/settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
     { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar />, id: '/ADMIN/STATS' },
     { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
@@ -132,6 +143,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {item.label === 'Orders' && unreadOrders > 0 && (
                   <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm">
                     {unreadOrders}
+                  </span>
+                )}
+                {item.label === 'Partnership' && unreadPartners > 0 && (
+                  <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+                    {unreadPartners}
                   </span>
                 )}
               </Link>

@@ -220,6 +220,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       lateFeePercent: instSettings.lateFeePercent || 5,
       withdrawalFeePercent: instSettings.withdrawalFeePercent || 15,
       gracePeriodDays: instSettings.gracePeriodDays || 5,
+      referralCode: localStorage.getItem('partner_ref_code') || null,
     };
 
     const res = await createPendingTransaction('installment_deposit', dataToSave);

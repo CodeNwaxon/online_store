@@ -5,11 +5,13 @@ import Image from 'next/image';
 import { 
   FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore, 
   FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaUserShield,
-  FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie
+  FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie,
+  FaUtensils, FaHandshake, FaChevronDown
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
+import { useThemeStore, useHydrateTheme } from '@/store/useThemeStore';
 import CartSlider from './CartSlider';
 import { auth, db } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -20,16 +22,20 @@ import { toast } from 'react-hot-toast';
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
   { href: '/shop', label: 'Shop', icon: <FaStore /> },
+  { href: '/foods', label: 'Food Market', icon: <FaUtensils /> },
   { href: '/about', label: 'About', icon: <FaInfoCircle /> },
   { href: '/contact', label: 'Contact', icon: <FaPhone /> },
+  { href: '/partnership', label: 'Partnership', icon: <FaHandshake /> },
 ];
 
 const adminLinks = [
   { href: '/admin', label: 'Dashboard', icon: <FaHome />, id: 'dashboard' },
   { href: '/admin/management', label: 'Management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
   { href: '/admin/products', label: 'Products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
+  { href: '/admin/foods', label: 'Foods', icon: <FaUtensils />, id: '/ADMIN/FOODS' },
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
   { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
+  { href: '/admin/partnership', label: 'Partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
   { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
   { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
@@ -66,8 +72,11 @@ export default function Navbar() {
   const [siteName, setSiteName] = useState('');
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
+  useHydrateTheme();
+  const { isPartnershipDarkMode } = useThemeStore();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOrders, setUnreadOrders] = useState(0);
+  const [unreadPartners, setUnreadPartners] = useState(0);
 
   const isAdminRoute = pathname.startsWith('/admin');
 
@@ -83,11 +92,13 @@ export default function Navbar() {
     if (!isAdmin && !isCEO) {
       setUnreadCount(0);
       setUnreadOrders(0);
+      setUnreadPartners(0);
       return;
     }
 
     let instCount = 0;
     let compCount = 0;
+    let partCount = 0;
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
       setUnreadOrders(snap.size);
@@ -109,10 +120,18 @@ export default function Navbar() {
       console.warn("Navbar complaints listener error:", error);
     });
 
+    const unsubPart = onSnapshot(query(collection(db, 'partners'), where('status', '==', 'pending')), (snap) => {
+      partCount = snap.size;
+      setUnreadPartners(partCount);
+    }, (error) => {
+      console.warn("Navbar partners listener error:", error);
+    });
+
     return () => {
       unsubOrders();
       unsubInst();
       unsubComp();
+      unsubPart();
     };
   }, [isAdmin, isCEO]);
 
@@ -159,23 +178,41 @@ export default function Navbar() {
   return (
     <>
       {/* --- NAV BAR --------------------------------------- */}
-      <nav className="bg-card border-b border-border sticky top-0 z-[200] py-[0.875rem]">
-        <div className="container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px]">
+      {/* --- NAV BAR --------------------------------------- */}
+      <nav className={`${isAdminRoute ? 'bg-card border-border' : (pathname === '/partnership' && isPartnershipDarkMode) ? 'bg-zinc-950 border-white/10' : (pathname === '/partnership' && !isPartnershipDarkMode) ? 'bg-slate-50 border-slate-200' : pathname.startsWith('/foods') ? 'bg-emerald-900 border-emerald-800' : 'bg-card border-border'} border-b sticky top-0 z-[200] py-[0.875rem] transition-colors duration-300`}>
+        <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-foreground'}`}>
 
           {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
-            <Image src="/logo_nomo.png" alt="Logo" width={38} height={38}
-              className="object-contain p-0.5" />
-            <span className="text-[0.8rem] md:text-[1.2rem] font-bold text-primary">{siteName}&reg;</span>
+            <div className={`${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
+              <Image src="/logo_nomo.png" alt="Logo" width={38} height={38} className="object-contain" />
+            </div>
+            <span className={`text-[0.8rem] md:text-[1.2rem] font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
           </Link>
 
           {/* Desktop centre links */}
           <div className="hidden md:flex gap-7 items-center">
-            {navLinks.map(l => (
-              <Link key={l.href} href={l.href} className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === l.href ? 'font-bold text-primary border-primary' : 'font-medium text-foreground border-transparent'}`}>
-                {l.label}
-              </Link>
-            ))}
+            {navLinks.map(l => {
+              if (l.label === 'Partnership') return null;
+              if (l.label === 'About') {
+                return (
+                  <div key="about-dropdown" className="relative group py-2">
+                    <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                      About <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
+                    </span>
+                    <div className="absolute top-full left-0 mt-0 w-40 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
+                      <Link href="/about" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
+                      <Link href="/partnership" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border">Partnership</Link>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <Link key={l.href} href={l.href} className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === l.href ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                  {l.label}
+                </Link>
+              );
+            })}
             {isAdmin && (
               <Link href="/admin" className={`flex items-center gap-1.5 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 font-bold text-secondary hover:text-primary ${pathname.startsWith('/admin') ? 'border-secondary text-primary' : 'border-transparent'}`}>
                 <FaUserShield size={14} />
@@ -191,11 +228,11 @@ export default function Navbar() {
             </a>
             {user ? (
               <div className="flex items-center gap-[0.6rem]">
-                <img src={user.photoURL || ''} alt="avatar" className="w-[30px] h-[30px] rounded-full border-2 border-primary object-cover" />
-                <button onClick={handleSignOut} className="text-[0.78rem] text-muted-foreground underline">Sign Out</button>
+                <img src={user.photoURL || ''} alt="avatar" className={`w-[30px] h-[30px] rounded-full border-2 ${(!isAdminRoute && pathname === '/partnership' && isPartnershipDarkMode) ? 'border-white/50' : 'border-primary'} object-cover`} />
+                <button onClick={handleSignOut} className={`text-[0.78rem] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 hover:text-white' : 'text-muted-foreground'} underline`}>Sign Out</button>
               </div>
             ) : (
-              <button onClick={handleSignIn} className="border border-border text-foreground hover:bg-muted px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200">
+              <button onClick={handleSignIn} className={`border ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'border-white/20 text-white hover:bg-white/10' : 'border-border text-foreground hover:bg-muted'} px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200`}>
                 Sign In
               </button>
             )}
@@ -275,6 +312,11 @@ export default function Navbar() {
                 {l.label === 'Orders' && unreadOrders > 0 && (
                   <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     {unreadOrders}
+                  </span>
+                )}
+                {l.label === 'Partnership' && unreadPartners > 0 && (
+                  <span className="bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    {unreadPartners}
                   </span>
                 )}
               </Link>

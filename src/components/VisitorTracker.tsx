@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
 
 const MONTH_KEYS = [
   'january', 'february', 'march', 'april', 'may', 'june',
@@ -10,7 +11,15 @@ const MONTH_KEYS = [
 ];
 
 export default function VisitorTracker() {
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    // Capture referral code if present
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      localStorage.setItem('partner_ref_code', refCode);
+    }
+
     const trackVisitor = async () => {
       try {
         // Check if this device has already been counted

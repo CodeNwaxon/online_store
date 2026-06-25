@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, deleteDoc, getDocs, increment } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock, FaEye } from 'react-icons/fa';
+import { FaChartLine, FaBoxOpen, FaChartPie, FaShoppingCart, FaCouch, FaBolt, FaArrowRight, FaSearch, FaPlus, FaMinus, FaChevronDown, FaTimes, FaHistory, FaTrash, FaLock, FaEye, FaUtensils } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -17,6 +17,7 @@ function AdminStatsContent() {
   const initialTab = (searchParams.get('tab') as 'stats' | 'inventory') || 'stats';
   const [view, setView] = useState<'stats' | 'inventory' | 'history'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
+  const [foods, setFoods] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [cartOrders, setCartOrders] = useState<any[]>([]);
   const [historyList, setHistoryList] = useState<any[]>([]);
@@ -80,7 +81,13 @@ function AdminStatsContent() {
       console.warn("Visitors listener error:", error);
     });
 
-    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); };
+    const unsubFoods = onSnapshot(collection(db, 'foods'), (snap) => {
+      setFoods(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats foods listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); unsubFoods(); };
   }, [isAuthenticated]);
 
   // Helper to check if a date is within the current calendar month
@@ -123,7 +130,14 @@ function AdminStatsContent() {
       s.items.forEach((item: any) => {
         let itemGroup = 'OTHER';
         const foundProduct = products.find(p => p.id === item.id);
-        if (foundProduct?.group) itemGroup = foundProduct.group.toUpperCase();
+        const foundFood = foods.find(f => f.id === item.id);
+        
+        if (foundProduct?.group) {
+          itemGroup = foundProduct.group.toUpperCase();
+        } else if (foundFood || item.category === 'Food') {
+          itemGroup = 'FOODS';
+        }
+        
         acc[itemGroup] = (acc[itemGroup] || 0) + (item.price * item.quantity);
       });
     }
@@ -147,8 +161,19 @@ function AdminStatsContent() {
       s.items.forEach((item: any) => {
         let itemGroup = 'OTHER';
         const foundProduct = products.find(p => p.id === item.id);
-        if (foundProduct?.group) itemGroup = foundProduct.group.toUpperCase();
-        const itemCost = (foundProduct?.rdpPrice || item.rdpPrice || 0) * item.quantity;
+        const foundFood = foods.find(f => f.id === item.id);
+
+        let itemCost = 0;
+        if (foundProduct?.group) {
+          itemGroup = foundProduct.group.toUpperCase();
+          itemCost = (foundProduct.rdpPrice || item.rdpPrice || 0) * item.quantity;
+        } else if (foundFood || item.category === 'Food') {
+          itemGroup = 'FOODS';
+          itemCost = (foundFood?.costPrice || item.costPrice || item.rdpPrice || 0) * item.quantity;
+        } else {
+          itemCost = (item.rdpPrice || item.costPrice || 0) * item.quantity;
+        }
+
         acc[itemGroup] = (acc[itemGroup] || 0) + itemCost;
       });
     }
@@ -419,7 +444,7 @@ function AdminStatsContent() {
       icon: <FaChartLine size={18} className="md:size-[24px]" />
     },
     // Dynamic Group Cards
-    ...['ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
+    ...['FOODS', 'ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
       const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const profit = rev - cost;
@@ -430,6 +455,9 @@ function AdminStatsContent() {
       if (group === 'FURNITURE') {
         icon = <FaCouch size={18} className="md:size-[24px]" />;
         iconBg = 'bg-orange-100 text-orange-600';
+      } else if (group === 'FOODS') {
+        icon = <FaUtensils size={18} className="md:size-[24px]" />;
+        iconBg = 'bg-emerald-100 text-emerald-600';
       } else if (group !== 'ELECTRONICS') {
         icon = <FaBoxOpen size={18} className="md:size-[24px]" />;
         iconBg = 'bg-teal-100 text-teal-600';

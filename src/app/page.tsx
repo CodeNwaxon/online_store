@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useCartStore } from '@/store/useCartStore';
-import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard } from 'react-icons/fa';
+import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard, FaLeaf } from 'react-icons/fa';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
@@ -46,6 +47,13 @@ export default function Home() {
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
   const [siteName, setSiteName] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
+
+  // Food Market Section
+  const [foodSection, setFoodSection] = useState<{ image: string; title: string; description: string }>({
+    image: '',
+    title: 'Fresh From the Farm to Your Table',
+    description: 'Discover our curated selection of premium grains, rice, beans, and fresh produce. Quality food at unbeatable prices — shop the Food Market today.',
+  });
 
   // Load hero slides and promo products from Firestore
   useEffect(() => {
@@ -104,13 +112,18 @@ export default function Home() {
 
         // Fetch hero config
         const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+        let slidesToSet = [];
         if (heroSnap.exists()) {
           const ids: string[] = heroSnap.data().productIds || [];
           const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
-          setHeroSlides(slides.length > 0 ? slides : allProducts.filter(p => p.isPromo).slice(0, 5));
+          slidesToSet = slides.length > 0 ? slides : allProducts.filter(p => p.isPromo).slice(0, 5);
         } else {
           // Default hero slides if no config
-          setHeroSlides(allProducts.filter(p => p.isPromo).slice(0, 5));
+          slidesToSet = allProducts.filter(p => p.isPromo).slice(0, 5);
+        }
+        setHeroSlides(slidesToSet);
+        if (slidesToSet.length > 0) {
+          setCurrentSlide(Math.floor(Math.random() * slidesToSet.length));
         }
 
         // Fetch general settings (installment bg)
@@ -123,10 +136,25 @@ export default function Home() {
 
         // Promo products for carousel
         setPromoProducts(allProducts.filter((p: any) => p.isPromo));
+
+        // Fetch food section settings
+        const foodSettingsSnap = await getDoc(doc(db, 'settings', 'food_market'));
+        if (foodSettingsSnap.exists()) {
+          const fData = foodSettingsSnap.data();
+          setFoodSection(prev => ({
+            image: fData.sectionImage || prev.image,
+            title: fData.sectionTitle || prev.title,
+            description: fData.sectionDescription || prev.description,
+          }));
+        }
       } catch (error) {
         console.error("Error loading home data:", error);
+        const fallbackSlides = staticProducts.filter(p => p.isPromo).slice(0, 5);
         setPromoProducts(staticProducts.filter(p => p.isPromo));
-        setHeroSlides(staticProducts.filter(p => p.isPromo).slice(0, 5));
+        setHeroSlides(fallbackSlides);
+        if (fallbackSlides.length > 0) {
+          setCurrentSlide(Math.floor(Math.random() * fallbackSlides.length));
+        }
       } finally {
         setDataLoading(false);
       }
@@ -347,6 +375,68 @@ export default function Home() {
             <Link href="/installments" className="bg-white text-secondary hover:bg-gray-100 rounded-md font-semibold transition-colors px-6 py-3 inline-block">
               Learn More About Plans
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Food Market Section */}
+      <section className="border-t-2 border-green-200 relative py-24 max-md:py-14 overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-950 text-white">
+        {/* Background image */}
+        {foodSection.image && (
+          <div className="absolute inset-0 z-0">
+            <Image
+              src={foodSection.image}
+              alt="Food Market"
+              fill
+              className="object-cover opacity-20"
+              sizes="100vw"
+            />
+          </div>
+        )}
+        {/* Decorative elements */}
+        <div className="absolute top-8 right-8 opacity-10 pointer-events-none max-md:hidden">
+          <FaLeaf size={200} />
+        </div>
+        <div className="absolute bottom-8 left-8 opacity-10 pointer-events-none max-md:hidden rotate-45">
+          <FaLeaf size={120} />
+        </div>
+
+        <div className="max-w-[1200px] mx-auto md:px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-center gap-12 max-md:gap-8">
+            {/* Image Side */}
+            {foodSection.image && (
+              <div className="flex-1 w-full max-md:order-1">
+                <div className="relative w-full aspect-[4/3] md:aspect-square md:rounded-xl overflow-hidden shadow-2xl border-2 border-white/10">
+                  <Image
+                    src={foodSection.image}
+                    alt="Food Market"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/50 to-transparent" />
+                </div>
+              </div>
+            )}
+
+            {/* Text Side */}
+            <div className={`flex-1 ${foodSection.image ? '' : 'text-center max-w-[800px] mx-auto'} max-md:order-2 max-md:text-center`}>
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold mb-6 text-green-200">
+                <FaLeaf /> Food Market
+              </div>
+              <h2 className="text-4xl max-md:text-2xl font-black mb-6 leading-tight">
+                {foodSection.title}
+              </h2>
+              <p className="text-lg max-md:text-sm text-green-100 mb-10 leading-relaxed opacity-90">
+                {foodSection.description}
+              </p>
+              <Link
+                href="/foods"
+                className="inline-flex items-center gap-3 bg-white text-emerald-900 hover:bg-green-50 px-8 py-4 max-md:px-6 max-md:py-3 rounded-xl font-bold text-lg max-md:text-sm transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Shop Food Market <FaArrowRight />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
