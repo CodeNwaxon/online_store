@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCartStore } from '@/store/useCartStore';
-import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard, FaLeaf } from 'react-icons/fa';
+import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard, FaLeaf, FaHandshake } from 'react-icons/fa';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -443,6 +443,31 @@ export default function Home() {
 
       {/* Reviews Section */}
       <ReviewSection />
+
+      {/* Partnership Section */}
+      <section 
+        className="py-24 max-md:py-16 text-white relative overflow-hidden border-t border-slate-800 bg-cover bg-center"
+        style={{ backgroundImage: `linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)), url(${installmentBg})` }}
+      >
+        <div className="absolute top-0 right-0 opacity-5 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
+          <FaHandshake size={400} />
+        </div>
+        <div className="absolute bottom-0 left-0 opacity-5 pointer-events-none transform -translate-x-1/4 translate-y-1/4">
+          <FaHandshake size={300} />
+        </div>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 relative z-10 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/10 text-white mb-8 backdrop-blur-sm border border-white/20 shadow-2xl">
+            <FaHandshake size={40} />
+          </div>
+          <h2 className="text-4xl max-md:text-3xl font-black mb-6 tracking-tight">Partner With Us</h2>
+          <p className="text-xl max-md:text-base text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+            Join our growing network of partners and distributors. Work with us to bring premium products to more customers, accelerate your business growth, and earn rewarding commissions.
+          </p>
+          <Link href="/partnership" className="inline-flex items-center gap-3 bg-white text-slate-900 hover:bg-slate-100 px-8 py-4 rounded-xl font-bold text-lg max-md:text-base transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
+            Explore Partnership <FaArrowRight />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
