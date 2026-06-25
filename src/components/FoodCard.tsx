@@ -60,13 +60,29 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
         />
-        <div
-          className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full shadow-sm text-green-600 z-[30] cursor-pointer hover:bg-green-50 transition-colors"
-          onClick={cycleImage}
-          title="View next image"
-        >
-          <FaLeaf size={14} />
-        </div>
+        {food.images && food.images.length > 1 && (
+          <>
+            <button
+              onClick={cycleImage}
+              className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm hover:bg-green-50 transition-colors text-green-600"
+              title="View next image"
+            >
+              <FaLeaf size={14} />
+            </button>
+            <div className="absolute bottom-4 left-3 flex gap-1.5 max-md:gap-2.5 z-20">
+              {food.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentImgIndex(i); }}
+                  className={`h-1 rounded-full transition-all duration-300 ${currentImgIndex === i
+                    ? 'bg-green-600 w-4'
+                    : 'bg-white/80 w-1.5 hover:bg-white'
+                    }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
         {(food.quantity ?? 0) <= 0 && (
           <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 p-2 text-center select-none">
             <div className="bg-red-600/90 text-white font-black text-[10px] md:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg border border-white/20 transform rotate-[-5deg] animate-pulse">
