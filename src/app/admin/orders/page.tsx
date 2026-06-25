@@ -75,6 +75,7 @@ export default function AdminOrders() {
           toast.success('Order deleted successfully');
         } else if (confirmUnmark) {
           await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
+          setSelectedOrder((prev: any) => prev?.id === confirmUnmark ? { ...prev, delivered: false } : prev);
           toast.success('Order marked as undelivered');
         }
         setShowPasskeyModal(null);
@@ -92,6 +93,7 @@ export default function AdminOrders() {
   const markAsDelivered = async (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
     await updateDoc(doc(db, 'orders', orderId), { delivered: true });
+    setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, delivered: true } : prev);
     toast.success('Order marked as delivered');
   };
 
@@ -311,25 +313,6 @@ export default function AdminOrders() {
                     <span className="text-[10px] font-bold truncate max-w-[120px]">{order.address}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!order.delivered ? (
-                      <button
-                        onClick={(e) => markAsDelivered(e, order.id)}
-                        className="px-3 py-1.5 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors z-10 relative"
-                      >
-                        Mark Delivered
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmUnmark(order.id);
-                          setShowPasskeyModal(order.id);
-                        }}
-                        className="px-3 py-1.5 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors z-10 relative opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                      >
-                        Unmark
-                      </button>
-                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -392,9 +375,28 @@ export default function AdminOrders() {
                 </div>
                 <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><FaTimes size={24} /></button>
               </div>
-              <div className="flex flex-wrap gap-6 text-sm opacity-90 font-bold">
+              <div className="flex flex-wrap gap-4 text-sm opacity-90 font-bold items-center">
                 <div className="flex items-center gap-2"><FaCalendarAlt /> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
                 <div className="flex items-center gap-2"><FaCreditCard /> ID: {selectedOrder.id.slice(-8).toUpperCase()}</div>
+                {!selectedOrder.delivered ? (
+                  <button
+                    onClick={(e) => markAsDelivered(e, selectedOrder.id)}
+                    className="px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                  >
+                    Mark Delivered
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmUnmark(selectedOrder.id);
+                      setShowPasskeyModal(selectedOrder.id);
+                    }}
+                    className="px-3 py-1 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors shadow-sm"
+                  >
+                    Unmark Delivered
+                  </button>
+                )}
               </div>
             </div>
 

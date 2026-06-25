@@ -14,7 +14,7 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import { FaHandshake, FaCheck, FaTimes, FaTrash, FaUserTie, FaCog, FaLink, FaWhatsapp } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -159,6 +159,7 @@ export default function AdminPartnership() {
 
   return (
     <AdminGuard>
+      <Toaster position="top-center" />
       <div className="max-w-[1200px] mx-auto  md:px-4 md:px-0 space-y-8 pb-20">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
