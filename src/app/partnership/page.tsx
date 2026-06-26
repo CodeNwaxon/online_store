@@ -500,7 +500,7 @@ export default function PartnershipPage() {
                   <p className={`font-mono font-bold text-lg ${isDarkMode ? 'text-zinc-200' : 'text-slate-800'}`}>{partnerData.referralCode}</p>
                 </div>
               </div>
-              <div className={`flex-1 p-4 rounded-xl border flex flex-col justify-center ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`flex-1 min-w-0 p-4 rounded-xl border flex flex-col justify-center overflow-hidden ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
                 <p className="text-[10px] font-bold text-primary uppercase mb-1">Referral Link</p>
                 <p className={`text-sm font-medium truncate ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
                   {typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : ''}
