@@ -222,18 +222,20 @@ export default function PartnershipPage() {
   };
 
   const handleShare = () => {
-    if (!partnerData?.referralLink) return;
+    if (!partnerData?.referralCode) return;
     
+    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : '';
+
     const shareText = `Looking for quality products at affordable prices? 🛍️\n\nWe've got you covered! From daily essentials to amazing deals, Nomo Storez makes your online shopping experience convenient and secured. ✨\n\n✅ Great Products\n✅ Affordable Prices\n✅ Easy Ordering\n✅ Fast Delivery\n✅ Trusted Services\n\nClick the link below to start shopping today! 👇`;
 
     if (navigator.share) {
       navigator.share({
         title: 'Shop at Nomo Storez',
         text: shareText,
-        url: partnerData.referralLink
+        url: currentReferralLink
       }).catch(() => { });
     } else {
-      navigator.clipboard.writeText(`${shareText}\n${partnerData.referralLink}`);
+      navigator.clipboard.writeText(`${shareText}\n${currentReferralLink}`);
       toast.success('Promo message & link copied to clipboard!');
     }
   };
@@ -500,7 +502,9 @@ export default function PartnershipPage() {
               </div>
               <div className={`flex-1 p-4 rounded-xl border flex flex-col justify-center ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
                 <p className="text-[10px] font-bold text-primary uppercase mb-1">Referral Link</p>
-                <p className={`text-sm font-medium truncate ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>{partnerData.referralLink}</p>
+                <p className={`text-sm font-medium truncate ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
+                  {typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : ''}
+                </p>
               </div>
               <button onClick={handleShare} className="bg-primary text-white font-bold px-6 py-4 rounded-xl shadow-md hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 shrink-0">
                 <FaShare /> Share Link
