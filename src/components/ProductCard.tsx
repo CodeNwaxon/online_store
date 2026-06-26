@@ -65,6 +65,10 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
 
+  useEffect(() => {
+    setImgError(false);
+  }, [currentImgIndex]);
+
   const sanitizeImageUrl = (url: string) => {
     if (!url) return '/images/placeholder.png';
     try {

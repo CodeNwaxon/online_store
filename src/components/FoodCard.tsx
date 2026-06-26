@@ -2,7 +2,7 @@
 
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingCart, FaEdit, FaTrash, FaLeaf } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
@@ -36,6 +36,10 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [currentImgIndex]);
 
   const safeImgUrl = imgError || !food.images?.length
     ? '/images/placeholder.png'
