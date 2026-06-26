@@ -223,14 +223,18 @@ export default function PartnershipPage() {
 
   const handleShare = () => {
     if (!partnerData?.referralLink) return;
+    
+    const shareText = `Looking for quality products at affordable prices? 🛍️\n\nWe've got you covered! From daily essentials to amazing deals, Nomo Storez makes your online shopping experience convenient and secured. ✨\n\n✅ Great Products\n✅ Affordable Prices\n✅ Easy Ordering\n✅ Fast Delivery\n✅ Trusted Services\n\nClick the link below to start shopping today! 👇`;
+
     if (navigator.share) {
       navigator.share({
-        title: 'Join me and shop!',
+        title: 'Shop at Nomo Storez',
+        text: shareText,
         url: partnerData.referralLink
       }).catch(() => { });
     } else {
-      navigator.clipboard.writeText(partnerData.referralLink);
-      toast.success('Link copied to clipboard!');
+      navigator.clipboard.writeText(`${shareText}\n${partnerData.referralLink}`);
+      toast.success('Promo message & link copied to clipboard!');
     }
   };
 
