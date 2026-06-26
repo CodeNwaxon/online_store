@@ -8,6 +8,13 @@ import { doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } fro
 import { toast } from 'react-hot-toast';
 import { FaHandshake, FaShare, FaTimes, FaTrash, FaCheckCircle, FaUserCircle, FaSun, FaMoon, FaWhatsapp, FaEdit, FaPhone } from 'react-icons/fa';
 
+const PROMO_MESSAGE = `Looking for quality products at affordable prices? 🛍️
+
+We've got you covered! From daily essentials to amazing deals, *Nomo Storez* makes your online shopping experience convenient & secured. ✨
+
+Click the link below to start shopping today! 👇
+`;
+
 export default function PartnershipPage() {
   const [user, setUser] = useState<any>(null);
   const [partnerData, setPartnerData] = useState<any>(null);
@@ -223,10 +230,9 @@ export default function PartnershipPage() {
 
   const handleShare = () => {
     if (!partnerData?.referralCode) return;
-    
-    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : '';
 
-    const shareText = `Looking for quality products at affordable prices? 🛍️\n\nWe've got you covered! From daily essentials to amazing deals, Nomo Storez makes your online shopping experience convenient and secured. ✨\n\n✅ Great Products\n✅ Affordable Prices\n✅ Easy Ordering\n✅ Fast Delivery\n✅ Trusted Services\n\nClick the link below to start shopping today! 👇`;
+    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : '';
+    const shareText = PROMO_MESSAGE;
 
     if (navigator.share) {
       navigator.share({
