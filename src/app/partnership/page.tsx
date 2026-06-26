@@ -10,7 +10,8 @@ import { FaHandshake, FaShare, FaTimes, FaTrash, FaCheckCircle, FaUserCircle, Fa
 
 const PROMO_MESSAGE = `Looking for quality products at affordable prices? 🛍️
 
-We've got you covered! From daily essentials to amazing deals, *Nomo Storez* makes your online shopping experience convenient & secured. ✨
+We've got you covered! From daily essentials to amazing deals.
+*Nomo Storez* making your online shopping experience convenient & secured ✨
 
 Click the link below to start shopping today! 👇
 `;
