@@ -491,20 +491,22 @@ export default function PartnershipPage() {
 
         {/* Referral Info & Motivation */}
         <div className="grid md:grid-cols-3 gap-6">
-          <div className={`md:col-span-2 p-6 md:p-8 rounded-2xl shadow-lg border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
+          <div className={`md:col-span-2 min-w-0 p-6 md:p-8 rounded-2xl shadow-lg border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
             <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Your Referral Details</h3>
-            <div className="flex flex-col md:flex-row gap-4 items-stretch">
-              <div className={`flex-1 p-4 rounded-xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex flex-col md:flex-row gap-4 items-stretch w-full min-w-0">
+              <div className={`flex-1 min-w-0 p-4 rounded-xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="overflow-hidden">
                   <p className="text-[10px] font-bold text-primary uppercase mb-1">Referral Code</p>
                   <p className={`font-mono font-bold text-lg ${isDarkMode ? 'text-zinc-200' : 'text-slate-800'}`}>{partnerData.referralCode}</p>
                 </div>
               </div>
-              <div className={`flex-1 min-w-0 p-4 rounded-xl border flex flex-col justify-center overflow-hidden ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
+              <div className={`flex-1 w-full min-w-0 p-4 rounded-xl border flex flex-col justify-center overflow-hidden ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
                 <p className="text-[10px] font-bold text-primary uppercase mb-1">Referral Link</p>
-                <p className={`text-sm font-medium truncate ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
-                  {typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : ''}
-                </p>
+                <div className="w-full overflow-hidden">
+                  <p className={`text-sm font-medium truncate w-full block ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
+                    {typeof window !== 'undefined' ? `${window.location.origin}/?ref=${partnerData.referralCode}` : ''}
+                  </p>
+                </div>
               </div>
               <button onClick={handleShare} className="bg-primary text-white font-bold px-6 py-4 rounded-xl shadow-md hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 shrink-0">
                 <FaShare /> Share Link
