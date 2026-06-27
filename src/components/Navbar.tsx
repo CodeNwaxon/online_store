@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore, 
+import {
+  FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore,
   FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaUserShield,
   FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie,
   FaUtensils, FaHandshake, FaChevronDown
@@ -15,9 +15,11 @@ import { useThemeStore, useHydrateTheme } from '@/store/useThemeStore';
 import CartSlider from './CartSlider';
 import { auth, db } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, onSnapshot, query, where, getDocs } from 'firebase/firestore';
 import { useAdmin } from '@/hooks/useAdmin';
+import { usePartner } from '@/hooks/usePartner';
 import { toast } from 'react-hot-toast';
+import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
@@ -77,6 +79,8 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [unreadPartners, setUnreadPartners] = useState(0);
+  const { partnerData, isApprovedPartner } = usePartner();
+  const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales } = usePartnerNotificationStore();
 
   const isAdminRoute = pathname.startsWith('/admin');
 
@@ -135,6 +139,49 @@ export default function Navbar() {
     };
   }, [isAdmin, isCEO]);
 
+  // Partner Sales Listener
+  useEffect(() => {
+    if (!isApprovedPartner || !partnerData?.referralCode) return;
+
+    let isInitialLoad = true;
+    const q = query(collection(db, 'orders'), where('referralCode', '==', partnerData.referralCode));
+
+    const unsubSales = onSnapshot(q, (snap) => {
+      let totalItems = 0;
+      snap.forEach(docSnap => {
+        const order = docSnap.data();
+        if (order.items && Array.isArray(order.items)) {
+          totalItems += order.items.length;
+        }
+      });
+
+      const { lastSalesCount, setUnreadSales } = usePartnerNotificationStore.getState();
+
+      if (isInitialLoad) {
+        if (totalItems > lastSalesCount) {
+          setUnreadSales(totalItems - lastSalesCount);
+        }
+        isInitialLoad = false;
+      } else {
+        if (totalItems > lastSalesCount) {
+          setUnreadSales(totalItems - lastSalesCount);
+        }
+      }
+    });
+
+    return () => unsubSales();
+  }, [isApprovedPartner, partnerData?.referralCode]);
+
+  const handlePartnershipClick = () => {
+    // When clicked, we want to clear the bubble and update the last viewed count.
+    // We need to fetch the total sales to update the last count accurately, 
+    // but the store might just clear the unread count and then the listener handles it.
+    const state = usePartnerNotificationStore.getState();
+    const newTotal = state.lastSalesCount + state.unreadSales;
+    state.setLastSalesCount(newTotal);
+    state.clearUnreadSales();
+  };
+
   // Close drawer on route change
   useEffect(() => { setIsMenuOpen(false); }, [pathname]);
 
@@ -180,7 +227,7 @@ export default function Navbar() {
       {/* --- NAV BAR --------------------------------------- */}
       {/* --- NAV BAR --------------------------------------- */}
       <nav className={`${isAdminRoute ? 'bg-card border-border' : (pathname === '/partnership' && isPartnershipDarkMode) ? 'bg-zinc-950 border-white/10' : (pathname === '/partnership' && !isPartnershipDarkMode) ? 'bg-slate-50 border-slate-200' : pathname.startsWith('/foods') ? 'bg-emerald-900 border-emerald-800' : 'bg-card border-border'} border-b sticky top-0 z-[200] py-[0.875rem] transition-colors duration-300`}>
-        <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1200px] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-foreground'}`}>
+        <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1350px] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-foreground'}`}>
 
           {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
@@ -191,7 +238,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop centre links */}
-          <div className="hidden md:flex gap-7 items-center">
+          <div className="hidden md:flex gap-10 items-center">
             {navLinks.map(l => {
               if (l.label === 'Partnership') return null;
               if (l.label === 'About') {
@@ -199,10 +246,22 @@ export default function Navbar() {
                   <div key="about-dropdown" className="relative group py-2">
                     <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
                       About <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
+                      {mounted && unreadSales > 0 && (
+                        <span className="absolute -top-1 -right-3 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
+                          {unreadSales}
+                        </span>
+                      )}
                     </span>
                     <div className="absolute top-full left-0 mt-0 w-40 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
                       <Link href="/about" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
-                      <Link href="/partnership" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border">Partnership</Link>
+                      <Link href="/partnership" onClick={handlePartnershipClick} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border flex items-center justify-between">
+                        Partnership
+                        {mounted && unreadSales > 0 && (
+                          <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                            {unreadSales}
+                          </span>
+                        )}
+                      </Link>
                     </div>
                   </div>
                 );
@@ -251,8 +310,13 @@ export default function Navbar() {
             </button>
 
             {/* Hamburger  only on mobile */}
-            <button className="flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
+            <button className="relative flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
               <FaBars size={24} />
+              {mounted && unreadSales > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
+                  {unreadSales}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -310,12 +374,12 @@ export default function Navbar() {
                   </span>
                 )}
                 {l.label === 'Orders' && unreadOrders > 0 && (
-                  <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     {unreadOrders}
                   </span>
                 )}
                 {l.label === 'Partnership' && unreadPartners > 0 && (
-                  <span className="bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     {unreadPartners}
                   </span>
                 )}
@@ -324,9 +388,16 @@ export default function Navbar() {
           ) : (
             // Normal Store Links
             navLinks.map(l => (
-              <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-[0.85rem] px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
-                {l.label}
+              <Link key={l.href} href={l.href} onClick={() => { setIsMenuOpen(false); if (l.label === 'Partnership') handlePartnershipClick(); }} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                <div className="flex items-center gap-[0.85rem]">
+                  <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+                  {l.label}
+                </div>
+                {mounted && l.label === 'Partnership' && unreadSales > 0 && (
+                  <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    {unreadSales}
+                  </span>
+                )}
               </Link>
             ))
           )}

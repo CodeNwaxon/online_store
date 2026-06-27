@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaLeaf, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaLeaf, FaChevronLeft, FaChevronRight, FaShareAlt } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -10,6 +10,7 @@ import FoodCard, { FoodProduct } from '@/components/FoodCard';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { usePartner } from '@/hooks/usePartner';
 
 export default function FoodDetail() {
   const params = useParams();
@@ -20,6 +21,7 @@ export default function FoodDetail() {
   const cartItems = useCartStore((state) => state.items);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allFoods, setAllFoods] = useState<any[]>([]);
+  const { isApprovedPartner, partnerData } = usePartner();
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
@@ -116,6 +118,23 @@ export default function FoodDetail() {
   const whatsappMessage = `I want to order ${food.name}, priced at ₦${food.price.toLocaleString()} from your Food Market.`;
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
+  const handleShareFood = () => {
+    if (!partnerData?.referralCode) return;
+    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/foods/${food.id}?ref=${partnerData.referralCode}` : '';
+    const shareText = `Craving ${food.name}? 🍲\n\nOrder it fresh at Nomo Storez! ✨\n`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: food.name,
+        text: shareText,
+        url: currentReferralLink
+      }).catch(() => { });
+    } else {
+      navigator.clipboard.writeText(`${shareText}\n${currentReferralLink}`);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
   return (
     <div className="py-12 max-md:py-4 bg-slate-50 min-h-screen">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
@@ -135,9 +154,15 @@ export default function FoodDetail() {
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
               />
-              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm text-green-600">
-                <FaLeaf size={20} />
-              </div>
+              {isApprovedPartner && (
+                <button
+                  onClick={handleShareFood}
+                  className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors z-10"
+                  title="Share with Referral Link"
+                >
+                  <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              )}
             </div>
 
             {foodImages.length > 1 && (

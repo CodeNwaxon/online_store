@@ -11,6 +11,7 @@ import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 
 import { useAdmin } from '@/hooks/useAdmin';
+import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
 
 const ICON_MAP: any = {
   Facebook: <FaFacebook size={20} />,
@@ -25,6 +26,12 @@ const ICON_MAP: any = {
 export default function Footer() {
   const [settings, setSettings] = useState<any>(null);
   const { isAdmin, isCEO, user } = useAdmin();
+  const { unreadSales, setLastSalesCount, clearUnreadSales } = usePartnerNotificationStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -43,6 +50,13 @@ export default function Footer() {
     };
     fetchSettings();
   }, []);
+
+  const handlePartnershipClick = () => {
+    const state = usePartnerNotificationStore.getState();
+    const newTotal = state.lastSalesCount + state.unreadSales;
+    state.setLastSalesCount(newTotal);
+    state.clearUnreadSales();
+  };
 
   const siteName = settings?.siteName || '';
   const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}].`;
@@ -83,7 +97,16 @@ export default function Footer() {
               <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
               <li><Link href="/shop" className="text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
               <li><Link href="/foods" className="text-muted-foreground hover:text-primary transition-colors">Food Market</Link></li>
-              <li><Link href="/partnership" className="text-green-600 font-black hover:text-green-700 transition-colors">Partnership</Link></li>
+              <li>
+                <Link href="/partnership" onClick={handlePartnershipClick} className="text-green-600 font-black hover:text-green-700 transition-colors inline-flex items-center gap-2">
+                  Partnership
+                  {mounted && unreadSales > 0 && (
+                    <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                      {unreadSales}
+                    </span>
+                  )}
+                </Link>
+              </li>
               <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
               {isAdmin && (
                 <li><Link href="/admin" className="text-secondary font-bold hover:text-primary transition-colors">{isCEO ? 'CEO Panel' : 'Admin Panel'}</Link></li>

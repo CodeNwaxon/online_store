@@ -3,7 +3,7 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight, FaShareAlt } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import WarrantyModal from '@/components/WarrantyModal';
 import { toast } from 'react-hot-toast';
+import { usePartner } from '@/hooks/usePartner';
 
 const cardThemes = [
   { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
@@ -43,6 +44,7 @@ export default function ProductDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const { isApprovedPartner, partnerData } = usePartner();
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037'); // Default fallback
@@ -147,6 +149,23 @@ export default function ProductDetail() {
   // Uses dynamic contactNumber from state
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
+  const handleShareProduct = () => {
+    if (!partnerData?.referralCode) return;
+    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/product/${product.id}?ref=${partnerData.referralCode}` : '';
+    const shareText = `Looking for ${product.name}? 🛍️\n\nGet it today at Nomo Storez! ✨\n`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: shareText,
+        url: currentReferralLink
+      }).catch(() => { });
+    } else {
+      navigator.clipboard.writeText(`${shareText}\n${currentReferralLink}`);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
   return (
     <div className="py-12 max-md:py-4">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
@@ -165,6 +184,15 @@ export default function ProductDetail() {
                 className="object-contain"
                 priority
               />
+              {isApprovedPartner && (
+                <button
+                  onClick={handleShareProduct}
+                  className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors z-10"
+                  title="Share with Referral Link"
+                >
+                  <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              )}
             </div>
 
             {productImages.length > 1 && (
