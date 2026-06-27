@@ -61,6 +61,7 @@ import { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import VisitorTracker from "@/components/VisitorTracker";
+import BadgeManager from "@/components/BadgeManager";
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
 
@@ -74,6 +75,7 @@ export default function RootLayout({
       <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <Toaster position="top-center" reverseOrder={false} />
         <Suspense><VisitorTracker /></Suspense>
+        <Suspense><BadgeManager /></Suspense>
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

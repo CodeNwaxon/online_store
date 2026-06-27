@@ -80,7 +80,8 @@ export default function Navbar() {
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [unreadPartners, setUnreadPartners] = useState(0);
   const { partnerData, isApprovedPartner } = usePartner();
-  const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales } = usePartnerNotificationStore();
+  const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
+  const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
 
   const isAdminRoute = pathname.startsWith('/admin');
 
@@ -173,14 +174,24 @@ export default function Navbar() {
   }, [isApprovedPartner, partnerData?.referralCode]);
 
   const handlePartnershipClick = () => {
-    // When clicked, we want to clear the bubble and update the last viewed count.
-    // We need to fetch the total sales to update the last count accurately, 
-    // but the store might just clear the unread count and then the listener handles it.
+    // Clear the bubble and update the last viewed count.
     const state = usePartnerNotificationStore.getState();
     const newTotal = state.lastSalesCount + state.unreadSales;
     state.setLastSalesCount(newTotal);
     state.clearUnreadSales();
+    // Clear approval notification
+    if (state.hasUnseenApproval) {
+      state.setHasUnseenApproval(false);
+      state.setLastSeenPartnerStatus('approved');
+    }
   };
+
+  // Auto-clear partner notifications when visiting the partnership page directly
+  useEffect(() => {
+    if (pathname === '/partnership') {
+      handlePartnershipClick();
+    }
+  }, [pathname]);
 
   // Close drawer on route change
   useEffect(() => { setIsMenuOpen(false); }, [pathname]);
@@ -246,9 +257,9 @@ export default function Navbar() {
                   <div key="about-dropdown" className="relative group py-2">
                     <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
                       About <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
-                      {mounted && unreadSales > 0 && (
+                      {mounted && partnerNotifCount > 0 && (
                         <span className="absolute -top-1 -right-3 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
-                          {unreadSales}
+                          {partnerNotifCount}
                         </span>
                       )}
                     </span>
@@ -256,9 +267,9 @@ export default function Navbar() {
                       <Link href="/about" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
                       <Link href="/partnership" onClick={handlePartnershipClick} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border flex items-center justify-between">
                         Partnership
-                        {mounted && unreadSales > 0 && (
+                        {mounted && partnerNotifCount > 0 && (
                           <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                            {unreadSales}
+                            {partnerNotifCount}
                           </span>
                         )}
                       </Link>
@@ -312,9 +323,9 @@ export default function Navbar() {
             {/* Hamburger  only on mobile */}
             <button className="relative flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
               <FaBars size={24} />
-              {mounted && unreadSales > 0 && (
+              {mounted && partnerNotifCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
-                  {unreadSales}
+                  {partnerNotifCount}
                 </span>
               )}
             </button>
@@ -393,9 +404,9 @@ export default function Navbar() {
                   <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
                   {l.label}
                 </div>
-                {mounted && l.label === 'Partnership' && unreadSales > 0 && (
+                {mounted && l.label === 'Partnership' && partnerNotifCount > 0 && (
                   <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    {unreadSales}
+                    {partnerNotifCount}
                   </span>
                 )}
               </Link>
