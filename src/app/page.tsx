@@ -468,7 +468,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-md:gap-6">
 
             {/* Cosmetics */}
-            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+            <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-pink-100 flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-tr from-pink-900/80 to-pink-600/40 z-10" />
                 <Image src={categoriesExplorer.cosmetics.image || "/images/placeholder.png"} alt="Cosmetics" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
@@ -488,7 +488,7 @@ export default function Home() {
             </div>
 
             {/* Wears */}
-            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+            <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-purple-100 flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/80 to-purple-600/40 z-10" />
                 <Image src={categoriesExplorer.wears.image || "/images/placeholder.png"} alt="Wears" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
@@ -508,7 +508,7 @@ export default function Home() {
             </div>
 
             {/* Toilet & Kitchen */}
-            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+            <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-teal-100 flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-tr from-teal-900/80 to-teal-600/40 z-10" />
                 <Image src={categoriesExplorer.toiletKitchen.image || "/images/placeholder.png"} alt="Toilet & Kitchen" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
