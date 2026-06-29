@@ -133,7 +133,7 @@ export default function CosmeticsPage() {
                   }}
                   className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedGroup === 'All' ? 'bg-pink-600 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-pink-50'}`}
                 >
-                  All Brands
+                  ALL BRANDS
                 </button>
                 {groups.map(group => (
                   <button
@@ -144,7 +144,7 @@ export default function CosmeticsPage() {
                     }}
                     className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedGroup === group ? 'bg-pink-600 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-pink-50'}`}
                   >
-                    {group}
+                    {group.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -185,7 +185,7 @@ export default function CosmeticsPage() {
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-3 py-1 md:px-4 md:py-1.5 text-[10px] md:text-xs font-bold border rounded-full transition-colors ${selectedCategory === cat ? 'bg-pink-600 text-white border-transparent' : 'bg-white text-pink-800 border-pink-200 hover:bg-pink-100'}`}
                   >
-                    {cat}
+                    {cat.toUpperCase()}
                   </button>
                 ))}
               </div>

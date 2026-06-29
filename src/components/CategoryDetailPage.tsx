@@ -38,6 +38,7 @@ export default function CategoryDetailPage({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allProducts, setAllProducts] = useState<CategoryProduct[]>([]);
   const { isApprovedPartner, partnerData } = usePartner();
+  const [installmentMinAmount, setInstallmentMinAmount] = useState<number>(20000);
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
@@ -64,6 +65,23 @@ export default function CategoryDetailPage({
       }
     };
     fetchSettings();
+
+    // Fetch Installment settings for minAmount threshold
+    const fetchInstallmentSettings = async () => {
+      try {
+        const instRef = doc(db, 'settings', 'installments');
+        const instSnap = await getDoc(instRef);
+        if (instSnap.exists()) {
+          const instData = instSnap.data();
+          if (instData.minAmount !== undefined) {
+            setInstallmentMinAmount(instData.minAmount);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching installment settings:", e);
+      }
+    };
+    fetchInstallmentSettings();
 
     const unsubscribe = onSnapshot(collection(db, collectionName), (prodSnap) => {
       const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as CategoryProduct[];
@@ -258,12 +276,14 @@ export default function CategoryDetailPage({
                   <FaWhatsapp size={18} /> <span className="md:hidden">Contact via WhatsApp</span>
                 </a>
 
-                <a
-                  href={`/installments?search=${encodeURIComponent(product.name)}#search-section`}
-                  className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
-                >
-                  <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
-                </a>
+                {product.price >= installmentMinAmount && (
+                  <a
+                    href={`/installments?search=${encodeURIComponent(product.name)}#search-section`}
+                    className="col-span-1 md:flex-[2] order-2 md:order-3 bg-foreground text-background hover:opacity-90 flex items-center justify-center gap-1 p-3 text-xs font-semibold rounded-md transition-opacity text-center"
+                  >
+                    <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
+                  </a>
+                )}
               </div>
             )}
 

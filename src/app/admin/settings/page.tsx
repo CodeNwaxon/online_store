@@ -244,28 +244,32 @@ export default function AdminSettings() {
               </div>
 
               {/* Preview */}
-              {(data.image || true) && (
-                <div className="relative w-full h-32 md:h-40 rounded-md overflow-hidden border border-border bg-slate-200">
+              <div className="relative w-full h-32 md:h-40 rounded-md overflow-hidden border border-border bg-slate-200">
+                {data.image ? (
                   <img
-                    src={data.image || '/images/placeholder.png'}
+                    src={data.image}
                     alt={`${title} background preview`}
                     className="w-full h-full object-cover opacity-60"
                   />
-                  {data.image && (
-                    <button
-                      type="button"
-                      onClick={() => setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, image: '' } })}
-                      className="absolute top-2 right-2 bg-secondary text-white p-1.5 rounded-full hover:bg-secondary-hover transition-colors z-10 shadow-md"
-                      title="Remove image"
-                    >
-                      <FaTimes size={12} />
-                    </button>
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center font-bold text-xl md:text-2xl text-slate-800 drop-shadow-md">
-                    {title} Preview
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm bg-slate-100 opacity-60">
+                    No Image
                   </div>
+                )}
+                {data.image && (
+                  <button
+                    type="button"
+                    onClick={() => setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, image: '' } })}
+                    className="absolute top-2 right-2 bg-secondary text-white p-1.5 rounded-full hover:bg-secondary-hover transition-colors z-10 shadow-md"
+                    title="Remove image"
+                  >
+                    <FaTimes size={12} />
+                  </button>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center font-bold text-xl md:text-2xl text-slate-800 drop-shadow-md z-10">
+                  {title} Preview
                 </div>
-              )}
+              </div>
 
               {/* URL Input & Upload row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

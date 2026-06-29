@@ -135,7 +135,8 @@ export default function AdminInstallments() {
     gracePeriodDays: 5,
     lateFeePercent: 5,
     withdrawalFeePercent: 15,
-    deliveryPolicy: "Goods are only delivered at the completion of payment."
+    deliveryPolicy: "Goods are only delivered at the completion of payment.",
+    minAmount: 20000
   });
 
   // Filters for installments
@@ -876,6 +877,25 @@ export default function AdminInstallments() {
                       }}
                     />
                     <p className="text-[10px] text-muted-foreground mt-1">Example: 1,000,000</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Min Amount for Installment (₦)</label>
+                    <input
+                      type="text"
+                      className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                      value={formatNumberWithCommas(instSettings.minAmount !== undefined ? instSettings.minAmount : 20000)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/,/g, '');
+                        if (val === '') {
+                          setInstSettings(prev => ({ ...prev, minAmount: 0 }));
+                          return;
+                        }
+                        if (!isNaN(Number(val))) {
+                          setInstSettings(prev => ({ ...prev, minAmount: Number(val) }));
+                        }
+                      }}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Example: 20,000</p>
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block">Below Threshold (%)</label>

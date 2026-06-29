@@ -102,7 +102,7 @@ export default function FurniturePage() {
                   onClick={() => setSelectedCategory('All')}
                   className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedCategory === 'All' ? 'bg-amber-700 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-amber-50'}`}
                 >
-                  All Categories
+                  ALL CATEGORIES
                 </button>
                 {categories.map(cat => (
                   <button
@@ -110,7 +110,7 @@ export default function FurniturePage() {
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedCategory === cat ? 'bg-amber-700 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-amber-50'}`}
                   >
-                    {cat}
+                    {cat.toUpperCase()}
                   </button>
                 ))}
               </div>

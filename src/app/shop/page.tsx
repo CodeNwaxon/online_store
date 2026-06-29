@@ -218,7 +218,7 @@ function ShopContent() {
                   onClick={() => setSelectedGroup(group)}
                   className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
                 >
-                  {group}
+                  {group === 'All' ? 'ALL' : group.toUpperCase()}
                 </button>
               ))}
 
@@ -270,7 +270,7 @@ function ShopContent() {
                 onClick={() => setSelectedCategory('All')}
                 className={`px-3 py-1 md:px-4 md:py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-slate-800 hover:bg-gray-50'}`}
               >
-                All {selectedGroup}
+                ALL {selectedGroup.toUpperCase()}
               </button>
               {availableCategories.map(cat => (
                 <button
@@ -278,7 +278,7 @@ function ShopContent() {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1 md:px-4 md:py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-slate-800 hover:bg-gray-50'}`}
                 >
-                  {cat}
+                  {cat.toUpperCase()}
                 </button>
               ))}
             </div>

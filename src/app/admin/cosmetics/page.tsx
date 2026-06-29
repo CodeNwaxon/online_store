@@ -194,8 +194,8 @@ export default function AdminCosmetics() {
     const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
     const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
 
-    if (parsedCost > parsedPrice) {
-      return toast.error('Cost Price cannot be higher than Selling Price.');
+    if (parsedCost >= parsedPrice) {
+      return toast.error('Cost Price cannot be higher or equal to Selling Price.');
     }
 
     setLoading(true);
@@ -370,8 +370,13 @@ export default function AdminCosmetics() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-pink-700">Selling Price (₦)</label>
-                <input required value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} type="text" placeholder="e.g. 3,500" className="w-full p-3 rounded-md border border-pink-200 bg-background text-sm font-bold" />
+                <label className="text-sm font-bold text-pink-700 flex justify-between items-center">
+                  <span>Selling Price (₦)</span>
+                  {costPrice.trim() !== '' && price.trim() !== '' && (parseFloat(costPrice.replace(/,/g, '')) || 0) >= (parseFloat(price.replace(/,/g, '')) || 0) && (
+                    <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Cost Price cannot be higher or equal to Sales Price</span>
+                  )}
+                </label>
+                <input required value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} type="text" placeholder="e.g. 3,500" className={`w-full p-3 rounded-md border text-sm font-bold outline-none transition-all ${costPrice.trim() !== '' && price.trim() !== '' && (parseFloat(costPrice.replace(/,/g, '')) || 0) >= (parseFloat(price.replace(/,/g, '')) || 0) ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100' : 'border-pink-200 bg-background'}`} />
               </div>
             </div>
 
@@ -631,13 +636,15 @@ export default function AdminCosmetics() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 items-stretch">
             {filteredProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
                   <FoodCard
                     food={product}
                     isAdmin={true}
+                    isFood={false}
+                    themeColor="pink"
                     onEdit={handleEdit}
                     onDelete={() => setProductToDelete(product.id)}
                   />

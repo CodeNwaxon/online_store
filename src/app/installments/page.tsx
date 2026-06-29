@@ -8,7 +8,7 @@ import InstallmentOverlay from '@/components/InstallmentOverlay';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -33,14 +33,28 @@ function InstallmentsContent() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const prodSnap = await getDocs(collection(db, 'products'));
-        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const settingsDoc = await getDoc(doc(db, 'settings', 'installments'));
+        const minAmount = settingsDoc.exists() ? (settingsDoc.data().minAmount !== undefined ? settingsDoc.data().minAmount : 20000) : 20000;
+
+        const [prodSnap, cosSnap, wearsSnap, tkSnap] = await Promise.all([
+          getDocs(collection(db, 'products')),
+          getDocs(collection(db, 'cosmetics')),
+          getDocs(collection(db, 'wears')),
+          getDocs(collection(db, 'toilet_kitchen'))
+        ]);
+        const dynamicProducts = [
+          ...prodSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          ...cosSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          ...wearsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+          ...tkSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        ].filter((p: any) => p.price >= minAmount && p.group?.toLowerCase() !== 'foods' && p.category?.toLowerCase() !== 'foods') as any[];
+
         const parseDate = (dateVal: any) => {
           if (!dateVal) return 0;
           if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
           return new Date(dateVal).getTime() || 0;
         };
-        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts.filter(p => p.price >= minAmount)).sort((a: any, b: any) => {
           const dateA = parseDate(a.updatedAt);
           const dateB = parseDate(b.updatedAt);
           return dateB - dateA;
@@ -48,7 +62,7 @@ function InstallmentsContent() {
         setProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
-        setProducts(staticProducts);
+        setProducts(staticProducts.filter(p => p.price >= 20000)); // Fallback to default
       } finally {
         setLoading(false);
       }
@@ -79,7 +93,7 @@ function InstallmentsContent() {
   const [activeLoan, setActiveLoan] = useState<any | null>(null);
   const [visibleCount, setVisibleCount] = useState(60);
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
-  const [pendingPlanSelection, setPendingPlanSelection] = useState<{product: Product, plan: number} | null>(null);
+  const [pendingPlanSelection, setPendingPlanSelection] = useState<{ product: Product, plan: number } | null>(null);
 
   // Reset category when group changes
   useEffect(() => {
@@ -270,26 +284,25 @@ function InstallmentsContent() {
         {/* Search & Filters */}
         <div id="search-section" className="flex flex-col gap-6 mb-12">
           <div className="flex flex-wrap gap-6 items-center justify-between p-2 md:p-6 bg-card border border-border rounded-sm md:rounded-lg">
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-nowrap overflow-x-auto w-full pb-2 scrollbar-thin">
               {groups.map(group => (
                 <button
                   key={group}
                   onClick={() => { setSelectedGroup(group); setVisibleCount(60); }}
-                  className={`px-5 py-2 text-sm rounded-md transition-colors ${selectedGroup === group ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
+                  className={`px-5 py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap shrink-0 ${selectedGroup === group ? 'bg-primary text-white border-none' : 'bg-transparent text-foreground border border-border hover:bg-muted'}`}
                 >
-                  {group}
+                  {group === 'All' ? 'ALL' : group.toUpperCase()}
                 </button>
               ))}
             </div>
 
-            {/* Categories Sub-filter - Shown when a group is selected */}
             {selectedGroup !== 'All' && (
-              <div className="flex gap-3 flex-wrap mt-4 w-full p-4 bg-muted rounded-[var(--radius)] border border-border animate-in fade-in slide-in-from-top-1">
+              <div className="flex gap-3 flex-wrap w-full mt-4 p-4 bg-muted rounded-[var(--radius)] border border-border animate-in fade-in slide-in-from-top-1">
                 <button
                   onClick={() => setSelectedCategory('All')}
-                  className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                  className={`px-4 py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors whitespace-nowrap ${selectedCategory === 'All' ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                 >
-                  All {selectedGroup}
+                  ALL {selectedGroup.toUpperCase()}
                 </button>
                 {Array.from(new Set(
                   products
@@ -300,9 +313,9 @@ function InstallmentsContent() {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-1.5 text-xs border border-border rounded-full transition-colors ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                    className={`px-4 py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors whitespace-nowrap ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
                   >
-                    {cat}
+                    {cat.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -402,7 +415,7 @@ function InstallmentsContent() {
       {showAuthOverlay && (
         <div className="fixed inset-0 z-[1000] bg-black/60 flex flex-col items-center justify-center p-4">
           <div className="bg-card w-full max-w-sm rounded-[var(--radius)] shadow-lg overflow-hidden relative p-8 text-center">
-            <button 
+            <button
               onClick={() => { setShowAuthOverlay(false); setPendingPlanSelection(null); }}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
@@ -412,7 +425,7 @@ function InstallmentsContent() {
             <p className="text-muted-foreground text-sm mb-6">
               You must be signed in to apply for an installment plan.
             </p>
-            <button 
+            <button
               onClick={handleSignIn}
               className="w-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-3 p-3 rounded-md font-bold transition-colors"
             >

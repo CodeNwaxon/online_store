@@ -344,8 +344,8 @@ function AdminProductsContent() {
     // Price relationship validation
     const parsedRdp = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
     const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
-    if (parsedRdp > parsedPrice) {
-      toast.error('RDP Price (Cost Price) cannot be higher than Sales Price (Selling Price).');
+    if (parsedRdp >= parsedPrice) {
+      toast.error('RDP Price (Cost Price) cannot be higher or equal to Sales Price (Selling Price).');
       return;
     }
 

@@ -69,6 +69,18 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /cosmetics/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /wears/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /toilet_kitchen/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
 
     // Orders — create is blocked client-side; only server (Admin SDK) can create
     match /orders/{id} {

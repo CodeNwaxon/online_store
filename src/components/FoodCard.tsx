@@ -1,7 +1,7 @@
 'use client';
 
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaEdit, FaTrash, FaLeaf } from 'react-icons/fa';
+import { FaShoppingCart, FaEdit, FaTrash, FaLeaf, FaEllipsisV } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,11 +29,72 @@ export interface FoodProduct {
 interface FoodCardProps {
   food: FoodProduct;
   isAdmin?: boolean;
+  isFood?: boolean;
   onEdit?: (food: FoodProduct) => void;
   onDelete?: (id: string) => void;
+  themeColor?: 'green' | 'pink' | 'purple' | 'teal' | 'amber';
 }
 
-export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardProps) {
+const themeStyles = {
+  green: {
+    bgGradient: "from-green-50 to-emerald-100",
+    textPrimary: "text-green-600",
+    bgPrimary: "bg-green-600",
+    hoverBgPrimary: "hover:bg-green-700",
+    hoverBgLight: "hover:bg-green-50",
+    border: "border-green-200",
+    shadow: "shadow-[0_4px_20px_rgba(34,197,94,0.08)] hover:shadow-[0_8px_30px_rgba(34,197,94,0.15)]",
+    divider: "from-green-400 to-emerald-600",
+    textPrice: "text-emerald-600",
+  },
+  pink: {
+    bgGradient: "from-pink-50 to-rose-100",
+    textPrimary: "text-pink-600",
+    bgPrimary: "bg-pink-600",
+    hoverBgPrimary: "hover:bg-pink-700",
+    hoverBgLight: "hover:bg-pink-50",
+    border: "border-pink-200",
+    shadow: "shadow-[0_4px_20px_rgba(219,39,119,0.08)] hover:shadow-[0_8px_30px_rgba(219,39,119,0.15)]",
+    divider: "from-pink-400 to-rose-600",
+    textPrice: "text-rose-600",
+  },
+  purple: {
+    bgGradient: "from-purple-50 to-violet-100",
+    textPrimary: "text-purple-600",
+    bgPrimary: "bg-purple-600",
+    hoverBgPrimary: "hover:bg-purple-700",
+    hoverBgLight: "hover:bg-purple-50",
+    border: "border-purple-200",
+    shadow: "shadow-[0_4px_20px_rgba(147,51,234,0.08)] hover:shadow-[0_8px_30px_rgba(147,51,234,0.15)]",
+    divider: "from-purple-400 to-violet-600",
+    textPrice: "text-violet-600",
+  },
+  teal: {
+    bgGradient: "from-teal-50 to-cyan-100",
+    textPrimary: "text-teal-600",
+    bgPrimary: "bg-teal-600",
+    hoverBgPrimary: "hover:bg-teal-700",
+    hoverBgLight: "hover:bg-teal-50",
+    border: "border-teal-200",
+    shadow: "shadow-[0_4px_20px_rgba(13,148,136,0.08)] hover:shadow-[0_8px_30px_rgba(13,148,136,0.15)]",
+    divider: "from-teal-400 to-cyan-600",
+    textPrice: "text-cyan-600",
+  },
+  amber: {
+    bgGradient: "from-amber-50 to-yellow-100",
+    textPrimary: "text-amber-600",
+    bgPrimary: "bg-amber-600",
+    hoverBgPrimary: "hover:bg-amber-700",
+    hoverBgLight: "hover:bg-amber-50",
+    border: "border-amber-200",
+    shadow: "shadow-[0_4px_20px_rgba(217,119,6,0.08)] hover:shadow-[0_8px_30px_rgba(217,119,6,0.15)]",
+    divider: "from-amber-400 to-yellow-600",
+    textPrice: "text-amber-600",
+  }
+};
+
+export default function FoodCard({ food, isAdmin, isFood = true, onEdit, onDelete, themeColor = 'green' }: FoodCardProps) {
+  const theme = themeStyles[themeColor];
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [imgError, setImgError] = useState(false);
@@ -57,7 +118,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
   };
 
   const CardContent = (
-    <div className="relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br from-green-50 to-emerald-100 p-1">
+    <div className={`relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br ${theme.bgGradient} p-1`}>
       <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)]">
         <Image
           src={safeImgUrl}
@@ -71,10 +132,10 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
           <>
             <button
               onClick={cycleImage}
-              className="absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm hover:bg-green-50 transition-colors text-green-600"
+              className={`absolute top-2.5 right-2.5 bg-white/90 p-1.5 rounded-full flex items-center justify-center z-30 shadow-sm transition-colors ${isFood ? `${theme.hoverBgLight} ${theme.textPrimary}` : 'hover:bg-white text-gray-700'}`}
               title="View next image"
             >
-              <FaLeaf size={14} />
+              {isFood ? <FaLeaf size={14} /> : <FaEllipsisV size={14} />}
             </button>
             <div className="absolute bottom-4 left-3 flex gap-1.5 max-md:gap-2.5 z-20">
               {food.images.map((_, i) => (
@@ -82,7 +143,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
                   key={i}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentImgIndex(i); }}
                   className={`h-1 rounded-full transition-all duration-300 ${currentImgIndex === i
-                    ? 'bg-green-600 w-4'
+                    ? `${theme.bgPrimary} w-4`
                     : 'bg-white/80 w-1.5 hover:bg-white'
                     }`}
                 />
@@ -107,12 +168,12 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
   );
 
   return (
-    <div className="relative bg-white border border-green-200 shadow-[0_4px_20px_rgba(34,197,94,0.08)] hover:shadow-[0_8px_30px_rgba(34,197,94,0.15)] rounded-lg md:rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 h-full flex flex-col group">
+    <div className={`relative bg-white border ${theme.border} ${theme.shadow} rounded-lg md:rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-1 h-full flex flex-col group`}>
       {isAdmin && onEdit && onDelete && (
         <div className="absolute top-14 right-2 z-[40] flex flex-col gap-2 transition-all duration-300 opacity-100 translate-x-0 md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-hover:translate-x-0 md:translate-x-4">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(food); }}
-            className="bg-green-600 text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20"
+            className={`${theme.bgPrimary} text-white p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center border border-white/20`}
             title="Edit Food"
           >
             <FaEdit size={14} />
@@ -127,7 +188,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
         </div>
       )}
 
-      <div className="w-full h-1 shrink-0 bg-gradient-to-r from-green-400 to-emerald-600" />
+      <div className={`w-full h-1 shrink-0 bg-gradient-to-r ${theme.divider}`} />
 
       {isAdmin ? (
         CardContent
@@ -147,7 +208,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
           {food.description && (
             <button
               onClick={() => setShowDescription(true)}
-              className="text-xs text-green-600 font-semibold hover:underline"
+              className={`text-xs ${theme.textPrimary} font-semibold hover:underline`}
             >
               Description
             </button>
@@ -179,7 +240,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
 
         <div className="flex items-end justify-between mt-auto">
           <div className="flex flex-col">
-            <span className="text-xl max-md:text-lg font-black text-emerald-600">
+            <span className={`text-xl max-md:text-lg font-black ${theme.textPrice}`}>
               &#8358;{food.price.toLocaleString()}
             </span>
             {isAdmin && (
@@ -210,7 +271,7 @@ export default function FoodCard({ food, isAdmin, onEdit, onDelete }: FoodCardPr
               </button>
             ) : (
               <button
-                className="flex items-center justify-center gap-1 md:gap-2 rounded md:rounded-md font-bold transition-all duration-200 px-4 py-2 max-md:p-1.5 text-sm max-md:text-xs bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg"
+                className={`flex items-center justify-center gap-1 md:gap-2 rounded md:rounded-md font-bold transition-all duration-200 px-4 py-2 max-md:p-1.5 text-sm max-md:text-xs ${theme.bgPrimary} ${theme.hoverBgPrimary} text-white shadow-md hover:shadow-lg`}
                 onClick={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
