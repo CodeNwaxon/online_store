@@ -189,6 +189,17 @@ function LoanCheckoutContent() {
           return;
         }
 
+        const hasStandardItem = !product.requiresMinShipping;
+        if (!hasStandardItem) {
+          const maxRequired = product.minShippingQty || 0;
+          if (1 < maxRequired) {
+            setShippingError(`This product requires at least ${maxRequired} items to qualify for standalone shipping.`);
+            setShippingBreakdown(null);
+            setCalculatingShipping(false);
+            return;
+          }
+        }
+
         const cartItems: CartItem[] = [{
           id: product.id,
           name: product.name,
@@ -222,6 +233,12 @@ function LoanCheckoutContent() {
     const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
     if (!matchedArea) return -1;
     if (matchedArea.isActive === false) return -2;
+
+    const hasStandardItem = !product?.requiresMinShipping;
+    if (!hasStandardItem && product) {
+      const maxRequired = product.minShippingQty || 0;
+      if (1 < maxRequired) return -3;
+    }
 
     let totalShipping = 0;
     if (product) {
@@ -286,6 +303,11 @@ function LoanCheckoutContent() {
         if (!formData.city.trim()) { toast.error('Please enter your city.'); return; }
         if (shippingCost === -1) { setShowCityError(true); return; }
         if (shippingCost === -2) { setShowPickupOnlyError(true); return; }
+        if (shippingCost === -3) { 
+          const maxRequired = product?.minShippingQty || 0;
+          toast.error(`This product requires at least ${maxRequired} items to qualify for standalone shipping.`); 
+          return; 
+        }
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
       }
     }
@@ -592,6 +614,8 @@ function LoanCheckoutContent() {
                         <span className="text-muted-foreground">Calculating...</span>
                       ) : shippingCost === -2 ? (
                         <span className="text-muted-foreground">Office Pick Up Only</span>
+                      ) : shippingCost === -3 ? (
+                        <span className="text-red-700 font-semibold">Min Qty Not Met</span>
                       ) : shippingCost > 0 ? (
                         <span className="text-primary font-semibold">+ {formatCurrency(shippingCost)}</span>
                       ) : (
@@ -600,13 +624,20 @@ function LoanCheckoutContent() {
                     )}
                   </div>
 
-                  {deliveryMethod === 'ship' && formData.city && shippingCost > 0 && (
+                  {deliveryMethod === 'ship' && formData.city && (shippingCost > 0 || shippingCost === -3) && (
                     <div className="mb-6">
-                      <ShippingBreakdownComponent
-                        breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
-                        isLoading={calculatingShipping}
-                        error={shippingError || undefined}
-                      />
+                      {shippingCost === -3 ? (
+                        <div className="bg-red-50 text-red-700 p-4 rounded-md border border-red-200">
+                          <h4 className="font-bold mb-1">Shipping Unavailable</h4>
+                          <p className="text-sm">{shippingError || "Minimum quantity required for standalone shipping is not met."}</p>
+                        </div>
+                      ) : (
+                        <ShippingBreakdownComponent
+                          breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
+                          isLoading={calculatingShipping}
+                          error={shippingError || undefined}
+                        />
+                      )}
                     </div>
                   )}
                 </>

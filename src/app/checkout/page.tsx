@@ -146,6 +146,19 @@ export default function Checkout() {
           return;
         }
 
+        const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+        if (!hasStandardItem && items.length > 0) {
+          const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+          const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+          
+          if (totalQty < maxRequired) {
+            setShippingError(`Your cart requires at least ${maxRequired} total items to qualify for shipping, or you must add a standard product.`);
+            setShippingBreakdown(null);
+            setCalculatingShipping(false);
+            return;
+          }
+        }
+
         // Convert cart items to CartItem format
         const cartItems: CartItem[] = items.map(item => ({
           id: item.id,
@@ -180,6 +193,13 @@ export default function Checkout() {
     const matchedArea = areas.find(a => normalizeCity(a.city) === normInput);
     if (!matchedArea) return -1;
     if (matchedArea.isActive === false) return -2;
+
+    const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+    if (!hasStandardItem && items.length > 0) {
+      const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+      const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+      if (totalQty < maxRequired) return -3;
+    }
 
     let totalShipping = 0;
     const cartItems: CartItem[] = items.map(item => ({
@@ -603,6 +623,8 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Calculating...</span>
                   ) : shippingCost === -2 ? (
                     <span className="text-muted-foreground">Office Pick Up Only</span>
+                  ) : shippingCost === -3 ? (
+                    <span className="text-red-700 font-semibold">Min Qty Not Met</span>
                   ) : shippingCost > 0 ? (
                     <span className="text-primary font-semibold">+₦{shippingCost.toLocaleString()}</span>
                   ) : (
@@ -612,13 +634,20 @@ export default function Checkout() {
               </div>
 
               {/* Shipping Breakdown Component */}
-              {deliveryMethod === 'ship' && formData.city && shippingCost > 0 && (
+              {deliveryMethod === 'ship' && formData.city && (shippingCost > 0 || shippingCost === -3) && (
                 <div className="mb-6">
-                  <ShippingBreakdownComponent
-                    breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
-                    isLoading={calculatingShipping}
-                    error={shippingError || undefined}
-                  />
+                  {shippingCost === -3 ? (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-md border border-red-200">
+                      <h4 className="font-bold mb-1">Shipping Unavailable</h4>
+                      <p className="text-sm">{shippingError || "Minimum quantity required for standalone shipping is not met."}</p>
+                    </div>
+                  ) : (
+                    <ShippingBreakdownComponent
+                      breakdown={shippingBreakdown || { totalShipping: 0, itemBreakdown: [], highestFeeItem: '' }}
+                      isLoading={calculatingShipping}
+                      error={shippingError || undefined}
+                    />
+                  )}
                 </div>
               )}
 
@@ -655,6 +684,11 @@ export default function Checkout() {
                   }
                   if (shippingCost === -2) {
                     setShowPickupOnlyError(true);
+                    return;
+                  }
+                  if (shippingCost === -3) {
+                    const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+                    toast.error(`Your cart requires at least ${maxRequired} items to qualify for shipping, or add a standard product.`);
                     return;
                   }
                   if (!formData.address.trim()) {

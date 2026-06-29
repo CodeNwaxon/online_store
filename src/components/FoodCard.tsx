@@ -21,6 +21,9 @@ export interface FoodProduct {
   category?: string;
   createdAt?: string;
   updatedAt?: string;
+  size?: string;
+  requiresMinShipping?: boolean;
+  minShippingQty?: number;
 }
 
 interface FoodCardProps {

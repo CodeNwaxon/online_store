@@ -27,6 +27,16 @@ export default function AdminSettings() {
   const [socialLinks, setSocialLinks] = useState<{ platform: string, url: string }[]>([]);
   const [warrantyPolicy, setWarrantyPolicy] = useState('');
 
+  // Market Categories Explorer
+  const [categoriesExplorer, setCategoriesExplorer] = useState({
+    toiletKitchen: { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
+    cosmetics: { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
+    wears: { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
+  });
+  
+  const [ceUrlInputs, setCeUrlInputs] = useState({ toiletKitchen: '', cosmetics: '', wears: '' });
+  const [ceUploading, setCeUploading] = useState({ toiletKitchen: false, cosmetics: false, wears: false });
+
   // Track original data for dirty save (excluding warranty)
   const [originalData, setOriginalData] = useState<any>(null);
 
@@ -57,6 +67,13 @@ export default function AdminSettings() {
         setAddresses(data.addresses || []);
         setSocialLinks(data.socialLinks || []);
         setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
+        if (data.categoriesExplorer) {
+          setCategoriesExplorer({
+            toiletKitchen: data.categoriesExplorer.toiletKitchen || { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
+            cosmetics: data.categoriesExplorer.cosmetics || { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
+            wears: data.categoriesExplorer.wears || { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
+          });
+        }
 
         // Store snapshot for dirty check
         setOriginalData(data);
@@ -73,7 +90,8 @@ export default function AdminSettings() {
     phones,
     emails,
     addresses,
-    socialLinks
+    socialLinks,
+    categoriesExplorer
   }) !== JSON.stringify({
     siteName: originalData?.siteName || '',
     footerMessage: originalData?.footerMessage || '',
@@ -81,7 +99,12 @@ export default function AdminSettings() {
     phones: originalData?.phones || [],
     emails: originalData?.emails || [],
     addresses: originalData?.addresses || [],
-    socialLinks: originalData?.socialLinks || []
+    socialLinks: originalData?.socialLinks || [],
+    categoriesExplorer: originalData?.categoriesExplorer || {
+      toiletKitchen: { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
+      cosmetics: { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
+      wears: { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
+    }
   });
 
   const handleSave = async () => {
@@ -93,7 +116,8 @@ export default function AdminSettings() {
         phones,
         emails,
         addresses,
-        socialLinks
+        socialLinks,
+        categoriesExplorer
       };
       await setDoc(doc(db, 'settings', 'general'), updatedData, { merge: true });
 
@@ -114,6 +138,9 @@ export default function AdminSettings() {
       setEmails(originalData.emails || []);
       setAddresses(originalData.addresses || []);
       setSocialLinks(originalData.socialLinks || []);
+      if (originalData.categoriesExplorer) {
+        setCategoriesExplorer(originalData.categoriesExplorer);
+      }
       toast('Changes discarded', { icon: '🔄' });
     }
   };
@@ -189,6 +216,121 @@ export default function AdminSettings() {
             </p>
           </div>
         </div>
+      </section>
+
+      {/* MARKET CATEGORIES EXPLORER */}
+      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">
+        <h2 className="text-lg md:text-xl font-bold border-b border-border pb-4 flex items-center gap-2">
+          <FaImage className="text-primary" /> Market Categories Explorer Settings
+        </h2>
+        <p className="text-xs text-muted-foreground">Manage the 3 category cards shown on the home page (Toilet & Kitchen, Cosmetics, Wears).</p>
+
+        {Object.entries(categoriesExplorer).map(([key, data]) => {
+          const categoryKey = key as keyof typeof categoriesExplorer;
+          const title = categoryKey === 'toiletKitchen' ? 'Toilet & Kitchen' : categoryKey === 'cosmetics' ? 'Cosmetics' : 'Wears';
+          
+          return (
+            <div key={categoryKey} className="border border-border rounded-md p-4 space-y-4 bg-muted/10">
+              <h3 className="font-bold text-md text-primary">{title}</h3>
+              
+              <div>
+                <label className="block text-sm font-bold mb-2">Description</label>
+                <textarea
+                  rows={2}
+                  className="w-full p-3 rounded-md border border-border bg-background text-sm"
+                  value={data.description}
+                  onChange={(e) => setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, description: e.target.value } })}
+                />
+              </div>
+
+              {/* Preview */}
+              {(data.image || true) && (
+                <div className="relative w-full h-32 md:h-40 rounded-md overflow-hidden border border-border bg-slate-200">
+                  <img
+                    src={data.image || '/images/placeholder.png'}
+                    alt={`${title} background preview`}
+                    className="w-full h-full object-cover opacity-60"
+                  />
+                  {data.image && (
+                    <button
+                      type="button"
+                      onClick={() => setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, image: '' } })}
+                      className="absolute top-2 right-2 bg-secondary text-white p-1.5 rounded-full hover:bg-secondary-hover transition-colors z-10 shadow-md"
+                      title="Remove image"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center font-bold text-xl md:text-2xl text-slate-800 drop-shadow-md">
+                    {title} Preview
+                  </div>
+                </div>
+              )}
+
+              {/* URL Input & Upload row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Image URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Paste image URL..."
+                      className="w-full flex-1 p-2 rounded-md border border-border bg-background text-sm"
+                      value={ceUrlInputs[categoryKey]}
+                      onChange={(e) => setCeUrlInputs({ ...ceUrlInputs, [categoryKey]: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (ceUrlInputs[categoryKey].trim()) {
+                          setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, image: ceUrlInputs[categoryKey].trim() } });
+                          setCeUrlInputs({ ...ceUrlInputs, [categoryKey]: '' });
+                          toast.success('URL applied!');
+                        }
+                      }}
+                      className="bg-muted px-4 py-2 rounded-md border border-border text-sm font-bold hover:bg-muted/80"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">Upload Image</label>
+                  <label className={`flex items-center justify-center gap-2 p-2 h-[42px] rounded-md border border-dashed cursor-pointer transition-colors ${ceUploading[categoryKey] ? 'border-primary/50 bg-primary/5 opacity-70' : 'border-primary bg-primary/5 hover:bg-primary/10'}`}>
+                    <FaImage className="text-primary text-sm" />
+                    <span className="text-sm font-bold text-primary">
+                      {ceUploading[categoryKey] ? 'Uploading...' : 'Choose File'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={ceUploading[categoryKey]}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setCeUploading({ ...ceUploading, [categoryKey]: true });
+                        try {
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          const uploadData = await uploadImageToCloudinary(formData);
+                          setCategoriesExplorer({ ...categoriesExplorer, [categoryKey]: { ...data, image: uploadData.secure_url } });
+                          toast.success('Image uploaded!');
+                        } catch {
+                          toast.error('Upload failed. Try URL instead.');
+                        } finally {
+                          setCeUploading({ ...ceUploading, [categoryKey]: false });
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* INSTALLMENT BACKGROUND IMAGE */}

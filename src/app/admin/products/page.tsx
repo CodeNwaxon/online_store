@@ -87,6 +87,9 @@ function AdminProductsContent() {
   const [filterGroup, setFilterGroup] = useState('All');
   const [visibleCount, setVisibleCount] = useState(60);
 
+  // Size shipping prices
+  const [sizePrices, setSizePrices] = useState<Record<string, string>>({});
+
   // Meta lists
   const [groups, setGroups] = useState<string[]>(['ELECTRONICS', 'FURNITURE']);
   const [categoriesByGroup, setCategoriesByGroup] = useState<Record<string, string[]>>({
@@ -106,6 +109,31 @@ function AdminProductsContent() {
 
   // Distribution Manager State
   const [isDistributionOpen, setIsDistributionOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub2 = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
+      const areas = snap.docs.map(d => d.data());
+      if (areas.length > 0) {
+        const priceStrings: Record<string, string> = {};
+        const sizes = ['extra-large', 'large', 'medium', 'small', 'extra-small'];
+        sizes.forEach(s => {
+          const vals = areas.map(a => (a.prices?.[s] || 0) as number).filter(v => v > 0);
+          const uniqueVals = Array.from(new Set(vals)).sort((a, b) => b - a);
+          if (uniqueVals.length === 0) {
+            priceStrings[s] = '';
+          } else if (uniqueVals.length === 1) {
+            priceStrings[s] = `₦${uniqueVals[0].toLocaleString()}`;
+          } else {
+            const highest = uniqueVals[0];
+            const rest = uniqueVals.slice(1).map(v => `₦${v.toLocaleString()}`).join(', ');
+            priceStrings[s] = `₦${highest.toLocaleString()} (${rest})`;
+          }
+        });
+        setSizePrices(priceStrings);
+      }
+    });
+    return () => unsub2();
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'products'), async (snap) => {
@@ -677,13 +705,13 @@ function AdminProductsContent() {
             {/* Product Size */}
             <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold">Product Size</label>
-              <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-sm">
+              <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
                 <option value="">Select Size</option>
-                <option value="extra-large">Extra Large</option>
-                <option value="large">Large</option>
-                <option value="medium">Medium</option>
-                <option value="small">Small</option>
-                <option value="extra-small">Extra Small</option>
+                <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
+                <option value="large">Large {sizePrices['large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['large']}` : ''}</option>
+                <option value="medium">Medium {sizePrices['medium'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['medium']}` : ''}</option>
+                <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
+                <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
               </select>
             </div>
 

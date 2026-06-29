@@ -26,6 +26,7 @@ export default function AdminPartnership() {
 
   // Settings state
   const [globalPercentage, setGlobalPercentage] = useState<number>(50);
+  const [vipPercentage, setVipPercentage] = useState<number>(20);
   const [showSettings, setShowSettings] = useState(false);
   const [ceoPasskey, setCeoPasskey] = useState('');
 
@@ -37,8 +38,10 @@ export default function AdminPartnership() {
     // Fetch settings
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'partnership'));
-      if (docSnap.exists() && docSnap.data().globalPercentage !== undefined) {
-        setGlobalPercentage(docSnap.data().globalPercentage);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.globalPercentage !== undefined) setGlobalPercentage(data.globalPercentage);
+        if (data.vipPercentage !== undefined) setVipPercentage(data.vipPercentage);
       }
     };
     fetchSettings();
@@ -80,7 +83,19 @@ export default function AdminPartnership() {
       setActionLoading(false);
     }
   };
-
+  const handleToggleVip = async (partner: any) => {
+    setActionLoading(true);
+    try {
+      await updateDoc(doc(db, 'partners', partner.id), {
+        isVip: !partner.isVip
+      });
+      toast.success(`Partner ${!partner.isVip ? 'marked as VIP' : 'removed from VIP'}.`);
+    } catch (error) {
+      toast.error('Failed to update VIP status.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
   const handleReject = async (id: string) => {
     setActionLoading(true);
     try {
@@ -139,7 +154,8 @@ export default function AdminPartnership() {
       }
 
       await setDoc(doc(db, 'settings', 'partnership'), {
-        globalPercentage: Number(globalPercentage)
+        globalPercentage: Number(globalPercentage),
+        vipPercentage: Number(vipPercentage)
       }, { merge: true });
 
       toast.success('Partnership percentage updated.');
@@ -187,16 +203,29 @@ export default function AdminPartnership() {
               <h3 className="font-bold text-xl mb-4 flex items-center gap-2"><FaUserTie className="text-secondary" /> Partnership Settings</h3>
 
               <div className="space-y-4 mb-6">
-                <div>
-                  <label className="text-xs font-bold block mb-1 text-muted-foreground">Global Profit Cut (%)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={globalPercentage}
-                    onChange={e => setGlobalPercentage(Number(e.target.value))}
-                    className="w-full p-3 rounded-md border border-border bg-background text-sm"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold block mb-1 text-muted-foreground">Global Cut (%)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={globalPercentage}
+                      onChange={e => setGlobalPercentage(Number(e.target.value))}
+                      className="w-full p-3 rounded-md border border-border bg-background text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold block mb-1 text-muted-foreground">VIP Cut (%)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={vipPercentage}
+                      onChange={e => setVipPercentage(Number(e.target.value))}
+                      className="w-full p-3 rounded-md border border-border bg-background text-sm"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold block mb-1 text-muted-foreground text-red-500">CEO Password Required</label>
@@ -322,6 +351,13 @@ export default function AdminPartnership() {
                   {/* Approved Info */}
                   {activeTab === 'approved' && (
                     <div className="flex flex-col gap-3 mt-1 border-t border-border pt-3">
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-muted-foreground uppercase font-black tracking-wider">VIP Status</div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" checked={!!partner.isVip} onChange={() => handleToggleVip(partner)} disabled={actionLoading} />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                      </div>
                       <div className="flex justify-between items-center">
                         <div className="text-xs text-muted-foreground uppercase font-black tracking-wider">Referral Code</div>
                         <div className="text-xs font-bold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md border border-primary/20">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCartStore } from '@/store/useCartStore';
-import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard, FaLeaf, FaHandshake } from 'react-icons/fa';
+import { FaArrowRight, FaShieldAlt, FaBolt, FaCreditCard, FaLeaf, FaHandshake, FaBoxes, FaUserTie } from 'react-icons/fa';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -53,6 +53,13 @@ export default function Home() {
     image: '',
     title: 'Fresh From the Farm to Your Table',
     description: 'Discover our curated selection of premium grains, rice, beans, and fresh produce. Quality food at unbeatable prices — shop the Food Market today.',
+  });
+
+  // Market Categories Explorer
+  const [categoriesExplorer, setCategoriesExplorer] = useState({
+    toiletKitchen: { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
+    cosmetics: { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
+    wears: { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
   });
 
   // Load hero slides and promo products from Firestore
@@ -126,12 +133,19 @@ export default function Home() {
           setCurrentSlide(Math.floor(Math.random() * slidesToSet.length));
         }
 
-        // Fetch general settings (installment bg)
+        // Fetch general settings (installment bg, siteName, categoriesExplorer)
         const generalSnap = await getDoc(doc(db, 'settings', 'general'));
         if (generalSnap.exists()) {
           const gData = generalSnap.data();
           if (gData.installmentBg) setInstallmentBg(gData.installmentBg);
           if (gData.siteName) setSiteName(gData.siteName);
+          if (gData.categoriesExplorer) {
+            setCategoriesExplorer(prev => ({
+              toiletKitchen: gData.categoriesExplorer.toiletKitchen || prev.toiletKitchen,
+              cosmetics: gData.categoriesExplorer.cosmetics || prev.cosmetics,
+              wears: gData.categoriesExplorer.wears || prev.wears,
+            }));
+          }
         }
 
         // Promo products for carousel
@@ -441,11 +455,84 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Reviews Section */}
-      <ReviewSection />
+      {/* Market Categories Explorer Section */}
+      <section className="py-24 max-md:py-16 bg-slate-50">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl max-md:text-2xl font-bold mb-4 text-slate-900">Explore More Categories</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto max-md:text-sm">
+              Discover a wide variety of premium products across our specialized departments.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-md:gap-6">
+
+            {/* Cosmetics */}
+            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="relative h-64 max-md:h-32 bg-pink-100 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-pink-900/80 to-pink-600/40 z-10" />
+                <Image src={categoriesExplorer.cosmetics.image || "/images/placeholder.png"} alt="Cosmetics" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
+                <FaBoxes className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+              </div>
+              <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
+                <div>
+                  <h3 className="text-2xl max-md:text-base font-bold text-slate-900 mb-3 max-md:mb-1.5">Cosmetics</h3>
+                  <p className="text-slate-600 text-sm max-md:text-[10px] mb-6 max-md:mb-3 line-clamp-3">
+                    {categoriesExplorer.cosmetics.description}
+                  </p>
+                </div>
+                <Link href="/shop/cosmetics" className="inline-flex items-center gap-2 bg-pink-900 text-white px-6 py-3 max-md:px-4 max-md:py-2 rounded-xl font-bold max-md:text-[10px] hover:bg-pink-800 transition-colors w-full justify-center">
+                  Shop Now <FaArrowRight className="max-md:w-2 max-md:h-2" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Wears */}
+            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="relative h-64 max-md:h-32 bg-purple-100 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/80 to-purple-600/40 z-10" />
+                <Image src={categoriesExplorer.wears.image || "/images/placeholder.png"} alt="Wears" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
+                <FaUserTie className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+              </div>
+              <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
+                <div>
+                  <h3 className="text-2xl max-md:text-base font-bold text-slate-900 mb-3 max-md:mb-1.5">Wears</h3>
+                  <p className="text-slate-600 text-sm max-md:text-[10px] mb-6 max-md:mb-3 line-clamp-3">
+                    {categoriesExplorer.wears.description}
+                  </p>
+                </div>
+                <Link href="/shop/wears" className="inline-flex items-center gap-2 bg-purple-900 text-white px-6 py-3 max-md:px-4 max-md:py-2 rounded-xl font-bold max-md:text-[10px] hover:bg-purple-800 transition-colors w-full justify-center">
+                  Shop Now <FaArrowRight className="max-md:w-2 max-md:h-2" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Toilet & Kitchen */}
+            <div className="bg-white rounded-md overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="relative h-64 max-md:h-32 bg-teal-100 flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-teal-900/80 to-teal-600/40 z-10" />
+                <Image src={categoriesExplorer.toiletKitchen.image || "/images/placeholder.png"} alt="Toilet & Kitchen" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
+                <FaBoxes className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+              </div>
+              <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
+                <div>
+                  <h3 className="text-2xl max-md:text-base font-bold text-slate-900 mb-3 max-md:mb-1.5">Toilet & Kitchen</h3>
+                  <p className="text-slate-600 text-sm max-md:text-[10px] mb-6 max-md:mb-3 line-clamp-3">
+                    {categoriesExplorer.toiletKitchen.description}
+                  </p>
+                </div>
+                <Link href="/shop/toilet-kitchen" className="inline-flex items-center gap-2 bg-teal-900 text-white px-6 py-3 max-md:px-4 max-md:py-2 rounded-xl font-bold max-md:text-[10px] hover:bg-teal-800 transition-colors w-full justify-center">
+                  Shop Now <FaArrowRight className="max-md:w-2 max-md:h-2" />
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
 
       {/* Partnership Section */}
-      <section 
+      <section
         className="py-24 max-md:py-16 text-white relative overflow-hidden border-t border-slate-800 bg-cover bg-center"
         style={{ backgroundImage: `linear-gradient(to bottom right, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)), url(${installmentBg})` }}
       >
@@ -468,6 +555,11 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Reviews Section */}
+      <ReviewSection />
+
+
     </div>
   );
 }

@@ -210,22 +210,22 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                 <button onClick={() => setIsCreating(false)} className="text-muted-foreground text-sm hover:underline">Cancel</button>
               </div>
               <form onSubmit={handleCreate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-40 blur-[1px] pointer-events-none select-none">
                   <div>
                     <label className="block text-xs font-bold mb-1">State</label>
-                    <input required value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} type="text" placeholder="e.g. Lagos" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
+                    <input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} type="text" placeholder="e.g. Lagos" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
                   </div>
                   <div>
                     <label className="block text-xs font-bold mb-1">City</label>
-                    <input required value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} type="text" placeholder="e.g. Ikeja" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
+                    <input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} type="text" placeholder="e.g. Ikeja" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold mb-1">Address</label>
-                    <input required value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} type="text" placeholder="Full address" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
+                    <input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} type="text" placeholder="Full address" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold mb-1">Google Map Location Link</label>
-                    <input value={formData.mapLocation} onChange={e => setFormData({ ...formData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
+                    <input value={formData.mapLocation} onChange={e => setFormData({ ...formData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
                   </div>
                   <div className="md:col-span-2 flex items-center gap-2 mt-2">
                     <input 

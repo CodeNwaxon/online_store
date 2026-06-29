@@ -24,7 +24,6 @@ import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
   { href: '/shop', label: 'Shop', icon: <FaStore /> },
-  { href: '/foods', label: 'Food Market', icon: <FaUtensils /> },
   { href: '/about', label: 'About', icon: <FaInfoCircle /> },
   { href: '/contact', label: 'Contact', icon: <FaPhone /> },
   { href: '/partnership', label: 'Partnership', icon: <FaHandshake /> },
@@ -35,6 +34,9 @@ const adminLinks = [
   { href: '/admin/management', label: 'Management', icon: <FaUserShield />, id: '/ADMIN/MANAGEMENT', ceoOnly: true },
   { href: '/admin/products', label: 'Products', icon: <FaBoxes />, id: '/ADMIN/PRODUCTS' },
   { href: '/admin/foods', label: 'Foods', icon: <FaUtensils />, id: '/ADMIN/FOODS' },
+  { href: '/admin/cosmetics', label: 'Cosmetics', icon: <FaBoxes />, id: '/ADMIN/COSMETICS' },
+  { href: '/admin/wears', label: 'Wears', icon: <FaUserTie />, id: '/ADMIN/WEARS' },
+  { href: '/admin/toilet-kitchen', label: 'Toilet & Kitchen', icon: <FaBoxes />, id: '/ADMIN/TOILET-KITCHEN' },
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
   { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
   { href: '/admin/partnership', label: 'Partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
@@ -83,7 +85,8 @@ export default function Navbar() {
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
 
-  const isAdminRoute = pathname.startsWith('/admin');
+  const isAdminRoute = pathname?.startsWith('/admin') || false;
+  const isDarkNav = !isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname?.startsWith('/foods') || pathname?.startsWith('/shop/cosmetics') || pathname?.startsWith('/shop/wears') || pathname?.startsWith('/shop/furniture') || pathname?.startsWith('/shop/toilet-kitchen'));
 
   useEffect(() => {
     setMounted(true);
@@ -196,6 +199,21 @@ export default function Navbar() {
   // Close drawer on route change
   useEffect(() => { setIsMenuOpen(false); }, [pathname]);
 
+  // Auto-close menu when resizing to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    // Initial check
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMenuOpen]);
+
   const handleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -237,25 +255,49 @@ export default function Navbar() {
     <>
       {/* --- NAV BAR --------------------------------------- */}
       {/* --- NAV BAR --------------------------------------- */}
-      <nav className={`${isAdminRoute ? 'bg-card border-border' : (pathname === '/partnership' && isPartnershipDarkMode) ? 'bg-zinc-950 border-white/10' : (pathname === '/partnership' && !isPartnershipDarkMode) ? 'bg-slate-50 border-slate-200' : pathname.startsWith('/foods') ? 'bg-emerald-900 border-emerald-800' : 'bg-card border-border'} border-b sticky top-0 z-[200] py-[0.875rem] transition-colors duration-300`}>
-        <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1350px] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-foreground'}`}>
+      <nav className={`${isAdminRoute ? 'bg-card border-border' : (pathname === '/partnership' && isPartnershipDarkMode) ? 'bg-zinc-950 border-white/10' : (pathname === '/partnership' && !isPartnershipDarkMode) ? 'bg-slate-50 border-slate-200' : pathname.startsWith('/foods') ? 'bg-emerald-900 border-emerald-800' : pathname.startsWith('/shop/cosmetics') ? 'bg-pink-900 border-pink-800' : pathname.startsWith('/shop/wears') ? 'bg-purple-900 border-purple-800' : pathname.startsWith('/shop/furniture') ? 'bg-amber-950 border-amber-900' : pathname.startsWith('/shop/toilet-kitchen') ? 'bg-teal-900 border-teal-800' : 'bg-card border-border'} border-b sticky top-0 z-[200] py-[0.875rem] transition-colors duration-300`}>
+        <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1350px] ${isDarkNav ? 'text-white' : 'text-foreground'}`}>
 
           {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
-            <div className={`${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
+            <div className={`${isDarkNav ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
               <Image src="/logo_nomo.png" alt="Logo" width={38} height={38} className="object-contain" />
             </div>
-            <span className={`text-[0.8rem] md:text-[1.2rem] font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
+            <span className={`text-[0.8rem] md:text-[1.2rem] font-bold ${isDarkNav ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
           </Link>
 
           {/* Desktop centre links */}
           <div className="hidden md:flex gap-10 items-center">
             {navLinks.map(l => {
               if (l.label === 'Partnership') return null;
+              
+              if (l.label === 'Shop') {
+                return (
+                  <div key="shop-and-market" className="flex items-center gap-10">
+                    <Link href="/shop" className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === '/shop' ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                      Shop
+                    </Link>
+
+                    <div key="market-dropdown" className="relative group py-2">
+                      <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname.startsWith('/foods') || pathname.startsWith('/shop/cosmetics') || pathname.startsWith('/shop/wears') || pathname.startsWith('/shop/furniture') || pathname.startsWith('/shop/toilet-kitchen')) ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                        Market <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
+                      </span>
+                      <div className="absolute top-full left-0 mt-0 w-48 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
+                        <Link href="/foods" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/foods' ? 'text-primary font-bold' : 'text-foreground'}`}>Food Market</Link>
+                        <Link href="/shop/cosmetics" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/cosmetics' ? 'text-primary font-bold' : 'text-foreground'}`}>Cosmetics</Link>
+                        <Link href="/shop/wears" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/wears' ? 'text-primary font-bold' : 'text-foreground'}`}>Wears</Link>
+                        <Link href="/shop/furniture" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/furniture' ? 'text-primary font-bold' : 'text-foreground'}`}>Furniture</Link>
+                        <Link href="/shop/toilet-kitchen" className={`px-4 py-3 text-sm hover:bg-muted font-medium ${pathname === '/shop/toilet-kitchen' ? 'text-primary font-bold' : 'text-foreground'}`}>Toilet & Kitchen</Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               if (l.label === 'About') {
                 return (
                   <div key="about-dropdown" className="relative group py-2">
-                    <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                    <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
                       About <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
                       {mounted && partnerNotifCount > 0 && (
                         <span className="absolute -top-1 -right-3 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
@@ -278,14 +320,14 @@ export default function Navbar() {
                 );
               }
               return (
-                <Link key={l.href} href={l.href} className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === l.href ? `font-bold ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                <Link key={l.href} href={l.href} className={`text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${pathname === l.href ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
                   {l.label}
                 </Link>
               );
             })}
             {isAdmin && (
-              <Link href="/admin" className={`flex items-center gap-1.5 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 font-bold text-secondary hover:text-primary ${pathname.startsWith('/admin') ? 'border-secondary text-primary' : 'border-transparent'}`}>
-                <FaUserShield size={14} />
+              <Link href="/admin" className={`flex items-center gap-1.5 text-[0.82rem] px-3.5 py-1.5 rounded-full font-bold transition-all duration-200 shadow-sm ${pathname.startsWith('/admin') ? 'bg-primary text-white ring-2 ring-primary/30' : 'bg-secondary text-white hover:bg-primary hover:shadow-md'}`}>
+                <FaUserShield size={13} />
                 {isCEO ? 'CEO Panel' : 'Admin Panel'}
               </Link>
             )}
@@ -299,10 +341,10 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-[0.6rem]">
                 <img src={user.photoURL || ''} alt="avatar" className={`w-[30px] h-[30px] rounded-full border-2 ${(!isAdminRoute && pathname === '/partnership' && isPartnershipDarkMode) ? 'border-white/50' : 'border-primary'} object-cover`} />
-                <button onClick={handleSignOut} className={`text-[0.78rem] ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'text-white/80 hover:text-white' : 'text-muted-foreground'} underline`}>Sign Out</button>
+                <button onClick={handleSignOut} className={`text-[0.78rem] ${isDarkNav ? 'text-white/80 hover:text-white' : 'text-muted-foreground'} underline`}>Sign Out</button>
               </div>
             ) : (
-              <button onClick={handleSignIn} className={`border ${(!isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname.startsWith('/foods'))) ? 'border-white/20 text-white hover:bg-white/10' : 'border-border text-foreground hover:bg-muted'} px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200`}>
+              <button onClick={handleSignIn} className={`border ${isDarkNav ? 'border-white/20 text-white hover:bg-white/10' : 'border-border text-foreground hover:bg-muted'} px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200`}>
                 Sign In
               </button>
             )}
@@ -398,19 +440,66 @@ export default function Navbar() {
             ))
           ) : (
             // Normal Store Links
-            navLinks.map(l => (
-              <Link key={l.href} href={l.href} onClick={() => { setIsMenuOpen(false); if (l.label === 'Partnership') handlePartnershipClick(); }} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                <div className="flex items-center gap-[0.85rem]">
-                  <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
-                  {l.label}
-                </div>
-                {mounted && l.label === 'Partnership' && partnerNotifCount > 0 && (
-                  <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    {partnerNotifCount}
-                  </span>
-                )}
-              </Link>
-            ))
+            <div className="flex flex-col">
+              {navLinks.map(l => {
+                if (l.label === 'Shop') {
+                  return (
+                    <div key="mobile-shop-group" className="flex flex-col">
+                      <Link href="/shop" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
+                          Shop
+                        </div>
+                      </Link>
+
+                      <Link href="/foods" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/foods' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/foods' ? 'text-primary' : 'text-muted-foreground'}`}><FaUtensils /></span>
+                          Food Market
+                        </div>
+                      </Link>
+                      <Link href="/shop/cosmetics" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/cosmetics' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop/cosmetics' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
+                          Cosmetics
+                        </div>
+                      </Link>
+                      <Link href="/shop/wears" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/wears' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop/wears' ? 'text-primary' : 'text-muted-foreground'}`}><FaUserTie /></span>
+                          Wears
+                        </div>
+                      </Link>
+                      <Link href="/shop/furniture" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/furniture' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop/furniture' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
+                          Furniture
+                        </div>
+                      </Link>
+                      <Link href="/shop/toilet-kitchen" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/toilet-kitchen' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop/toilet-kitchen' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
+                          Toilet & Kitchen
+                        </div>
+                      </Link>
+                    </div>
+                  );
+                }
+                return (
+                  <Link key={l.href} href={l.href} onClick={() => { setIsMenuOpen(false); if (l.label === 'Partnership') handlePartnershipClick(); }} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                    <div className="flex items-center gap-[0.85rem]">
+                      <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+                      {l.label}
+                    </div>
+                    {mounted && l.label === 'Partnership' && partnerNotifCount > 0 && (
+                      <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        {partnerNotifCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           )}
         </nav>
 

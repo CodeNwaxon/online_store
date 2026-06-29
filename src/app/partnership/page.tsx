@@ -449,7 +449,12 @@ export default function PartnershipPage() {
           <div className="flex items-center gap-4">
             <img src={partnerData.photoURL || '/images/placeholder.png'} alt="Profile" className="w-16 h-16 rounded-full border-2 border-primary object-cover" />
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Partner Dashboard</h1>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                Partner Dashboard
+                {partnerData.isVip && (
+                  <span className="bg-yellow-500 text-black text-xs px-2 py-1 rounded-full font-black uppercase tracking-wider">VIP</span>
+                )}
+              </h1>
               <p className={`text-sm md:text-base ${isDarkMode ? 'text-zinc-400' : 'text-slate-400'}`}>Welcome back, <span className="text-white font-semibold">{partnerData.accountName}</span></p>
             </div>
           </div>

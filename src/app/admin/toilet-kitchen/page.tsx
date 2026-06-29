@@ -13,10 +13,11 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaBoxes } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import FoodCard, { FoodProduct } from '@/components/FoodCard';
+
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -28,8 +29,8 @@ const parsePriceInput = (value: string) => {
   return value.replace(/\D/g, "");
 };
 
-export default function AdminFoods() {
-  const [foods, setFoods] = useState<FoodProduct[]>([]);
+export default function AdminToiletKitchen() {
+  const [products, setProducts] = useState<FoodProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -69,11 +70,10 @@ export default function AdminFoods() {
   const [sizePrices, setSizePrices] = useState<Record<string, string>>({});
 
   // Delete state
-  const [foodToDelete, setFoodToDelete] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    // Fetch one distribution area to show size prices as reference
     const unsub2 = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
       const areas = snap.docs.map(d => d.data());
       if (areas.length > 0) {
@@ -99,7 +99,7 @@ export default function AdminFoods() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
+    const q = query(collection(db, 'toilet_kitchen'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
       
@@ -109,7 +109,7 @@ export default function AdminFoods() {
         return dateB - dateA;
       });
       
-      setFoods(sortedProds);
+      setProducts(sortedProds);
 
       // Extract unique groups and categories
       const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
@@ -126,7 +126,7 @@ export default function AdminFoods() {
       setCategoriesByGroup(newMap);
 
     }, (error) => {
-      console.warn("Foods listener error:", error);
+      console.warn("ToiletKitchen listener error:", error);
     });
     return () => unsub();
   }, []);
@@ -138,7 +138,7 @@ export default function AdminFoods() {
       return;
     }
     if (images.length >= 3) {
-      toast.error('Maximum 3 images allowed for foods');
+      toast.error('Maximum 3 images allowed');
       return;
     }
     setImages([...images, { type: 'url', value: imageUrlInput }]);
@@ -149,7 +149,7 @@ export default function AdminFoods() {
     const files = e.target.files;
     if (!files) return;
     if (images.length + files.length > 3) {
-      toast.error('Maximum 3 images allowed for foods');
+      toast.error('Maximum 3 images allowed');
       return;
     }
     const newImages = Array.from(files).map(file => ({ type: 'file' as const, value: file }));
@@ -182,10 +182,10 @@ export default function AdminFoods() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) return toast.error('Food name is required.');
+    if (!name.trim()) return toast.error('Product name is required.');
     if (!costPrice.trim()) return toast.error('Cost price is required.');
     if (!price.trim()) return toast.error('Selling price is required.');
-    if (!group) return toast.error('Please select a group.');
+    if (!group) return toast.error('Please select a brand/group.');
     if (!category) return toast.error('Please select a category.');
     if (!size) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
@@ -207,7 +207,7 @@ export default function AdminFoods() {
         return data.secure_url;
       }));
 
-      const foodData: any = {
+      const productData: any = {
         name: name.trim(),
         costPrice: parsedCost,
         price: parsedPrice,
@@ -223,14 +223,14 @@ export default function AdminFoods() {
       };
 
       if (editingId) {
-        await updateDoc(doc(db, 'foods', editingId), foodData);
-        toast.success('Food item updated!');
+        await updateDoc(doc(db, 'toilet_kitchen', editingId), productData);
+        toast.success('Product updated!');
       } else {
-        await addDoc(collection(db, 'foods'), {
-          ...foodData,
+        await addDoc(collection(db, 'toilet_kitchen'), {
+          ...productData,
           createdAt: new Date().toISOString()
         });
-        toast.success('Food item added!');
+        toast.success('Product added!');
       }
       resetForm();
     } catch (error: any) {
@@ -241,40 +241,40 @@ export default function AdminFoods() {
     }
   };
 
-  const handleEdit = (food: FoodProduct) => {
-    setEditingId(food.id);
-    setName(food.name);
-    setCostPrice(formatPriceInput((food.costPrice || 0).toString()));
-    setPrice(formatPriceInput((food.price || 0).toString()));
-    setDescription(food.description || '');
-    setGroup(food.group || '');
-    setCategory(food.category || '');
-    setQuantity(food.quantity?.toString() || '1');
-    setSize(food.size || '');
-    setRequiresMinShipping(food.requiresMinShipping || false);
-    setMinShippingQty(food.minShippingQty?.toString() || '0');
-    setImages((food.images || []).map(url => ({ type: 'url', value: url })));
+  const handleEdit = (product: FoodProduct) => {
+    setEditingId(product.id);
+    setName(product.name);
+    setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
+    setPrice(formatPriceInput((product.price || 0).toString()));
+    setDescription(product.description || '');
+    setGroup(product.group || '');
+    setCategory(product.category || '');
+    setQuantity(product.quantity?.toString() || '1');
+    setSize(product.size || '');
+    setRequiresMinShipping(product.requiresMinShipping || false);
+    setMinShippingQty(product.minShippingQty?.toString() || '0');
+    setImages((product.images || []).map(url => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const confirmDelete = async () => {
-    if (!foodToDelete) return;
+    if (!productToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'foods', foodToDelete));
-      toast.success('Food deleted.');
+      await deleteDoc(doc(db, 'toilet_kitchen', productToDelete));
+      toast.success('Product deleted.');
     } catch (error) {
       toast.error('Failed to delete.');
     } finally {
       setIsDeleting(false);
-      setFoodToDelete(null);
+      setProductToDelete(null);
     }
   };
 
-  const filteredFoods = foods.filter(f => {
+  const filteredProducts = products.filter(p => {
     const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (searchTerms.length === 0) {
-      return filterGroup === 'All' || f.group === filterGroup;
+      return filterGroup === 'All' || p.group === filterGroup;
     }
 
     const normalize = (str: string) => {
@@ -297,13 +297,13 @@ export default function AdminFoods() {
       };
 
       return (
-        checkField(f.name) ||
-        checkField(f.group || '') ||
-        checkField(f.category || '')
+        checkField(p.name) ||
+        checkField(p.group || '') ||
+        checkField(p.category || '')
       );
     });
 
-    const matchesGroup = filterGroup === 'All' || f.group === filterGroup;
+    const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
     return matchesSearch && matchesGroup;
   });
 
@@ -313,20 +313,20 @@ export default function AdminFoods() {
         <header className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <FaUtensils className="text-green-600" /> Food Market Management
+              <FaBoxes className="text-teal-600" /> Toilet & Kitchen Management
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage food items in your market.</p>
+            <p className="text-sm text-muted-foreground mt-1">Manage WC, sinks, washers, and accessories.</p>
           </div>
         </header>
 
         {/* Form Section */}
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-          <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Food' : 'Add New Food'}</h2>
+          <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold">Food Name</label>
-                <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. 50kg Bag of Rice, Yam Tubers, Milo" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                <label className="text-sm font-bold">Product Name</label>
+                <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Stainless Steel Kitchen Sink" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
               </div>
 
               <div className="space-y-2">
@@ -335,16 +335,16 @@ export default function AdminFoods() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-green-700">Selling Price (₦)</label>
-                <input required value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} type="text" placeholder="e.g. 3,500" className="w-full p-3 rounded-md border border-green-200 bg-background text-sm font-bold" />
+                <label className="text-sm font-bold text-teal-700">Selling Price (₦)</label>
+                <input required value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} type="text" placeholder="e.g. 3,500" className="w-full p-3 rounded-md border border-teal-200 bg-background text-sm font-bold" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Group */}
+              {/* Group/Brand */}
               <div className="space-y-2">
                 <label className="text-sm font-bold flex justify-between items-center">
-                  Group
+                  Brand / Material / Group
                   <button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-primary text-[0.7rem] flex items-center gap-1 hover:underline">
                     <FaPlus size={10} /> {isAddingGroup ? 'Cancel' : 'Add New'}
                   </button>
@@ -353,7 +353,7 @@ export default function AdminFoods() {
                   <div className="flex gap-2">
                     <input
                       autoFocus
-                      placeholder="Type new group name..."
+                      placeholder="Type new group..."
                       value={newGroupName}
                       onChange={e => setNewGroupName(e.target.value)}
                       className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm"
@@ -430,7 +430,7 @@ export default function AdminFoods() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold">Description (Optional)</label>
-                <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="High quality and well preserved..." className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Product details, dimensions, materials..." className="w-full p-3 rounded-md border border-border bg-background text-sm" />
               </div>
 
               <div className="space-y-2">
@@ -447,7 +447,7 @@ export default function AdminFoods() {
             </div>
 
             <div className="space-y-4">
-              <label className="text-sm font-bold">Food Images (Max 3)</label>
+              <label className="text-sm font-bold">Product Images (Max 3)</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
@@ -505,10 +505,9 @@ export default function AdminFoods() {
               </div>
             </div>
 
-            {/* QUANTITY MOVED HERE */}
             <div className="pt-4 border-t border-border mt-4">
               <div className="max-w-[200px] space-y-2">
-                <label className="text-xs md:text-sm font-bold text-green-700">Quantity In Stock</label>
+                <label className="text-xs md:text-sm font-bold text-teal-700">Quantity In Stock</label>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -538,19 +537,19 @@ export default function AdminFoods() {
             {/* MIN SHIPPING QTY */}
             <div className="pt-4 border-t border-border mt-4">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-3">
-                <input type="checkbox" checked={requiresMinShipping} onChange={e => setRequiresMinShipping(e.target.checked)} className="size-4 accent-green-600" />
+                <input type="checkbox" checked={requiresMinShipping} onChange={e => setRequiresMinShipping(e.target.checked)} className="size-4 accent-teal-600" />
                 Require Minimum Quantity for Standalone Shipping?
               </label>
               {requiresMinShipping && (
                 <div className="max-w-[200px] space-y-2 animate-in slide-in-from-top-2">
-                  <label className="text-xs md:text-sm font-bold text-green-700">Minimum Quantity Required</label>
+                  <label className="text-xs md:text-sm font-bold text-teal-700">Minimum Quantity Required</label>
                   <input
                     required={requiresMinShipping}
                     value={minShippingQty}
                     onChange={e => setMinShippingQty(e.target.value)}
                     type="number"
                     min="1"
-                    className="w-full p-2 rounded-md border border-border bg-background text-sm font-bold focus:border-green-500 outline-none"
+                    className="w-full p-2 rounded-md border border-border bg-background text-sm font-bold focus:border-teal-500 outline-none"
                   />
                 </div>
               )}
@@ -560,9 +559,9 @@ export default function AdminFoods() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 bg-green-600 text-white py-4 rounded-md font-bold flex items-center justify-center gap-2 text-sm transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-green-700'}`}
+                className={`flex-1 bg-teal-600 text-white py-4 rounded-md font-bold flex items-center justify-center gap-2 text-sm transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-teal-700'}`}
               >
-                {loading ? 'Processing...' : (editingId ? 'Update Food' : 'Add Food')}
+                {loading ? 'Processing...' : (editingId ? 'Update Product' : 'Add Product')}
               </button>
               {editingId && (
                 <button type="button" onClick={resetForm} className="bg-muted px-8 py-4 rounded-md font-bold border border-border text-sm">Cancel</button>
@@ -574,12 +573,12 @@ export default function AdminFoods() {
         {/* List Section */}
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
+            <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input
                   type="text"
-                  placeholder="Search foods..."
+                  placeholder="Search..."
                   className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -598,35 +597,35 @@ export default function AdminFoods() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {filteredFoods.map(food => (
-              <div key={food.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
+            {filteredProducts.map(product => (
+              <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
                   <FoodCard
-                    food={food}
+                    food={product}
                     isAdmin={true}
                     onEdit={handleEdit}
-                    onDelete={() => setFoodToDelete(food.id)}
+                    onDelete={() => setProductToDelete(product.id)}
                   />
                 </div>
               </div>
             ))}
           </div>
-          {filteredFoods.length === 0 && (
+          {filteredProducts.length === 0 && (
             <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-              No foods found. Add some above!
+              No products found. Add some above!
             </div>
           )}
         </section>
 
         {/* Delete Confirmation Modal */}
-        {foodToDelete && (
+        {productToDelete && (
           <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 px-4">
             <div className="bg-card border border-border rounded-[var(--radius)] shadow-2xl w-full max-w-sm p-6 text-center">
               <div className="text-red-500 mb-4 flex justify-center"><FaTrash size={40} /></div>
-              <h3 className="font-bold text-xl mb-2">Delete Food?</h3>
+              <h3 className="font-bold text-xl mb-2">Delete Product?</h3>
               <p className="text-sm text-muted-foreground mb-6">This action cannot be undone.</p>
               <div className="flex gap-3">
-                <button onClick={() => setFoodToDelete(null)} className="flex-1 py-3 rounded-md border border-border font-bold hover:bg-muted">Cancel</button>
+                <button onClick={() => setProductToDelete(null)} className="flex-1 py-3 rounded-md border border-border font-bold hover:bg-muted">Cancel</button>
                 <button onClick={confirmDelete} disabled={isDeleting} className="flex-1 py-3 rounded-md bg-red-600 text-white font-bold hover:bg-red-700">
                   {isDeleting ? 'Deleting...' : 'Delete'}
                 </button>

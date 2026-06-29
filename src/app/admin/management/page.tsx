@@ -16,7 +16,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes } from 'react-icons/fa';
+import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
 
@@ -69,6 +69,28 @@ export default function AdminManagement() {
   const [editingAdmin, setEditingAdmin] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
 
+  // Vendor Transfer State
+  const [oldVendorEmail, setOldVendorEmail] = useState('');
+  const [newVendorEmail, setNewVendorEmail] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+
+  // Vendor Search State (for transfer inputs)
+  const [oldVendorSearch, setOldVendorSearch] = useState('');
+  const [newVendorSearch, setNewVendorSearch] = useState('');
+  const [oldVendorResults, setOldVendorResults] = useState<any[]>([]);
+  const [newVendorResults, setNewVendorResults] = useState<any[]>([]);
+  const [oldVendorShowCount, setOldVendorShowCount] = useState(20);
+  const [newVendorShowCount, setNewVendorShowCount] = useState(20);
+  const [oldVendorFocused, setOldVendorFocused] = useState(false);
+  const [newVendorFocused, setNewVendorFocused] = useState(false);
+
+  // Vendor Delete State
+  const [pendingVendorDeleteId, setPendingVendorDeleteId] = useState<string | null>(null);
+  const [pendingVendorDeleteEmail, setPendingVendorDeleteEmail] = useState('');
+  const [vendorDeletePasskey, setVendorDeletePasskey] = useState('');
+  const [vendorDeleteError, setVendorDeleteError] = useState('');
+  const [vendorDeleteLoading, setVendorDeleteLoading] = useState(false);
+
   useEffect(() => {
     // Fetch current admins
     const unsubAdmins = onSnapshot(collection(db, 'admins'), (snap) => {
@@ -97,7 +119,9 @@ export default function AdminManagement() {
     };
     fetchSettings();
 
-    return () => unsubAdmins();
+    return () => {
+      unsubAdmins();
+    };
   }, []);
 
   // Real-time Search Logic
@@ -253,6 +277,107 @@ export default function AdminManagement() {
       toast.error('Failed to sync removal to database.');
     }
   };
+
+  const handleTransferVendor = async () => {
+    if (!oldVendorEmail || !newVendorEmail) {
+      toast.error('Please enter both old and new vendor emails.');
+      return;
+    }
+    
+    setTransferLoading(true);
+    try {
+      const collectionsToUpdate = ['foods', 'products', 'cosmetics', 'wears', 'toilet_kitchen'];
+      let totalUpdated = 0;
+
+      for (const colName of collectionsToUpdate) {
+        const q = query(collection(db, colName), where('vendor', '==', oldVendorEmail));
+        const snap = await getDocs(q);
+        
+        for (const documentSnap of snap.docs) {
+          await updateDoc(doc(db, colName, documentSnap.id), { vendor: newVendorEmail });
+          totalUpdated++;
+        }
+      }
+
+      if (totalUpdated > 0) {
+        toast.success(`Transferred ${totalUpdated} products to ${newVendorEmail}.`);
+        setOldVendorEmail('');
+        setNewVendorEmail('');
+        setOldVendorSearch('');
+        setNewVendorSearch('');
+      } else {
+        toast.error(`No products found for vendor ${oldVendorEmail}.`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to transfer products.');
+    }
+    setTransferLoading(false);
+  };
+
+  // VIP Toggle
+  const handleToggleVip = async (adminId: string, currentVip: boolean) => {
+    try {
+      await updateDoc(doc(db, 'admins', adminId), { vip: !currentVip });
+      toast.success(!currentVip ? 'VIP access granted!' : 'VIP access removed.');
+    } catch (error) {
+      toast.error('Failed to update VIP status.');
+    }
+  };
+
+  // Vendor Delete
+  const openVendorDeleteOverlay = (uid: string, email: string) => {
+    setPendingVendorDeleteId(uid);
+    setPendingVendorDeleteEmail(email);
+    setVendorDeletePasskey('');
+    setVendorDeleteError('');
+  };
+
+  const handleConfirmVendorDelete = async () => {
+    if (!pendingVendorDeleteId) return;
+    setVendorDeleteLoading(true);
+    setVendorDeleteError('');
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const currentPasskey = settingsDoc.data()?.passkey || 'admin1234';
+      if (vendorDeletePasskey !== currentPasskey) {
+        setVendorDeleteError('Incorrect passkey. Please try again.');
+        setVendorDeleteLoading(false);
+        return;
+      }
+      await deleteDoc(doc(db, 'admins', pendingVendorDeleteId));
+      toast.success('Vendor removed successfully.');
+      setPendingVendorDeleteId(null);
+      setVendorDeletePasskey('');
+    } catch (error) {
+      toast.error('Failed to remove vendor.');
+    }
+    setVendorDeleteLoading(false);
+  };
+
+  // Filter local admins for old vendor search
+  useEffect(() => {
+    if (oldVendorSearch && !oldVendorEmail) {
+      const clean = oldVendorSearch.trim().toLowerCase();
+      const filtered = admins.filter(a => a.role !== 'CEO' && a.email.toLowerCase().includes(clean));
+      setOldVendorResults(filtered);
+      setOldVendorShowCount(20);
+    } else {
+      setOldVendorResults([]);
+    }
+  }, [oldVendorSearch, oldVendorEmail, admins]);
+
+  // Filter local admins for new vendor search
+  useEffect(() => {
+    if (newVendorSearch && !newVendorEmail) {
+      const clean = newVendorSearch.trim().toLowerCase();
+      const filtered = admins.filter(a => a.role !== 'CEO' && a.email.toLowerCase().includes(clean));
+      setNewVendorResults(filtered);
+      setNewVendorShowCount(20);
+    } else {
+      setNewVendorResults([]);
+    }
+  }, [newVendorSearch, newVendorEmail, admins]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -629,6 +754,236 @@ export default function AdminManagement() {
                 </div>
             ))}
           </div>
+        </section>
+
+        {/* VENDOR DELETE PASSKEY OVERLAY */}
+        {pendingVendorDeleteId && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 px-4">
+            <div className="bg-card border border-border rounded-[var(--radius)] shadow-2xl w-full max-w-sm p-6 animate-[slideIn_0.2s_ease]">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">🔐</span>
+                <div>
+                  <h3 className="font-bold text-base">Confirm Vendor Deletion</h3>
+                  <p className="text-[0.72rem] text-muted-foreground">You are about to remove vendor:</p>
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-secondary mb-4 bg-secondary/10 px-3 py-2 rounded-md break-all">{pendingVendorDeleteEmail}</p>
+              <p className="text-[0.65rem] text-muted-foreground mb-3 bg-yellow-50 border border-yellow-200 rounded-md p-2">⚠️ This will also remove them from the Admin Staff list.</p>
+              <label className="block text-xs font-bold mb-1 text-muted-foreground">Enter CEO Passkey to confirm</label>
+              <input
+                type="password"
+                autoFocus
+                placeholder="CEO Passkey"
+                className={`w-full p-3 rounded-md border bg-background text-sm mb-1 ${vendorDeleteError ? 'border-secondary' : 'border-border'}`}
+                value={vendorDeletePasskey}
+                onChange={(e) => { setVendorDeletePasskey(e.target.value); setVendorDeleteError(''); }}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmVendorDelete()}
+              />
+              {vendorDeleteError && <p className="text-secondary text-[0.7rem] mb-3">{vendorDeleteError}</p>}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => { setPendingVendorDeleteId(null); setVendorDeletePasskey(''); setVendorDeleteError(''); }}
+                  className="flex-1 py-2.5 rounded-md border border-border text-sm font-semibold hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmVendorDelete}
+                  disabled={vendorDeleteLoading || !vendorDeletePasskey}
+                  className="flex-1 py-2.5 rounded-md bg-secondary text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {vendorDeleteLoading ? 'Removing…' : 'Delete Vendor'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VENDOR MANAGEMENT SECTION */}
+        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+          <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaStore /> Vendor Management</h2>
+          <p className="text-sm text-muted-foreground mb-6">View current vendors (admins) and transfer product ownership to a new email address.</p>
+          
+          <div className="mb-8">
+            <h3 className="font-bold text-sm mb-3">Current Admins (Vendors)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {admins.filter(a => a.role !== 'CEO').map(admin => (
+                <div key={admin.id} className="p-3 border border-border rounded-md bg-muted/30 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-primary truncate">{admin.email}</p>
+                    {admin.vip && (
+                      <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 mt-1">
+                        <FaCrown size={8} /> VIP
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* VIP Toggle */}
+                    <label className="flex items-center gap-1.5 cursor-pointer" title={admin.vip ? 'Remove VIP access' : 'Grant VIP access (see all)'}>
+                      <input
+                        type="checkbox"
+                        checked={!!admin.vip}
+                        onChange={() => handleToggleVip(admin.id, !!admin.vip)}
+                        className="accent-amber-500 w-4 h-4"
+                      />
+                      <span className="text-[0.6rem] font-bold text-muted-foreground">VIP</span>
+                    </label>
+                    {/* Delete */}
+                    <button
+                      onClick={() => openVendorDeleteOverlay(admin.id, admin.email)}
+                      className="text-secondary p-2 hover:bg-secondary/10 rounded-full transition-colors"
+                      title="Delete vendor"
+                    >
+                      <FaTrash size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {admins.filter(a => a.role !== 'CEO').length === 0 && (
+                <p className="text-xs text-muted-foreground">No admin vendors found.</p>
+              )}
+            </div>
+          </div>
+
+          <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><FaExchangeAlt /> Transfer Product Access</h3>
+          <p className="text-[0.65rem] text-muted-foreground mb-4 italic">* Both Old and New Vendor searches will look up your current Admin Staff.</p>
+          
+          {oldVendorEmail && newVendorEmail && oldVendorEmail === newVendorEmail && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-xs font-bold animate-pulse">
+              ⚠️ Error: Old Vendor and New Vendor emails cannot be the same.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Old Vendor Searchable Input */}
+            <div className="relative">
+              <label className="block text-xs font-bold mb-2">Old Vendor Email</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Start typing to search..."
+                  className="w-full p-3 pl-9 rounded-md border border-border bg-background text-sm"
+                  value={oldVendorEmail || oldVendorSearch}
+                  onChange={(e) => {
+                    setOldVendorEmail('');
+                    setOldVendorSearch(e.target.value);
+                  }}
+                  onFocus={() => setOldVendorFocused(true)}
+                  onBlur={() => setTimeout(() => setOldVendorFocused(false), 200)}
+                />
+                <FaSearch className="absolute left-3 top-4 text-muted-foreground" size={12} />
+                {oldVendorEmail && (
+                  <button
+                    onClick={() => { setOldVendorEmail(''); setOldVendorSearch(''); setOldVendorResults([]); }}
+                    className="absolute right-2 top-3 text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <FaTimes size={10} />
+                  </button>
+                )}
+              </div>
+              {/* Dropdown */}
+              {oldVendorFocused && !oldVendorEmail && oldVendorSearch.length >= 2 && (
+                <div className="absolute top-full left-0 w-full bg-card border border-border rounded-md shadow-xl mt-1 z-50 max-h-[300px] overflow-y-auto">
+                  {oldVendorResults.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-muted-foreground">No admin staff found</div>
+                  ) : (
+                    <>
+                      {oldVendorResults.slice(0, oldVendorShowCount).map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setOldVendorEmail(u.email);
+                            setOldVendorSearch('');
+                            setOldVendorResults([]);
+                          }}
+                          className="w-full p-3 text-left hover:bg-muted border-b border-border last:border-0 flex flex-col"
+                        >
+                          <span className="font-bold text-sm">{u.displayName || 'Unnamed'}</span>
+                          <span className="text-[10px] text-muted-foreground">{u.email}</span>
+                        </button>
+                      ))}
+                      {oldVendorResults.length > oldVendorShowCount && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); setOldVendorShowCount(prev => prev + 20); }}
+                          className="w-full p-3 text-center text-xs font-bold text-primary hover:bg-primary/5 flex items-center justify-center gap-1"
+                        >
+                          <FaChevronDown size={10} /> View More ({oldVendorResults.length - oldVendorShowCount} remaining)
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* New Vendor Searchable Input */}
+            <div className="relative">
+              <label className="block text-xs font-bold mb-2">New Vendor Email</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Start typing to search..."
+                  className="w-full p-3 pl-9 rounded-md border border-border bg-background text-sm"
+                  value={newVendorEmail || newVendorSearch}
+                  onChange={(e) => {
+                    setNewVendorEmail('');
+                    setNewVendorSearch(e.target.value);
+                  }}
+                  onFocus={() => setNewVendorFocused(true)}
+                  onBlur={() => setTimeout(() => setNewVendorFocused(false), 200)}
+                />
+                <FaSearch className="absolute left-3 top-4 text-muted-foreground" size={12} />
+                {newVendorEmail && (
+                  <button
+                    onClick={() => { setNewVendorEmail(''); setNewVendorSearch(''); setNewVendorResults([]); }}
+                    className="absolute right-2 top-3 text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <FaTimes size={10} />
+                  </button>
+                )}
+              </div>
+              {/* Dropdown */}
+              {newVendorFocused && !newVendorEmail && newVendorSearch.length >= 2 && (
+                <div className="absolute top-full left-0 w-full bg-card border border-border rounded-md shadow-xl mt-1 z-50 max-h-[300px] overflow-y-auto">
+                  {newVendorResults.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-muted-foreground">No admin staff found</div>
+                  ) : (
+                    <>
+                      {newVendorResults.slice(0, newVendorShowCount).map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setNewVendorEmail(u.email);
+                            setNewVendorSearch('');
+                            setNewVendorResults([]);
+                          }}
+                          className="w-full p-3 text-left hover:bg-muted border-b border-border last:border-0 flex flex-col"
+                        >
+                          <span className="font-bold text-sm">{u.displayName || 'Unnamed'}</span>
+                          <span className="text-[10px] text-muted-foreground">{u.email}</span>
+                        </button>
+                      ))}
+                      {newVendorResults.length > newVendorShowCount && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); setNewVendorShowCount(prev => prev + 20); }}
+                          className="w-full p-3 text-center text-xs font-bold text-primary hover:bg-primary/5 flex items-center justify-center gap-1"
+                        >
+                          <FaChevronDown size={10} /> View More ({newVendorResults.length - newVendorShowCount} remaining)
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleTransferVendor}
+            disabled={transferLoading || !oldVendorEmail || !newVendorEmail || oldVendorEmail === newVendorEmail}
+            className="w-full md:w-auto bg-primary text-white px-6 py-3 rounded-md font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:blur-[1px] disabled:cursor-not-allowed"
+          >
+            {transferLoading ? 'Transferring...' : 'Transfer Products'}
+          </button>
         </section>
 
         {/* CEO CONTACT SECTION */}
