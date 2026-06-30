@@ -313,7 +313,7 @@ function InstallmentsContent() {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors whitespace-nowrap ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-foreground hover:bg-gray-50'}`}
+                    className={`px-4 py-1.5 text-[10px] md:text-xs border border-border rounded-full transition-colors whitespace-nowrap ${selectedCategory === cat ? 'bg-secondary text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     {cat.toUpperCase()}
                   </button>
