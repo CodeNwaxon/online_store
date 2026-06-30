@@ -81,6 +81,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /furniture/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
 
     // Orders — create is blocked client-side; only server (Admin SDK) can create
     match /orders/{id} {
@@ -140,7 +144,8 @@ service cloud.firestore {
     
     // Partners
     match /partners/{userId} {
-      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      // Allow public to read approved partners for the top earners list
+      allow read: if resource == null || resource.data.status == 'approved' || isAdmin() || (request.auth != null && request.auth.uid == userId);
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if isAdmin() || (request.auth != null && request.auth.uid == userId);
       allow delete: if isCEO() || (request.auth != null && request.auth.uid == userId);

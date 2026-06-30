@@ -32,8 +32,10 @@ import {
 } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function AdminOrders() {
+  const { adminData, isCEO } = useAdmin();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -189,13 +191,19 @@ export default function AdminOrders() {
     printWindow.document.close();
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.map(order => {
+    if (isCEO || adminData?.vip) return order;
+    const myItems = order.items ? order.items.filter((item: any) => item.vendor === adminData?.email) : [];
+    return { ...order, items: myItems };
+  }).filter(order => {
     // Hide soft-deleted orders from admin view
     if (order.deleted) return false;
+    // Hide order if the vendor doesn't have any items in it
+    if (!isCEO && !adminData?.vip && (!order.items || order.items.length === 0)) return false;
 
     const matchesSearch =
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      (order.items && order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase())));
 
     let matchesFilter = true;
     if (filter === 'normal' || filter === 'installment') {

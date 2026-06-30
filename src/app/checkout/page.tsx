@@ -714,7 +714,8 @@ export default function Checkout() {
                     quantity: item.quantity,
                     image: item.image,
                     size: dbProducts[item.id]?.size || item.size || 'medium',
-                    category: item.category
+                    category: item.category,
+                    vendor: dbProducts[item.id]?.vendor || null
                   })),
                   totalAmount: finalTotalAmount,
                   shippingFee: shippingCost > 0 ? shippingCost : 0,

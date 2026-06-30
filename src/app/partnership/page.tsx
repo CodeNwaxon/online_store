@@ -45,6 +45,10 @@ export default function PartnershipPage() {
   const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalItems: 0, totalPurchase: 0, partnerProfit: 0 });
 
+  // Top Partners State
+  const [topPartners, setTopPartners] = useState<any[]>([]);
+  const [showTopPartners, setShowTopPartners] = useState(false);
+
   // Dark Mode State — hydrate from localStorage on mount
   useHydrateTheme();
   const { isPartnershipDarkMode: isDarkMode, setIsPartnershipDarkMode: setIsDarkMode } = useThemeStore();
@@ -59,6 +63,38 @@ export default function PartnershipPage() {
         setLoading(false);
       }
     });
+
+    const fetchTopPartners = async () => {
+      try {
+        const q = query(collection(db, 'partners'), where('status', '==', 'approved'));
+        const snap = await getDocs(q);
+        const allPartners = snap.docs.map(d => d.data());
+
+        // Filter out partners with 0 referrals AND 0 earnings
+        const activePartners = allPartners.filter(partner =>
+          (partner.referralCount || 0) > 0 || (partner.totalEarnings || 0) > 0
+        );
+
+        activePartners.sort((a, b) => {
+          const earnDiff = (b.totalEarnings || 0) - (a.totalEarnings || 0);
+          if (earnDiff !== 0) return earnDiff;
+
+          const refDiff = (b.referralCount || 0) - (a.referralCount || 0);
+          if (refDiff !== 0) return refDiff;
+
+          const timeA = a.lastEarningAt ? new Date(a.lastEarningAt).getTime() : 0;
+          const timeB = b.lastEarningAt ? new Date(b.lastEarningAt).getTime() : 0;
+          return timeB - timeA;
+        });
+
+        // Take top 5 from active partners only
+        setTopPartners(activePartners.slice(0, 5));
+      } catch (err) {
+        console.error('Error fetching top partners', err);
+      }
+    };
+    fetchTopPartners();
+
     return () => unsub();
   }, []);
 
@@ -280,6 +316,50 @@ export default function PartnershipPage() {
     </button>
   );
 
+  const TopPartnersSection = () => {
+    if (topPartners.length === 0) return null;
+    return (
+      <div className="w-full max-w-4xl mx-auto mt-12 mb-8 px-4">
+        <button
+          onClick={() => setShowTopPartners(!showTopPartners)}
+          className={`w-full py-4 px-6 rounded-xl font-bold flex items-center justify-between transition-colors shadow-md ${isDarkMode ? 'bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800' : 'bg-white text-slate-800 border border-slate-200 hover:bg-slate-50'}`}
+        >
+          <span className="flex items-center gap-3">
+            <FaCheckCircle className="text-primary" /> Top Earning Partners
+          </span>
+          <span className="text-xl">{showTopPartners ? '-' : '+'}</span>
+        </button>
+
+        {showTopPartners && (
+          <div className={`mt-4 rounded-xl shadow-lg border overflow-hidden animate-in slide-in-from-top-4 ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'}`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className={`text-xs uppercase font-bold border-b ${isDarkMode ? 'bg-zinc-950 text-zinc-500 border-zinc-800' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                  <tr>
+                    <th className="px-6 py-4">Rank</th>
+                    <th className="px-6 py-4">Partner Email</th>
+                    <th className="px-6 py-4 text-center">Referrals</th>
+                    <th className="px-6 py-4 text-right">Total Earnings</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-zinc-800' : 'divide-slate-100'}`}>
+                  {topPartners.map((partner, idx) => (
+                    <tr key={idx} className={`transition-colors ${isDarkMode ? 'hover:bg-zinc-800/50' : 'hover:bg-slate-50/50'}`}>
+                      <td className="px-6 py-4 font-black text-primary">#{idx + 1}</td>
+                      <td className={`px-6 py-4 font-semibold ${isDarkMode ? 'text-zinc-200' : 'text-slate-800'}`}>{partner.email}</td>
+                      <td className={`px-6 py-4 text-center font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>{partner.referralCount || 0}</td>
+                      <td className={`px-6 py-4 text-right font-black ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(partner.totalEarnings || 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // --- UNAUTHENTICATED OR NO PARTNER DATA VIEW ---
   if (!partnerData) {
     return (
@@ -360,6 +440,7 @@ export default function PartnershipPage() {
             </div>
           </div>
         )}
+
       </div>
     );
   }
@@ -628,6 +709,8 @@ export default function PartnershipPage() {
             </div>
           )}
         </div>
+
+        <TopPartnersSection />
 
       </div>
     </div>

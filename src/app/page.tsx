@@ -470,9 +470,9 @@ export default function Home() {
             {/* Cosmetics */}
             <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-pink-100 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-tr from-pink-900/80 to-pink-600/40 z-10" />
-                <Image src={categoriesExplorer.cosmetics.image || "/images/placeholder.png"} alt="Cosmetics" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
-                <FaBoxes className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-pink-800 via-rose-500 to-pink-400 z-0" />
+                <Image src={categoriesExplorer.cosmetics.image || "/images/placeholder.png"} alt="Cosmetics" fill className="object-contain z-10 group-hover:scale-110 transition-transform duration-700" />
+                <FaBoxes className="relative z-20 text-white/60 blur-sm w-24 h-24 max-md:w-12 max-md:h-12" />
               </div>
               <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
                 <div>
@@ -490,9 +490,9 @@ export default function Home() {
             {/* Wears */}
             <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-purple-100 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/80 to-purple-600/40 z-10" />
-                <Image src={categoriesExplorer.wears.image || "/images/placeholder.png"} alt="Wears" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
-                <FaUserTie className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-purple-800 via-fuchsia-500 to-purple-400 z-0" />
+                <Image src={categoriesExplorer.wears.image || "/images/placeholder.png"} alt="Wears" fill className="object-contain z-10 group-hover:scale-110 transition-transform duration-700" />
+                <FaUserTie className="relative z-20 text-white/60 blur-sm w-24 h-24 max-md:w-12 max-md:h-12" />
               </div>
               <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
                 <div>
@@ -510,9 +510,9 @@ export default function Home() {
             {/* Toilet & Kitchen */}
             <div className="bg-white rounded-md md:rounded-2xl overflow-hidden shadow-lg border border-slate-100 group flex flex-col transition-all hover:shadow-xl hover:-translate-y-1">
               <div className="relative h-64 max-md:h-32 bg-teal-100 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-tr from-teal-900/80 to-teal-600/40 z-10" />
-                <Image src={categoriesExplorer.toiletKitchen.image || "/images/placeholder.png"} alt="Toilet & Kitchen" fill className="object-cover md:object-contain opacity-50 group-hover:scale-110 transition-transform duration-700" />
-                <FaBoxes className="relative z-20 text-white opacity-80 w-20 h-20 max-md:w-10 max-md:h-10" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-teal-800 via-emerald-500 to-teal-400 z-0" />
+                <Image src={categoriesExplorer.toiletKitchen.image || "/images/placeholder.png"} alt="Toilet & Kitchen" fill className="object-contain z-10 group-hover:scale-110 transition-transform duration-700" />
+                <FaBoxes className="relative z-20 text-white/60 blur-sm w-24 h-24 max-md:w-12 max-md:h-12" />
               </div>
               <div className="p-8 max-md:p-4 flex flex-col flex-1 text-center items-center justify-between">
                 <div>

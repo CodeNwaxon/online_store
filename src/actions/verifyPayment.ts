@@ -165,6 +165,25 @@ export async function verifyAndFulfillOrder(
         previousReferralCode = phoneQuery.docs[0].data().referralCode || previousReferralCode;
       }
 
+      // ALWAYS map items to include rdpPrice and vendor
+      let totalProfitForReferral = 0;
+      const itemsWithCostAndVendor: any[] = [];
+      for (const item of orderData.items) {
+        const sellPrice = item.price || 0;
+        const collectionName = item.category === 'Food' ? 'foods' : 'products';
+        const productDoc = await transaction.get(adminDb.collection(collectionName).doc(item.id));
+        const rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
+        const vendorEmail = productDoc.exists ? (productDoc.data()?.vendor || null) : (item.vendor || null);
+        totalProfitForReferral += Math.max(0, sellPrice - rdpPrice) * item.quantity;
+        
+        itemsWithCostAndVendor.push({
+          ...item,
+          rdpPrice,
+          vendor: vendorEmail
+        });
+      }
+      orderData.items = itemsWithCostAndVendor;
+
       let finalReferralCode = orderData.referralCode;
       let partnerCutPercentage = 50;
 
@@ -199,29 +218,15 @@ export async function verifyAndFulfillOrder(
              // Calculate total profit and earnings
              let totalProfit = 0;
              
-             // We need to fetch rdpPrice for each item because orderData only has selling price
-             const itemsWithCost: any[] = [];
-             for (const item of orderData.items) {
-               const sellPrice = item.price || 0;
-               const collectionName = item.category === 'Food' ? 'foods' : 'products';
-               const productDoc = await transaction.get(adminDb.collection(collectionName).doc(item.id));
-               const rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
-               totalProfit += Math.max(0, sellPrice - rdpPrice) * item.quantity;
-               
-               itemsWithCost.push({
-                 ...item,
-                 rdpPrice
-               });
-             }
+             // The items mapping has been moved above so it happens for all orders.
              
-             // Update orderData items with rdpPrice so public dashboard can see it
-             orderData.items = itemsWithCost;
+             const partnerEarnings = totalProfitForReferral * (partnerCutPercentage / 100);
              
-             const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
-             
-             // Increment partner's totalEarnings
+             // Increment partner's totalEarnings and referral counts
              transaction.update(partnerDoc.ref, {
-               totalEarnings: FieldValue.increment(partnerEarnings)
+               totalEarnings: FieldValue.increment(partnerEarnings),
+               referralCount: FieldValue.increment(1),
+               lastEarningAt: new Date().toISOString()
              });
            }
          }
@@ -450,7 +455,9 @@ export async function verifyAndCreateInstallment(
             const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
             
             transaction.update(partnerDoc.ref, {
-              totalEarnings: FieldValue.increment(partnerEarnings)
+              totalEarnings: FieldValue.increment(partnerEarnings),
+              referralCount: FieldValue.increment(1),
+              lastEarningAt: new Date().toISOString()
             });
           }
         }
@@ -466,6 +473,7 @@ export async function verifyAndCreateInstallment(
         productName: data.productName,
         productCategory: data.productCategory,
         productImage: data.productImage,
+        vendor: productDoc.data()?.vendor || null,
         basePrice: realProductPrice,
         rdpPrice: rdpPrice,
         shippingFee: 0,
@@ -672,6 +680,7 @@ export async function verifyAndProcessInstallmentPayment(
               price: loan.totalAmount,
               quantity: 1,
               image: loan.productImage,
+              vendor: loan.vendor || null,
             },
           ],
           totalAmount: loan.totalAmount + (data.isLastPayment ? clientShippingFee : 0),

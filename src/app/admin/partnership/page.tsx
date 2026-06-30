@@ -24,6 +24,10 @@ export default function AdminPartnership() {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [loading, setLoading] = useState(true);
 
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOption, setFilterOption] = useState('all');
+
   // Settings state
   const [globalPercentage, setGlobalPercentage] = useState<number>(50);
   const [vipPercentage, setVipPercentage] = useState<number>(20);
@@ -171,7 +175,27 @@ export default function AdminPartnership() {
   const pendingPartners = partners.filter(p => p.status === 'pending');
   const approvedPartners = partners.filter(p => p.status === 'approved');
 
-  const displayedPartners = activeTab === 'pending' ? pendingPartners : approvedPartners;
+  let baseList = activeTab === 'pending' ? pendingPartners : approvedPartners;
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    baseList = baseList.filter(p => 
+      (p.email && p.email.toLowerCase().includes(q)) ||
+      (p.accountName && p.accountName.toLowerCase().includes(q)) ||
+      (p.phoneNumber && p.phoneNumber.toLowerCase().includes(q)) ||
+      (p.referralCode && p.referralCode.toLowerCase().includes(q))
+    );
+  }
+
+  if (filterOption === 'highest_paid') {
+    baseList = [...baseList].sort((a, b) => (b.totalEarnings || 0) - (a.totalEarnings || 0));
+  } else if (filterOption === 'vips') {
+    baseList = baseList.filter(p => p.isVip);
+  } else if (filterOption === 'non_vips') {
+    baseList = baseList.filter(p => !p.isVip);
+  }
+
+  const displayedPartners = baseList;
 
   return (
     <AdminGuard>
@@ -304,6 +328,27 @@ export default function AdminPartnership() {
           >
             Registered Partners
           </button>
+        </div>
+
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col md:flex-row gap-4 mb-2">
+          <input
+            type="text"
+            placeholder="Search by email, name, phone, or code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 p-3 rounded-md border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
+          />
+          <select
+            value={filterOption}
+            onChange={(e) => setFilterOption(e.target.value)}
+            className="p-3 rounded-md border border-border bg-background text-sm min-w-[200px] outline-none focus:border-primary transition-colors font-semibold"
+          >
+            <option value="all">All Partners</option>
+            <option value="highest_paid">Highest Paid</option>
+            <option value="vips">VIPs Only</option>
+            <option value="non_vips">Non-VIPs Only</option>
+          </select>
         </div>
 
         {/* List Content */}
