@@ -13,6 +13,7 @@ export interface AdminData {
   assignedRoutes: string[];
   name?: string;
   image?: string;
+  vip?: boolean;
 }
 
 export function useAdmin() {
@@ -21,7 +22,7 @@ export function useAdmin() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubAdmin: () => void = () => {};
+    let unsubAdmin: () => void = () => { };
 
     const unsubAuth = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
@@ -36,7 +37,7 @@ export function useAdmin() {
           providerId: authUser.providerData[0]?.providerId || 'password',
           lastSeen: new Date().toISOString()
         }, { merge: true });
-        
+
         // Realtime listener for the admin document
         unsubAdmin = onSnapshot(doc(db, 'admins', authUser.uid), async (docSnap) => {
           if (docSnap.exists()) {
@@ -92,11 +93,11 @@ export function useAdmin() {
     };
   }, []);
 
-  return { 
-    user, 
-    adminData, 
-    loading, 
+  return {
+    user,
+    adminData,
+    loading,
     isCEO: adminData?.role === 'CEO',
-    isAdmin: !!adminData 
+    isAdmin: !!adminData
   };
 }

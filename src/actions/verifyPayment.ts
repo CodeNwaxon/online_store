@@ -56,6 +56,7 @@ interface OrderItem {
   image: string;
   size?: string;
   category?: string;
+  vendor?: string;
 }
 
 interface OrderData {
@@ -78,13 +79,13 @@ export async function verifyAndFulfillOrder(
   // Step 0: Fetch Pending Transaction
   const pendingTxRef = adminDb.collection('pending_transactions').doc(reference);
   const pendingTxSnap = await pendingTxRef.get();
-  
+
   if (!pendingTxSnap.exists) {
     return { success: false, error: 'Transaction record not found.' };
   }
 
   const pendingTx = pendingTxSnap.data()!;
-  
+
   // Idempotency: If already completed, just return success and the orderId
   if (pendingTx.status === 'completed') {
     return { success: true, orderId: pendingTx.orderId, orderData: pendingTx.data };
@@ -144,7 +145,7 @@ export async function verifyAndFulfillOrder(
       if (!txDoc.exists) {
         throw new Error('Transaction record not found during finalization.');
       }
-      
+
       const currentTxData = txDoc.data()!;
       if (currentTxData.status === 'completed') {
         return { success: true, orderId: currentTxData.orderId, orderData: currentTxData.data };
@@ -153,10 +154,10 @@ export async function verifyAndFulfillOrder(
       // Check for returning customer (by email or phone)
       let isReturningCustomer = false;
       let previousReferralCode: string | null = null;
-      
+
       const emailQuery = await transaction.get(adminDb.collection('orders').where('email', '==', orderData.email).limit(1));
       const phoneQuery = await transaction.get(adminDb.collection('orders').where('phone', '==', orderData.phone).limit(1));
-      
+
       if (!emailQuery.empty) {
         isReturningCustomer = true;
         previousReferralCode = emailQuery.docs[0].data().referralCode || previousReferralCode;
@@ -175,7 +176,7 @@ export async function verifyAndFulfillOrder(
         const rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
         const vendorEmail = productDoc.exists ? (productDoc.data()?.vendor || null) : (item.vendor || null);
         totalProfitForReferral += Math.max(0, sellPrice - rdpPrice) * item.quantity;
-        
+
         itemsWithCostAndVendor.push({
           ...item,
           rdpPrice,
@@ -192,44 +193,44 @@ export async function verifyAndFulfillOrder(
       }
 
       if (finalReferralCode) {
-         // Verify partner and fetch percentages
-         const partnersQuery = await transaction.get(adminDb.collection('partners').where('referralCode', '==', finalReferralCode).where('status', '==', 'approved').limit(1));
-         
-         if (partnersQuery.empty) {
-           finalReferralCode = null;
-         } else {
-           const partnerDoc = partnersQuery.docs[0];
-           const partnerData = partnerDoc.data();
-           
-           if (isReturningCustomer && !partnerData.isVip) {
-             // Regular partners do not get commission for returning customers
-             finalReferralCode = null;
-           } else {
-             // Fetch percentages
-             const settingsDoc = await transaction.get(adminDb.collection('settings').doc('partnership'));
-             const settings = settingsDoc.exists ? settingsDoc.data()! : {};
-             
-             if (isReturningCustomer && partnerData.isVip) {
-               partnerCutPercentage = settings.vipPercentage !== undefined ? settings.vipPercentage : 20;
-             } else {
-               partnerCutPercentage = settings.globalPercentage !== undefined ? settings.globalPercentage : 50;
-             }
-             
-             // Calculate total profit and earnings
-             let totalProfit = 0;
-             
-             // The items mapping has been moved above so it happens for all orders.
-             
-             const partnerEarnings = totalProfitForReferral * (partnerCutPercentage / 100);
-             
-             // Increment partner's totalEarnings and referral counts
-             transaction.update(partnerDoc.ref, {
-               totalEarnings: FieldValue.increment(partnerEarnings),
-               referralCount: FieldValue.increment(1),
-               lastEarningAt: new Date().toISOString()
-             });
-           }
-         }
+        // Verify partner and fetch percentages
+        const partnersQuery = await transaction.get(adminDb.collection('partners').where('referralCode', '==', finalReferralCode).where('status', '==', 'approved').limit(1));
+
+        if (partnersQuery.empty) {
+          finalReferralCode = null;
+        } else {
+          const partnerDoc = partnersQuery.docs[0];
+          const partnerData = partnerDoc.data();
+
+          if (isReturningCustomer && !partnerData.isVip) {
+            // Regular partners do not get commission for returning customers
+            finalReferralCode = null;
+          } else {
+            // Fetch percentages
+            const settingsDoc = await transaction.get(adminDb.collection('settings').doc('partnership'));
+            const settings = settingsDoc.exists ? settingsDoc.data()! : {};
+
+            if (isReturningCustomer && partnerData.isVip) {
+              partnerCutPercentage = settings.vipPercentage !== undefined ? settings.vipPercentage : 20;
+            } else {
+              partnerCutPercentage = settings.globalPercentage !== undefined ? settings.globalPercentage : 50;
+            }
+
+            // Calculate total profit and earnings
+            let totalProfit = 0;
+
+            // The items mapping has been moved above so it happens for all orders.
+
+            const partnerEarnings = totalProfitForReferral * (partnerCutPercentage / 100);
+
+            // Increment partner's totalEarnings and referral counts
+            transaction.update(partnerDoc.ref, {
+              totalEarnings: FieldValue.increment(partnerEarnings),
+              referralCount: FieldValue.increment(1),
+              lastEarningAt: new Date().toISOString()
+            });
+          }
+        }
       }
 
       const orderRef = adminDb.collection('orders').doc();
@@ -372,7 +373,7 @@ export async function verifyAndCreateInstallment(
       if (!txDoc.exists) {
         throw new Error('Transaction record not found during finalization.');
       }
-      
+
       const currentTxData = txDoc.data()!;
       if (currentTxData.status === 'completed') {
         return { success: true };
@@ -384,7 +385,7 @@ export async function verifyAndCreateInstallment(
         .where('userEmail', '==', data.userEmail)
         .where('status', 'in', ['active', 'cancelling']);
       const existingSnap = await transaction.get(existingLoansQuery);
-      
+
       if (!existingSnap.empty) {
         throw new Error('You already have an active installment plan.');
       }
@@ -407,7 +408,7 @@ export async function verifyAndCreateInstallment(
       // Handle Referral Logic if applicable
       let isReturningCustomer = false;
       let previousReferralCode: string | null = null;
-      
+
       const emailQuery = await transaction.get(adminDb.collection('installments').where('userEmail', '==', data.userEmail).limit(1));
       if (!emailQuery.empty) {
         isReturningCustomer = true;
@@ -436,24 +437,24 @@ export async function verifyAndCreateInstallment(
         } else {
           const partnerDoc = partnersQuery.docs[0];
           const partnerData = partnerDoc.data();
-          
+
           if (isReturningCustomer && !partnerData.isVip) {
             finalReferralCode = null;
           } else {
             const settingsDoc = await transaction.get(adminDb.collection('settings').doc('partnership'));
             const settings = settingsDoc.exists ? settingsDoc.data()! : {};
-            
+
             if (isReturningCustomer && partnerData.isVip) {
               partnerCutPercentage = settings.vipPercentage !== undefined ? settings.vipPercentage : 20;
             } else {
               partnerCutPercentage = settings.globalPercentage !== undefined ? settings.globalPercentage : 50;
             }
-            
+
             // Get rdpPrice or costPrice
             rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
             const totalProfit = Math.max(0, realProductPrice - rdpPrice);
             const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
-            
+
             transaction.update(partnerDoc.ref, {
               totalEarnings: FieldValue.increment(partnerEarnings),
               referralCount: FieldValue.increment(1),
@@ -622,7 +623,7 @@ export async function verifyAndProcessInstallmentPayment(
       if (!txDoc.exists) {
         throw new Error('Transaction record not found during finalization.');
       }
-      
+
       const currentTxData = txDoc.data()!;
       if (currentTxData.status === 'completed') {
         return { success: true };
