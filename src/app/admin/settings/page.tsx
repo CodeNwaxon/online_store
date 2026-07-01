@@ -29,16 +29,16 @@ export default function AdminSettings() {
 
   // Market Categories Explorer
   const [categoriesExplorer, setCategoriesExplorer] = useState({
-    toiletKitchen: { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
-    cosmetics: { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
-    wears: { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
+    toiletKitchen: { description: '', image: '' },
+    cosmetics: { description: '', image: '' },
+    wears: { description: '', image: '' },
   });
   
   const [ceUrlInputs, setCeUrlInputs] = useState({ toiletKitchen: '', cosmetics: '', wears: '' });
   const [ceUploading, setCeUploading] = useState({ toiletKitchen: false, cosmetics: false, wears: false });
 
-  // Track original data for dirty save (excluding warranty)
-  const [originalData, setOriginalData] = useState<any>(null);
+  // Track original data snapshot (JSON string) for dirty detection
+  const [originalData, setOriginalData] = useState<string | null>(null);
 
   // Passkey Overlay State
   const [showPasskeyOverlay, setShowPasskeyOverlay] = useState(false);
@@ -52,6 +52,45 @@ export default function AdminSettings() {
 3. If a product requires service, we will facilitate sending it to the manufacturer. This process may take some time for repairs and return.
 4. Returns/Exchanges: If a product is found to have a manufacturing defect within 2 days of purchase, it can be exchanged, provided it is in the exact condition it was purchased (including original packaging and accessories).`;
 
+  // Helper: build a normalized JSON snapshot for dirty comparison.
+  // Keys are always written in the same fixed order so JSON.stringify is stable
+  // regardless of the order Firestore returns them.
+  const buildSnapshot = (data: {
+    siteName: string;
+    footerMessage: string;
+    installmentBg: string;
+    phones: any[];
+    emails: any[];
+    addresses: any[];
+    socialLinks: any[];
+    categoriesExplorer: any;
+  }) => {
+    const ce = data.categoriesExplorer || {};
+    return JSON.stringify({
+      siteName: data.siteName || '',
+      footerMessage: data.footerMessage || '',
+      installmentBg: data.installmentBg || '',
+      phones: data.phones || [],
+      emails: data.emails || [],
+      addresses: data.addresses || [],
+      socialLinks: data.socialLinks || [],
+      // Explicitly reconstruct with fixed key order to avoid JSON.stringify key-order mismatch
+      categoriesExplorer: {
+        toiletKitchen: {
+          description: ce.toiletKitchen?.description || '',
+          image: ce.toiletKitchen?.image || '',
+        },
+        cosmetics: {
+          description: ce.cosmetics?.description || '',
+          image: ce.cosmetics?.image || '',
+        },
+        wears: {
+          description: ce.wears?.description || '',
+          image: ce.wears?.image || '',
+        },
+      },
+    });
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -59,53 +98,61 @@ export default function AdminSettings() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setSiteName(data.siteName || '');
-        setFooterMessage(data.footerMessage || '');
-        setInstallmentBg(data.installmentBg || '');
-        setPhones(data.phones || []);
-        setEmails(data.emails || []);
-        setAddresses(data.addresses || []);
-        setSocialLinks(data.socialLinks || []);
-        setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
-        if (data.categoriesExplorer) {
-          setCategoriesExplorer({
-            toiletKitchen: data.categoriesExplorer.toiletKitchen || { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
-            cosmetics: data.categoriesExplorer.cosmetics || { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
-            wears: data.categoriesExplorer.wears || { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
-          });
-        }
 
-        // Store snapshot for dirty check
-        setOriginalData(data);
+        const loadedSiteName = data.siteName || '';
+        const loadedFooterMessage = data.footerMessage || '';
+        const loadedInstallmentBg = data.installmentBg || '';
+        const loadedPhones = data.phones || [];
+        const loadedEmails = data.emails || [];
+        const loadedAddresses = data.addresses || [];
+        const loadedSocialLinks = data.socialLinks || [];
+        const rawCE = data.categoriesExplorer || {};
+
+        // Normalize to fixed structure — same shape used by buildSnapshot
+        const loadedCategoriesExplorer = {
+          toiletKitchen: {
+            description: rawCE.toiletKitchen?.description || '',
+            image: rawCE.toiletKitchen?.image || '',
+          },
+          cosmetics: {
+            description: rawCE.cosmetics?.description || '',
+            image: rawCE.cosmetics?.image || '',
+          },
+          wears: {
+            description: rawCE.wears?.description || '',
+            image: rawCE.wears?.image || '',
+          },
+        };
+
+        setSiteName(loadedSiteName);
+        setFooterMessage(loadedFooterMessage);
+        setInstallmentBg(loadedInstallmentBg);
+        setPhones(loadedPhones);
+        setEmails(loadedEmails);
+        setAddresses(loadedAddresses);
+        setSocialLinks(loadedSocialLinks);
+        setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
+        setCategoriesExplorer(loadedCategoriesExplorer);
+
+        // Baseline snapshot — uses same normalized structure as currentSnapshot
+        setOriginalData(buildSnapshot({
+          siteName: loadedSiteName,
+          footerMessage: loadedFooterMessage,
+          installmentBg: loadedInstallmentBg,
+          phones: loadedPhones,
+          emails: loadedEmails,
+          addresses: loadedAddresses,
+          socialLinks: loadedSocialLinks,
+          categoriesExplorer: loadedCategoriesExplorer,
+        }));
       }
     };
     fetchSettings();
   }, []);
 
-  // Dirty state calculation
-  const isDirty = JSON.stringify({
-    siteName,
-    footerMessage,
-    installmentBg,
-    phones,
-    emails,
-    addresses,
-    socialLinks,
-    categoriesExplorer
-  }) !== JSON.stringify({
-    siteName: originalData?.siteName || '',
-    footerMessage: originalData?.footerMessage || '',
-    installmentBg: originalData?.installmentBg || '',
-    phones: originalData?.phones || [],
-    emails: originalData?.emails || [],
-    addresses: originalData?.addresses || [],
-    socialLinks: originalData?.socialLinks || [],
-    categoriesExplorer: originalData?.categoriesExplorer || {
-      toiletKitchen: { description: 'Upgrade your home with our high-quality kitchenware and bathroom essentials designed for modern living.', image: '' },
-      cosmetics: { description: 'Discover our collection of premium beauty products, skincare routines, and authentic cosmetics.', image: '' },
-      wears: { description: 'Step out in style with our latest fashion collection featuring trendy clothes and elegant accessories.', image: '' },
-    }
-  });
+  // Dirty: compare live state JSON to the saved snapshot JSON
+  const currentSnapshot = buildSnapshot({ siteName, footerMessage, installmentBg, phones, emails, addresses, socialLinks, categoriesExplorer });
+  const isDirty = originalData !== null && currentSnapshot !== originalData;
 
   const handleSave = async () => {
     try {
@@ -121,8 +168,8 @@ export default function AdminSettings() {
       };
       await setDoc(doc(db, 'settings', 'general'), updatedData, { merge: true });
 
-      // Update originalData so the bar disappears
-      setOriginalData({ ...originalData, ...updatedData });
+      // Move baseline forward to what we just saved — dirty bar disappears immediately
+      setOriginalData(buildSnapshot(updatedData));
       toast.success('Settings updated successfully!');
     } catch (error) {
       toast.error('Failed to update settings.');
@@ -131,15 +178,16 @@ export default function AdminSettings() {
 
   const handleCancelChanges = () => {
     if (originalData) {
-      setSiteName(originalData.siteName || '');
-      setFooterMessage(originalData.footerMessage || '');
-      setInstallmentBg(originalData.installmentBg || '');
-      setPhones(originalData.phones || []);
-      setEmails(originalData.emails || []);
-      setAddresses(originalData.addresses || []);
-      setSocialLinks(originalData.socialLinks || []);
-      if (originalData.categoriesExplorer) {
-        setCategoriesExplorer(originalData.categoriesExplorer);
+      const parsed = JSON.parse(originalData);
+      setSiteName(parsed.siteName || '');
+      setFooterMessage(parsed.footerMessage || '');
+      setInstallmentBg(parsed.installmentBg || '');
+      setPhones(parsed.phones || []);
+      setEmails(parsed.emails || []);
+      setAddresses(parsed.addresses || []);
+      setSocialLinks(parsed.socialLinks || []);
+      if (parsed.categoriesExplorer) {
+        setCategoriesExplorer(parsed.categoriesExplorer);
       }
       toast('Changes discarded', { icon: '🔄' });
     }
@@ -163,8 +211,7 @@ export default function AdminSettings() {
         warrantyPolicy
       }, { merge: true });
 
-      // Update local original data for warranty specifically
-      setOriginalData({ ...originalData, warrantyPolicy });
+      // Warranty is excluded from dirty tracking — no snapshot update needed
 
       toast.success('Warranty policy updated!');
       setShowPasskeyOverlay(false);
@@ -625,20 +672,20 @@ export default function AdminSettings() {
 
       {/* DIRTY SAVE BAR */}
       {isDirty && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[650px] bg-card border border-primary shadow-2xl rounded-2xl md:rounded-full p-4 md:p-2 md:pl-6 flex flex-col md:flex-row gap-3 justify-between items-center z-[500] animate-in fade-in slide-in-from-bottom-4">
-          <p className="text-xs md:text-sm font-medium w-full text-center md:text-left">Site settings have unsaved changes</p>
-          <div className="flex gap-2 w-full md:w-auto justify-center">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[650px] bg-card border border-primary shadow-2xl rounded-2xl p-3 px-4 flex flex-row gap-2 justify-between items-center z-[500] animate-in fade-in slide-in-from-bottom-4 overflow-hidden">
+          <p className="text-xs font-medium truncate flex-1 min-w-0">Unsaved changes</p>
+          <div className="flex gap-2 shrink-0">
             <button
               onClick={handleCancelChanges}
-              className="flex-1 md:flex-none justify-center px-4 md:px-4 py-2 text-xs md:text-sm font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-2 border border-border md:border-none"
+              className="px-3 py-2 text-xs font-bold text-muted-foreground hover:bg-muted rounded-full transition-colors flex items-center gap-1.5 border border-border"
             >
-              <FaUndo size={12} /> Discard
+              <FaUndo size={10} /> Discard
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 md:flex-none justify-center px-6 md:px-6 py-2 text-xs md:text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow-lg flex items-center gap-2"
+              className="px-4 py-2 text-xs font-bold bg-primary text-white rounded-full hover:bg-primary/90 shadow flex items-center gap-1.5 whitespace-nowrap"
             >
-              <FaSave size={12} /> Update Now
+              <FaSave size={10} /> Update Now
             </button>
           </div>
         </div>

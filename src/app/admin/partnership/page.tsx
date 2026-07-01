@@ -39,6 +39,7 @@ export default function AdminPartnership() {
 
   // Modals state
   const [deletePartnerId, setDeletePartnerId] = useState<string | null>(null);
+  const [payOutstandingPartner, setPayOutstandingPartner] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // History State
@@ -124,8 +125,9 @@ export default function AdminPartnership() {
     }
   };
 
-  const handlePayOutstanding = async (partner: any) => {
-    if (!confirm('Mark all outstanding balance as paid?')) return;
+  const handlePayOutstanding = async () => {
+    const partner = payOutstandingPartner;
+    if (!partner) return;
     setActionLoading(true);
     try {
       const q = query(collection(db, 'orders'), where('referralCode', '==', partner.referralCode));
@@ -143,6 +145,7 @@ export default function AdminPartnership() {
       await batch.commit();
       
       toast.success('Outstanding balance marked as paid.');
+      setPayOutstandingPartner(null);
     } catch (error) {
       toast.error('Failed to pay outstanding.');
     } finally {
@@ -523,7 +526,7 @@ export default function AdminPartnership() {
                           </div>
                           <button
                             disabled={actionLoading || !partner.outstandingEarnings}
-                            onClick={() => handlePayOutstanding(partner)}
+                            onClick={() => setPayOutstandingPartner(partner)}
                             className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase hover:bg-green-200 transition-colors disabled:opacity-50"
                           >
                             Paid Outstanding
@@ -575,6 +578,40 @@ export default function AdminPartnership() {
           )}
         </section>
         
+        {/* Pay Outstanding Confirmation Modal */}
+        {payOutstandingPartner && (
+          <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+              <div className="w-16 h-16 bg-green-500/20 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FaCheck size={24} />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Mark as Paid?</h3>
+              <p className="text-sm text-muted-foreground mb-2">
+                You are about to mark all outstanding balance as paid for:
+              </p>
+              <p className="font-black text-base text-foreground mb-1">{payOutstandingPartner.accountName}</p>
+              <p className="text-2xl font-black text-green-600 mb-6">
+                ₦{(payOutstandingPartner.outstandingEarnings || 0).toLocaleString()}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPayOutstandingPartner(null)}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm border border-border hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePayOutstanding}
+                  disabled={actionLoading}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {actionLoading ? 'Processing...' : 'Yes, Mark Paid'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* History Overlay */}
         {selectedPartnerForHistory && (
           <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/80 p-4">
