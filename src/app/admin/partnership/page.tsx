@@ -12,7 +12,10 @@ import {
   getDoc,
   setDoc,
   query,
-  orderBy
+  orderBy,
+  where,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { toast, Toaster } from 'react-hot-toast';
 import { FaHandshake, FaCheck, FaTimes, FaTrash, FaUserTie, FaCog, FaLink, FaWhatsapp } from 'react-icons/fa';
@@ -37,6 +40,12 @@ export default function AdminPartnership() {
   // Modals state
   const [deletePartnerId, setDeletePartnerId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // History State
+  const [selectedPartnerForHistory, setSelectedPartnerForHistory] = useState<any>(null);
+  const [partnerHistory, setPartnerHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistoryPasskey, setShowHistoryPasskey] = useState(false);
 
   useEffect(() => {
     // Fetch settings
@@ -110,6 +119,103 @@ export default function AdminPartnership() {
       toast.success('Partner rejected.');
     } catch (error) {
       toast.error('Failed to reject partner.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePayOutstanding = async (partner: any) => {
+    if (!confirm('Mark all outstanding balance as paid?')) return;
+    setActionLoading(true);
+    try {
+      const q = query(collection(db, 'orders'), where('referralCode', '==', partner.referralCode));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (!data.partnerPaid) {
+          batch.update(d.ref, { partnerPaid: true });
+        }
+      });
+      
+      batch.update(doc(db, 'partners', partner.id), { outstandingEarnings: 0 });
+      await batch.commit();
+      
+      toast.success('Outstanding balance marked as paid.');
+    } catch (error) {
+      toast.error('Failed to pay outstanding.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openHistory = async (partner: any) => {
+    setSelectedPartnerForHistory(partner);
+    setHistoryLoading(true);
+    try {
+      const q = query(collection(db, 'orders'), where('referralCode', '==', partner.referralCode));
+      const snap = await getDocs(q);
+      const items: any[] = [];
+      snap.docs.forEach(d => {
+        const order = d.data();
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach((item: any) => {
+            const sellPrice = item.price || 0;
+            const costPrice = item.rdpPrice || item.costPrice || 0;
+            const profit = Math.max(0, sellPrice - costPrice);
+            const cutPct = order.partnerCutPercentage || 50;
+            const partnerCut = profit * (cutPct / 100);
+            items.push({
+              id: d.id,
+              name: item.name,
+              partnerCut,
+              partnerPaid: order.partnerPaid || false,
+              createdAt: order.createdAt
+            });
+          });
+        }
+      });
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPartnerHistory(items);
+    } catch (error) {
+      toast.error('Failed to load history.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleSuperDeleteHistory = async () => {
+    if (!ceoPasskey) return toast.error('CEO Password required.');
+    setActionLoading(true);
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const currentPasskey = settingsDoc.data()?.passkey || 'admin1234';
+
+      if (ceoPasskey !== currentPasskey) {
+        toast.error('Incorrect CEO Password.');
+        setActionLoading(false);
+        return;
+      }
+
+      // Delete only cleared transactions (where partnerPaid == true)
+      const q = query(collection(db, 'orders'), where('referralCode', '==', selectedPartnerForHistory.referralCode), where('partnerPaid', '==', true));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      snap.docs.forEach(d => {
+        batch.delete(d.ref); // Completely delete the order from Firestore
+      });
+      
+      await batch.commit();
+      
+      toast.success('Cleared history deleted from Firestore.');
+      setShowHistoryPasskey(false);
+      setCeoPasskey('');
+      // Refresh history view
+      openHistory(selectedPartnerForHistory);
+    } catch (error) {
+      toast.error('Failed to delete history.');
     } finally {
       setActionLoading(false);
     }
@@ -409,12 +515,28 @@ export default function AdminPartnership() {
                           <FaLink /> {partner.referralCode}
                         </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <div className="text-xs text-muted-foreground uppercase font-black tracking-wider">Earnings</div>
-                        <div className="text-sm font-bold text-green-600">
-                          ₦{(partner.totalEarnings || 0).toLocaleString()}
+                      <div className="flex justify-between items-center mt-2">
+                        <div className="text-xs text-muted-foreground uppercase font-black tracking-wider">Outstanding</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-bold text-green-600">
+                            ₦{(partner.outstandingEarnings || 0).toLocaleString()}
+                          </div>
+                          <button
+                            disabled={actionLoading || !partner.outstandingEarnings}
+                            onClick={() => handlePayOutstanding(partner)}
+                            className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase hover:bg-green-200 transition-colors disabled:opacity-50"
+                          >
+                            Paid Outstanding
+                          </button>
                         </div>
                       </div>
+                      
+                      <button
+                        onClick={() => openHistory(partner)}
+                        className="text-xs font-bold text-blue-600 underline text-right w-full mt-2"
+                      >
+                        View History
+                      </button>
                     </div>
                   )}
 
@@ -452,6 +574,75 @@ export default function AdminPartnership() {
             </div>
           )}
         </section>
+        
+        {/* History Overlay */}
+        {selectedPartnerForHistory && (
+          <div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/80 p-4">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-border">
+              <div className="p-6 border-b border-border flex justify-between items-center">
+                <h3 className="font-bold text-xl">
+                  History - {selectedPartnerForHistory.accountName}
+                </h3>
+                <button onClick={() => { setSelectedPartnerForHistory(null); setShowHistoryPasskey(false); setCeoPasskey(''); }} className="text-muted-foreground hover:text-foreground">
+                  <FaTimes size={20} />
+                </button>
+              </div>
+              
+              <div className="p-6 flex-1 overflow-y-auto">
+                {historyLoading ? (
+                  <div className="text-center py-10 opacity-50">Loading history...</div>
+                ) : partnerHistory.length === 0 ? (
+                  <div className="text-center py-10 opacity-50">No history found.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {partnerHistory.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-muted/30 border border-border">
+                        <div>
+                          <div className="font-bold text-sm truncate max-w-[200px] md:max-w-[300px]">{item.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div className={`font-black ${item.partnerPaid ? 'text-red-500' : 'text-green-500'}`}>
+                          ₦{(item.partnerCut || 0).toLocaleString()}
+                          <div className="text-[10px] uppercase text-right opacity-70">
+                            {item.partnerPaid ? 'Cleared' : 'Outstanding'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-6 border-t border-border bg-muted/20">
+                {!showHistoryPasskey ? (
+                  <button
+                    onClick={() => setShowHistoryPasskey(true)}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition-colors"
+                  >
+                    <FaTrash /> Super Delete Cleared History
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs font-bold text-red-500 uppercase">Enter CEO Password to clear all paid history permanently from Firestore</p>
+                    <input
+                      type="password"
+                      value={ceoPasskey}
+                      onChange={e => setCeoPasskey(e.target.value)}
+                      placeholder="CEO Password"
+                      className="w-full p-3 rounded-xl border border-border bg-background text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowHistoryPasskey(false)} className="flex-1 py-3 rounded-xl bg-muted font-bold text-sm">Cancel</button>
+                      <button disabled={actionLoading || !ceoPasskey} onClick={handleSuperDeleteHistory} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm disabled:opacity-50">
+                        {actionLoading ? 'Deleting...' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminGuard>
   );

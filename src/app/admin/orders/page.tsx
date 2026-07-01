@@ -388,7 +388,7 @@ export default function AdminOrders() {
               </div>
               <div className="flex flex-wrap gap-4 text-sm opacity-90 font-bold items-center">
                 <div className="flex items-center gap-2"><FaCalendarAlt /> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
-                <div className="flex items-center gap-2"><FaCreditCard /> ID: {selectedOrder.id.slice(-8).toUpperCase()}</div>
+                <div className="flex items-center gap-2"><FaCreditCard /> ID: {selectedOrder.id.substring(0, 10).toUpperCase()}</div>
                 {!selectedOrder.delivered ? (
                   <button
                     onClick={(e) => markAsDelivered(e, selectedOrder.id)}

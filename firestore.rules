@@ -93,7 +93,7 @@ service cloud.firestore {
                   || (request.auth != null && exists(/databases/$(database)/documents/partners/$(request.auth.uid)) && resource.data.referralCode == get(/databases/$(database)/documents/partners/$(request.auth.uid)).data.referralCode);
       allow create: if false; // Only the server (Admin SDK) can create orders
       allow update: if isAdmin();
-      allow delete: if isCEO();
+      allow delete: if isAdmin();
     }
 
     // Complaints

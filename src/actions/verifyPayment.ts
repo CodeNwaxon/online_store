@@ -226,6 +226,7 @@ export async function verifyAndFulfillOrder(
             // Increment partner's totalEarnings and referral counts
             transaction.update(partnerDoc.ref, {
               totalEarnings: FieldValue.increment(partnerEarnings),
+              outstandingEarnings: FieldValue.increment(partnerEarnings),
               referralCount: FieldValue.increment(1),
               lastEarningAt: new Date().toISOString()
             });
@@ -252,6 +253,7 @@ export async function verifyAndFulfillOrder(
         verifiedByServer: true,
         referralCode: finalReferralCode || null,
         partnerCutPercentage: finalReferralCode ? partnerCutPercentage : null,
+        partnerPaid: finalReferralCode ? false : null,
         createdAt: new Date().toISOString(),
       });
 
@@ -457,6 +459,7 @@ export async function verifyAndCreateInstallment(
 
             transaction.update(partnerDoc.ref, {
               totalEarnings: FieldValue.increment(partnerEarnings),
+              outstandingEarnings: FieldValue.increment(partnerEarnings),
               referralCount: FieldValue.increment(1),
               lastEarningAt: new Date().toISOString()
             });
@@ -511,6 +514,7 @@ export async function verifyAndCreateInstallment(
         verifiedByServer: true,
         referralCode: finalReferralCode || null,
         partnerCutPercentage: finalReferralCode ? partnerCutPercentage : null,
+        partnerPaid: finalReferralCode ? false : null,
         createdAt: FieldValue.serverTimestamp(),
       });
 

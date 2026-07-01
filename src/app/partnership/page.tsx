@@ -44,6 +44,11 @@ export default function PartnershipPage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalItems: 0, totalPurchase: 0, partnerProfit: 0 });
+  const [clearingHistory, setClearingHistory] = useState(false);
+  
+  // Confirmation Modals State
+  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
 
   // Top Partners State
   const [topPartners, setTopPartners] = useState<any[]>([]);
@@ -163,7 +168,8 @@ export default function PartnershipPage() {
               orderDate: order.createdAt,
               profit,
               partnerCut,
-              cutPct
+              cutPct,
+              partnerPaid: order.partnerPaid || false
             });
 
             totalPurchase += sellPrice;
@@ -172,10 +178,18 @@ export default function PartnershipPage() {
         }
       });
 
-      setPurchasedItems(items);
+      // Filter out items that the partner has hidden (Super Delete), except if they are outstanding
+      const partnerHiddenAt = partnerData?.partnerHiddenAt ? new Date(partnerData.partnerHiddenAt).getTime() : 0;
+      const visibleItems = items.filter(item => {
+        if (!item.partnerPaid) return true; // always show outstanding
+        const orderTime = new Date(item.orderDate).getTime();
+        return orderTime > partnerHiddenAt;
+      });
+
+      setPurchasedItems(visibleItems);
       setStats({
-        totalItems: items.length,
-        totalPurchase: totalPurchase,
+        totalItems: visibleItems.length,
+        totalPurchase: totalPurchase, // Or calculate only visible? Wait, user wants total as is, let's keep total for stats
         partnerProfit: totalPartner
       });
     } catch (error) {
@@ -283,12 +297,29 @@ export default function PartnershipPage() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!confirm('Are you sure you want to delete your partnership account? This will permanently remove your referral code, link, and earnings data.')) return;
+  const handleClearHistory = async () => {
+    setClearingHistory(true);
+    try {
+      await setDoc(doc(db, 'partners', user.uid), {
+        partnerHiddenAt: new Date().toISOString()
+      }, { merge: true });
+      setPartnerData({ ...partnerData, partnerHiddenAt: new Date().toISOString() });
+      toast.success('History cleared successfully.');
+      setShowClearHistoryConfirm(false);
+      // Refresh list
+      loadReferralSales(partnerData.referralCode);
+    } catch (error) {
+      toast.error('Failed to clear history.');
+    } finally {
+      setClearingHistory(false);
+    }
+  };
 
+  const handleDeleteAccount = async () => {
     try {
       await deleteDoc(doc(db, 'partners', user.uid));
       setPartnerData(null);
+      setShowDeleteAccountConfirm(false);
       toast.success('Partnership account deleted.');
     } catch (error) {
       toast.error('Failed to delete account.');
@@ -539,7 +570,7 @@ export default function PartnershipPage() {
               <p className={`text-sm md:text-base ${isDarkMode ? 'text-zinc-400' : 'text-slate-400'}`}>Welcome back, <span className="text-white font-semibold">{partnerData.accountName}</span></p>
             </div>
           </div>
-          <button onClick={handleDeleteAccount} className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 font-bold bg-white/5 px-4 py-2 rounded-lg transition-colors border border-red-500/20">
+          <button onClick={() => setShowDeleteAccountConfirm(true)} className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 font-bold bg-white/5 px-4 py-2 rounded-lg transition-colors border border-red-500/20">
             <FaTrash /> Delete Account
           </button>
         </div>
@@ -627,8 +658,14 @@ export default function PartnershipPage() {
           </div>
           <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center relative overflow-hidden ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
             <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 ${isDarkMode ? 'bg-primary/20' : 'bg-green-500/10'}`} />
-            <p className={`text-sm font-bold uppercase mb-2 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Your Total Earnings</p>
-            <p className={`text-4xl font-black relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{stats.partnerProfit.toLocaleString()}</p>
+            
+            <p className={`text-xs font-bold uppercase mb-1 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Your Total Earnings</p>
+            <p className={`text-lg font-bold relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{stats.partnerProfit.toLocaleString()}</p>
+            
+            <div className="w-full h-px bg-border my-3 relative z-10"></div>
+            
+            <p className={`text-sm font-bold uppercase mb-2 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Outstanding</p>
+            <p className={`text-4xl font-black relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(partnerData.outstandingEarnings || 0).toLocaleString()}</p>
           </div>
         </div>
 
@@ -672,8 +709,17 @@ export default function PartnershipPage() {
 
         {/* Table */}
         <div className={`rounded-2xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
-          <div className={`p-6 border-b ${isDarkMode ? 'border-zinc-800' : 'border-slate-100'}`}>
+          <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? 'border-zinc-800' : 'border-slate-100'}`}>
             <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Sales History</h3>
+            {purchasedItems.some(i => i.partnerPaid) && (
+              <button
+                disabled={clearingHistory}
+                onClick={() => setShowClearHistoryConfirm(true)}
+                className="text-xs bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
+              >
+                <FaTrash /> Super Delete
+              </button>
+            )}
           </div>
           {purchasedItems.length === 0 ? (
             <div className={`p-12 text-center ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>
@@ -692,7 +738,7 @@ export default function PartnershipPage() {
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-zinc-800' : 'divide-slate-100'}`}>
                   {purchasedItems.map((item, idx) => (
-                    <tr key={idx} className={`transition-colors ${isDarkMode ? 'hover:bg-zinc-800/50' : 'hover:bg-slate-50/50'}`}>
+                    <tr key={idx} className={`transition-colors ${isDarkMode ? 'hover:bg-zinc-800/50' : 'hover:bg-slate-50/50'} ${item.partnerPaid ? 'opacity-50 grayscale' : ''}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img src={item.image || '/images/placeholder.png'} alt={item.name} className={`w-10 h-10 rounded-md object-cover border ${isDarkMode ? 'border-zinc-700' : 'border-slate-200'}`} />
@@ -701,7 +747,10 @@ export default function PartnershipPage() {
                       </td>
                       <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>₦{(item.price || 0).toLocaleString()}</td>
                       <td className={`px-6 py-4 font-medium ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>{item.cutPct || 50}%</td>
-                      <td className={`px-6 py-4 text-right font-black ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(item.partnerCut || 0).toLocaleString()}</td>
+                      <td className={`px-6 py-4 text-right font-black ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>
+                        ₦{(item.partnerCut || 0).toLocaleString()}
+                        {item.partnerPaid && <div className="text-[10px] text-red-500 uppercase tracking-widest mt-1">Paid</div>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -713,6 +762,49 @@ export default function PartnershipPage() {
         <TopPartnersSection />
 
       </div>
+
+      {/* Super Delete History Confirmation Modal */}
+      {showClearHistoryConfirm && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm animate-in fade-in">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-border'}`}>
+            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaTrash size={24} />
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Super Delete History?</h3>
+            <p className={`text-sm mb-6 ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
+              Are you sure you want to clear your paid sales history? This only hides it from your view.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowClearHistoryConfirm(false)} className={`flex-1 py-3 rounded-xl font-bold text-sm border ${isDarkMode ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'}`}>Cancel</button>
+              <button onClick={handleClearHistory} disabled={clearingHistory} className={`flex-1 py-3 rounded-xl font-bold text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50`}>
+                {clearingHistory ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteAccountConfirm && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm animate-in fade-in">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-border'}`}>
+            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaTrash size={24} />
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Delete Partnership?</h3>
+            <p className={`text-sm mb-6 ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
+              Are you sure you want to delete your partnership account? This will permanently remove your referral code, link, and earnings data.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteAccountConfirm(false)} className={`flex-1 py-3 rounded-xl font-bold text-sm border ${isDarkMode ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'}`}>Cancel</button>
+              <button onClick={handleDeleteAccount} className={`flex-1 py-3 rounded-xl font-bold text-sm bg-red-600 text-white hover:bg-red-700`}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
