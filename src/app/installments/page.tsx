@@ -22,8 +22,10 @@ function InstallmentsContent() {
   const [selectedGroup, setSelectedGroup] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [instSettings, setInstSettings] = useState<any>({
-    shortPlan: { months: 3, increase: 20 },
-    longPlan: { months: 4, increase: 30 },
+    plans: [
+      { months: 3, increase: 20 },
+      { months: 4, increase: 30 }
+    ],
     gracePeriodDays: 5,
     lateFeePercent: 5,
     withdrawalFeePercent: 15,
@@ -70,7 +72,14 @@ function InstallmentsContent() {
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'installments'), (doc) => {
       if (doc.exists()) {
-        setInstSettings(doc.data());
+        const data = doc.data();
+        let plans = data.plans;
+        if (!plans || plans.length === 0) {
+          plans = [];
+          if (data.shortPlan) plans.push(data.shortPlan);
+          if (data.longPlan) plans.push(data.longPlan);
+        }
+        setInstSettings({ ...data, plans });
       }
     });
 
@@ -255,8 +264,12 @@ function InstallmentsContent() {
             <div>
               <h3 className="font-bold mb-2">Flexible Plans</h3>
               <p className="text-sm text-muted-foreground">
-                Choose between <strong>{instSettings.shortPlan.months} months</strong> ({Math.round(instSettings.shortPlan.increase)}% increase)
-                or <strong>{instSettings.longPlan.months} months</strong> ({Math.round(instSettings.longPlan.increase)}% increase).
+                Choose between {instSettings.plans?.map((plan: any, index: number) => (
+                  <span key={index}>
+                    <strong>{plan.months} months</strong> ({Math.round(plan.increase)}% increase)
+                    {index < (instSettings.plans.length - 2) ? ', ' : index === (instSettings.plans.length - 2) ? ' or ' : '.'}
+                  </span>
+                ))}
               </p>
             </div>
             <div>
@@ -350,7 +363,7 @@ function InstallmentsContent() {
                   />
                 </div>
               </div>
-              <div className="p-6 flex flex-col flex-1">
+              <div className="p-6 flex flex-col flex-1 items-center text-center">
                 <h3 className="font-bold mb-2">{product.name}</h3>
                 {product.group && (product.group.toUpperCase().includes('PHONE') || product.group.toUpperCase().includes('PHONES') || product.group.toUpperCase().includes('LAPTOP') || product.group.toUpperCase().includes('LAPTOPS')) && product.ramRom && (
                   <div className="text-[0.65rem] text-muted-foreground uppercase tracking-wider -mt-1 mb-2 font-bold">
@@ -361,19 +374,16 @@ function InstallmentsContent() {
                   {formatCurrency(product.price)}
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 mt-auto">
-                  <button
-                    onClick={() => handleSelectPlan(product, instSettings.shortPlan.months)}
-                    className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
-                  >
-                    {instSettings.shortPlan.months} Months Plan
-                  </button>
-                  <button
-                    onClick={() => handleSelectPlan(product, instSettings.longPlan.months)}
-                    className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors"
-                  >
-                    {instSettings.longPlan.months} Months Plan
-                  </button>
+                <div className="flex flex-wrap justify-center gap-2 mt-auto w-full">
+                  {instSettings.plans?.map((plan: any, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSelectPlan(product, plan.months)}
+                      className="border border-border text-foreground hover:bg-muted text-xs p-2 rounded-md font-semibold transition-colors flex-1 min-w-[100px]"
+                    >
+                      {plan.months} Months Plan
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

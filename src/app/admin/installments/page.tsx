@@ -40,7 +40,8 @@ import {
   FaCalendarAlt,
   FaIdCard,
   FaHistory,
-  FaShoppingBag
+  FaShoppingBag,
+  FaPlus
 } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
@@ -126,7 +127,16 @@ export default function AdminInstallments() {
   const [showReceiptInput, setShowReceiptInput] = useState<string | null>(null);
 
   // Installment Settings State
-  const [instSettings, setInstSettings] = useState({
+  const [instSettings, setInstSettings] = useState<{
+    plans: { months: number, increase: number }[];
+    shortPlan: { months: number, increase: number };
+    longPlan: { months: number, increase: number };
+    [key: string]: any;
+  }>({
+    plans: [
+      { months: 3, increase: 20 },
+      { months: 4, increase: 30 }
+    ],
     shortPlan: { months: 3, increase: 20 },
     longPlan: { months: 4, increase: 30 },
     downpaymentThreshold: 1000000,
@@ -158,7 +168,14 @@ export default function AdminInstallments() {
     const loadSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'installments'));
       if (docSnap.exists()) {
-        setInstSettings(prev => ({ ...prev, ...docSnap.data() }));
+        const data = docSnap.data();
+        let plans = data.plans;
+        if (!plans || plans.length === 0) {
+          plans = [];
+          if (data.shortPlan) plans.push(data.shortPlan);
+          if (data.longPlan) plans.push(data.longPlan);
+        }
+        setInstSettings(prev => ({ ...prev, ...data, plans }));
       }
     };
     loadSettings();
@@ -232,8 +249,25 @@ export default function AdminInstallments() {
         } else if (actionType === 'deleteSettled') {
           await deleteDoc(doc(db, 'installments', id));
           toast.success('Record deleted.');
+        } else if (actionType === 'addPlan') {
+          setInstSettings(prev => ({
+            ...prev,
+            plans: [...prev.plans, { months: Math.max(...prev.plans.map(p => p.months || 0), 0) + 1, increase: 20 }]
+          }));
+          toast.success('New plan added. Please configure and save.');
+        } else if (actionType === 'deletePlan') {
+          const index = parseInt(id);
+          setInstSettings(prev => {
+            const newPlans = [...prev.plans];
+            newPlans.splice(index, 1);
+            return { ...prev, plans: newPlans };
+          });
+          toast.success('Plan deleted. Please save settings.');
         } else if (actionType === 'saveInstallmentSettings') {
-          await setDoc(doc(db, 'settings', 'installments'), instSettings);
+          const dataToSave = { ...instSettings };
+          if (dataToSave.plans.length > 0) dataToSave.shortPlan = dataToSave.plans[0];
+          if (dataToSave.plans.length > 1) dataToSave.longPlan = dataToSave.plans[1];
+          await setDoc(doc(db, 'settings', 'installments'), dataToSave);
           toast.success('Installment settings updated successfully!');
         }
         setShowPasskeyModal(null);
@@ -798,63 +832,60 @@ export default function AdminInstallments() {
             {activeSettingsTab === 'plans' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                    <h3 className="font-bold text-sm mb-4">Short-term Plan</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                        <input
-                          type="number"
-                          className="w-full bg-background border border-border rounded p-2 text-sm"
-                          value={instSettings.shortPlan.months || ''}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, months: isNaN(val) ? 0 : val } }));
-                          }}
-                        />
+                  {instSettings.plans.map((plan, index) => (
+                    <div key={index} className="p-4 bg-muted/30 rounded-lg border border-border relative">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-sm">Plan {index + 1}</h3>
+                        {instSettings.plans.length > 1 && (
+                          <button
+                            onClick={() => setShowPasskeyModal({ type: 'deletePlan', id: index.toString() })}
+                            className="text-secondary hover:bg-secondary/10 p-1.5 rounded transition-colors"
+                            title="Remove Plan"
+                          >
+                            <FaTrash size={12} />
+                          </button>
+                        )}
                       </div>
-                      <div>
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                        <input
-                          type="number"
-                          className="w-full bg-background border border-border rounded p-2 text-sm"
-                          value={instSettings.shortPlan.increase || ''}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            setInstSettings(prev => ({ ...prev, shortPlan: { ...prev.shortPlan, increase: isNaN(val) ? 0 : val } }));
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-lg border border-border">
-                    <h3 className="font-bold text-sm mb-4">Long-term Plan</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
-                        <input
-                          type="number"
-                          className="w-full bg-background border border-border rounded p-2 text-sm"
-                          value={instSettings.longPlan.months || ''}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, months: isNaN(val) ? 0 : val } }));
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
-                        <input
-                          type="number"
-                          className="w-full bg-background border border-border rounded p-2 text-sm"
-                          value={instSettings.longPlan.increase || ''}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            setInstSettings(prev => ({ ...prev, longPlan: { ...prev.longPlan, increase: isNaN(val) ? 0 : val } }));
-                          }}
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">Months</label>
+                          <input
+                            type="number"
+                            className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                            value={plan.months || ''}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              const newPlans = [...instSettings.plans];
+                              newPlans[index].months = isNaN(val) ? 0 : val;
+                              setInstSettings(prev => ({ ...prev, plans: newPlans }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground">Interest (%)</label>
+                          <input
+                            type="number"
+                            className="w-full bg-background border border-border rounded p-2 text-sm font-bold"
+                            value={plan.increase || ''}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              const newPlans = [...instSettings.plans];
+                              newPlans[index].increase = isNaN(val) ? 0 : val;
+                              setInstSettings(prev => ({ ...prev, plans: newPlans }));
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
+                  ))}
+                  <div className="flex items-center justify-center p-4">
+                    <button
+                      onClick={() => setShowPasskeyModal({ type: 'addPlan', id: 'new' })}
+                      className="w-full h-full min-h-[120px] border-2 border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 rounded-lg flex flex-col items-center justify-center gap-2 text-primary font-bold transition-colors"
+                    >
+                      <FaPlus size={20} />
+                      Add New Plan
+                    </button>
                   </div>
                 </div>
 

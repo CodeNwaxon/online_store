@@ -344,7 +344,7 @@ export async function verifyAndCreateInstallment(
     return { success: false, error: 'Installment configuration missing on server.' };
   }
 
-  const currentPlanConfig = data.planMonths === instSettings.shortPlan.months ? instSettings.shortPlan : instSettings.longPlan;
+  const currentPlanConfig = instSettings.plans?.find((p: any) => p.months === data.planMonths) || instSettings.shortPlan || { months: data.planMonths, increase: 20 };
   const increaseRate = (currentPlanConfig?.increase || 0) / 100;
   const increaseAmount = realProductPrice * increaseRate;
   const serverCalculatedTotalAmount = realProductPrice + increaseAmount;

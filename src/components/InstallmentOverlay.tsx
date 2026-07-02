@@ -40,9 +40,20 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     // Real-time settings listener
     const unsubSettings = onSnapshot(doc(db, 'settings', 'installments'), (docSnap) => {
       if (docSnap.exists()) {
-        setInstSettings(docSnap.data());
+        const data = docSnap.data();
+        let plans = data.plans;
+        if (!plans || plans.length === 0) {
+          plans = [];
+          if (data.shortPlan) plans.push(data.shortPlan);
+          if (data.longPlan) plans.push(data.longPlan);
+        }
+        setInstSettings({ ...data, plans });
       } else {
         setInstSettings({
+          plans: [
+            { months: 3, increase: 20 },
+            { months: 4, increase: 30 }
+          ],
           shortPlan: { months: 3, increase: 20 },
           longPlan: { months: 4, increase: 30 },
           downpaymentThreshold: 1000000,
@@ -91,7 +102,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     </div>
   );
 
-  const currentPlanConfig = plan === instSettings.shortPlan.months ? instSettings.shortPlan : instSettings.longPlan;
+  const currentPlanConfig = instSettings.plans?.find((p: any) => p.months === plan) || instSettings.shortPlan || { months: plan, increase: 20 };
   const increaseRate = currentPlanConfig.increase / 100;
   const increaseAmount = product.price * increaseRate;
 
