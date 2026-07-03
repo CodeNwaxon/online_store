@@ -6,6 +6,7 @@ import { FaShoppingCart, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import LikeButton from './LikeButton';
 import WarrantyModal from './WarrantyModal';
 import { toast } from 'react-hot-toast';
@@ -48,6 +49,8 @@ const cardThemes = [
 ];
 
 export default function ProductCard({ product, isAdmin, priority = false, index = 0, onEdit, onDelete }: ProductCardProps) {
+  const pathname = usePathname();
+  const isFurniturePage = pathname?.includes('/shop/furniture');
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
@@ -296,6 +299,14 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             </div>
           )}
           {!isAdmin && (
+            (product.quantity ?? 0) <= 0 && isFurniturePage ? (
+              <button
+                disabled
+                className="flex items-center justify-center gap-1.5 rounded md:rounded-md font-bold px-3 py-1.5 max-md:px-2 max-md:py-1 max-md:text-[0.65rem] text-[0.8rem] bg-gray-400 text-white cursor-not-allowed opacity-50 whitespace-nowrap"
+              >
+                Out of Stock
+              </button>
+            ) : (
             <button
               disabled={(product.quantity ?? 0) <= 0}
               className={`flex items-center justify-center gap-1.5 rounded md:rounded-md font-bold transition-all duration-200 px-3 py-1.5 max-md:px-2 max-md:py-1 max-md:text-[0.65rem] text-[0.8rem] ${(product.quantity ?? 0) <= 0
@@ -336,6 +347,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             >
               <FaShoppingCart size={13} />
             </button>
+            )
           )}
         </div>
       </div>
