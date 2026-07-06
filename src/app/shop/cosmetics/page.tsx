@@ -16,7 +16,7 @@ export default function CosmeticsPage() {
   const [selectedPriceFilter, setSelectedPriceFilter] = useState('All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(50);
+  const [visibleCount, setVisibleCount] = useState(54);
 
   useEffect(() => {
     const q = query(collection(db, 'cosmetics'), orderBy('updatedAt', 'desc'));
