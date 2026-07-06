@@ -16,24 +16,24 @@ export default function CosmeticsPage() {
   const [selectedPriceFilter, setSelectedPriceFilter] = useState('All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(24);
+  const [visibleCount, setVisibleCount] = useState(50);
 
   useEffect(() => {
     const q = query(collection(db, 'cosmetics'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
-      
+
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setProducts(sortedProds);
 
       const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
       setGroups(uniqueGroups);
-      
+
       setLoading(false);
     }, (error) => {
       console.warn("Cosmetics listener error:", error);
@@ -63,10 +63,10 @@ export default function CosmeticsPage() {
   }, [selectedGroup, products]);
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
 
@@ -218,10 +218,10 @@ export default function CosmeticsPage() {
             <>
               <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 sm:gap-4 md:gap-6">
                 {displayedProducts.map(product => (
-                  <CategoryProductCard 
-                    key={product.id} 
-                    product={product} 
-                    themeClass="bg-pink-600 hover:bg-pink-700" 
+                  <CategoryProductCard
+                    key={product.id}
+                    product={product}
+                    themeClass="bg-pink-600 hover:bg-pink-700"
                     categoryName="Cosmetics"
                     detailPath="/shop/cosmetics/"
                   />
