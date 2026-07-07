@@ -22,6 +22,8 @@ export interface FoodProduct {
   createdAt?: string;
   updatedAt?: string;
   size?: string;
+  itemSize?: string;
+  color?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
 }
@@ -128,6 +130,14 @@ export default function FoodCard({ food, isAdmin, isFood = true, onEdit, onDelet
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
         />
+        {food.itemSize && (
+          <div className="absolute top-2 left-2 bg-white p-1.5 rounded flex flex-col items-center justify-center z-30 shadow-sm border border-gray-100">
+            <span className="text-[8px] md:text-[10px] font-bold text-gray-800 uppercase leading-none">{food.itemSize}</span>
+            {food.color && (
+              <span className="text-[8px] md:text-[10px] font-semibold text-gray-500 capitalize mt-1 leading-none">{food.color}</span>
+            )}
+          </div>
+        )}
         {food.images && food.images.length > 1 && (
           <>
             <button

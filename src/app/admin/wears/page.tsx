@@ -45,6 +45,8 @@ export default function AdminWears() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [size, setSize] = useState('');
+  const [itemSize, setItemSize] = useState('');
+  const [color, setColor] = useState('');
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
 
@@ -172,6 +174,8 @@ export default function AdminWears() {
     setCategory('');
     setQuantity('1');
     setSize('');
+    setItemSize('');
+    setColor('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -218,6 +222,8 @@ export default function AdminWears() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
+        itemSize: itemSize.trim(),
+        color: color.trim(),
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
@@ -266,6 +272,8 @@ export default function AdminWears() {
     setCategory(product.category || '');
     setQuantity(product.quantity?.toString() || '1');
     setSize(product.size || '');
+    setItemSize(product.itemSize || '');
+    setColor(product.color || '');
     setRequiresMinShipping(product.requiresMinShipping || false);
     setMinShippingQty(product.minShippingQty?.toString() || '0');
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
@@ -468,6 +476,45 @@ export default function AdminWears() {
               </div>
             </div>
 
+            {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes') && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {group?.toLowerCase() === 'shoes' ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">Product Size</label>
+                      <input required value={itemSize} onChange={e => setItemSize(e.target.value)} type="text" placeholder="e.g. 42 or 8" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">Color</label>
+                      <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold">Product Size (Waist/Letter)</label>
+                    <select required value={itemSize} onChange={e => setItemSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
+                      <option value="">Select Size</option>
+                      <option value="XXL">XXL</option>
+                      <option value="XL">XL</option>
+                      <option value="L">L</option>
+                      <option value="M">M</option>
+                      <option value="S">S</option>
+                      <option value="XS">XS</option>
+                      <option value="28">28 (Waist)</option>
+                      <option value="30">30 (Waist)</option>
+                      <option value="32">32 (Waist)</option>
+                      <option value="34">34 (Waist)</option>
+                      <option value="36">36 (Waist)</option>
+                      <option value="38">38 (Waist)</option>
+                      <option value="40">40 (Waist)</option>
+                      <option value="42">42 (Waist)</option>
+                      <option value="44">44 (Waist)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold">Description (Optional)</label>
@@ -475,9 +522,9 @@ export default function AdminWears() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold">Product Size</label>
+                <label className="text-sm font-bold">Shipping Size (Required)</label>
                 <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
-                  <option value="">Select Size</option>
+                  <option value="">Select Shipping Size</option>
                   <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
                   <option value="large">Large {sizePrices['large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['large']}` : ''}</option>
                   <option value="medium">Medium {sizePrices['medium'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['medium']}` : ''}</option>
