@@ -50,6 +50,11 @@ export default function ProductDetail() {
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037'); // Default fallback
 
+  // Scroll to top on mount to fix back-navigation scroll position on mobile
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
 

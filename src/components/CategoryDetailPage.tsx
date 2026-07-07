@@ -44,6 +44,11 @@ export default function CategoryDetailPage({
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
+  // Scroll to top on mount to fix back-navigation scroll position on mobile
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
 
@@ -360,6 +365,12 @@ export default function CategoryDetailPage({
                 </div>
               </div>
             )}
+
+            {product.minShippingQty && product.minShippingQty > 0 ? (
+              <p className="mt-4 text-xs text-muted-foreground font-medium">
+                Min. shipping qty: {product.minShippingQty}
+              </p>
+            ) : null}
 
             <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm space-y-2">
               <div><strong>Brand / Group:</strong> {product.group}</div>

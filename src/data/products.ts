@@ -24,6 +24,8 @@ export interface Product {
   selectedSize?: string;
   warranty?: string;
   ramRom?: string;
+  requiresMinShipping?: boolean;
+  minShippingQty?: number;
 }
 
 export const products: Product[] = [

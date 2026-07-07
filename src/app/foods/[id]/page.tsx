@@ -26,6 +26,11 @@ export default function FoodDetail() {
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
+  // Scroll to top on mount to fix back-navigation scroll position on mobile
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
 

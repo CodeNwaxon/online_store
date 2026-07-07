@@ -78,7 +78,7 @@ export default function AdminFoods() {
       const areas = snap.docs.map(d => d.data());
       if (areas.length > 0) {
         const priceStrings: Record<string, string> = {};
-        const sizes = ['extra-large', 'large', 'medium', 'small', 'extra-small'];
+        const sizes = ['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'];
         sizes.forEach(s => {
           const vals = areas.map(a => (a.prices?.[s] || 0) as number).filter(v => v > 0);
           const uniqueVals = Array.from(new Set(vals)).sort((a, b) => b - a);
@@ -447,6 +447,7 @@ export default function AdminFoods() {
                   <option value="medium">Medium {sizePrices['medium'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['medium']}` : ''}</option>
                   <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
                   <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
+                  <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
                 </select>
               </div>
             </div>

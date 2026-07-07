@@ -258,6 +258,11 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               Description
             </button>
           )}
+          {food.minShippingQty && food.minShippingQty > 0 ? (
+            <p className="mt-0 text-[9px] text-muted-foreground font-medium">
+              Min. shipping qty: {food.minShippingQty}
+            </p>
+          ) : null}
         </div>
 
         {showDescription && (

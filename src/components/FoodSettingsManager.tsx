@@ -20,6 +20,7 @@ interface Area {
     'medium': number;
     'small': number;
     'extra-small': number;
+    'extra-extra-small': number;
   };
   isActive?: boolean;
 }
@@ -36,10 +37,10 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
   
   // Forms state
   const [formData, setFormData] = useState({ state: '', city: '', address: '', mapLocation: '', isActive: true });
-  const [prices, setPrices] = useState({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '' });
+  const [prices, setPrices] = useState({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '', 'extra-extra-small': '' });
   
   const [editFormData, setEditFormData] = useState({ state: '', city: '', address: '', mapLocation: '', isActive: true });
-  const [editPrices, setEditPrices] = useState({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '' });
+  const [editPrices, setEditPrices] = useState({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '', 'extra-extra-small': '' });
   
   const [loading, setLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -227,7 +228,8 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
           'large': Number(prices['large']),
           'medium': Number(prices['medium']),
           'small': Number(prices['small']),
-          'extra-small': Number(prices['extra-small'])
+          'extra-small': Number(prices['extra-small']),
+          'extra-extra-small': Number(prices['extra-extra-small'])
         },
         isActive: formData.isActive
       };
@@ -236,7 +238,7 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
       toast.success('Food Area created successfully!');
       setIsCreating(false);
       setFormData({ state: '', city: '', address: '', mapLocation: '', isActive: true });
-      setPrices({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '' });
+      setPrices({ 'extra-large': '', 'large': '', 'medium': '', 'small': '', 'extra-small': '', 'extra-extra-small': '' });
     } catch (error) {
       console.error("Error creating area:", error);
       toast.error('Failed to create area');
@@ -263,6 +265,7 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
       'medium': area.prices['medium'].toString(),
       'small': area.prices['small'].toString(),
       'extra-small': area.prices['extra-small'].toString(),
+      'extra-extra-small': (area.prices['extra-extra-small'] || 0).toString(),
     });
   };
 
@@ -282,6 +285,7 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
           'medium': Number(editPrices['medium']),
           'small': Number(editPrices['small']),
           'extra-small': Number(editPrices['extra-small']),
+          'extra-extra-small': Number(editPrices['extra-extra-small']),
         },
         isActive: editFormData.isActive
       });
@@ -501,7 +505,7 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
                   <div className="border-t border-border pt-4 mt-4">
                     <h4 className="text-sm font-bold mb-3">Shipping Prices by Size (₦)</h4>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {['extra-large', 'large', 'medium', 'small', 'extra-small'].map((size) => (
+                      {['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'].map((size) => (
                         <div key={size}>
                           <label className="block text-[10px] font-bold mb-1 uppercase text-muted-foreground">{size}</label>
                           <input required value={prices[size as keyof typeof prices]} onChange={e => setPrices({ ...prices, [size]: e.target.value })} type="number" min="0" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-green-500 font-bold" />
@@ -609,7 +613,7 @@ export default function FoodSettingsManager({ isOpen, onClose }: FoodSettingsMan
               <div className="border-t border-border pt-4">
                 <h4 className="text-sm font-bold mb-3">Shipping Prices by Size (₦)</h4>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {['extra-large', 'large', 'medium', 'small', 'extra-small'].map((size) => (
+                  {['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'].map((size) => (
                     <div key={size}>
                       <label className="block text-[10px] font-bold mb-1 uppercase text-muted-foreground">{size}</label>
                       <input required value={editPrices[size as keyof typeof editPrices]} onChange={e => setEditPrices({ ...editPrices, [size]: e.target.value })} type="number" min="0" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-green-500 font-bold" />

@@ -23,6 +23,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [showCityError, setShowCityError] = useState(false);
   const [showPickupOnlyError, setShowPickupOnlyError] = useState(false);
+  const [minShippingOverlay, setMinShippingOverlay] = useState<{ name: string; needed: number, current: number, required: number } | null>(null);
 
   // Delivery State
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'ship'>('pickup');
@@ -69,14 +70,19 @@ export default function Checkout() {
   const [dbProducts, setDbProducts] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'products'), (snap) => {
-      const prodMap: Record<string, any> = {};
-      snap.forEach(doc => {
-        prodMap[doc.id] = doc.data();
-      });
-      setDbProducts(prodMap);
-    });
-    return () => unsub();
+    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+    const unsubs = collections.map(collName => 
+      onSnapshot(collection(db, collName), (snap) => {
+        setDbProducts(prev => {
+          const newMap = { ...prev };
+          snap.forEach(doc => {
+            newMap[doc.id] = doc.data();
+          });
+          return newMap;
+        });
+      })
+    );
+    return () => unsubs.forEach(unsub => unsub());
   }, []);
 
   useEffect(() => {
@@ -484,7 +490,33 @@ export default function Checkout() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDeliveryMethod('ship')}
+                  onClick={() => {
+                    const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+                    if (!hasStandardItem && items.length > 0) {
+                      let maxReqItem = items[0];
+                      let maxRequired = 0;
+                      
+                      for (const item of items) {
+                        const req = dbProducts[item.id]?.minShippingQty || 0;
+                        if (req > maxRequired) {
+                          maxRequired = req;
+                          maxReqItem = item;
+                        }
+                      }
+                      
+                      const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+                      if (totalQty < maxRequired) {
+                         setMinShippingOverlay({
+                            name: maxReqItem.name,
+                            needed: maxRequired - totalQty,
+                            current: totalQty,
+                            required: maxRequired
+                         });
+                         return;
+                      }
+                    }
+                    setDeliveryMethod('ship');
+                  }}
                   className={`p-4 border-2 rounded-xl text-left transition-all relative ${deliveryMethod === 'ship' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}
                 >
                   <FaTruck className={`mb-3 text-2xl ${deliveryMethod === 'ship' ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -756,6 +788,36 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Min Shipping Quantity Overlay */}
+      {minShippingOverlay && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-[200] flex items-center justify-center p-6 text-center">
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-2xl animate-in fade-in zoom-in duration-200 max-w-md w-full relative">
+            <div className="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-5 border border-amber-200">
+              <FaTruck size={28} />
+            </div>
+            <h3 className="text-xl font-black uppercase text-foreground mb-3 tracking-wide">Shipping Requirement Not Met</h3>
+            <p className="text-sm text-muted-foreground mb-6 font-medium leading-relaxed">
+              The quantity for <span className="font-bold text-foreground">"{minShippingOverlay.name}"</span> is below the minimum quantity required to ship to an address.
+            </p>
+            <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 mb-6 border border-amber-100 dark:border-amber-900/30">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                You need to add <span className="font-black text-amber-600 dark:text-amber-400 text-lg mx-1">{minShippingOverlay.needed}</span> more to the currently selected quantity.
+              </p>
+              <div className="flex justify-between items-center mt-3 text-xs text-amber-700/70 dark:text-amber-500/70 font-bold uppercase">
+                <span>Current: {minShippingOverlay.current}</span>
+                <span>Required: {minShippingOverlay.required}</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setMinShippingOverlay(null)} 
+              className="w-full py-4 bg-primary hover:bg-primary-hover text-white rounded-xl text-sm font-black uppercase transition-colors shadow-md tracking-wider"
+            >
+              Okay, I understand
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

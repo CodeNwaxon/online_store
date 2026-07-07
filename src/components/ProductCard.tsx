@@ -237,6 +237,11 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             Description
           </button>
         </div>
+        {product.minShippingQty && product.minShippingQty > 0 ? (
+          <p className="mt-0 text-[9px] text-muted-foreground font-medium">
+            Min. shipping qty: {product.minShippingQty}
+          </p>
+        ) : null}
 
 
 

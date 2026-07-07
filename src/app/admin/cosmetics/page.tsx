@@ -79,7 +79,7 @@ export default function AdminCosmetics() {
       const areas = snap.docs.map(d => d.data());
       if (areas.length > 0) {
         const priceStrings: Record<string, string> = {};
-        const sizes = ['extra-large', 'large', 'medium', 'small', 'extra-small'];
+        const sizes = ['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'];
         sizes.forEach(s => {
           const vals = areas.map(a => (a.prices?.[s] || 0) as number).filter(v => v > 0);
           const uniqueVals = Array.from(new Set(vals)).sort((a, b) => b - a);
@@ -103,13 +103,13 @@ export default function AdminCosmetics() {
     const q = query(collection(db, 'cosmetics'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
-      
+
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setProducts(sortedProds);
 
       // Extract unique groups and categories
@@ -482,6 +482,7 @@ export default function AdminCosmetics() {
                   <option value="medium">Medium {sizePrices['medium'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['medium']}` : ''}</option>
                   <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
                   <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
+                  <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
                 </select>
               </div>
             </div>
@@ -611,9 +612,9 @@ export default function AdminCosmetics() {
         </section>
 
         {/* List Section */}
-        <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
+        <section className="bg-card py-4 px-1.5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+            <h2 className="ml-3 text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input
@@ -636,10 +637,10 @@ export default function AdminCosmetics() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 items-stretch">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-6 items-stretch">
             {filteredProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
-                <div className="relative flex-1 flex flex-col">
+                <div className="relative flex-1 flex flex-col mb-2">
                   <ShopCard
                     food={product}
                     isAdmin={true}

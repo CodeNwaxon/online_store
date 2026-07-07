@@ -24,6 +24,8 @@ export interface CategoryProduct {
   sizeQuantities?: Record<string, number>;
   selectedSize?: string;
   updatedAt?: string;
+  requiresMinShipping?: boolean;
+  minShippingQty?: number;
 }
 
 interface CategoryProductCardProps {
@@ -242,6 +244,11 @@ export default function CategoryProductCard({
             Description
           </button>
         </div>
+        {product.minShippingQty && product.minShippingQty > 0 ? (
+          <p className="mt-0 text-[9px] text-muted-foreground dark:text-zinc-400 font-medium">
+            Min. shipping qty: {product.minShippingQty}
+          </p>
+        ) : null}
 
         {showDescription && (
           <div

@@ -1,7 +1,7 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-export type ShippingSize = 'extra-large' | 'large' | 'medium' | 'small' | 'extra-small';
+export type ShippingSize = 'extra-large' | 'large' | 'medium' | 'small' | 'extra-small' | 'extra-extra-small';
 
 export interface CartItem {
   id: string;
@@ -26,7 +26,7 @@ export interface ShippingBreakdown {
   highestFeeItem: string;
 }
 
-const ALL_SIZES: ShippingSize[] = ['extra-small', 'small', 'medium', 'large', 'extra-large'];
+const ALL_SIZES: ShippingSize[] = ['extra-extra-small', 'extra-small', 'small', 'medium', 'large', 'extra-large'];
 
 export const normalizeShippingSize = (size: string | undefined): ShippingSize => {
   const normalized = (size || 'medium')
@@ -38,6 +38,7 @@ export const normalizeShippingSize = (size: string | undefined): ShippingSize =>
 
   if (normalized === 'extralarge') return 'extra-large';
   if (normalized === 'extrasmall') return 'extra-small';
+  if (normalized === 'extraextrasmall' || normalized === 'extra-extra-small') return 'extra-extra-small';
   if (ALL_SIZES.includes(normalized as ShippingSize)) {
     return normalized as ShippingSize;
   }
