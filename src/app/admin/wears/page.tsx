@@ -476,9 +476,9 @@ export default function AdminWears() {
               </div>
             </div>
 
-            {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes') && (
+            {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe' || group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes') && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {group?.toLowerCase() === 'shoes' ? (
+                {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe') ? (
                   <>
                     <div className="space-y-2">
                       <label className="text-sm font-bold">Product Size</label>
