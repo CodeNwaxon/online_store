@@ -24,6 +24,8 @@ export interface ShopProduct {
   size?: string;
   itemSize?: string;
   color?: string;
+  sizeQuantities?: Record<string, number>;
+  selectedSize?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
 }
@@ -102,6 +104,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [showSizeOverlay, setShowSizeOverlay] = useState(false);
 
   useEffect(() => {
     setImgError(false);
@@ -119,6 +122,32 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
     }
   };
 
+  // Parse colors
+  const colors = food.color ? food.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+
+  // Compute size display
+  const sizeKeys = food.sizeQuantities ? Object.keys(food.sizeQuantities).filter(k => (food.sizeQuantities as Record<string, number>)[k] > 0) : [];
+  const getSizeDisplay = () => {
+    if (sizeKeys.length === 0 && food.itemSize) {
+      const parts = food.itemSize.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length === 1) return `Size: ${parts[0]}`;
+      if (parts.length > 1) {
+        const nums = parts.map(p => parseInt(p.replace(/\D/g, ''))).filter(n => !isNaN(n));
+        if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
+        return `Sizes: ${parts[0]} - ${parts[parts.length - 1]}`;
+      }
+    }
+    if (sizeKeys.length === 1) return `Size: ${sizeKeys[0]}`;
+    if (sizeKeys.length > 1) {
+      // try numeric sort
+      const nums = sizeKeys.map(k => parseInt(k.replace(/\D/g, ''))).filter(n => !isNaN(n));
+      if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
+      return `Sizes: ${sizeKeys[0]} - ${sizeKeys[sizeKeys.length - 1]}`;
+    }
+    return null;
+  };
+  const sizeLabel = getSizeDisplay();
+
   const CardContent = (
     <div className={`relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br ${theme.bgGradient} p-1`}>
       <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)]">
@@ -130,14 +159,9 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
         />
-        {(food.itemSize || food.color) && (
-          <div className="absolute top-1 left-1 bg-white py-1 px-1.5 rounded flex flex-col z-30 shadow-sm border border-gray-100 text-[8px] md:text-[10px] leading-tight">
-            {food.itemSize && <span className="font-bold text-gray-800">Size: {food.itemSize}</span>}
-            {food.color && (
-              <span className="font-semibold text-gray-500">
-                Color: <span className="capitalize drop-shadow-sm" style={{ color: food.color.toLowerCase().replace(/\s/g, '') }}>{food.color}</span>
-              </span>
-            )}
+        {sizeLabel && (
+          <div className="absolute top-1 left-1 bg-white py-1 px-1.5 rounded z-30 shadow-sm border border-gray-100 text-[8px] md:text-[10px] leading-tight">
+            <span className="font-bold text-gray-800">{sizeLabel}</span>
           </div>
         )}
         {food.images && food.images.length > 1 && (
@@ -208,6 +232,15 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
         <Link href={`/foods/${food.id}`}>
           {CardContent}
         </Link>
+      )}
+
+      {/* Color bar below image */}
+      {colors.length > 0 && (
+        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {colors.map((c, i) => (
+            <span key={i} className="shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white border border-gray-100 shadow-sm" style={{ color: c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
+          ))}
+        </div>
       )}
 
       <div className="p-4 max-md:p-3 flex-1 flex flex-col justify-between">
@@ -287,6 +320,12 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                 onClick={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
+
+                  if (sizeKeys.length > 0) {
+                    setShowSizeOverlay(true);
+                    return;
+                  }
+
                   // Check quantity in cart vs available stock
                   const cartItem = cartItems.find(item => item.id === food.id);
                   const currentInCart = cartItem ? cartItem.quantity : 0;
@@ -321,6 +360,67 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
             )
           )}
         </div>
+
+        {/* Size Selection Overlay */}
+        {showSizeOverlay && sizeKeys.length > 0 && (
+          <div
+            className="absolute inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-2 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+          >
+            <div
+              className="bg-card w-full max-h-[90%] rounded-lg shadow-xl border border-border p-3 flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+                className="absolute top-1.5 right-1.5 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+              >
+                ✕
+              </button>
+              <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Size</h3>
+              <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40">
+                {sizeKeys.map(sz => {
+                  const qty = (food.sizeQuantities as Record<string, number>)[sz];
+                  return (
+                    <button
+                      key={sz}
+                      disabled={qty <= 0}
+                      className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `${theme.bgPrimary} text-white border-transparent hover:opacity-90`}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                        const currentInCart = existing ? existing.quantity : 0;
+                        if (currentInCart + 1 > qty) {
+                          toast.error(`Only ${qty} available for size ${sz}`);
+                          return;
+                        }
+                        const cartProduct = {
+                          id: food.id,
+                          name: food.name,
+                          price: food.price,
+                          image: food.images?.[0] || '/images/placeholder.png',
+                          category: 'Food',
+                          description: food.description,
+                          selectedSize: sz,
+                        };
+                        addItem(cartProduct as any);
+                        toast.success(`${food.name} (${sz}) added to cart`, {
+                          style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                          position: 'bottom-center',
+                          duration: 2000,
+                        });
+                        setShowSizeOverlay(false);
+                      }}
+                    >
+                      {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -39,6 +39,7 @@ export default function CategoryDetailPage({
   const [allProducts, setAllProducts] = useState<CategoryProduct[]>([]);
   const { isApprovedPartner, partnerData } = usePartner();
   const [installmentMinAmount, setInstallmentMinAmount] = useState<number>(20000);
+  const [showSizeOverlay, setShowSizeOverlay] = useState(false);
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
@@ -139,6 +140,8 @@ export default function CategoryDetailPage({
     return url;
   };
 
+  const sizeKeys = product.sizeQuantities ? Object.keys(product.sizeQuantities).filter(k => (product.sizeQuantities as Record<string, number>)[k] > 0) : [];
+
   const productImages = (product.images && product.images.length > 0
     ? product.images
     : [product.image || '/images/placeholder.png']).map(sanitizeImageUrl);
@@ -236,8 +239,13 @@ export default function CategoryDetailPage({
             ) : (
               <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
                 <button
-                  className={`text-sm md:text-base col-span-1 md:flex-[2] order-1 ${themeConfig.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
+                  className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${themeConfig.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
+                    if (sizeKeys.length > 0) {
+                      setShowSizeOverlay(true);
+                      return;
+                    }
+
                     const existing = cartItems.find(item => item.id === product.id);
                     const currentInCart = existing ? existing.quantity : 0;
                     
@@ -284,6 +292,72 @@ export default function CategoryDetailPage({
                     <FaCreditCard size={16} className="max-md:hidden" /> Installment pay
                   </a>
                 )}
+              </div>
+            )}
+
+            {/* Size Selection Overlay */}
+            {showSizeOverlay && sizeKeys.length > 0 && (
+              <div
+                className="fixed inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-4 flex items-center justify-center animate-in fade-in duration-200"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+              >
+                <div
+                  className="bg-card w-full max-w-[400px] max-h-[90%] rounded-xl shadow-2xl border border-border p-5 flex flex-col relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+                    className="absolute top-2 right-2 text-xs font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+                  >
+                    ✕
+                  </button>
+                  <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Size</h3>
+                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64">
+                    {sizeKeys.map(sz => {
+                      const qty = (product.sizeQuantities as Record<string, number>)[sz];
+                      return (
+                        <button
+                          key={sz}
+                          disabled={qty <= 0}
+                          className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `${themeConfig.btn} text-white border-transparent hover:opacity-90`}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const existing = cartItems.find(item => item.id === product.id && item.selectedSize === sz);
+                            const currentInCart = existing ? existing.quantity : 0;
+                            if (currentInCart + 1 > qty) {
+                              toast.error(`Only ${qty} available for size ${sz}`);
+                              return;
+                            }
+                            addItem({
+                              id: product.id,
+                              name: product.name,
+                              price: product.price,
+                              image: productImages[0],
+                              images: productImages,
+                              quantity: product.quantity,
+                              category: product.category as any,
+                              description: product.description,
+                              productCode: 'N/A',
+                              rdpPrice: product.costPrice,
+                              manufacturer: product.group,
+                              shipping: 0,
+                              selectedSize: sz,
+                            });
+                            toast.success(`${product.name} (${sz}) added to cart`, {
+                              style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                              position: 'bottom-center',
+                              duration: 2000,
+                            });
+                            setShowSizeOverlay(false);
+                          }}
+                        >
+                          {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 

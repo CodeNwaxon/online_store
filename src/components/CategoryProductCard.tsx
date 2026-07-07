@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { createPortal } from 'react-dom';
 
 export interface CategoryProduct {
   id: string;
@@ -20,6 +21,8 @@ export interface CategoryProduct {
   image?: string;
   itemSize?: string;
   color?: string;
+  sizeQuantities?: Record<string, number>;
+  selectedSize?: string;
   updatedAt?: string;
 }
 
@@ -58,6 +61,14 @@ export default function CategoryProductCard({
 
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [showSizeOverlay, setShowSizeOverlay] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [tempSelectedSize, setTempSelectedSize] = useState<string>('');
+  const [tempSelectedColor, setTempSelectedColor] = useState<string>('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setImgError(false);
@@ -78,6 +89,31 @@ export default function CategoryProductCard({
   const rawImgUrl = imgError ? '/images/placeholder.png' : (product.images && product.images.length > 0 ? product.images[currentImgIndex] : product.image || '/images/placeholder.png');
   const safeImgUrl = sanitizeImageUrl(rawImgUrl);
 
+  // Parse colors
+  const colors = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+
+  // Compute size display
+  const sizeKeys = product.sizeQuantities ? Object.keys(product.sizeQuantities).filter(k => (product.sizeQuantities as Record<string, number>)[k] > 0) : [];
+  const getSizeDisplay = () => {
+    if (sizeKeys.length === 0 && product.itemSize) {
+      const parts = product.itemSize.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length === 1) return `Size: ${parts[0]}`;
+      if (parts.length > 1) {
+        const nums = parts.map(p => parseInt(p.replace(/\D/g, ''))).filter(n => !isNaN(n));
+        if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
+        return `Sizes: ${parts[0]} - ${parts[parts.length - 1]}`;
+      }
+    }
+    if (sizeKeys.length === 1) return `Size: ${sizeKeys[0]}`;
+    if (sizeKeys.length > 1) {
+      const nums = sizeKeys.map(k => parseInt(k.replace(/\D/g, ''))).filter(n => !isNaN(n));
+      if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
+      return `Sizes: ${sizeKeys[0]} - ${sizeKeys[sizeKeys.length - 1]}`;
+    }
+    return null;
+  };
+  const sizeLabel = getSizeDisplay();
+
   const CardContent = (
     <div className={`relative h-45 max-md:h-40 w-full cursor-pointer bg-muted/20 p-0.5 dark:bg-muted/10`}>
       <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)] md:rounded-[calc(var(--radius)-1px)]">
@@ -91,14 +127,9 @@ export default function CategoryProductCard({
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
         />
-        {(product.itemSize || product.color) && (
-          <div className="absolute top-2 left-2 bg-white dark:bg-zinc-800 p-1.5 rounded flex flex-col z-30 shadow-sm border border-gray-100 dark:border-zinc-700 text-[8px] md:text-[10px] leading-tight">
-            {product.itemSize && <span className="font-bold text-gray-800 dark:text-zinc-200">Size: {product.itemSize}</span>}
-            {product.color && (
-              <span className="font-semibold text-gray-500 dark:text-zinc-400">
-                Color: <span className="capitalize drop-shadow-sm" style={{ color: product.color.toLowerCase().replace(/\s/g, '') }}>{product.color}</span>
-              </span>
-            )}
+        {sizeLabel && (
+          <div className="absolute top-1 left-1 bg-white dark:bg-zinc-800 py-1 px-1.5 rounded z-30 shadow-sm border border-gray-100 dark:border-zinc-700 text-[8px] md:text-[10px] leading-tight">
+            <span className="font-bold text-gray-800 dark:text-zinc-200">{sizeLabel}</span>
           </div>
         )}
         {(product.quantity ?? 0) <= 0 && (
@@ -169,6 +200,15 @@ export default function CategoryProductCard({
         </Link>
       ) : (
         CardContent
+      )}
+
+      {/* Color bar below image */}
+      {colors.length > 0 && (
+        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 dark:bg-zinc-800/50 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {colors.map((c, i) => (
+            <span key={i} className="shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm" style={{ color: c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
+          ))}
+        </div>
       )}
 
       <div className="p-3 max-md:p-2 flex-1 flex flex-col">
@@ -257,7 +297,15 @@ export default function CategoryProductCard({
               onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // We add to cart treating it like any other product
+
+                // If product has sizes or colors, show selection overlay
+                if (sizeKeys.length > 0 || colors.length > 0) {
+                  setShowSizeOverlay(true);
+                  setTempSelectedSize('');
+                  setTempSelectedColor('');
+                  return;
+                }
+
                 const existing = cartItems.find(item => item.id === product.id);
                 const currentInCart = existing ? existing.quantity : 0;
 
@@ -266,7 +314,6 @@ export default function CategoryProductCard({
                   return;
                 }
 
-                // Construct a mock product to match what useCartStore expects
                 addItem({
                   id: product.id,
                   name: product.name,
@@ -274,7 +321,7 @@ export default function CategoryProductCard({
                   image: safeImgUrl,
                   images: product.images || [safeImgUrl],
                   quantity: product.quantity,
-                  category: product.category as any, // type hack
+                  category: product.category as any,
                   description: product.description,
                   productCode: 'N/A',
                   rdpPrice: product.costPrice,
@@ -282,12 +329,7 @@ export default function CategoryProductCard({
                   shipping: 0
                 });
                 toast.success(`${product.name} added to cart`, {
-                  style: {
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    minWidth: '120px',
-                    marginTop: '20px'
-                  },
+                  style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                   position: 'bottom-center',
                   duration: 2000,
                 });
@@ -297,6 +339,134 @@ export default function CategoryProductCard({
             </button>
           )}
         </div>
+
+        {/* Size & Color Selection Overlay */}
+        {mounted && showSizeOverlay && (sizeKeys.length > 0 || colors.length > 0) && createPortal(
+          <div
+            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] p-4 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+          >
+            <div
+              className="bg-white dark:bg-zinc-900 w-full max-w-sm max-h-[90%] rounded-xl shadow-2xl border border-border dark:border-zinc-800 p-5 flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+                className="absolute top-3 right-3 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 text-foreground dark:text-zinc-300 z-10"
+              >
+                ✕
+              </button>
+              
+              <div className="overflow-y-auto pr-2 custom-scrollbar">
+                {sizeKeys.length > 0 && (
+                  <div className="mb-5">
+                    <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Size</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {sizeKeys.map(sz => {
+                        const qty = (product.sizeQuantities as Record<string, number>)[sz];
+                        return (
+                          <button
+                            key={sz}
+                            disabled={qty <= 0}
+                            className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : tempSelectedSize === sz ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setTempSelectedSize(sz);
+                            }}
+                          >
+                            {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {colors.length > 0 && (
+                  <div className="mb-2">
+                    <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map((c, i) => (
+                        <button
+                          key={i}
+                          className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === c ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setTempSelectedColor(c);
+                          }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 shrink-0">
+                <button
+                  className={`w-full py-2.5 rounded-lg font-bold text-white transition-all ${((sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor)) ? 'bg-gray-300 cursor-not-allowed dark:bg-zinc-700 text-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  disabled={(sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (sizeKeys.length > 0 && !tempSelectedSize) return;
+                    if (colors.length > 0 && !tempSelectedColor) return;
+
+                    const qtyToCheck = tempSelectedSize ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize] : product.quantity;
+                    
+                    const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === tempSelectedColor);
+                    const currentInCart = existing ? existing.quantity : 0;
+                    
+                    if (currentInCart + 1 > (qtyToCheck ?? 0)) {
+                      toast.error(`Only ${qtyToCheck ?? 0} available`);
+                      return;
+                    }
+
+                    addItem({
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      image: safeImgUrl,
+                      images: product.images || [safeImgUrl],
+                      quantity: product.quantity,
+                      category: product.category as any,
+                      description: product.description,
+                      productCode: 'N/A',
+                      rdpPrice: product.costPrice,
+                      manufacturer: product.group,
+                      shipping: 0,
+                      selectedSize: tempSelectedSize,
+                      selectedColor: tempSelectedColor,
+                    } as any);
+
+                    let successMsg = `${product.name}`;
+                    if (tempSelectedSize || tempSelectedColor) {
+                       const parts = [];
+                       if (tempSelectedSize) parts.push(tempSelectedSize);
+                       if (tempSelectedColor) parts.push(tempSelectedColor);
+                       successMsg += ` (${parts.join(', ')})`;
+                    }
+                    successMsg += ` added to cart`;
+
+                    toast.success(successMsg, {
+                      style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                      position: 'bottom-center',
+                      duration: 2000,
+                    });
+                    setShowSizeOverlay(false);
+                  }}
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     </div>
   );

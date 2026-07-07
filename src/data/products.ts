@@ -19,6 +19,9 @@ export interface Product {
   group?: string;
   promoEndDate?: string;
   size?: string;
+  itemSize?: string;
+  sizeQuantities?: Record<string, number>;
+  selectedSize?: string;
   warranty?: string;
   ramRom?: string;
 }

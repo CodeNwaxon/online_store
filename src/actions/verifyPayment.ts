@@ -112,12 +112,20 @@ export async function verifyAndFulfillOrder(
   // Step 3: Re-verify product prices from the database to prevent price manipulation
   let serverCalculatedTotal = 0;
   for (const item of orderData.items) {
-    const collectionName = item.category === 'Food' ? 'foods' : 'products';
-    const productDoc = await adminDb.collection(collectionName).doc(item.id).get();
-    if (!productDoc.exists) {
-      return { success: false, error: `Item ${item.name} not found in ${collectionName}.` };
+    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+    let productData = null;
+
+    for (const coll of collections) {
+      const productDoc = await adminDb.collection(coll).doc(item.id).get();
+      if (productDoc.exists) {
+        productData = productDoc.data()!;
+        break;
+      }
     }
-    const productData = productDoc.data()!;
+
+    if (!productData) {
+      return { success: false, error: `Item ${item.name} not found in products.` };
+    }
     serverCalculatedTotal += (productData.price || 0) * item.quantity;
   }
 
@@ -171,16 +179,28 @@ export async function verifyAndFulfillOrder(
       const itemsWithCostAndVendor: any[] = [];
       for (const item of orderData.items) {
         const sellPrice = item.price || 0;
-        const collectionName = item.category === 'Food' ? 'foods' : 'products';
-        const productDoc = await transaction.get(adminDb.collection(collectionName).doc(item.id));
-        const rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
-        const vendorEmail = productDoc.exists ? (productDoc.data()?.vendor || null) : (item.vendor || null);
+        const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+        let productDoc = null;
+        let foundCollection = 'products'; // fallback
+
+        for (const coll of collections) {
+          const docSnap = await transaction.get(adminDb.collection(coll).doc(item.id));
+          if (docSnap.exists) {
+            productDoc = docSnap;
+            foundCollection = coll;
+            break;
+          }
+        }
+
+        const rdpPrice = productDoc ? (productDoc?.data()?.rdpPrice || productDoc?.data()?.costPrice || 0) : 0;
+        const vendorEmail = productDoc ? (productDoc?.data()?.vendor || null) : (item.vendor || null);
         totalProfitForReferral += Math.max(0, sellPrice - rdpPrice) * item.quantity;
 
         itemsWithCostAndVendor.push({
           ...item,
           rdpPrice,
-          vendor: vendorEmail
+          vendor: vendorEmail,
+          _collection: foundCollection
         });
       }
       orderData.items = itemsWithCostAndVendor;
@@ -259,11 +279,12 @@ export async function verifyAndFulfillOrder(
 
       // Deduct product quantities
       for (const item of orderData.items) {
-        const collectionName = item.category === 'Food' ? 'foods' : 'products';
+        const collectionName = (item as any)._collection || 'products';
         const productRef = adminDb.collection(collectionName).doc(item.id);
         transaction.update(productRef, {
           quantity: FieldValue.increment(-item.quantity),
         });
+        delete (item as any)._collection; // clean up before saving to db
       }
 
       // Mark pending transaction as completed
@@ -331,8 +352,20 @@ export async function verifyAndCreateInstallment(
   }
 
   // Step 2: Verify product price from the database
-  const productDoc = await adminDb.collection('products').doc(data.productId).get();
-  if (!productDoc.exists) {
+  const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+  let productDoc: any = null;
+  let foundCollection = 'products';
+
+  for (const coll of collections) {
+    const docSnap = await adminDb.collection(coll).doc(data.productId).get();
+    if (docSnap.exists) {
+      productDoc = docSnap;
+      foundCollection = coll;
+      break;
+    }
+  }
+
+  if (!productDoc) {
     return { success: false, error: 'Product not found.' };
   }
   const realProductPrice = productDoc.data()?.price || 0;
@@ -476,6 +509,7 @@ export async function verifyAndCreateInstallment(
         productId: data.productId,
         productName: data.productName,
         productCategory: data.productCategory,
+        productCollection: foundCollection,
         productImage: data.productImage,
         vendor: productDoc.data()?.vendor || null,
         basePrice: realProductPrice,
@@ -701,7 +735,8 @@ export async function verifyAndProcessInstallmentPayment(
         });
 
         // Deduct product quantity
-        const productRef = adminDb.collection('products').doc(loan.productId);
+        const collectionName = loan.productCollection || 'products';
+        const productRef = adminDb.collection(collectionName).doc(loan.productId);
         transaction.update(productRef, {
           quantity: FieldValue.increment(-1),
         });

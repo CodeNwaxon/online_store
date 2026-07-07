@@ -267,7 +267,7 @@ export default function ProductDetail() {
             ) : (
               <div className="grid grid-cols-2 md:flex gap-2 md:gap-3">
                 <button
-                  className={`text-sm md:text-base col-span-1 md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
+                  className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
                     const existing = cartItems.find(item => item.id === product.id);
                     const currentInCart = existing ? existing.quantity : 0;

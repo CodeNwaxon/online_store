@@ -45,8 +45,42 @@ export default function AdminWears() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [size, setSize] = useState('');
-  const [itemSize, setItemSize] = useState('');
+  const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
   const [color, setColor] = useState('');
+
+  // Size definitions
+  const menShoeSizes = ['45', '44', '43', '42', '41', '40', '39', '38', '36', '32', '30'];
+  const womenShoeSizes = ['42', '41', '40', '39', '38', '37', '36', '35', '34', '33'];
+  const childrenShoeSizes = ['34', '33', '32', '31', '30', '29', '28', '27', '26', '25', '24', '23', '22'];
+  const clothLetterSizes = ['XXL', 'XL', 'L', 'M', 'S', 'XS', 'XXS'];
+  const clothWaistSizes = ['44', '42', '40', '38', '36', '34', '32', '30', '28', '26'];
+
+  const isShoeGroup = group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe';
+  const isClothGroup = group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes';
+
+  const toggleSize = (sz: string) => {
+    setSizeQuantities(prev => {
+      const copy = { ...prev };
+      if (copy[sz] !== undefined) {
+        delete copy[sz];
+      } else {
+        copy[sz] = 1;
+      }
+      return copy;
+    });
+  };
+
+  const updateSizeQty = (sz: string, qty: number) => {
+    setSizeQuantities(prev => ({ ...prev, [sz]: Math.max(0, qty) }));
+  };
+
+  // Auto-compute total quantity from sizeQuantities when wears group
+  useEffect(() => {
+    if (isShoeGroup || isClothGroup) {
+      const total = Object.values(sizeQuantities).reduce((a, b) => a + b, 0);
+      setQuantity(total.toString());
+    }
+  }, [sizeQuantities, isShoeGroup, isClothGroup]);
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
 
@@ -106,13 +140,13 @@ export default function AdminWears() {
     const q = query(collection(db, 'wears'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
-      
+
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setProducts(sortedProds);
 
       // Extract unique groups and categories
@@ -174,7 +208,7 @@ export default function AdminWears() {
     setCategory('');
     setQuantity('1');
     setSize('');
-    setItemSize('');
+    setSizeQuantities({});
     setColor('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
@@ -193,7 +227,8 @@ export default function AdminWears() {
     if (!price.trim()) return toast.error('Selling price is required.');
     if (!group) return toast.error('Please select a brand/group.');
     if (!category) return toast.error('Please select a category.');
-    if (!size) return toast.error('Please select a product size.');
+    if (!size) return toast.error('Please select a shipping size.');
+    if ((isShoeGroup || isClothGroup) && Object.keys(sizeQuantities).length === 0) return toast.error('Please select at least one product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
 
     const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
@@ -222,7 +257,8 @@ export default function AdminWears() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
-        itemSize: itemSize.trim(),
+        sizeQuantities: (isShoeGroup || isClothGroup) ? sizeQuantities : {},
+        itemSize: Object.keys(sizeQuantities).join(', '),
         color: color.trim(),
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
@@ -272,7 +308,7 @@ export default function AdminWears() {
     setCategory(product.category || '');
     setQuantity(product.quantity?.toString() || '1');
     setSize(product.size || '');
-    setItemSize(product.itemSize || '');
+    setSizeQuantities((product as any).sizeQuantities || {});
     setColor(product.color || '');
     setRequiresMinShipping(product.requiresMinShipping || false);
     setMinShippingQty(product.minShippingQty?.toString() || '0');
@@ -353,7 +389,7 @@ export default function AdminWears() {
         </header>
 
         {/* Form Section */}
-        <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
+        <section className="bg-card py-4 px-2 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Vendor (auto-filled, read-only) */}
@@ -476,40 +512,110 @@ export default function AdminWears() {
               </div>
             </div>
 
-            {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe' || group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes') && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {(group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe') ? (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold">Product Size</label>
-                      <input required value={itemSize} onChange={e => setItemSize(e.target.value)} type="text" placeholder="e.g. 42 or 8" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+            {(isShoeGroup || isClothGroup) && (
+              <div className="space-y-4 mb-6 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold">Colors (comma separated)</label>
+                  <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                  {color && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {color.split(',').map((c, i) => c.trim() && (
+                        <span key={i} className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize" style={{ color: c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
+                      ))}
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold">Color</label>
-                      <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                  )}
+                </div>
+
+                <label className="text-sm font-bold block">Available Sizes (tick to add, enter qty)</label>
+
+                {isShoeGroup && (
+                  <>
+                    {/* Men's Shoe Sizes */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Men&apos;s Sizes</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {menShoeSizes.map(sz => (
+                          <div key={`m-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
+                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[sz] !== undefined && (
+                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Women's Shoe Sizes */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Women&apos;s Sizes</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {womenShoeSizes.map(sz => (
+                          <div key={`w-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`W${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`W${sz}`)}>
+                            <input type="checkbox" checked={sizeQuantities[`W${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[`W${sz}`] !== undefined && (
+                              <input type="number" min="0" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Children's Shoe Sizes */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Children&apos;s Sizes</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {childrenShoeSizes.map(sz => (
+                          <div key={`c-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`C${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`C${sz}`)}>
+                            <input type="checkbox" checked={sizeQuantities[`C${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[`C${sz}`] !== undefined && (
+                              <input type="number" min="0" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </>
-                ) : (
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">Product Size (Waist/Letter)</label>
-                    <select required value={itemSize} onChange={e => setItemSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
-                      <option value="">Select Size</option>
-                      <option value="XXL">XXL</option>
-                      <option value="XL">XL</option>
-                      <option value="L">L</option>
-                      <option value="M">M</option>
-                      <option value="S">S</option>
-                      <option value="XS">XS</option>
-                      <option value="28">28 (Waist)</option>
-                      <option value="30">30 (Waist)</option>
-                      <option value="32">32 (Waist)</option>
-                      <option value="34">34 (Waist)</option>
-                      <option value="36">36 (Waist)</option>
-                      <option value="38">38 (Waist)</option>
-                      <option value="40">40 (Waist)</option>
-                      <option value="42">42 (Waist)</option>
-                      <option value="44">44 (Waist)</option>
-                    </select>
+                )}
+
+                {isClothGroup && (
+                  <>
+                    {/* Letter Sizes */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Letter Sizes</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {clothLetterSizes.map(sz => (
+                          <div key={`l-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
+                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[sz] !== undefined && (
+                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Waist Sizes */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Waist Sizes</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {clothWaistSizes.map(sz => (
+                          <div key={`ws-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
+                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[sz] !== undefined && (
+                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {Object.keys(sizeQuantities).length > 0 && (
+                  <div className="text-xs font-bold text-purple-700 pt-2 border-t border-purple-200">
+                    Total Stock: {Object.values(sizeQuantities).reduce((a, b) => a + b, 0)} | Selected: {Object.keys(sizeQuantities).join(', ')}
                   </div>
                 )}
               </div>
@@ -659,9 +765,9 @@ export default function AdminWears() {
         </section>
 
         {/* List Section */}
-        <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
+        <section className="bg-card py-4 px-1.5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+            <h2 className="ml-2 text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input
@@ -684,10 +790,10 @@ export default function AdminWears() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 items-stretch">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-6 items-stretch">
             {filteredProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
-                <div className="relative flex-1 flex flex-col">
+                <div className="relative flex-1 flex flex-col mb-2">
                   <ShopCard
                     food={product}
                     isAdmin={true}

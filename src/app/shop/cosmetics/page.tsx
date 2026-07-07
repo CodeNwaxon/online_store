@@ -216,7 +216,7 @@ export default function CosmeticsPage() {
             </div>
           ) : (
             <>
-              <div className="px-1.5 md:px-6 max-w-8xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 sm:gap-4 md:gap-6">
+              <div className="my-4 px-1.5 md:px-6 max-w-8xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-1 gap-y-3 sm:gap-4 md:gap-6">
                 {displayedProducts.map(product => (
                   <CategoryProductCard
                     key={product.id}

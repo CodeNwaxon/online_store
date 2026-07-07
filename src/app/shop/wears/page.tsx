@@ -169,7 +169,7 @@ export default function WearsPage() {
           </div>
         ) : (
           <>
-            <div className="px-1.5 md:px-4 md:px-6 max-w-8xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 sm:gap-4 md:gap-6">
+            <div className="px-1.5 md:px-4 md:px-6 max-w-8xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-1 gap-y-3 sm:gap-4 md:gap-6">
               {displayedProducts.map(product => (
                 <CategoryProductCard key={product.id} product={product} themeClass="bg-purple-600 hover:bg-purple-700" categoryName="Wears" detailPath="/shop/wears/" />
               ))}

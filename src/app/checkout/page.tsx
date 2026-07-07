@@ -337,7 +337,7 @@ export default function Checkout() {
               <div class="section-title" style="margin-top: 20px;">Items Ordered</div>
               ${finalOrderData.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} (x${item.quantity})</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -589,13 +589,15 @@ export default function Checkout() {
           <div className="bg-muted p-8 rounded-[var(--radius)] sticky top-[100px] border border-border">
             <h3 className="text-xl font-bold mb-6">Order Summary</h3>
             <div className="flex flex-col gap-4 mb-6">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center text-sm">
+              {items.map((item, idx) => (
+                <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${idx}`} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 rounded shrink-0 overflow-hidden">
                       <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
                     </div>
-                    <span className="text-muted-foreground">{item.name} x {item.quantity}</span>
+                    <span className="text-muted-foreground">
+                      {item.name} {(item.selectedSize || item.selectedColor) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>} x {item.quantity}
+                    </span>
                   </div>
                   <span className="font-semibold">₦{(item.price * item.quantity).toLocaleString()}</span>
                 </div>
@@ -714,6 +716,8 @@ export default function Checkout() {
                     quantity: item.quantity,
                     image: item.image,
                     size: dbProducts[item.id]?.size || item.size || 'medium',
+                    selectedSize: item.selectedSize || null,
+                    selectedColor: item.selectedColor || null,
                     category: item.category,
                     vendor: dbProducts[item.id]?.vendor || null
                   })),

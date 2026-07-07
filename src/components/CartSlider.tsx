@@ -38,10 +38,10 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
           return;
         }
       }
-      updateQuantity(item.id, item.quantity + 1);
+      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor);
     } catch (error) {
       console.error("Error verifying quantity:", error);
-      updateQuantity(item.id, item.quantity + 1);
+      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor);
     }
   };
 
@@ -154,7 +154,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               <div class="section-title" style="margin-top: 20px;">Items Ordered</div>
               ${order.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} (x${item.quantity})</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -264,7 +264,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                       <div className="space-y-2 mb-4">
                         {order.items.slice(0, 2).map((item: any, i: number) => (
                           <div key={i} className="text-[10px] font-bold text-foreground truncate">
-                            • {item.name} <span className="text-muted-foreground">(x{item.quantity})</span>
+                            • {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-muted-foreground">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground">(x{item.quantity})</span>
                           </div>
                         ))}
                         {order.items.length > 2 && <div className="text-[9px] font-bold text-muted-foreground">+{order.items.length - 2} more...</div>}
@@ -308,15 +308,21 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
+                {items.map((item, idx) => (
+                  <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${idx}`} className="flex gap-4">
                     <div className="relative w-[80px] h-[80px] rounded shrink-0 overflow-hidden">
                       <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between mb-1">
-                        <h4 className="text-[0.9rem] font-semibold text-foreground">{item.name}</h4>
-                        <button onClick={() => removeItem(item.id)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
+                        <div>
+                          <h4 className="text-[0.9rem] font-semibold text-foreground">{item.name}</h4>
+                          <div className="flex gap-2 items-center flex-wrap mt-0.5">
+                            {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedSize}</span>}
+                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span><span className="capitalize" style={{ color: item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span></span>}
+                          </div>
+                        </div>
+                        <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
                       </div>
                       <div className="text-sm text-primary font-bold mb-2">
                         ₦{item.price.toLocaleString()}
@@ -324,7 +330,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                       <div className="flex items-center gap-3">
                         <button 
                           className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
                         >
                           <FaMinus size={14} />
                         </button>

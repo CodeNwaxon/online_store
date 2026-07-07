@@ -22,6 +22,7 @@ export default function FoodDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [allFoods, setAllFoods] = useState<any[]>([]);
   const { isApprovedPartner, partnerData } = usePartner();
+  const [showSizeOverlay, setShowSizeOverlay] = useState(false);
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
@@ -114,6 +115,8 @@ export default function FoodDetail() {
   const foodImages = (food.images && food.images.length > 0
     ? food.images
     : ['/images/placeholder.png']).map(sanitizeImageUrl);
+
+  const sizeKeys = food.sizeQuantities ? Object.keys(food.sizeQuantities).filter(k => (food.sizeQuantities as Record<string, number>)[k] > 0) : [];
 
   const whatsappMessage = `I want to order ${food.name}, priced at ₦${food.price.toLocaleString()} from your Food Market.`;
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -208,6 +211,11 @@ export default function FoodDetail() {
                 <button
                   className={`text-base md:flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 p-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg`}
                   onClick={async () => {
+                    if (sizeKeys.length > 0) {
+                      setShowSizeOverlay(true);
+                      return;
+                    }
+
                     const existing = cartItems.find(item => item.id === food.id);
                     const currentInCart = existing ? existing.quantity : 0;
                     try {
@@ -246,6 +254,66 @@ export default function FoodDetail() {
                 >
                   <FaWhatsapp size={20} /> Order via WhatsApp
                 </a>
+              </div>
+            )}
+
+            {/* Size Selection Overlay */}
+            {showSizeOverlay && sizeKeys.length > 0 && (
+              <div
+                className="fixed inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-4 flex items-center justify-center animate-in fade-in duration-200"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+              >
+                <div
+                  className="bg-card w-full max-w-[400px] max-h-[90%] rounded-xl shadow-2xl border border-border p-5 flex flex-col relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+                    className="absolute top-2 right-2 text-xs font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+                  >
+                    ✕
+                  </button>
+                  <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Size</h3>
+                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64">
+                    {sizeKeys.map(sz => {
+                      const qty = (food.sizeQuantities as Record<string, number>)[sz];
+                      return (
+                        <button
+                          key={sz}
+                          disabled={qty <= 0}
+                          className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `bg-green-600 text-white border-transparent hover:bg-green-700`}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                            const currentInCart = existing ? existing.quantity : 0;
+                            if (currentInCart + 1 > qty) {
+                              toast.error(`Only ${qty} available for size ${sz}`);
+                              return;
+                            }
+                            addItem({
+                              id: food.id,
+                              name: food.name,
+                              price: food.price,
+                              image: food.images?.[0] || '/images/placeholder.png',
+                              category: 'Food',
+                              description: food.description,
+                              selectedSize: sz,
+                            } as any);
+                            toast.success(`${food.name} (${sz}) added to cart`, {
+                              style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                              position: 'bottom-center',
+                              duration: 2000,
+                            });
+                            setShowSizeOverlay(false);
+                          }}
+                        >
+                          {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
           </div>
