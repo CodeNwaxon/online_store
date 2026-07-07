@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
-import FoodCard, { FoodProduct } from '@/components/FoodCard';
+import ShopCard, { ShopProduct } from '@/components/ShopCard';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -29,7 +29,7 @@ const parsePriceInput = (value: string) => {
 };
 
 export default function AdminFoods() {
-  const [foods, setFoods] = useState<FoodProduct[]>([]);
+  const [foods, setFoods] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -101,7 +101,7 @@ export default function AdminFoods() {
   useEffect(() => {
     const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
+      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
       
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -241,7 +241,7 @@ export default function AdminFoods() {
     }
   };
 
-  const handleEdit = (food: FoodProduct) => {
+  const handleEdit = (food: ShopProduct) => {
     setEditingId(food.id);
     setName(food.name);
     setCostPrice(formatPriceInput((food.costPrice || 0).toString()));
@@ -606,7 +606,7 @@ export default function AdminFoods() {
             {filteredFoods.map(food => (
               <div key={food.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
-                  <FoodCard
+                  <ShopCard
                     food={food}
                     isAdmin={true}
                     onEdit={handleEdit}

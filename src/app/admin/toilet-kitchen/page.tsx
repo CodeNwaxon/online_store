@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaBoxes } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
-import FoodCard, { FoodProduct } from '@/components/FoodCard';
+import ShopCard, { ShopProduct } from '@/components/ShopCard';
 
 
 const formatPriceInput = (value: string) => {
@@ -30,7 +30,7 @@ const parsePriceInput = (value: string) => {
 };
 
 export default function AdminToiletKitchen() {
-  const [products, setProducts] = useState<FoodProduct[]>([]);
+  const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -101,7 +101,7 @@ export default function AdminToiletKitchen() {
   useEffect(() => {
     const q = query(collection(db, 'toilet_kitchen'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
+      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
       
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -241,7 +241,7 @@ export default function AdminToiletKitchen() {
     }
   };
 
-  const handleEdit = (product: FoodProduct) => {
+  const handleEdit = (product: ShopProduct) => {
     setEditingId(product.id);
     setName(product.name);
     setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
@@ -605,7 +605,7 @@ export default function AdminToiletKitchen() {
             {filteredProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
-                  <FoodCard
+                  <ShopCard
                     food={product}
                     isAdmin={true}
                     isFood={false}

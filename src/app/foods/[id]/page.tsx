@@ -6,7 +6,7 @@ import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaLeaf, FaChevronLeft, FaChevr
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import FoodCard, { FoodProduct } from '@/components/FoodCard';
+import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -344,7 +344,7 @@ function RelatedCarousel({
       <div className="relative hidden sm:block px-4">
         <div className={`grid ${gridCols} gap-4 transition-all duration-500 ease-in-out`}>
           {displayedFoods.map((f, i) => (
-            <FoodCard key={f.id} food={f} />
+            <ShopCard key={f.id} food={f} />
           ))}
         </div>
 
@@ -379,7 +379,7 @@ function RelatedCarousel({
         >
           {related.map((f, index) => (
             <div key={f.id} className="min-w-[48%] w-[48%] shrink-0 snap-start">
-              <FoodCard food={f} />
+              <ShopCard food={f} />
             </div>
           ))}
         </div>

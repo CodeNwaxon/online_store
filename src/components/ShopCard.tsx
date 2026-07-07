@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-export interface FoodProduct {
+export interface ShopProduct {
   id: string;
   name: string;
   description?: string;
@@ -28,11 +28,11 @@ export interface FoodProduct {
   minShippingQty?: number;
 }
 
-interface FoodCardProps {
-  food: FoodProduct;
+interface ShopCardProps {
+  food: ShopProduct;
   isAdmin?: boolean;
   isFood?: boolean;
-  onEdit?: (food: FoodProduct) => void;
+  onEdit?: (food: ShopProduct) => void;
   onDelete?: (id: string) => void;
   themeColor?: 'green' | 'pink' | 'purple' | 'teal' | 'amber';
 }
@@ -95,7 +95,7 @@ const themeStyles = {
   }
 };
 
-export default function FoodCard({ food, isAdmin, isFood = true, onEdit, onDelete, themeColor = 'green' }: FoodCardProps) {
+export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelete, themeColor = 'green' }: ShopCardProps) {
   const theme = themeStyles[themeColor];
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
@@ -130,11 +130,13 @@ export default function FoodCard({ food, isAdmin, isFood = true, onEdit, onDelet
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onError={() => setImgError(true)}
         />
-        {food.itemSize && (
-          <div className="absolute top-2 left-2 bg-white p-1.5 rounded flex flex-col items-center justify-center z-30 shadow-sm border border-gray-100">
-            <span className="text-[8px] md:text-[10px] font-bold text-gray-800 uppercase leading-none">{food.itemSize}</span>
+        {(food.itemSize || food.color) && (
+          <div className="absolute top-1 left-1 bg-white py-1 px-1.5 rounded flex flex-col z-30 shadow-sm border border-gray-100 text-[8px] md:text-[10px] leading-tight">
+            {food.itemSize && <span className="font-bold text-gray-800">Size: {food.itemSize}</span>}
             {food.color && (
-              <span className="text-[8px] md:text-[10px] font-semibold text-gray-500 capitalize mt-1 leading-none">{food.color}</span>
+              <span className="font-semibold text-gray-500">
+                Color: <span className="capitalize drop-shadow-sm" style={{ color: food.color.toLowerCase().replace(/\s/g, '') }}>{food.color}</span>
+              </span>
             )}
           </div>
         )}
@@ -211,7 +213,7 @@ export default function FoodCard({ food, isAdmin, isFood = true, onEdit, onDelet
       <div className="p-4 max-md:p-3 flex-1 flex flex-col justify-between">
         <div className="mb-2">
           <div className="flex justify-between items-start mb-1">
-            <h3 className="text-lg max-md:text-base font-bold text-gray-900 leading-tight line-clamp-2">
+            <h3 className="capitalize text-lg max-md:text-base font-bold text-gray-900 leading-tight line-clamp-2">
               {food.name}
             </h3>
           </div>

@@ -18,6 +18,8 @@ export interface CategoryProduct {
   quantity?: number;
   images?: string[];
   image?: string;
+  itemSize?: string;
+  color?: string;
   updatedAt?: string;
 }
 
@@ -89,6 +91,16 @@ export default function CategoryProductCard({
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
         />
+        {(product.itemSize || product.color) && (
+          <div className="absolute top-2 left-2 bg-white dark:bg-zinc-800 p-1.5 rounded flex flex-col z-30 shadow-sm border border-gray-100 dark:border-zinc-700 text-[8px] md:text-[10px] leading-tight">
+            {product.itemSize && <span className="font-bold text-gray-800 dark:text-zinc-200">Size: {product.itemSize}</span>}
+            {product.color && (
+              <span className="font-semibold text-gray-500 dark:text-zinc-400">
+                Color: <span className="capitalize drop-shadow-sm" style={{ color: product.color.toLowerCase().replace(/\s/g, '') }}>{product.color}</span>
+              </span>
+            )}
+          </div>
+        )}
         {(product.quantity ?? 0) <= 0 && (
           <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 p-2 text-center select-none">
             <div className="bg-red-600/90 text-white font-black text-[10px] md:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg border border-white/20 transform rotate-[-5deg] animate-pulse">
@@ -168,7 +180,7 @@ export default function CategoryProductCard({
 
         <div className="flex flex-col mb-0.5">
           <h3
-            className={`text-[0.95rem] max-md:text-[0.75rem] font-bold whitespace-nowrap overflow-hidden text-ellipsis leading-tight text-slate-900 dark:text-zinc-100`}
+            className={`capitalize text-[0.95rem] max-md:text-[0.75rem] font-bold whitespace-nowrap overflow-hidden text-ellipsis leading-tight text-slate-900 dark:text-zinc-100`}
             title={product.name}
           >
             {product.name}
@@ -176,7 +188,7 @@ export default function CategoryProductCard({
         </div>
 
         <div className="mt-2 flex flex-col md:flex-row justify-between items-start">
-          <div className="flex flex-col justify-start items-start gap-2 mb-2">
+          <div className="flex flex-col justify-start items-start gap-1 mb-2">
             {product.group && (
               <span className="text-[0.65rem] text-muted-foreground dark:text-zinc-400 font-medium italic">
                 By {product.group.toUpperCase()}

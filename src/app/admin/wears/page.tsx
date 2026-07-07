@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUserTie, FaBoxes } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
-import FoodCard, { FoodProduct } from '@/components/FoodCard';
+import ShopCard, { ShopProduct } from '@/components/ShopCard';
 
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -32,7 +32,7 @@ const parsePriceInput = (value: string) => {
 
 export default function AdminWears() {
   const { user, isCEO } = useAdmin();
-  const [products, setProducts] = useState<FoodProduct[]>([]);
+  const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -105,7 +105,7 @@ export default function AdminWears() {
   useEffect(() => {
     const q = query(collection(db, 'wears'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
+      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
       
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -257,7 +257,7 @@ export default function AdminWears() {
     }
   };
 
-  const handleEdit = (product: FoodProduct) => {
+  const handleEdit = (product: ShopProduct) => {
     // Block editing another admin's products (CEO can edit any)
     if (!isCEO && (product as any).vendor && (product as any).vendor !== user?.email) {
       toast.error('You can only edit your own products.');
@@ -688,7 +688,7 @@ export default function AdminWears() {
             {filteredProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
-                  <FoodCard
+                  <ShopCard
                     food={product}
                     isAdmin={true}
                     isFood={false}

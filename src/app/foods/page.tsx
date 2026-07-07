@@ -3,11 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import FoodCard, { FoodProduct } from '@/components/FoodCard';
+import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { FaLeaf, FaUtensils, FaSearch, FaFilter } from 'react-icons/fa';
 
 export default function FoodsPage() {
-  const [foods, setFoods] = useState<FoodProduct[]>([]);
+  const [foods, setFoods] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters state
@@ -19,7 +19,7 @@ export default function FoodsPage() {
   useEffect(() => {
     const q = query(collection(db, 'foods'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FoodProduct[];
+      const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
       setFoods(items);
       setLoading(false);
     }, (error) => {
@@ -216,7 +216,7 @@ export default function FoodsPage() {
         ) : (
           <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
             {filteredFoods.map((food) => (
-              <FoodCard key={food.id} food={food} />
+              <ShopCard key={food.id} food={food} />
             ))}
           </div>
         )}
