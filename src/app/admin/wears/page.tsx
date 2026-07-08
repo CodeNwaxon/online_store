@@ -535,7 +535,7 @@ export default function AdminWears() {
                   {color && (
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {color.split(',').map((c, i) => c.trim() && (
-                        <span key={i} className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize" style={{ color: c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
+                        <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
                       ))}
                     </div>
                   )}

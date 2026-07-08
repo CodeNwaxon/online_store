@@ -89,7 +89,9 @@ export default function Navbar() {
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
   
-  const { addNotification, getUnreadCount } = useNotificationStore();
+  const notifications = useNotificationStore(state => state.notifications);
+  const addNotification = useNotificationStore(state => state.addNotification);
+  const getUnreadCount = useNotificationStore(state => state.getUnreadCount);
   const notifUnreadCount = getUnreadCount({
     userUid: user?.uid,
     userEmail: user?.email || undefined,
@@ -179,7 +181,7 @@ export default function Navbar() {
                id: `comp-${change.doc.id}`,
                type: 'complaint',
                title: 'New Complaint',
-               message: `A new complaint was submitted regarding an installment.`,
+               message: `A new complain has been sent to your Admin`,
                createdAt: new Date().toISOString(),
                read: false,
                link: '/admin/installments'

@@ -319,7 +319,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                           <h4 className="text-[0.9rem] font-semibold text-foreground">{item.name}</h4>
                           <div className="flex gap-2 items-center flex-wrap mt-0.5">
                             {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedSize}</span>}
-                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span><span className="capitalize" style={{ color: item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span></span>}
+                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span><span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span></span>}
                           </div>
                         </div>
                         <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>

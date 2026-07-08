@@ -208,7 +208,7 @@ export default function CategoryProductCard({
       {colors.length > 0 && (
         <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 dark:bg-zinc-800/50 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {colors.map((c, i) => (
-            <span key={i} className="shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm" style={{ color: c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
+            <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
           ))}
         </div>
       )}
