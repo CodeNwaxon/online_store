@@ -3,7 +3,7 @@
 import AdminGuard from '@/components/AdminGuard';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes, FaUtensils, FaHandshake } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes, FaUtensils, FaHandshake, FaBullhorn } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
 import { auth, db } from '@/lib/firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
@@ -84,6 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
     { label: 'Orders', href: '/admin/orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
+    { label: 'Broadcast', href: '/admin/broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
     { label: 'Settings', href: '/admin/settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
     { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar />, id: '/ADMIN/STATS' },
     { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },

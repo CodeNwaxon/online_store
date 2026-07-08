@@ -2,7 +2,7 @@
 
 import { useAdmin } from '@/hooks/useAdmin';
 import Link from 'next/link';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaUserTie, FaShoppingCart, FaUtensils, FaHandshake } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaUserTie, FaShoppingCart, FaUtensils, FaHandshake, FaBullhorn } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -74,6 +74,7 @@ export default function AdminDashboard() {
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard size={40} />, id: '/ADMIN/INSTALLMENTS', description: 'Track installment payments and customer complaints.' },
     { label: 'Store Orders', href: '/admin/orders', icon: <FaShoppingCart size={40} />, id: '/ADMIN/ORDERS', description: 'Process online payments and completed installment orders.' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake size={40} />, id: '/ADMIN/PARTNERSHIP', description: 'Manage partnership applications and view payouts.' },
+    { label: 'Broadcast', href: '/admin/broadcast', icon: <FaBullhorn size={40} />, id: '/ADMIN/BROADCAST', description: 'Send targeted notifications and manage templates.' },
     { label: 'Site Settings', href: '/admin/settings', icon: <FaCog size={40} />, id: '/ADMIN/SETTINGS', description: 'Update site name, contacts, and social links.' },
     { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar size={40} />, id: '/ADMIN/STATS', description: 'View sales data, revenue, and product statistics.' },
     { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie size={40} />, id: '/ADMIN/ABOUT', description: 'Update CEO contact info, image, and shop message.' },

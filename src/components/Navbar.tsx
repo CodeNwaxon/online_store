@@ -6,7 +6,7 @@ import {
   FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore,
   FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaUserShield,
   FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie,
-  FaUtensils, FaHandshake, FaChevronDown
+  FaUtensils, FaHandshake, FaChevronDown, FaBell, FaBullhorn
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -20,6 +20,8 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { usePartner } from '@/hooks/usePartner';
 import { toast } from 'react-hot-toast';
 import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
+import NotificationWrapper from './NotificationWrapper';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
@@ -43,6 +45,7 @@ const adminLinks = [
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
   { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
   { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
+  { href: '/admin/broadcast', label: 'Broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
 ];
 
 export default function Navbar() {
@@ -51,6 +54,7 @@ export default function Navbar() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   useEffect(() => {
     const lastPage = localStorage.getItem('lastVisitedPage');
@@ -84,6 +88,16 @@ export default function Navbar() {
   const { partnerData, isApprovedPartner } = usePartner();
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
+  
+  const { addNotification, getUnreadCount } = useNotificationStore();
+  const notifUnreadCount = getUnreadCount({
+    userUid: user?.uid,
+    userEmail: user?.email || undefined,
+    isAdmin: isAdmin,
+    isCEO: isCEO,
+    isVip: adminData?.vip,
+    assignedRoutes: adminData?.assignedRoutes
+  });
 
   const isAdminRoute = pathname?.startsWith('/admin') || false;
   const isDarkNav = !isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname?.startsWith('/foods') || pathname?.startsWith('/shop/cosmetics') || pathname?.startsWith('/shop/wears') || pathname?.startsWith('/shop/furniture') || pathname?.startsWith('/shop/toilet-kitchen'));
@@ -108,6 +122,20 @@ export default function Navbar() {
     let compCount = 0;
     let partCount = 0;
 
+    // Fetch notification templates for installment messages
+    let instTemplate = '';
+    const fetchTemplates = async () => {
+      try {
+        const tplSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
+        if (tplSnap.exists()) {
+          instTemplate = tplSnap.data().installmentNotification || '';
+        }
+      } catch (e) {
+        console.warn('Failed to fetch notification templates:', e);
+      }
+    };
+    fetchTemplates();
+
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
       setUnreadOrders(snap.size);
     }, (error) => {
@@ -117,6 +145,26 @@ export default function Navbar() {
     const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
       instCount = snap.size;
       setUnreadCount(instCount + compCount);
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
+             const userName = data.userName || data.userEmail || 'a user';
+             const templateMsg = instTemplate 
+               ? instTemplate.replace(/\{user\}/gi, userName)
+               : `A new installment plan was started by ${userName}.`;
+             addNotification({
+               id: `inst-${change.doc.id}`,
+               type: 'installment',
+               title: 'New Installment',
+               message: templateMsg,
+               createdAt: new Date().toISOString(),
+               read: false,
+               link: '/admin/installments'
+             });
+          }
+        }
+      });
     }, (error) => {
       console.warn("Navbar installments listener error:", error);
     });
@@ -124,6 +172,21 @@ export default function Navbar() {
     const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
       compCount = snap.size;
       setUnreadCount(instCount + compCount);
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
+             addNotification({
+               id: `comp-${change.doc.id}`,
+               type: 'complaint',
+               title: 'New Complaint',
+               message: `A new complaint was submitted regarding an installment.`,
+               createdAt: new Date().toISOString(),
+               read: false,
+               link: '/admin/installments'
+             });
+          }
+        }
+      });
     }, (error) => {
       console.warn("Navbar complaints listener error:", error);
     });
@@ -141,7 +204,37 @@ export default function Navbar() {
       unsubComp();
       unsubPart();
     };
-  }, [isAdmin, isCEO]);
+  }, [isAdmin, isCEO, adminData, addNotification]);
+
+  // Global Listeners for useNotificationStore
+  useEffect(() => {
+    if (!user) return;
+
+    // Listen for Broadcasts
+    const unsubBroadcasts = onSnapshot(query(collection(db, 'broadcasts'), where('createdAt', '>', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())), (snap) => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          addNotification({
+            id: change.doc.id,
+            type: 'broadcast',
+            title: data.title,
+            message: data.message,
+            image: data.image,
+            link: data.link,
+            linkLabel: data.linkLabel,
+            createdAt: data.createdAt || new Date().toISOString(),
+            read: false,
+            vendorEmail: data.vendorEmail
+          });
+        }
+      });
+    }, (err) => console.warn("Broadcasts listener error:", err));
+
+    return () => {
+      unsubBroadcasts();
+    };
+  }, [user]);
 
   // Partner Sales Listener
   useEffect(() => {
@@ -361,6 +454,18 @@ export default function Navbar() {
                 </span>
               )}
             </button>
+            
+            {/* Notifications */}
+            {user && (
+              <button onClick={() => setIsNotifOpen(true)} className="relative flex items-center p-1">
+                <FaBell size={22} className={notifUnreadCount > 0 ? 'animate-pulse text-primary' : ''} />
+                {mounted && notifUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-[16px] h-[16px] text-[9px] flex items-center justify-center font-bold shadow-sm">
+                    {notifUnreadCount > 9 ? '9+' : notifUnreadCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Hamburger  only on mobile */}
             <button className="relative flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
@@ -524,6 +629,7 @@ export default function Navbar() {
       </div>
 
       <CartSlider isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <NotificationWrapper isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </>
   );
 }

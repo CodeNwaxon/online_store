@@ -78,11 +78,14 @@ export default function AdminWears() {
   useEffect(() => {
     if (isShoeGroup || isClothGroup) {
       const total = Object.values(sizeQuantities).reduce((a, b) => a + b, 0);
-      setQuantity(total.toString());
+      if (total > 0) {
+        setQuantity(total.toString());
+      }
     }
   }, [sizeQuantities, isShoeGroup, isClothGroup]);
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
+  const [includeColor, setIncludeColor] = useState(false);
 
   // Dynamic Groups & Categories State
   const [groups, setGroups] = useState<string[]>([]);
@@ -217,6 +220,7 @@ export default function AdminWears() {
     setImages([]);
     setRequiresMinShipping(false);
     setMinShippingQty('0');
+    setIncludeColor(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,7 +263,7 @@ export default function AdminWears() {
         size: size || 'medium',
         sizeQuantities: (isShoeGroup || isClothGroup) ? sizeQuantities : {},
         itemSize: Object.keys(sizeQuantities).join(', '),
-        color: color.trim(),
+        color: (includeColor || isShoeGroup || isClothGroup) ? color.trim() : '',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
@@ -310,6 +314,7 @@ export default function AdminWears() {
     setSize(product.size || '');
     setSizeQuantities((product as any).sizeQuantities || {});
     setColor(product.color || '');
+    setIncludeColor(!!product.color);
     setRequiresMinShipping(product.requiresMinShipping || false);
     setMinShippingQty(product.minShippingQty?.toString() || '0');
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
@@ -512,9 +517,19 @@ export default function AdminWears() {
               </div>
             </div>
 
-            {(isShoeGroup || isClothGroup) && (
-              <div className="space-y-4 mb-6 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50">
-                <div className="space-y-2">
+            <div className="space-y-2 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={includeColor || isShoeGroup || isClothGroup} 
+                  onChange={(e) => setIncludeColor(e.target.checked)} 
+                  className="size-4 accent-purple-600"
+                  disabled={isShoeGroup || isClothGroup} // always true for these
+                />
+                Include Color Input
+              </label>
+              {(includeColor || isShoeGroup || isClothGroup) && (
+                <div className="py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50 animate-in fade-in slide-in-from-top-2">
                   <label className="text-sm font-bold">Colors (comma separated)</label>
                   <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
                   {color && (
@@ -525,7 +540,11 @@ export default function AdminWears() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
 
+            {(isShoeGroup || isClothGroup) && (
+              <div className="space-y-4 mb-6 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50">
                 <label className="text-sm font-bold block">Available Sizes (tick to add, enter qty)</label>
 
                 {isShoeGroup && (

@@ -10,7 +10,8 @@ import {
   doc,
   updateDoc,
   getDoc,
-  where
+  where,
+  addDoc
 } from 'firebase/firestore';
 import { toast, Toaster } from 'react-hot-toast';
 import {
@@ -94,9 +95,34 @@ export default function AdminOrders() {
 
   const markAsDelivered = async (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
+    
+    // Set delivered to true
     await updateDoc(doc(db, 'orders', orderId), { delivered: true });
+    
     setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, delivered: true } : prev);
     toast.success('Order marked as delivered');
+
+    // Send Notification to Customer
+    try {
+      const orderToNotify = selectedOrder?.id === orderId ? selectedOrder : orders.find(o => o.id === orderId);
+      if (orderToNotify?.userId && orderToNotify.userId !== 'guest') {
+        const tSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
+        const template = tSnap.exists() ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly.';
+        
+        await addDoc(collection(db, 'broadcasts'), {
+          type: 'delivery',
+          title: 'Order Delivered',
+          message: template,
+          customerUid: orderToNotify.userId,
+          image: orderToNotify.items?.[0]?.image || '',
+          orderItems: orderToNotify.items || [],
+          orderId: orderToNotify.id,
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send delivery notification", err);
+    }
   };
 
   const getOrderCity = (order: any) => {
