@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
 import ReviewSection from '@/components/ReviewSection';
 import InstallPrompt from '@/components/InstallPrompt';
+import GlobalSearch from '@/components/GlobalSearch';
 import { products as staticProducts } from '@/data/products';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
@@ -206,6 +207,9 @@ export default function Home() {
   return (
     <div className="relative">
       <InstallPrompt />
+
+      <GlobalSearch containerBg={heroSlides.length > 0 ? heroThemes[currentSlide % heroThemes.length].bg : 'bg-slate-50'} />
+
       {/* Hero Section */}
       <section className="relative h-[620px] max-md:h-[670px] overflow-hidden bg-slate-50">
         {dataLoading ? (

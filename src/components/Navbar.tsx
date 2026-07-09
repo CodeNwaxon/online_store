@@ -88,7 +88,7 @@ export default function Navbar() {
   const { partnerData, isApprovedPartner } = usePartner();
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
-  
+
   const notifications = useNotificationStore(state => state.notifications);
   const addNotification = useNotificationStore(state => state.addNotification);
   const getUnreadCount = useNotificationStore(state => state.getUnreadCount);
@@ -151,19 +151,19 @@ export default function Navbar() {
         if (change.type === 'added') {
           const data = change.doc.data();
           if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
-             const userName = data.userName || data.userEmail || 'a user';
-             const templateMsg = instTemplate 
-               ? instTemplate.replace(/\{user\}/gi, userName)
-               : `A new installment plan was started by ${userName}.`;
-             addNotification({
-               id: `inst-${change.doc.id}`,
-               type: 'installment',
-               title: 'New Installment',
-               message: templateMsg,
-               createdAt: new Date().toISOString(),
-               read: false,
-               link: '/admin/installments'
-             });
+            const userName = data.userName || data.userEmail || 'a user';
+            const templateMsg = instTemplate
+              ? instTemplate.replace(/\{user\}/gi, userName)
+              : `A new installment plan was started by ${userName}.`;
+            addNotification({
+              id: `inst-${change.doc.id}`,
+              type: 'installment',
+              title: 'New Installment',
+              message: templateMsg,
+              createdAt: new Date().toISOString(),
+              read: false,
+              link: '/admin/installments'
+            });
           }
         }
       });
@@ -177,15 +177,15 @@ export default function Navbar() {
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
-             addNotification({
-               id: `comp-${change.doc.id}`,
-               type: 'complaint',
-               title: 'New Complaint',
-               message: `A new complain has been sent to your Admin`,
-               createdAt: new Date().toISOString(),
-               read: false,
-               link: '/admin/installments'
-             });
+            addNotification({
+              id: `comp-${change.doc.id}`,
+              type: 'complaint',
+              title: 'New Complaint',
+              message: `A new complain has been sent to your Admin`,
+              createdAt: new Date().toISOString(),
+              read: false,
+              link: '/admin/installments'
+            });
           }
         }
       });
@@ -349,14 +349,14 @@ export default function Navbar() {
   return (
     <>
       {/* --- NAV BAR --------------------------------------- */}
-      {/* --- NAV BAR --------------------------------------- */}
       <nav className={`${isAdminRoute ? 'bg-card border-border' : (pathname === '/partnership' && isPartnershipDarkMode) ? 'bg-zinc-950 border-white/10' : (pathname === '/partnership' && !isPartnershipDarkMode) ? 'bg-slate-50 border-slate-200' : pathname.startsWith('/foods') ? 'bg-emerald-900 border-emerald-800' : pathname.startsWith('/shop/cosmetics') ? 'bg-pink-900 border-pink-800' : pathname.startsWith('/shop/wears') ? 'bg-purple-900 border-purple-800' : pathname.startsWith('/shop/furniture') ? 'bg-amber-950 border-amber-900' : pathname.startsWith('/shop/toilet-kitchen') ? 'bg-teal-900 border-teal-800' : 'bg-card border-border'} border-b sticky top-0 z-[200] py-[0.875rem] transition-colors duration-300`}>
         <div className={`container mx-auto px-4 md:px-6 flex justify-between items-center max-w-[1350px] ${isDarkNav ? 'text-white' : 'text-foreground'}`}>
 
           {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
             <div className={`${isDarkNav ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
-              <Image src="/logo_nomo.png" alt="Logo" width={38} height={38} className="object-contain" />
+              <Image src="/logo_nomo.png" alt="Logo" width={30} height={30} className="md:hidden object-contain" />
+              <Image src="/logo_nomo.png" alt="Logo" width={38} height={38} className="hidden md:block object-contain" />
             </div>
             <span className={`text-[0.8rem] md:text-[1.2rem] font-bold ${isDarkNav ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
           </Link>
@@ -365,7 +365,7 @@ export default function Navbar() {
           <div className="hidden md:flex gap-10 items-center">
             {navLinks.map(l => {
               if (l.label === 'Partnership') return null;
-              
+
               if (l.label === 'Shop') {
                 return (
                   <div key="shop-and-market" className="flex items-center gap-10">
@@ -449,18 +449,18 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {/* Cart */}
             <button onClick={() => setIsCartOpen(true)} className="relative flex items-center p-1">
-              <FaShoppingCart size={22} />
+              <FaShoppingCart size={20} />
               {mounted && totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-secondary text-white rounded-full w-[18px] h-[18px] text-[0.65rem] flex items-center justify-center font-bold">
                   {totalItems}
                 </span>
               )}
             </button>
-            
+
             {/* Notifications */}
             {user && (
               <button onClick={() => setIsNotifOpen(true)} className="relative flex items-center p-1">
-                <FaBell size={22} className={notifUnreadCount > 0 ? 'animate-pulse text-primary' : ''} />
+                <FaBell size={20} className={notifUnreadCount > 0 ? 'animate-pulse text-primary' : ''} />
                 {mounted && notifUnreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-[16px] h-[16px] text-[9px] flex items-center justify-center font-bold shadow-sm">
                     {notifUnreadCount > 9 ? '9+' : notifUnreadCount}
@@ -471,7 +471,7 @@ export default function Navbar() {
 
             {/* Hamburger  only on mobile */}
             <button className="relative flex md:hidden items-center p-1" onClick={() => setIsMenuOpen(true)}>
-              <FaBars size={24} />
+              <FaBars size={22} />
               {mounted && partnerNotifCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
                   {partnerNotifCount}
