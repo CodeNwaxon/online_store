@@ -267,7 +267,17 @@ export default function CategoryProductCard({
               </button>
               <h3 className="text-[0.75rem] font-bold mb-1.5 pr-6 text-foreground dark:text-zinc-100 leading-tight">{product.name}</h3>
               <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                <p className="text-[0.7rem] text-foreground/90 dark:text-zinc-300 whitespace-pre-wrap">{product.description}</p>
+                <p className="text-[0.7rem] text-foreground/90 dark:text-zinc-300 whitespace-pre-wrap">
+                  {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part, i) => 
+                    part.match(/^https?:\/\/nomo-store/) ? (
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        {part}
+                      </a>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )}
+                </p>
               </div>
             </div>
           </div>

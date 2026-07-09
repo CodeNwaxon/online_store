@@ -160,8 +160,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
           onError={() => setImgError(true)}
         />
         {sizeLabel && (
-          <div className="absolute top-1 left-1 bg-white py-1 px-1.5 rounded z-30 shadow-sm border border-gray-100 text-[8px] md:text-[10px] leading-tight">
-            <span className="font-bold text-gray-800">{sizeLabel}</span>
+          <div className="absolute top-1 left-1 bg-white dark:bg-zinc-800 py-1 px-1.5 rounded z-30 shadow-sm border border-gray-100 dark:border-zinc-700 text-[8px] md:text-[10px] leading-tight">
+            <span className="font-bold text-gray-800 dark:text-zinc-200">{sizeLabel}</span>
           </div>
         )}
         {food.images && food.images.length > 1 && (
@@ -282,7 +282,17 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               </button>
               <h3 className="text-[0.75rem] font-bold mb-1.5 pr-6 text-foreground leading-tight">{food.name}</h3>
               <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap">{food.description}</p>
+                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap">
+                  {food.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part, i) => 
+                    part.match(/^https?:\/\/nomo-store/) ? (
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        {part}
+                      </a>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )}
+                </p>
               </div>
             </div>
           </div>

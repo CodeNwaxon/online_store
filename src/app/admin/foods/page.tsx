@@ -54,7 +54,25 @@ export default function AdminFoods() {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const formatStructure = (str: string) => {
-    return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    if (!str) return '';
+    return str.trim().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+  };
+
+  const findSimilarGroup = (newName: string, existingGroups: string[]): string | null => {
+    const normalize = (s: string) => s.toLowerCase().trim();
+    const stem = (s: string) => {
+      const n = normalize(s);
+      if (n.endsWith('ies')) return n.slice(0, -3) + 'y';
+      if (n.endsWith('es')) return n.slice(0, -2);
+      if (n.endsWith('s') && !n.endsWith('ss')) return n.slice(0, -1);
+      return n;
+    };
+    const newStem = stem(newName);
+    for (const g of existingGroups) {
+      if (normalize(g) === normalize(newName)) return g;
+      if (stem(g) === newStem) return g;
+    }
+    return null;
   };
 
   // Image State
@@ -122,7 +140,7 @@ export default function AdminFoods() {
         newMap[groupUpper] = Array.from(new Set([...newMap[groupUpper], ...catsForGroup as string[]]));
       });
 
-      setGroups(Array.from(new Set([...groups, ...uniqueGroups.map((g: any) => formatStructure(g))])));
+      setGroups(prev => Array.from(new Set([...prev, ...uniqueGroups.map((g: any) => formatStructure(g))])).sort());
       setCategoriesByGroup(newMap);
 
     }, (error) => {
@@ -365,7 +383,17 @@ export default function AdminFoods() {
                     />
                     <button
                       type="button"
-                      onClick={() => { if (newGroupName) { const formatted = formatStructure(newGroupName); setGroup(formatted); setGroups([...groups, formatted]); setIsAddingGroup(false); } }}
+                      onClick={() => {
+                        if (newGroupName) {
+                          const formatted = formatStructure(newGroupName);
+                          const existing = findSimilarGroup(formatted, groups);
+                          if (existing) {
+                            toast.error(`"${formatted}" is too similar to existing group "${existing}". Please use "${existing}" instead.`);
+                            return;
+                          }
+                          setGroup(formatted); setGroups(prev => Array.from(new Set([...prev, formatted])).sort()); setIsAddingGroup(false);
+                        }
+                      }}
                       className="bg-primary text-white px-4 rounded-md text-xs font-bold"
                     >
                       Add

@@ -229,7 +229,15 @@ export default function CategoryDetailPage({
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
               <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap">
-                {product.description}
+                {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) => 
+                  part.match(/^https?:\/\/nomo-store/) ? (
+                    <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
+                      {part}
+                    </a>
+                  ) : (
+                    <span key={i}>{part}</span>
+                  )
+                )}
               </p>
             </div>
 

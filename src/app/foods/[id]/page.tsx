@@ -199,7 +199,19 @@ export default function FoodDetail() {
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3 text-green-800 border-b border-green-100 pb-2">Description</h3>
               <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                {food.description || 'No description available for this delicious item.'}
+                {food.description ? (
+                  food.description.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) => 
+                    part.match(/^https?:\/\/nomo-store/) ? (
+                      <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
+                        {part}
+                      </a>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    )
+                  )
+                ) : (
+                  'No description available for this delicious item.'
+                )}
               </p>
             </div>
 
