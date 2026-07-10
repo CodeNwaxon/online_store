@@ -17,6 +17,7 @@ import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUserTie, FaBoxes
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
+import SearchableSelect from '@/components/SearchableSelect';
 
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -487,10 +488,13 @@ export default function AdminWears() {
                     </button>
                   </div>
                 ) : (
-                  <select required value={group} onChange={e => { setGroup(e.target.value); setCategory(''); }} className="w-full p-3 rounded-md border border-border bg-background text-sm">
-                    <option value="">Select Group</option>
-                    {groups.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
+                  <SearchableSelect
+                    required
+                    value={group}
+                    onChange={(val) => { setGroup(val); setCategory(''); }}
+                    options={groups}
+                    placeholder="Select Group"
+                  />
                 )}
               </div>
 
@@ -533,16 +537,14 @@ export default function AdminWears() {
                     </button>
                   </div>
                 ) : (
-                  <select
+                  <SearchableSelect
                     required
                     disabled={!group}
                     value={category}
-                    onChange={e => setCategory(e.target.value)}
-                    className="w-full p-3 rounded-md border border-border bg-background text-sm disabled:bg-muted"
-                  >
-                    <option value="">{group ? 'Select Category' : 'Choose Group First'}</option>
-                    {group && categoriesByGroup[group.toUpperCase()]?.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                    onChange={(val) => setCategory(val)}
+                    options={group ? (categoriesByGroup[group.toUpperCase()] || []) : []}
+                    placeholder={group ? 'Select Category' : 'Choose Group First'}
+                  />
                 )}
               </div>
             </div>
