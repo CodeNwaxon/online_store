@@ -46,6 +46,25 @@ export default function AdminFoods() {
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
 
+  // Measurements State
+  const [includeMeasurements, setIncludeMeasurements] = useState(false);
+  const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, boolean>>({});
+
+  const grainMeasurements = ['1 cup', '1 congo', '1 mudu', '1 paint rubber', '1/4 bag (quarter bag)', '1/2 bag (half bag)', '1 bag', '2 bags'];
+  const weightMeasurements = ['1 kg', '2 kg', '5 kg', '10 kg', '25 kg', '50 kg'];
+
+  const toggleMeasurement = (m: string) => {
+    setSelectedMeasurements(prev => {
+      const copy = { ...prev };
+      if (copy[m]) {
+        delete copy[m];
+      } else {
+        copy[m] = true;
+      }
+      return copy;
+    });
+  };
+
   // Dynamic Groups & Categories State
   const [groups, setGroups] = useState<string[]>([]);
   const [categoriesByGroup, setCategoriesByGroup] = useState<Record<string, string[]>>({});
@@ -193,9 +212,10 @@ export default function AdminFoods() {
     setIsAddingCategory(false);
     setNewGroupName('');
     setNewCategoryName('');
-    setImages([]);
     setRequiresMinShipping(false);
     setMinShippingQty('0');
+    setIncludeMeasurements(false);
+    setSelectedMeasurements({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,6 +255,7 @@ export default function AdminFoods() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
+        measurements: includeMeasurements ? Object.keys(selectedMeasurements).join(', ') : '',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
@@ -272,6 +293,21 @@ export default function AdminFoods() {
     setSize(food.size || '');
     setRequiresMinShipping(food.requiresMinShipping || false);
     setMinShippingQty(food.minShippingQty?.toString() || '0');
+    
+    // Load measurements if they exist
+    const foodMeasurements = (food as any).measurements;
+    if (foodMeasurements) {
+      setIncludeMeasurements(true);
+      const mObj: Record<string, boolean> = {};
+      foodMeasurements.split(', ').forEach((m: string) => {
+        if (m) mObj[m] = true;
+      });
+      setSelectedMeasurements(mObj);
+    } else {
+      setIncludeMeasurements(false);
+      setSelectedMeasurements({});
+    }
+
     setImages((food.images || []).map(url => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -469,7 +505,7 @@ export default function AdminFoods() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold">Product Size</label>
+                <label className="text-sm font-bold">Product Size (Shipping)</label>
                 <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
                   <option value="">Select Size</option>
                   <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
@@ -480,6 +516,57 @@ export default function AdminFoods() {
                   <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
                 </select>
               </div>
+            </div>
+
+            {/* Measurements Section */}
+            <div className="space-y-2 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={includeMeasurements} 
+                  onChange={(e) => setIncludeMeasurements(e.target.checked)} 
+                  className="size-4 accent-green-600"
+                />
+                Add Market Measurements (Grains, Kilos, etc.)
+              </label>
+              
+              {includeMeasurements && (
+                <div className="space-y-4 py-4 px-2 border border-green-200 rounded-lg bg-green-50/50 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm font-bold block">Available Measurements (tick to add)</label>
+                  
+                  {/* Grain Measurements */}
+                  <div>
+                    <p className="text-xs font-black text-green-800 mb-1.5">Grains & General Measurements</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {grainMeasurements.map(m => (
+                        <div key={`gm-${m}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${selectedMeasurements[m] ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleMeasurement(m)}>
+                          <input type="checkbox" checked={!!selectedMeasurements[m]} readOnly className="accent-green-600 pointer-events-none" />
+                          <span className="font-bold">{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Weight Measurements */}
+                  <div>
+                    <p className="text-xs font-black text-green-800 mb-1.5">Weight (Chicken, Fish, etc.)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {weightMeasurements.map(m => (
+                        <div key={`wm-${m}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${selectedMeasurements[m] ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleMeasurement(m)}>
+                          <input type="checkbox" checked={!!selectedMeasurements[m]} readOnly className="accent-green-600 pointer-events-none" />
+                          <span className="font-bold">{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {Object.keys(selectedMeasurements).length > 0 && (
+                    <div className="text-xs font-bold text-green-700 pt-2 border-t border-green-200">
+                      Selected: {Object.keys(selectedMeasurements).join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

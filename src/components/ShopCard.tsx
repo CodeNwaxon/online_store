@@ -28,6 +28,7 @@ export interface ShopProduct {
   selectedSize?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
+  measurements?: string;
 }
 
 interface ShopCardProps {
@@ -105,6 +106,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   const [showDescription, setShowDescription] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
+  const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
 
   useEffect(() => {
     setImgError(false);
@@ -144,9 +146,18 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
       if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
       return `Sizes: ${sizeKeys[0]} - ${sizeKeys[sizeKeys.length - 1]}`;
     }
+    if (food.measurements) {
+      const parts = food.measurements.split(',').map(m => m.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        if (parts.length === 1) return parts[0];
+        return `${parts[0]} - ${parts[parts.length - 1]}`;
+      }
+    }
     return null;
   };
   const sizeLabel = getSizeDisplay();
+  
+  const measurementKeys = food.measurements ? food.measurements.split(',').map(m => m.trim()).filter(Boolean) : [];
 
   const CardContent = (
     <div className={`relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br ${theme.bgGradient} p-1`}>
@@ -336,8 +347,9 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                   e.preventDefault();
                   e.stopPropagation();
 
-                  if (sizeKeys.length > 0) {
+                  if (sizeKeys.length > 0 || measurementKeys.length > 0) {
                     setShowSizeOverlay(true);
+                    setTempSelectedMeasurement('');
                     return;
                   }
 
@@ -376,8 +388,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
           )}
         </div>
 
-        {/* Size Selection Overlay */}
-        {showSizeOverlay && sizeKeys.length > 0 && (
+        {/* Size/Measurement Selection Overlay */}
+        {showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && (
           <div
             className="absolute inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-2 flex items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
@@ -392,22 +404,84 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               >
                 ✕
               </button>
-              <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Size</h3>
-              <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40">
-                {sizeKeys.map(sz => {
-                  const qty = (food.sizeQuantities as Record<string, number>)[sz];
-                  return (
+              
+              {sizeKeys.length > 0 && (
+                <>
+                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Size</h3>
+                  <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+                    {sizeKeys.map(sz => {
+                      const qty = (food.sizeQuantities as Record<string, number>)[sz];
+                      return (
+                        <button
+                          key={sz}
+                          disabled={qty <= 0}
+                          className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `${theme.bgPrimary} text-white border-transparent hover:opacity-90`}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                            const currentInCart = existing ? existing.quantity : 0;
+                            if (currentInCart + 1 > qty) {
+                              toast.error(`Only ${qty} available for size ${sz}`);
+                              return;
+                            }
+                            const cartProduct = {
+                              id: food.id,
+                              name: food.name,
+                              price: food.price,
+                              image: food.images?.[0] || '/images/placeholder.png',
+                              category: 'Food',
+                              description: food.description,
+                              selectedSize: sz,
+                            };
+                            addItem(cartProduct as any);
+                            toast.success(`${food.name} (${sz}) added to cart`, {
+                              style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                              position: 'bottom-center',
+                              duration: 2000,
+                            });
+                            setShowSizeOverlay(false);
+                          }}
+                        >
+                          {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {measurementKeys.length > 0 && (
+                <>
+                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Measurement</h3>
+                  <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+                    {measurementKeys.map(m => (
+                      <button
+                        key={m}
+                        className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${tempSelectedMeasurement === m ? `${theme.bgPrimary} text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTempSelectedMeasurement(m);
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-border">
                     <button
-                      key={sz}
-                      disabled={qty <= 0}
-                      className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `${theme.bgPrimary} text-white border-transparent hover:opacity-90`}`}
+                      className={`w-full py-1.5 rounded-md text-xs font-bold text-white transition-all ${!tempSelectedMeasurement ? 'bg-gray-300 cursor-not-allowed text-gray-500' : `${theme.bgPrimary} ${theme.hoverBgPrimary}`}`}
+                      disabled={!tempSelectedMeasurement}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                        if (!tempSelectedMeasurement) return;
+
+                        const existing = cartItems.find(item => item.id === food.id && item.selectedSize === tempSelectedMeasurement);
                         const currentInCart = existing ? existing.quantity : 0;
-                        if (currentInCart + 1 > qty) {
-                          toast.error(`Only ${qty} available for size ${sz}`);
+                        if (currentInCart + 1 > (food.quantity ?? 0)) {
+                          toast.error(`Only ${food.quantity ?? 0} available in stock`);
                           return;
                         }
                         const cartProduct = {
@@ -417,10 +491,10 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                           image: food.images?.[0] || '/images/placeholder.png',
                           category: 'Food',
                           description: food.description,
-                          selectedSize: sz,
+                          selectedSize: tempSelectedMeasurement, // Map measurement to selectedSize for cart
                         };
                         addItem(cartProduct as any);
-                        toast.success(`${food.name} (${sz}) added to cart`, {
+                        toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {
                           style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                           position: 'bottom-center',
                           duration: 2000,
@@ -428,11 +502,11 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         setShowSizeOverlay(false);
                       }}
                     >
-                      {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                      Add to Cart
                     </button>
-                  );
-                })}
-              </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
