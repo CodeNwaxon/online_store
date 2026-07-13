@@ -635,7 +635,7 @@ export default function AdminFoods() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuantity(Math.max(0, Number(quantity) - 1).toString())}
+                    onClick={() => setQuantity(Math.max(1, Number(quantity) - 1).toString())}
                     className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
                   >
                     -
@@ -645,6 +645,7 @@ export default function AdminFoods() {
                     value={quantity}
                     onChange={e => setQuantity(e.target.value)}
                     type="number"
+                    min="1"
                     className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"
                   />
                   <button

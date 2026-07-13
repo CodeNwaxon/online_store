@@ -590,7 +590,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -605,7 +605,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[`W${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`W${sz}`] !== undefined && (
-                              <input type="number" min="0" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -620,7 +620,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[`C${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`C${sz}`] !== undefined && (
-                              <input type="number" min="0" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -640,7 +640,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -655,7 +655,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="0" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, parseInt(e.target.value) || 0)} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -757,7 +757,7 @@ export default function AdminWears() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuantity(Math.max(0, Number(quantity) - 1).toString())}
+                    onClick={() => setQuantity(Math.max(1, Number(quantity) - 1).toString())}
                     className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
                   >
                     -
@@ -767,6 +767,7 @@ export default function AdminWears() {
                     value={quantity}
                     onChange={e => setQuantity(e.target.value)}
                     type="number"
+                    min="1"
                     className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"
                   />
                   <button
