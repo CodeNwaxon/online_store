@@ -162,13 +162,6 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
       if (nums.length >= 2) return `Sizes: ${Math.min(...nums)} - ${Math.max(...nums)}`;
       return `Sizes: ${sizeKeys[0]} - ${sizeKeys[sizeKeys.length - 1]}`;
     }
-    if (food.measurements) {
-      const parts = food.measurements.split(',').map(m => m.trim()).filter(Boolean);
-      if (parts.length > 0) {
-        if (parts.length === 1) return parts[0];
-        return `${parts[0]} - ${parts[parts.length - 1]}`;
-      }
-    }
     return null;
   };
   const sizeLabel = getSizeDisplay();
