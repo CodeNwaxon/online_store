@@ -149,7 +149,21 @@ export default function CategoryDetailPage({
   };
 
   const sizeKeys = product.sizeQuantities ? Object.keys(product.sizeQuantities).filter(k => (product.sizeQuantities as Record<string, number>)[k] > 0) : [];
-  const measurementKeys = product.measurements ? product.measurements.split(',').map((m: string) => m.trim()).filter(Boolean) : [];
+  let parsedMeasurements: Record<string, string> = {};
+  if (product.measurements) {
+    try {
+      const parsed = JSON.parse(product.measurements);
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurements[k] = String(v);
+      });
+    } catch {
+      product.measurements.split(',').forEach((m: string) => {
+        const trimmed = m.trim();
+        if (trimmed) parsedMeasurements[trimmed] = '';
+      });
+    }
+  }
+  const measurementKeys = Object.keys(parsedMeasurements);
 
   const productImages = (product.images && product.images.length > 0
     ? product.images
@@ -256,14 +270,17 @@ export default function CategoryDetailPage({
               <div className="mb-6">
                 <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Measurements</h3>
                 <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
-                  {measurementKeys.map((m: string, i: number) => (
-                    <span
-                      key={i}
-                      className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md"
-                    >
-                      {m}
-                    </span>
-                  ))}
+                  {measurementKeys.map((m: string, i: number) => {
+                    const mPrice = parsedMeasurements[m];
+                    return (
+                      <span
+                        key={i}
+                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md"
+                      >
+                        {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -447,23 +464,26 @@ export default function CategoryDetailPage({
                         <div className="mb-3">
                           <h3 className="text-base font-bold mb-3 text-foreground">Select Measurement</h3>
                           <div className="flex flex-wrap gap-2">
-                            {measurementKeys.map((m: string, i: number) => (
-                              <button
-                                key={i}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
-                                  tempSelectedMeasurement === m 
-                                    ? `${themeConfig.btn} text-white border-transparent`
-                                    : 'bg-white border-gray-300 hover:bg-gray-50'
-                                }`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setTempSelectedMeasurement(m);
-                                }}
-                              >
-                                {m}
-                              </button>
-                            ))}
+                            {measurementKeys.map((m: string, i: number) => {
+                              const mPrice = parsedMeasurements[m];
+                              return (
+                                <button
+                                  key={i}
+                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
+                                    tempSelectedMeasurement === m 
+                                      ? `${themeConfig.btn} text-white border-transparent`
+                                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setTempSelectedMeasurement(m);
+                                  }}
+                                >
+                                  {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -497,10 +517,13 @@ export default function CategoryDetailPage({
                             return;
                           }
 
+                          const measurePriceStr = tempSelectedMeasurement ? parsedMeasurements[tempSelectedMeasurement] : null;
+                          const finalPrice = measurePriceStr ? Number(measurePriceStr) : product.price;
+
                           addItem({
                             id: product.id,
                             name: product.name,
-                            price: product.price,
+                            price: finalPrice,
                             image: productImages[0],
                             images: productImages,
                             quantity: product.quantity,
@@ -513,6 +536,7 @@ export default function CategoryDetailPage({
                             selectedSize: tempSelectedSize || undefined,
                             selectedColor: tempSelectedColor || undefined,
                             selectedMeasurement: tempSelectedMeasurement || undefined,
+                            measurementPrice: measurePriceStr ? finalPrice : undefined,
                           } as any);
 
                           const parts = [tempSelectedSize, tempSelectedColor, tempSelectedMeasurement].filter(Boolean);

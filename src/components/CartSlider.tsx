@@ -38,10 +38,10 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
           return;
         }
       }
-      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor);
+      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor, item.selectedMeasurement);
     } catch (error) {
       console.error("Error verifying quantity:", error);
-      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor);
+      updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor, item.selectedMeasurement);
     }
   };
 
@@ -53,7 +53,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
 
       const saved = localStorage.getItem('purchase_history');
       if (saved) setPurchaseHistory(JSON.parse(saved));
-      
+
       const fetchSettings = async () => {
         const docSnap = await getDoc(doc(db, 'settings', 'general'));
         if (docSnap.exists()) setSiteName(docSnap.data().siteName || 'Quick Choice');
@@ -154,7 +154,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               <div class="section-title" style="margin-top: 20px;">Items Ordered</div>
               ${order.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -183,13 +183,13 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   return (
     <div className="fixed inset-0 z-[200] flex justify-end">
       {/* Backdrop */}
-      <div 
-        className={`absolute inset-0 bg-black/50 cursor-pointer transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`} 
+      <div
+        className={`absolute inset-0 bg-black/50 cursor-pointer transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
       />
-      
+
       {/* Content */}
-      <div 
+      <div
         className={`relative w-full max-w-[400px] h-full bg-card shadow-[-4px_0_15px_rgba(0,0,0,0.1)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${animateIn ? 'translate-x-0' : 'translate-x-full'}`}
         onTransitionEnd={handleAnimationEnd}
       >
@@ -203,8 +203,8 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               <p className="text-xs text-muted-foreground mb-6 font-medium leading-relaxed">
                 We only have <span className="font-bold text-amber-600 text-sm">{exceededStockItem.available}</span> quantity left of <span className="font-bold text-foreground">{exceededStockItem.name}</span> in stock.
               </p>
-              <button 
-                onClick={() => setExceededStockItem(null)} 
+              <button
+                onClick={() => setExceededStockItem(null)}
                 className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-black uppercase transition-colors shadow-md"
               >
                 Okay, I understand
@@ -214,8 +214,8 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
         )}
         <div className="p-6 border-b border-border flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowHistory(!showHistory)} 
+            <button
+              onClick={() => setShowHistory(!showHistory)}
               className={`flex items-center gap-1.5 transition-all ${showHistory ? 'text-primary font-black' : 'text-muted-foreground hover:text-foreground font-bold'}`}
             >
               {showHistory ? <FaChevronLeft size={14} /> : <FaHistory size={14} />}
@@ -226,7 +226,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
           </div>
           <button onClick={onClose} aria-label="Close cart" className="text-foreground hover:text-primary transition-colors"><FaTimes size={24} /></button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-6 relative">
           {showHistory ? (
             <div className="space-y-6">
@@ -239,14 +239,14 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                 <>
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{purchaseHistory.length} Past Purchases</span>
-                    <button 
+                    <button
                       onClick={() => setShowClearConfirm(true)}
                       className="text-[10px] font-black uppercase text-secondary hover:underline tracking-widest"
                     >
                       Clear All
                     </button>
                   </div>
-                  
+
                   {purchaseHistory.map((order) => (
                     <div key={order.id} className="bg-muted/30 p-4 rounded-xl border border-border group relative">
                       <div className="flex justify-between items-start mb-3">
@@ -254,7 +254,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                           <div className="text-[10px] font-bold text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</div>
                           <div className="text-sm font-black text-primary">₦{order.totalAmount?.toLocaleString()}</div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => deleteHistoryItem(order.id)}
                           className="text-muted-foreground hover:text-secondary p-1"
                         >
@@ -264,12 +264,12 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                       <div className="space-y-2 mb-4">
                         {order.items.slice(0, 2).map((item: any, i: number) => (
                           <div key={i} className="text-[10px] font-bold text-foreground truncate">
-                            • {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-muted-foreground">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground">(x{item.quantity})</span>
+                            • {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-muted-foreground">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground ">(x{item.quantity})</span>
                           </div>
                         ))}
                         {order.items.length > 2 && <div className="text-[9px] font-bold text-muted-foreground">+{order.items.length - 2} more...</div>}
                       </div>
-                      <button 
+                      <button
                         onClick={() => handlePrintReceipt(order)}
                         className="w-full py-2 bg-card border border-border rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-2 hover:bg-muted transition-all"
                       >
@@ -298,10 +298,10 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               <div className="text-center mt-16 flex flex-col items-center">
                 <FaShoppingBag size={64} className="text-muted-foreground mb-4 opacity-50" />
                 <p className="text-muted-foreground">Your cart is empty.</p>
-                <Link 
-                  href="/shop" 
+                <Link
+                  href="/shop"
                   onClick={onClose}
-                  className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold mt-6 inline-block transition-colors" 
+                  className="border border-border text-foreground hover:bg-muted px-6 py-3 rounded-md font-semibold mt-6 inline-block transition-colors"
                 >
                   Start Shopping
                 </Link>
@@ -309,7 +309,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
             ) : (
               <div className="flex flex-col gap-6">
                 {items.map((item, idx) => (
-                  <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${idx}`} className="flex gap-4">
+                  <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${item.selectedMeasurement || ''}-${idx}`} className="flex gap-4">
                     <div className="relative w-[80px] h-[80px] rounded shrink-0 overflow-hidden">
                       <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
                     </div>
@@ -319,23 +319,24 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                           <h4 className="text-[0.9rem] font-semibold text-foreground">{item.name}</h4>
                           <div className="flex gap-2 items-center flex-wrap mt-0.5">
                             {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedSize}</span>}
+                            {item.selectedMeasurement && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedMeasurement}</span>}
                             {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span><span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span></span>}
                           </div>
                         </div>
-                        <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
+                        <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor, item.selectedMeasurement)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
                       </div>
                       <div className="text-sm text-primary font-bold mb-2">
                         ₦{item.price.toLocaleString()}
                       </div>
                       <div className="flex items-center gap-3">
-                        <button 
+                        <button
                           className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor, item.selectedMeasurement)}
                         >
                           <FaMinus size={14} />
                         </button>
                         <span className="text-sm font-medium">{item.quantity}</span>
-                        <button 
+                        <button
                           className="border border-border p-0.5 rounded hover:bg-muted text-foreground transition-colors"
                           onClick={() => handleIncreaseQuantity(item)}
                         >
@@ -349,15 +350,15 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
             )
           )}
         </div>
-        
+
         {items.length > 0 && (
           <div className="p-6 border-t border-border bg-muted">
             <div className="flex justify-between mb-6 text-[1.1rem] font-bold">
               <span>Total:</span>
               <span className="text-primary">₦{getTotalPrice().toLocaleString()}</span>
             </div>
-            <Link 
-              href="/checkout" 
+            <Link
+              href="/checkout"
               onClick={onClose}
               className="block w-full py-3 bg-primary text-white text-center font-bold rounded-lg hover:bg-primary-hover transition-colors"
             >

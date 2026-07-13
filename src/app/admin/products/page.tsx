@@ -23,6 +23,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DistributionManager from '@/components/DistributionManager';
 import { uploadImageToCloudinary } from '@/actions/upload';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -68,6 +69,7 @@ const parseDate = (dateVal: any) => {
 
 
 function AdminProductsContent() {
+  const { isCEO } = useAdmin();
   const searchParams = useSearchParams();
   const router = useRouter();
   const editParam = searchParams.get('edit');
@@ -522,12 +524,14 @@ function AdminProductsContent() {
           <h1 className="text-2xl md:text-3xl font-bold">Product Management</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage your store inventory and promos.</p>
         </div>
-        <button
-          onClick={() => setIsDistributionOpen(true)}
-          className="bg-secondary text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-secondary/90 transition-colors"
-        >
-          Distribution fee
-        </button>
+        {isCEO && (
+          <button
+            onClick={() => setIsDistributionOpen(true)}
+            className="bg-secondary text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-secondary/90 transition-colors"
+          >
+            Distribution fee
+          </button>
+        )}
       </header>
 
       <DistributionManager isOpen={isDistributionOpen} onClose={() => setIsDistributionOpen(false)} />

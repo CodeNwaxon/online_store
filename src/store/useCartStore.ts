@@ -6,13 +6,15 @@ interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   selectedColor?: string;
+  selectedMeasurement?: string;
+  measurementPrice?: number;
 }
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product & { selectedColor?: string }) => void;
-  removeItem: (productId: string, selectedSize?: string, selectedColor?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string) => void;
+  addItem: (product: Product & { selectedColor?: string, selectedMeasurement?: string, measurementPrice?: number }) => void;
+  removeItem: (productId: string, selectedSize?: string, selectedColor?: string, selectedMeasurement?: string) => void;
+  updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string, selectedMeasurement?: string) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -26,13 +28,13 @@ export const useCartStore = create<CartState>()(
       addItem: (product) => {
         const currentItems = get().items;
         const existingItem = currentItems.find(
-          (item) => item.id === product.id && item.selectedSize === product.selectedSize && item.selectedColor === product.selectedColor
+          (item) => item.id === product.id && item.selectedSize === product.selectedSize && item.selectedColor === product.selectedColor && item.selectedMeasurement === product.selectedMeasurement
         );
         
         if (existingItem) {
           set({
             items: currentItems.map((item) =>
-              item.id === product.id && item.selectedSize === product.selectedSize && item.selectedColor === product.selectedColor
+              item.id === product.id && item.selectedSize === product.selectedSize && item.selectedColor === product.selectedColor && item.selectedMeasurement === product.selectedMeasurement
                 ? { ...item, quantity: item.quantity + 1 }
                 : item
             ),
@@ -42,21 +44,21 @@ export const useCartStore = create<CartState>()(
         }
       },
       
-      removeItem: (productId, selectedSize, selectedColor) => {
+      removeItem: (productId, selectedSize, selectedColor, selectedMeasurement) => {
         set({
-          items: get().items.filter((item) => !(item.id === productId && item.selectedSize === selectedSize && item.selectedColor === selectedColor)),
+          items: get().items.filter((item) => !(item.id === productId && item.selectedSize === selectedSize && item.selectedColor === selectedColor && item.selectedMeasurement === selectedMeasurement)),
         });
       },
       
-      updateQuantity: (productId, quantity, selectedSize, selectedColor) => {
+      updateQuantity: (productId, quantity, selectedSize, selectedColor, selectedMeasurement) => {
         if (quantity <= 0) {
-          get().removeItem(productId, selectedSize, selectedColor);
+          get().removeItem(productId, selectedSize, selectedColor, selectedMeasurement);
           return;
         }
         
         set({
           items: get().items.map((item) =>
-            item.id === productId && item.selectedSize === selectedSize && item.selectedColor === selectedColor ? { ...item, quantity } : item
+            item.id === productId && item.selectedSize === selectedSize && item.selectedColor === selectedColor && item.selectedMeasurement === selectedMeasurement ? { ...item, quantity } : item
           ),
         });
       },

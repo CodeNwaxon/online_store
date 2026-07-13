@@ -9,6 +9,7 @@ export interface CartItem {
   size: ShippingSize;
   quantity: number;
   price: number;
+  selectedMeasurement?: string;
 }
 
 export interface ShippingItemBreakdown {
@@ -52,7 +53,19 @@ export const calculateCartShippingForArea = (
 ): ShippingBreakdown => {
   const expandedUnits = cartItems.flatMap((item) => {
     const size = normalizeShippingSize(item.size);
-    const unitShipping = areaData.prices?.[size] ?? 0;
+    let unitShipping = areaData.prices?.[size] ?? 0;
+    
+    if (item.selectedMeasurement) {
+      const measurement = item.selectedMeasurement.toLowerCase();
+      if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+        unitShipping = Math.ceil(unitShipping / 2) + 1000;
+      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
+        unitShipping = Math.ceil(unitShipping / 3) + 500;
+      } else if (!measurement.includes('1 bag')) {
+        unitShipping = 1500; // Flat fee for cups, congo, mudu, etc.
+      }
+    }
+
     return Array.from({ length: item.quantity }, () => ({
       id: item.id,
       name: item.name,
@@ -79,7 +92,19 @@ export const calculateCartShippingForArea = (
 
   const itemBreakdown = cartItems.map((item) => {
     const size = normalizeShippingSize(item.size);
-    const unitShipping = areaData.prices?.[size] ?? 0;
+    let unitShipping = areaData.prices?.[size] ?? 0;
+    
+    if (item.selectedMeasurement) {
+      const measurement = item.selectedMeasurement.toLowerCase();
+      if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+        unitShipping = Math.ceil(unitShipping / 2) + 1000;
+      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
+        unitShipping = Math.ceil(unitShipping / 3) + 500;
+      } else if (!measurement.includes('1 bag')) {
+        unitShipping = 1500;
+      }
+    }
+    
     const unitCharges = chargedUnits.filter((unit) => unit.id === item.id);
     const totalShipping = unitCharges.reduce((sum, unit) => sum + unit.charge, 0);
 

@@ -48,7 +48,7 @@ export default function AdminFoods() {
 
   // Measurements State
   const [includeMeasurements, setIncludeMeasurements] = useState(false);
-  const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, boolean>>({});
+  const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, string>>({});
 
   const grainMeasurements = ['1 cup', '1 congo', '1 mudu', '1 paint rubber', '1/4 bag (quarter bag)', '1/2 bag (half bag)', '1 bag', '2 bags'];
   const weightMeasurements = ['1 kg', '2 kg', '5 kg', '10 kg', '25 kg', '50 kg'];
@@ -56,13 +56,17 @@ export default function AdminFoods() {
   const toggleMeasurement = (m: string) => {
     setSelectedMeasurements(prev => {
       const copy = { ...prev };
-      if (copy[m]) {
+      if (m in copy) {
         delete copy[m];
       } else {
-        copy[m] = true;
+        copy[m] = '';
       }
       return copy;
     });
+  };
+
+  const setMeasurementPrice = (m: string, value: string) => {
+    setSelectedMeasurements(prev => ({ ...prev, [m]: value }));
   };
 
   // Dynamic Groups & Categories State
@@ -229,6 +233,16 @@ export default function AdminFoods() {
     if (!size) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
 
+    // Validate measurement prices
+    if (includeMeasurements && Object.keys(selectedMeasurements).length > 0) {
+      for (const [mName, mPrice] of Object.entries(selectedMeasurements)) {
+        const parsed = parseFloat(mPrice.replace(/,/g, ''));
+        if (!mPrice.trim() || isNaN(parsed) || parsed < 1) {
+          return toast.error(`Please enter a valid price (minimum ₦1) for "${mName}".`);
+        }
+      }
+    }
+
     const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
     const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
 
@@ -255,7 +269,13 @@ export default function AdminFoods() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
-        measurements: includeMeasurements ? Object.keys(selectedMeasurements).join(', ') : '',
+        measurements: includeMeasurements && Object.keys(selectedMeasurements).length > 0
+          ? JSON.stringify(
+              Object.fromEntries(
+                Object.entries(selectedMeasurements).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
+              )
+            )
+          : '',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
@@ -298,11 +318,22 @@ export default function AdminFoods() {
     const foodMeasurements = (food as any).measurements;
     if (foodMeasurements) {
       setIncludeMeasurements(true);
-      const mObj: Record<string, boolean> = {};
-      foodMeasurements.split(', ').forEach((m: string) => {
-        if (m) mObj[m] = true;
-      });
-      setSelectedMeasurements(mObj);
+      try {
+        // Try parsing as JSON (new format with prices)
+        const parsed = JSON.parse(foodMeasurements);
+        const mObj: Record<string, string> = {};
+        Object.entries(parsed).forEach(([k, v]) => {
+          mObj[k] = formatPriceInput(String(v));
+        });
+        setSelectedMeasurements(mObj);
+      } catch {
+        // Fallback: old comma-separated format (no prices)
+        const mObj: Record<string, string> = {};
+        foodMeasurements.split(', ').forEach((m: string) => {
+          if (m) mObj[m] = '';
+        });
+        setSelectedMeasurements(mObj);
+      }
     } else {
       setIncludeMeasurements(false);
       setSelectedMeasurements({});
@@ -537,11 +568,26 @@ export default function AdminFoods() {
                   {/* Grain Measurements */}
                   <div>
                     <p className="text-xs font-black text-green-800 mb-1.5">Grains & General Measurements</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {grainMeasurements.map(m => (
-                        <div key={`gm-${m}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${selectedMeasurements[m] ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleMeasurement(m)}>
-                          <input type="checkbox" checked={!!selectedMeasurements[m]} readOnly className="accent-green-600 pointer-events-none" />
-                          <span className="font-bold">{m}</span>
+                        <div key={`gm-${m}`} className={`flex flex-col gap-1.5 p-2 rounded border text-xs transition-colors ${m in selectedMeasurements ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`}>
+                          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleMeasurement(m)}>
+                            <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-green-600 pointer-events-none" />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {m in selectedMeasurements && (
+                            <div className="flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <span className="text-[10px] font-bold text-green-800">₦</span>
+                              <input
+                                type="text"
+                                placeholder="Price"
+                                value={selectedMeasurements[m]}
+                                onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                onClick={e => e.stopPropagation()}
+                                className="w-full p-1.5 rounded border border-green-300 bg-white text-xs font-bold focus:border-green-500 focus:ring-1 focus:ring-green-500/30 outline-none"
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -550,19 +596,41 @@ export default function AdminFoods() {
                   {/* Weight Measurements */}
                   <div>
                     <p className="text-xs font-black text-green-800 mb-1.5">Weight (Chicken, Fish, etc.)</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {weightMeasurements.map(m => (
-                        <div key={`wm-${m}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${selectedMeasurements[m] ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleMeasurement(m)}>
-                          <input type="checkbox" checked={!!selectedMeasurements[m]} readOnly className="accent-green-600 pointer-events-none" />
-                          <span className="font-bold">{m}</span>
+                        <div key={`wm-${m}`} className={`flex flex-col gap-1.5 p-2 rounded border text-xs transition-colors ${m in selectedMeasurements ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`}>
+                          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleMeasurement(m)}>
+                            <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-green-600 pointer-events-none" />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {m in selectedMeasurements && (
+                            <div className="flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <span className="text-[10px] font-bold text-green-800">₦</span>
+                              <input
+                                type="text"
+                                placeholder="Price"
+                                value={selectedMeasurements[m]}
+                                onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                onClick={e => e.stopPropagation()}
+                                className="w-full p-1.5 rounded border border-green-300 bg-white text-xs font-bold focus:border-green-500 focus:ring-1 focus:ring-green-500/30 outline-none"
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {Object.keys(selectedMeasurements).length > 0 && (
-                    <div className="text-xs font-bold text-green-700 pt-2 border-t border-green-200">
-                      Selected: {Object.keys(selectedMeasurements).join(', ')}
+                    <div className="text-xs font-bold text-green-700 pt-2 border-t border-green-200 space-y-1">
+                      <p>Selected Measurements:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(selectedMeasurements).map(([m, p]) => (
+                          <span key={m} className="inline-flex items-center gap-1 bg-green-200/60 px-2 py-0.5 rounded-full">
+                            {m}{p ? ` — ₦${p}` : ' (no price)'}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

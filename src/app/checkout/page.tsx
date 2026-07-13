@@ -166,16 +166,17 @@ export default function Checkout() {
         }
 
         // Convert cart items to CartItem format
-        const cartItems: CartItem[] = items.map(item => ({
+        const cartItemsForShipping: CartItem[] = items.map(item => ({
           id: item.id,
           name: item.name,
           size: (dbProducts[item.id]?.size || item.size || 'medium') as any,
           quantity: item.quantity,
           price: dbProducts[item.id]?.price || item.price,
+          selectedMeasurement: (item as any).selectedMeasurement,
         }));
 
         // Calculate shipping
-        const breakdown = await calculateCartShipping(cartItems, matchedArea.id || normalizeCity(formData.city));
+        const breakdown = await calculateCartShipping(cartItemsForShipping, matchedArea.id || normalizeCity(formData.city));
         setShippingBreakdown(breakdown);
         setCalculatingShipping(false);
       } catch (error) {
@@ -343,7 +344,7 @@ export default function Checkout() {
               <div class="section-title" style="margin-top: 20px;">Items Ordered</div>
               ${finalOrderData.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -622,13 +623,13 @@ export default function Checkout() {
             <h3 className="text-xl font-bold mb-6">Order Summary</h3>
             <div className="flex flex-col gap-4 mb-6">
               {items.map((item, idx) => (
-                <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${idx}`} className="flex justify-between items-center text-sm">
+                <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${item.selectedMeasurement || ''}-${idx}`} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 rounded shrink-0 overflow-hidden">
                       <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
                     </div>
                     <span className="text-muted-foreground">
-                      {item.name} {(item.selectedSize || item.selectedColor) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>} x {item.quantity}
+                      {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} x {item.quantity}
                     </span>
                   </div>
                   <span className="font-semibold">₦{(item.price * item.quantity).toLocaleString()}</span>
@@ -750,6 +751,7 @@ export default function Checkout() {
                     size: dbProducts[item.id]?.size || item.size || 'medium',
                     selectedSize: item.selectedSize || null,
                     selectedColor: item.selectedColor || null,
+                    selectedMeasurement: item.selectedMeasurement || null,
                     category: item.category,
                     vendor: dbProducts[item.id]?.vendor || null
                   })),

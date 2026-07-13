@@ -123,7 +123,21 @@ export default function FoodDetailClient() {
     : ['/images/placeholder.png']).map(sanitizeImageUrl);
 
   const sizeKeys = food.sizeQuantities ? Object.keys(food.sizeQuantities).filter(k => (food.sizeQuantities as Record<string, number>)[k] > 0) : [];
-  const measurementKeys = food.measurements ? food.measurements.split(',').map((m: string) => m.trim()).filter(Boolean) : [];
+  let parsedMeasurements: Record<string, string> = {};
+  if (food.measurements) {
+    try {
+      const parsed = JSON.parse(food.measurements);
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurements[k] = String(v);
+      });
+    } catch {
+      food.measurements.split(',').forEach((m: string) => {
+        const trimmed = m.trim();
+        if (trimmed) parsedMeasurements[trimmed] = '';
+      });
+    }
+  }
+  const measurementKeys = Object.keys(parsedMeasurements);
 
   const whatsappMessage = `I want to order ${food.name}, priced at ₦${food.price.toLocaleString()} from your Food Market.`;
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -203,14 +217,17 @@ export default function FoodDetailClient() {
               <div className="mb-6">
                 <h3 className="text-sm font-bold mb-2 text-green-800 uppercase tracking-wider">Available Measurements</h3>
                 <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-green-200 md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
-                  {measurementKeys.map((m: string, i: number) => (
-                    <span
-                      key={i}
-                      className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900"
-                    >
-                      {m}
-                    </span>
-                  ))}
+                  {measurementKeys.map((m: string, i: number) => {
+                    const mPrice = parsedMeasurements[m];
+                    return (
+                      <span
+                        key={i}
+                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900"
+                      >
+                        {m} {mPrice ? ` — ₦${Number(mPrice).toLocaleString()}` : ''}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -360,19 +377,23 @@ export default function FoodDetailClient() {
                     <>
                       <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Measurement</h3>
                       <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64 mb-4">
-                        {measurementKeys.map((m: string) => (
-                          <button
-                            key={m}
-                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-green-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setTempSelectedMeasurement(m);
-                            }}
-                          >
-                            {m}
-                          </button>
-                        ))}
+                        {measurementKeys.map((m: string) => {
+                          const mPrice = parsedMeasurements[m];
+                          return (
+                            <button
+                              key={m}
+                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors flex flex-col items-center justify-center ${tempSelectedMeasurement === m ? 'bg-green-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setTempSelectedMeasurement(m);
+                              }}
+                            >
+                              <span>{m}</span>
+                              {mPrice && <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>₦{Number(mPrice).toLocaleString()}</span>}
+                            </button>
+                          );
+                        })}
                       </div>
                       <div className="mt-2 pt-4 border-t border-border">
                         <button
@@ -383,20 +404,24 @@ export default function FoodDetailClient() {
                             e.stopPropagation();
                             if (!tempSelectedMeasurement) return;
 
-                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === tempSelectedMeasurement);
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement);
                             const currentInCart = existing ? existing.quantity : 0;
                             if (currentInCart + 1 > (food.quantity ?? 0)) {
                               toast.error(`Only ${food.quantity ?? 0} available in stock`);
                               return;
                             }
+                            const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
+                            const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
+
                             addItem({
                               id: food.id,
                               name: food.name,
-                              price: food.price,
+                              price: measurePrice,
                               image: food.images?.[0] || '/images/placeholder.png',
                               category: 'Food',
                               description: food.description,
-                              selectedSize: tempSelectedMeasurement,
+                              selectedMeasurement: tempSelectedMeasurement,
+                              measurementPrice: measurePrice,
                             } as any);
                             toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {
                               style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },

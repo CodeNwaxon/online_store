@@ -17,7 +17,7 @@ export default function FoodsPage() {
   const [selectedPriceFilter, setSelectedPriceFilter] = useState('All');
 
   useEffect(() => {
-    const q = query(collection(db, 'foods'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
       setFoods(items);

@@ -166,7 +166,21 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   };
   const sizeLabel = getSizeDisplay();
   
-  const measurementKeys = food.measurements ? food.measurements.split(',').map(m => m.trim()).filter(Boolean) : [];
+  let parsedMeasurements: Record<string, string> = {};
+  if (food.measurements) {
+    try {
+      const parsed = JSON.parse(food.measurements);
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurements[k] = String(v);
+      });
+    } catch {
+      food.measurements.split(',').forEach((m: string) => {
+        const trimmed = m.trim();
+        if (trimmed) parsedMeasurements[trimmed] = '';
+      });
+    }
+  }
+  const measurementKeys = Object.keys(parsedMeasurements);
 
   const CardContent = (
     <div className={`relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br ${theme.bgGradient} p-1`}>
@@ -464,19 +478,22 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                 <>
                   <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Measurement</h3>
                   <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
-                    {measurementKeys.map(m => (
-                      <button
-                        key={m}
-                        className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${tempSelectedMeasurement === m ? `${theme.bgPrimary} text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setTempSelectedMeasurement(m);
-                        }}
-                      >
-                        {m}
-                      </button>
-                    ))}
+                    {measurementKeys.map(m => {
+                      const mPrice = parsedMeasurements[m];
+                      return (
+                        <button
+                          key={m}
+                          className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${tempSelectedMeasurement === m ? `${theme.bgPrimary} text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setTempSelectedMeasurement(m);
+                          }}
+                        >
+                          {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                   <div className="mt-2 pt-2 border-t border-border">
                     <button
@@ -487,20 +504,25 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         e.stopPropagation();
                         if (!tempSelectedMeasurement) return;
 
-                        const existing = cartItems.find(item => item.id === food.id && item.selectedSize === tempSelectedMeasurement);
+                        const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement);
                         const currentInCart = existing ? existing.quantity : 0;
                         if (currentInCart + 1 > (food.quantity ?? 0)) {
                           toast.error(`Only ${food.quantity ?? 0} available in stock`);
                           return;
                         }
+                        
+                        const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
+                        const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
+
                         const cartProduct = {
                           id: food.id,
                           name: food.name,
-                          price: food.price,
+                          price: measurePrice,
                           image: food.images?.[0] || '/images/placeholder.png',
                           category: 'Food',
                           description: food.description,
-                          selectedSize: tempSelectedMeasurement, // Map measurement to selectedSize for cart
+                          selectedMeasurement: tempSelectedMeasurement,
+                          measurementPrice: measurePrice,
                         };
                         addItem(cartProduct as any);
                         toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {

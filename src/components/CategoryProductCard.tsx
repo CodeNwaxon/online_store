@@ -131,7 +131,21 @@ export default function CategoryProductCard({
   };
   const sizeLabel = getSizeDisplay();
 
-  const measurementKeys = product.measurements ? product.measurements.split(',').map(m => m.trim()).filter(Boolean) : [];
+  let parsedMeasurements: Record<string, string> = {};
+  if (product.measurements) {
+    try {
+      const parsed = JSON.parse(product.measurements);
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurements[k] = String(v);
+      });
+    } catch {
+      product.measurements.split(',').forEach((m: string) => {
+        const trimmed = m.trim();
+        if (trimmed) parsedMeasurements[trimmed] = '';
+      });
+    }
+  }
+  const measurementKeys = Object.keys(parsedMeasurements);
 
   const CardContent = (
     <div className={`relative h-45 max-md:h-40 w-full cursor-pointer bg-muted/20 p-0.5 dark:bg-muted/10`}>
@@ -443,19 +457,22 @@ export default function CategoryProductCard({
                   <div className="mb-2">
                     <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Measurement</h3>
                     <div className="flex flex-wrap gap-2">
-                      {measurementKeys.map((m, i) => (
-                        <button
-                          key={i}
-                          className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setTempSelectedMeasurement(m);
-                          }}
-                        >
-                          {m}
-                        </button>
-                      ))}
+                      {measurementKeys.map((m, i) => {
+                        const mPrice = parsedMeasurements[m];
+                        return (
+                          <button
+                            key={i}
+                            className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setTempSelectedMeasurement(m);
+                            }}
+                          >
+                            {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -483,10 +500,13 @@ export default function CategoryProductCard({
                       return;
                     }
 
+                    const measurePriceStr = tempSelectedMeasurement ? parsedMeasurements[tempSelectedMeasurement] : null;
+                    const finalPrice = measurePriceStr ? Number(measurePriceStr) : product.price;
+
                     addItem({
                       id: product.id,
                       name: product.name,
-                      price: product.price,
+                      price: finalPrice,
                       image: safeImgUrl,
                       images: product.images || [safeImgUrl],
                       quantity: product.quantity,
@@ -499,6 +519,7 @@ export default function CategoryProductCard({
                       selectedSize: tempSelectedSize,
                       selectedColor: tempSelectedColor,
                       selectedMeasurement: tempSelectedMeasurement || undefined,
+                      measurementPrice: measurePriceStr ? finalPrice : undefined,
                     } as any);
 
                     let successMsg = `${product.name}`;
