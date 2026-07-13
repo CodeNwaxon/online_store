@@ -42,6 +42,7 @@ export default function CategoryDetailPage({
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedSize, setTempSelectedSize] = useState('');
   const [tempSelectedColor, setTempSelectedColor] = useState('');
+  const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
@@ -148,6 +149,7 @@ export default function CategoryDetailPage({
   };
 
   const sizeKeys = product.sizeQuantities ? Object.keys(product.sizeQuantities).filter(k => (product.sizeQuantities as Record<string, number>)[k] > 0) : [];
+  const measurementKeys = product.measurements ? product.measurements.split(',').map((m: string) => m.trim()).filter(Boolean) : [];
 
   const productImages = (product.images && product.images.length > 0
     ? product.images
@@ -249,6 +251,23 @@ export default function CategoryDetailPage({
               ) : null;
             })()}
 
+            {/* Measurement Cards Section (display only) */}
+            {measurementKeys.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Measurements</h3>
+                <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
+                  {measurementKeys.map((m: string, i: number) => (
+                    <span
+                      key={i}
+                      className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
               <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words overflow-hidden">
@@ -278,11 +297,12 @@ export default function CategoryDetailPage({
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${themeConfig.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
                     const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
-                    // Show overlay if there are sizes or colors to select
-                    if (sizeKeys.length > 0 || colors.length > 0) {
+                    // Show overlay if there are sizes, colors, or measurements to select
+                    if (sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0) {
                       setShowSizeOverlay(true);
                       setTempSelectedSize('');
                       setTempSelectedColor('');
+                      setTempSelectedMeasurement('');
                       return;
                     }
 
@@ -338,16 +358,17 @@ export default function CategoryDetailPage({
             {/* Size & Color Selection Overlay */}
             {(() => {
               const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
-              const hasSelections = sizeKeys.length > 0 || colors.length > 0;
+              const hasSelections = sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0;
               if (!showSizeOverlay || !hasSelections) return null;
 
               const needsSize = sizeKeys.length > 0;
               const needsColor = colors.length > 0;
-              const canAdd = (!needsSize || tempSelectedSize) && (!needsColor || tempSelectedColor);
+              const needsMeasurement = measurementKeys.length > 0;
+              const canAdd = (!needsSize || tempSelectedSize) && (!needsColor || tempSelectedColor) && (!needsMeasurement || tempSelectedMeasurement);
 
               return (
                 <div
-                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center animate-in fade-in duration-200"
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
                 >
                   <div
@@ -421,6 +442,31 @@ export default function CategoryDetailPage({
                           </div>
                         </div>
                       )}
+
+                      {needsMeasurement && (
+                        <div className="mb-3">
+                          <h3 className="text-base font-bold mb-3 text-foreground">Select Measurement</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {measurementKeys.map((m: string, i: number) => (
+                              <button
+                                key={i}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
+                                  tempSelectedMeasurement === m 
+                                    ? `${themeConfig.btn} text-white border-transparent`
+                                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setTempSelectedMeasurement(m);
+                                }}
+                              >
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-border shrink-0">
@@ -441,7 +487,8 @@ export default function CategoryDetailPage({
                           const existing = cartItems.find(item => 
                             item.id === product.id && 
                             item.selectedSize === (tempSelectedSize || undefined) && 
-                            (item as any).selectedColor === (tempSelectedColor || undefined)
+                            (item as any).selectedColor === (tempSelectedColor || undefined) &&
+                            (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined)
                           );
                           const currentInCart = existing ? existing.quantity : 0;
                           
@@ -465,9 +512,10 @@ export default function CategoryDetailPage({
                             shipping: 0,
                             selectedSize: tempSelectedSize || undefined,
                             selectedColor: tempSelectedColor || undefined,
+                            selectedMeasurement: tempSelectedMeasurement || undefined,
                           } as any);
 
-                          const parts = [tempSelectedSize, tempSelectedColor].filter(Boolean);
+                          const parts = [tempSelectedSize, tempSelectedColor, tempSelectedMeasurement].filter(Boolean);
                           const label = parts.length > 0 ? ` (${parts.join(', ')})` : '';
                           toast.success(`${product.name}${label} added to cart`, {
                             style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },

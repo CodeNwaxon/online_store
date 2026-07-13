@@ -23,6 +23,7 @@ export default function FoodDetail() {
   const [allFoods, setAllFoods] = useState<any[]>([]);
   const { isApprovedPartner, partnerData } = usePartner();
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
+  const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
@@ -122,6 +123,7 @@ export default function FoodDetail() {
     : ['/images/placeholder.png']).map(sanitizeImageUrl);
 
   const sizeKeys = food.sizeQuantities ? Object.keys(food.sizeQuantities).filter(k => (food.sizeQuantities as Record<string, number>)[k] > 0) : [];
+  const measurementKeys = food.measurements ? food.measurements.split(',').map((m: string) => m.trim()).filter(Boolean) : [];
 
   const whatsappMessage = `I want to order ${food.name}, priced at ₦${food.price.toLocaleString()} from your Food Market.`;
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -196,6 +198,23 @@ export default function FoodDetail() {
               ₦{food.price.toLocaleString()}
             </div>
 
+            {/* Measurement Cards Section (display only) */}
+            {measurementKeys.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold mb-2 text-green-800 uppercase tracking-wider">Available Measurements</h3>
+                <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-green-200 md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
+                  {measurementKeys.map((m: string, i: number) => (
+                    <span
+                      key={i}
+                      className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3 text-green-800 border-b border-green-100 pb-2">Description</h3>
               <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
@@ -228,8 +247,9 @@ export default function FoodDetail() {
                 <button
                   className={`text-base md:flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 p-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg`}
                   onClick={async () => {
-                    if (sizeKeys.length > 0) {
+                    if (sizeKeys.length > 0 || measurementKeys.length > 0) {
                       setShowSizeOverlay(true);
+                      setTempSelectedMeasurement('');
                       return;
                     }
 
@@ -274,8 +294,8 @@ export default function FoodDetail() {
               </div>
             )}
 
-            {/* Size Selection Overlay */}
-            {showSizeOverlay && sizeKeys.length > 0 && (
+            {/* Size/Measurement Selection Overlay */}
+            {showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && (
               <div
                 className="fixed inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-4 flex items-center justify-center animate-in fade-in duration-200"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
@@ -290,22 +310,83 @@ export default function FoodDetail() {
                   >
                     ✕
                   </button>
-                  <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Size</h3>
-                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64">
-                    {sizeKeys.map(sz => {
-                      const qty = (food.sizeQuantities as Record<string, number>)[sz];
-                      return (
+                  
+                  {sizeKeys.length > 0 && (
+                    <>
+                      <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Size</h3>
+                      <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64 mb-4">
+                        {sizeKeys.map(sz => {
+                          const qty = (food.sizeQuantities as Record<string, number>)[sz];
+                          return (
+                            <button
+                              key={sz}
+                              disabled={qty <= 0}
+                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : 'bg-green-600 text-white border-transparent hover:bg-green-700'}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                                const currentInCart = existing ? existing.quantity : 0;
+                                if (currentInCart + 1 > qty) {
+                                  toast.error(`Only ${qty} available for size ${sz}`);
+                                  return;
+                                }
+                                addItem({
+                                  id: food.id,
+                                  name: food.name,
+                                  price: food.price,
+                                  image: food.images?.[0] || '/images/placeholder.png',
+                                  category: 'Food',
+                                  description: food.description,
+                                  selectedSize: sz,
+                                } as any);
+                                toast.success(`${food.name} (${sz}) added to cart`, {
+                                  style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                                  position: 'bottom-center',
+                                  duration: 2000,
+                                });
+                                setShowSizeOverlay(false);
+                              }}
+                            >
+                              {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {measurementKeys.length > 0 && (
+                    <>
+                      <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Measurement</h3>
+                      <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64 mb-4">
+                        {measurementKeys.map((m: string) => (
+                          <button
+                            key={m}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-green-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setTempSelectedMeasurement(m);
+                            }}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-2 pt-4 border-t border-border">
                         <button
-                          key={sz}
-                          disabled={qty <= 0}
-                          className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `bg-green-600 text-white border-transparent hover:bg-green-700`}`}
+                          className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-all ${!tempSelectedMeasurement ? 'bg-gray-300 cursor-not-allowed text-gray-500' : 'bg-green-600 hover:bg-green-700 shadow-md'}`}
+                          disabled={!tempSelectedMeasurement}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                            if (!tempSelectedMeasurement) return;
+
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === tempSelectedMeasurement);
                             const currentInCart = existing ? existing.quantity : 0;
-                            if (currentInCart + 1 > qty) {
-                              toast.error(`Only ${qty} available for size ${sz}`);
+                            if (currentInCart + 1 > (food.quantity ?? 0)) {
+                              toast.error(`Only ${food.quantity ?? 0} available in stock`);
                               return;
                             }
                             addItem({
@@ -315,9 +396,9 @@ export default function FoodDetail() {
                               image: food.images?.[0] || '/images/placeholder.png',
                               category: 'Food',
                               description: food.description,
-                              selectedSize: sz,
+                              selectedSize: tempSelectedMeasurement,
                             } as any);
-                            toast.success(`${food.name} (${sz}) added to cart`, {
+                            toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {
                               style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                               position: 'bottom-center',
                               duration: 2000,
@@ -325,11 +406,11 @@ export default function FoodDetail() {
                             setShowSizeOverlay(false);
                           }}
                         >
-                          {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                          Add to Cart
                         </button>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

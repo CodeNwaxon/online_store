@@ -26,6 +26,7 @@ export interface CategoryProduct {
   updatedAt?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
+  measurements?: string;
 }
 
 interface CategoryProductCardProps {
@@ -67,6 +68,7 @@ export default function CategoryProductCard({
   const [mounted, setMounted] = useState(false);
   const [tempSelectedSize, setTempSelectedSize] = useState<string>('');
   const [tempSelectedColor, setTempSelectedColor] = useState<string>('');
+  const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -128,6 +130,8 @@ export default function CategoryProductCard({
     return null;
   };
   const sizeLabel = getSizeDisplay();
+
+  const measurementKeys = product.measurements ? product.measurements.split(',').map(m => m.trim()).filter(Boolean) : [];
 
   const CardContent = (
     <div className={`relative h-45 max-md:h-40 w-full cursor-pointer bg-muted/20 p-0.5 dark:bg-muted/10`}>
@@ -328,11 +332,12 @@ export default function CategoryProductCard({
                 e.preventDefault();
                 e.stopPropagation();
 
-                // If product has sizes or colors, show selection overlay
-                if (sizeKeys.length > 0 || colors.length > 0) {
+                // If product has sizes, colors, or measurements, show selection overlay
+                if (sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0) {
                   setShowSizeOverlay(true);
                   setTempSelectedSize('');
                   setTempSelectedColor('');
+                  setTempSelectedMeasurement('');
                   return;
                 }
 
@@ -371,9 +376,9 @@ export default function CategoryProductCard({
         </div>
 
         {/* Size & Color Selection Overlay */}
-        {mounted && showSizeOverlay && (sizeKeys.length > 0 || colors.length > 0) && createPortal(
+        {mounted && showSizeOverlay && (sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0) && createPortal(
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
           >
             <div
@@ -433,22 +438,44 @@ export default function CategoryProductCard({
                     </div>
                   </div>
                 )}
+
+                {measurementKeys.length > 0 && (
+                  <div className="mb-2">
+                    <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Measurement</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {measurementKeys.map((m, i) => (
+                        <button
+                          key={i}
+                          className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setTempSelectedMeasurement(m);
+                          }}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 shrink-0">
                 <button
-                  className={`w-full py-2.5 rounded-lg font-bold text-white transition-all ${((sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor)) ? 'bg-gray-300 cursor-not-allowed dark:bg-zinc-700 text-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
-                  disabled={(sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor)}
+                  className={`w-full py-2.5 rounded-lg font-bold text-white transition-all ${((sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor) || (measurementKeys.length > 0 && !tempSelectedMeasurement)) ? 'bg-gray-300 cursor-not-allowed dark:bg-zinc-700 text-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  disabled={(sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor) || (measurementKeys.length > 0 && !tempSelectedMeasurement)}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
                     if (sizeKeys.length > 0 && !tempSelectedSize) return;
                     if (colors.length > 0 && !tempSelectedColor) return;
+                    if (measurementKeys.length > 0 && !tempSelectedMeasurement) return;
 
                     const qtyToCheck = tempSelectedSize ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize] : product.quantity;
                     
-                    const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === tempSelectedColor);
+                    const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === tempSelectedColor && (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined));
                     const currentInCart = existing ? existing.quantity : 0;
                     
                     if (currentInCart + 1 > (qtyToCheck ?? 0)) {
@@ -471,13 +498,15 @@ export default function CategoryProductCard({
                       shipping: 0,
                       selectedSize: tempSelectedSize,
                       selectedColor: tempSelectedColor,
+                      selectedMeasurement: tempSelectedMeasurement || undefined,
                     } as any);
 
                     let successMsg = `${product.name}`;
-                    if (tempSelectedSize || tempSelectedColor) {
+                    if (tempSelectedSize || tempSelectedColor || tempSelectedMeasurement) {
                        const parts = [];
                        if (tempSelectedSize) parts.push(tempSelectedSize);
                        if (tempSelectedColor) parts.push(tempSelectedColor);
+                       if (tempSelectedMeasurement) parts.push(tempSelectedMeasurement);
                        successMsg += ` (${parts.join(', ')})`;
                     }
                     successMsg += ` added to cart`;

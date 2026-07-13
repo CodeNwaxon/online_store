@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { createPortal } from 'react-dom';
 
 export interface ShopProduct {
   id: string;
@@ -107,6 +108,11 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setImgError(false);
@@ -399,18 +405,18 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
         </div>
 
         {/* Size/Measurement Selection Overlay */}
-        {showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && (
+        {mounted && showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && createPortal(
           <div
-            className="absolute inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-2 flex items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
           >
             <div
-              className="bg-card w-full max-h-[90%] rounded-lg shadow-xl border border-border p-3 flex flex-col relative"
+              className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[400px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
-                className="absolute top-1.5 right-1.5 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+                className="absolute top-3 right-3 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
               >
                 ✕
               </button>
@@ -518,7 +524,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                 </>
               )}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
