@@ -236,7 +236,7 @@ export default function AdminFoods() {
     // Validate measurement prices
     if (includeMeasurements && Object.keys(selectedMeasurements).length > 0) {
       for (const [mName, mPrice] of Object.entries(selectedMeasurements)) {
-        if (mName === '1 bag') continue; // 1 bag uses default product price
+        if (mName === '1 bag' || mName === '1 kg') continue; // these use default product price
         const parsed = parseFloat(mPrice.replace(/,/g, ''));
         if (!mPrice.trim() || isNaN(parsed) || parsed < 1) {
           return toast.error(`Please enter a valid price (minimum ₦1) for "${mName}".`);
@@ -607,7 +607,7 @@ export default function AdminFoods() {
                             <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-green-600 pointer-events-none" />
                             <span className="font-bold">{m}</span>
                           </div>
-                          {m in selectedMeasurements && (
+                          {m in selectedMeasurements && m !== '1 kg' && (
                             <div className="flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
                               <span className="text-[10px] font-bold text-green-800">₦</span>
                               <input
@@ -620,6 +620,9 @@ export default function AdminFoods() {
                               />
                             </div>
                           )}
+                          {m in selectedMeasurements && m === '1 kg' && (
+                            <span className="text-[10px] font-bold text-green-700 italic">Uses default product price</span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -631,7 +634,7 @@ export default function AdminFoods() {
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(selectedMeasurements).map(([m, p]) => (
                           <span key={m} className="inline-flex items-center gap-1 bg-green-200/60 px-2 py-0.5 rounded-full">
-                            {m}{m === '1 bag' ? ' — default price' : p ? ` — ₦${p}` : ' (no price)'}
+                            {m}{(m === '1 bag' || m === '1 kg') ? ' — default price' : p ? ` — ₦${p}` : ' (no price)'}
                           </span>
                         ))}
                       </div>
