@@ -125,7 +125,7 @@ export default function WearsPage() {
       </div>
 
       <div className="mx-auto mt-0">
-        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10 max-md:-mx-1">
+        <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10">
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between px-2 py-3 md:py-6 md:px-24 mb-0 bg-white border-y md:border border-purple-100 shadow-sm">
             <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
               <button onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); }} className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedGroup === 'All' ? 'bg-purple-600 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-purple-50'}`}>ALL GROUPS</button>

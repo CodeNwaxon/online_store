@@ -94,6 +94,19 @@ export default function CategoryProductCard({
   // Parse colors
   const colors = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : [];
 
+  // Scrollbar color matching the top border theme
+  const scrollbarColor = (() => {
+    if (themeClass.includes('purple')) return '#9333ea';
+    if (themeClass.includes('teal')) return '#0d9488';
+    if (themeClass.includes('pink')) return '#db2777';
+    if (themeClass.includes('amber')) return '#d97706';
+    if (themeClass.includes('green')) return '#16a34a';
+    if (themeClass.includes('blue')) return '#2563eb';
+    if (themeClass.includes('rose')) return '#e11d48';
+    if (themeClass.includes('indigo')) return '#4f46e5';
+    return '#6b7280';
+  })();
+
   // Compute size display
   const sizeKeys = product.sizeQuantities ? Object.keys(product.sizeQuantities).filter(k => (product.sizeQuantities as Record<string, number>)[k] > 0) : [];
   const getSizeDisplay = () => {
@@ -206,7 +219,7 @@ export default function CategoryProductCard({
 
       {/* Color bar below image */}
       {colors.length > 0 && (
-        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 dark:bg-zinc-800/50 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 dark:bg-zinc-800/50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
           {colors.map((c, i) => (
             <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
           ))}
@@ -267,7 +280,7 @@ export default function CategoryProductCard({
               </button>
               <h3 className="text-[0.75rem] font-bold mb-1.5 pr-6 text-foreground dark:text-zinc-100 leading-tight">{product.name}</h3>
               <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                <p className="text-[0.7rem] text-foreground/90 dark:text-zinc-300 whitespace-pre-wrap">
+                <p className="text-[0.7rem] text-foreground/90 dark:text-zinc-300 whitespace-pre-wrap break-words overflow-hidden">
                   {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part, i) => 
                     part.match(/^https?:\/\/nomo-store/) ? (
                       <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer" onClick={(e) => e.stopPropagation()}>
@@ -360,11 +373,11 @@ export default function CategoryProductCard({
         {/* Size & Color Selection Overlay */}
         {mounted && showSizeOverlay && (sizeKeys.length > 0 || colors.length > 0) && createPortal(
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] p-4 flex items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
           >
             <div
-              className="bg-white dark:bg-zinc-900 w-full max-w-sm max-h-[90%] rounded-xl shadow-2xl border border-border dark:border-zinc-800 p-5 flex flex-col relative"
+              className="bg-white dark:bg-zinc-900 w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-sm max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border dark:border-zinc-800 p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
               onClick={(e) => e.stopPropagation()}
             >
               <button

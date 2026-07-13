@@ -71,14 +71,21 @@ export default function AdminWears() {
     });
   };
 
-  const updateSizeQty = (sz: string, qty: number) => {
-    setSizeQuantities(prev => ({ ...prev, [sz]: Math.max(0, qty) }));
+  const updateSizeQty = (sz: string, qty: string) => {
+    setSizeQuantities(prev => ({ ...prev, [sz]: qty as any }));
+  };
+
+  const handleSizeQtyBlur = (sz: string, val: any) => {
+    const num = parseInt(val);
+    if (isNaN(num) || num < 1) {
+      setSizeQuantities(prev => ({ ...prev, [sz]: 1 }));
+    }
   };
 
   // Auto-compute total quantity from sizeQuantities when wears group
   useEffect(() => {
     if (isShoeGroup || isClothGroup) {
-      const total = Object.values(sizeQuantities).reduce((a, b) => a + b, 0);
+      const total = Object.values(sizeQuantities).reduce((a, b) => a + (parseInt(b as any) || 0), 0);
       if (total > 0) {
         setQuantity(total.toString());
       }
@@ -282,7 +289,7 @@ export default function AdminWears() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
-        sizeQuantities: (isShoeGroup || isClothGroup) ? sizeQuantities : {},
+        sizeQuantities: (isShoeGroup || isClothGroup) ? Object.fromEntries(Object.entries(sizeQuantities).map(([k, v]) => [k, parseInt(v as any) || 1])) : {},
         itemSize: Object.keys(sizeQuantities).join(', '),
         color: (includeColor || isShoeGroup || isClothGroup) ? color.trim() : '',
         requiresMinShipping,
@@ -590,7 +597,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -605,7 +612,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[`W${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`W${sz}`] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`W${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -620,7 +627,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[`C${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`C${sz}`] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`C${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -640,7 +647,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -655,7 +662,7 @@ export default function AdminWears() {
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, Math.max(1, parseInt(e.target.value) || 1))} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
                             )}
                           </div>
                         ))}
@@ -666,7 +673,7 @@ export default function AdminWears() {
 
                 {Object.keys(sizeQuantities).length > 0 && (
                   <div className="text-xs font-bold text-purple-700 pt-2 border-t border-purple-200">
-                    Total Stock: {Object.values(sizeQuantities).reduce((a, b) => a + b, 0)} | Selected: {Object.keys(sizeQuantities).join(', ')}
+                    Total Stock: {Object.values(sizeQuantities).reduce((a, b) => a + (parseInt(b as any) || 0), 0)} | Selected: {Object.keys(sizeQuantities).join(', ')}
                   </div>
                 )}
               </div>
@@ -766,6 +773,8 @@ export default function AdminWears() {
                     required
                     value={quantity}
                     onChange={e => setQuantity(e.target.value)}
+                    onBlur={e => { const v = parseInt(e.target.value); if(isNaN(v) || v < 1) setQuantity('1'); }}
+                    onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
                     type="number"
                     min="1"
                     className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"

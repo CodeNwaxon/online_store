@@ -92,7 +92,7 @@ export default function FurniturePage() {
         </div>
       ) : (
         <div className="mx-auto mt-0">
-          <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10 max-md:-mx-1">
+          <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10">
             {/* Main Filters Bar */}
             <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between px-2 py-3 md:py-6 md:px-24 mb-0 bg-white border-y md:border border-amber-100 shadow-sm">
 

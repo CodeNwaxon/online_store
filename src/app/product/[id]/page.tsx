@@ -254,6 +254,27 @@ export default function ProductDetail() {
               )}
             </div>
 
+            {/* Color Cards Section */}
+            {product.color && product.color.trim() && (() => {
+              const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
+              return colors.length > 0 ? (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Colors</h3>
+                  <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
+                    {colors.map((c: string, i: number) => (
+                      <span
+                        key={i}
+                        className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
+                        style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
               <p className="text-muted-foreground leading-relaxed italic">

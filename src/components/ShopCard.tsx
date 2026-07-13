@@ -127,6 +127,16 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   // Parse colors
   const colors = food.color ? food.color.split(',').map(c => c.trim()).filter(Boolean) : [];
 
+  // Scrollbar color matching the top border theme
+  const scrollbarColorMap: Record<string, string> = {
+    green: '#16a34a',
+    pink: '#db2777',
+    purple: '#9333ea',
+    teal: '#0d9488',
+    amber: '#d97706',
+  };
+  const scrollbarColor = scrollbarColorMap[themeColor] || '#6b7280';
+
   // Compute size display
   const sizeKeys = food.sizeQuantities ? Object.keys(food.sizeQuantities).filter(k => (food.sizeQuantities as Record<string, number>)[k] > 0) : [];
   const getSizeDisplay = () => {
@@ -247,7 +257,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
 
       {/* Color bar below image */}
       {colors.length > 0 && (
-        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
           {colors.map((c, i) => (
             <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white border border-gray-100 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
           ))}
@@ -293,7 +303,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               </button>
               <h3 className="text-[0.75rem] font-bold mb-1.5 pr-6 text-foreground leading-tight">{food.name}</h3>
               <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap">
+                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap break-words overflow-hidden">
                   {food.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part, i) => 
                     part.match(/^https?:\/\/nomo-store/) ? (
                       <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer" onClick={(e) => e.stopPropagation()}>

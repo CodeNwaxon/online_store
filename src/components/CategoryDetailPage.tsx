@@ -40,6 +40,8 @@ export default function CategoryDetailPage({
   const { isApprovedPartner, partnerData } = usePartner();
   const [installmentMinAmount, setInstallmentMinAmount] = useState<number>(20000);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
+  const [tempSelectedSize, setTempSelectedSize] = useState('');
+  const [tempSelectedColor, setTempSelectedColor] = useState('');
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
@@ -226,9 +228,30 @@ export default function CategoryDetailPage({
               ₦{product.price.toLocaleString()}
             </div>
 
+            {/* Color Cards Section (display only) */}
+            {product.color && product.color.trim() && (() => {
+              const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
+              return colors.length > 0 ? (
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Colors</h3>
+                  <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
+                    {colors.map((c: string, i: number) => (
+                      <span
+                        key={i}
+                        className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
+                        style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
-              <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap">
+              <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words overflow-hidden">
                 {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) => 
                   part.match(/^https?:\/\/nomo-store/) ? (
                     <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
@@ -254,8 +277,12 @@ export default function CategoryDetailPage({
                 <button
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${themeConfig.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
-                    if (sizeKeys.length > 0) {
+                    const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+                    // Show overlay if there are sizes or colors to select
+                    if (sizeKeys.length > 0 || colors.length > 0) {
                       setShowSizeOverlay(true);
+                      setTempSelectedSize('');
+                      setTempSelectedColor('');
                       return;
                     }
 
@@ -308,71 +335,155 @@ export default function CategoryDetailPage({
               </div>
             )}
 
-            {/* Size Selection Overlay */}
-            {showSizeOverlay && sizeKeys.length > 0 && (
-              <div
-                className="fixed inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-4 flex items-center justify-center animate-in fade-in duration-200"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
-              >
+            {/* Size & Color Selection Overlay */}
+            {(() => {
+              const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+              const hasSelections = sizeKeys.length > 0 || colors.length > 0;
+              if (!showSizeOverlay || !hasSelections) return null;
+
+              const needsSize = sizeKeys.length > 0;
+              const needsColor = colors.length > 0;
+              const canAdd = (!needsSize || tempSelectedSize) && (!needsColor || tempSelectedColor);
+
+              return (
                 <div
-                  className="bg-card w-full max-w-[400px] max-h-[90%] rounded-xl shadow-2xl border border-border p-5 flex flex-col relative"
-                  onClick={(e) => e.stopPropagation()}
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center animate-in fade-in duration-200"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
                 >
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
-                    className="absolute top-2 right-2 text-xs font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+                  <div
+                    className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[420px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    ✕
-                  </button>
-                  <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Size</h3>
-                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64">
-                    {sizeKeys.map(sz => {
-                      const qty = (product.sizeQuantities as Record<string, number>)[sz];
-                      return (
-                        <button
-                          key={sz}
-                          disabled={qty <= 0}
-                          className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' : `${themeConfig.btn} text-white border-transparent hover:opacity-90`}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const existing = cartItems.find(item => item.id === product.id && item.selectedSize === sz);
-                            const currentInCart = existing ? existing.quantity : 0;
-                            if (currentInCart + 1 > qty) {
-                              toast.error(`Only ${qty} available for size ${sz}`);
-                              return;
-                            }
-                            addItem({
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              image: productImages[0],
-                              images: productImages,
-                              quantity: product.quantity,
-                              category: product.category as any,
-                              description: product.description,
-                              productCode: 'N/A',
-                              rdpPrice: product.costPrice,
-                              manufacturer: product.group,
-                              shipping: 0,
-                              selectedSize: sz,
-                            });
-                            toast.success(`${product.name} (${sz}) added to cart`, {
-                              style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
-                              position: 'bottom-center',
-                              duration: 2000,
-                            });
-                            setShowSizeOverlay(false);
-                          }}
-                        >
-                          {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
-                        </button>
-                      );
-                    })}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
+                      className="absolute top-3 right-3 text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+                    >
+                      ✕
+                    </button>
+
+                    {/* Drag handle for mobile */}
+                    <div className="md:hidden w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4 shrink-0" />
+
+                    <div className="overflow-y-auto flex-1 pr-1">
+                      {needsSize && (
+                        <div className="mb-5">
+                          <h3 className="text-base font-bold mb-3 text-foreground">Select Size</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {sizeKeys.map(sz => {
+                              const qty = (product.sizeQuantities as Record<string, number>)[sz];
+                              return (
+                                <button
+                                  key={sz}
+                                  disabled={qty <= 0}
+                                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                                    qty <= 0 
+                                      ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' 
+                                      : tempSelectedSize === sz 
+                                        ? `${themeConfig.btn} text-white border-transparent`
+                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setTempSelectedSize(sz);
+                                  }}
+                                >
+                                  {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {needsColor && (
+                        <div className="mb-3">
+                          <h3 className="text-base font-bold mb-3 text-foreground">Select Color</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {colors.map((c: string, i: number) => (
+                              <button
+                                key={i}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
+                                  tempSelectedColor === c 
+                                    ? `${themeConfig.btn} text-white border-transparent`
+                                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`}
+                                style={tempSelectedColor === c ? undefined : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, '') }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setTempSelectedColor(c);
+                                }}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-border shrink-0">
+                      <button
+                        className={`w-full py-3 rounded-lg font-bold text-white transition-all text-sm ${
+                          !canAdd ? 'bg-gray-300 cursor-not-allowed text-gray-500' : `${themeConfig.btn}`
+                        }`}
+                        disabled={!canAdd}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!canAdd) return;
+
+                          const qtyToCheck = tempSelectedSize 
+                            ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize] 
+                            : product.quantity;
+                          
+                          const existing = cartItems.find(item => 
+                            item.id === product.id && 
+                            item.selectedSize === (tempSelectedSize || undefined) && 
+                            (item as any).selectedColor === (tempSelectedColor || undefined)
+                          );
+                          const currentInCart = existing ? existing.quantity : 0;
+                          
+                          if (currentInCart + 1 > (qtyToCheck ?? 0)) {
+                            toast.error(`Only ${qtyToCheck ?? 0} available`);
+                            return;
+                          }
+
+                          addItem({
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            image: productImages[0],
+                            images: productImages,
+                            quantity: product.quantity,
+                            category: product.category as any,
+                            description: product.description,
+                            productCode: 'N/A',
+                            rdpPrice: product.costPrice,
+                            manufacturer: product.group,
+                            shipping: 0,
+                            selectedSize: tempSelectedSize || undefined,
+                            selectedColor: tempSelectedColor || undefined,
+                          } as any);
+
+                          const parts = [tempSelectedSize, tempSelectedColor].filter(Boolean);
+                          const label = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+                          toast.success(`${product.name}${label} added to cart`, {
+                            style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                            position: 'bottom-center',
+                            duration: 2000,
+                          });
+                          setShowSizeOverlay(false);
+                        }}
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {product.minShippingQty && product.minShippingQty > 0 ? (
               <p className="mt-4 text-xs text-muted-foreground font-medium">

@@ -75,3 +75,10 @@
     }
   }
 }
+
+/* Theme-colored scrollbar thumbs for color bars */
+@media (min-width: 768px) {
+  [style*="--scrollbar-thumb"]::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb) !important;
+  }
+}
