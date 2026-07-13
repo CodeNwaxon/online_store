@@ -57,11 +57,15 @@ export const calculateCartShippingForArea = (
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();
-      if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+      if (measurement.includes('2 bags')) {
+        unitShipping = Math.ceil(unitShipping + unitShipping * 0.5); // 1 bag + half = 1.5x
+      } else if (measurement.includes('1/2 bag') || measurement.includes('half')) {
         unitShipping = Math.ceil(unitShipping / 2) + 1000;
       } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
         unitShipping = Math.ceil(unitShipping / 3) + 500;
-      } else if (!measurement.includes('1 bag')) {
+      } else if (measurement.includes('1 bag')) {
+        // 1 bag = default, no change
+      } else {
         unitShipping = 1500; // Flat fee for cups, congo, mudu, etc.
       }
     }
@@ -96,11 +100,15 @@ export const calculateCartShippingForArea = (
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();
-      if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+      if (measurement.includes('2 bags')) {
+        unitShipping = Math.ceil(unitShipping + unitShipping * 0.5);
+      } else if (measurement.includes('1/2 bag') || measurement.includes('half')) {
         unitShipping = Math.ceil(unitShipping / 2) + 1000;
       } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
         unitShipping = Math.ceil(unitShipping / 3) + 500;
-      } else if (!measurement.includes('1 bag')) {
+      } else if (measurement.includes('1 bag')) {
+        // 1 bag = default, no change
+      } else {
         unitShipping = 1500;
       }
     }
