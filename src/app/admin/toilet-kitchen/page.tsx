@@ -196,6 +196,7 @@ export default function AdminToiletKitchen() {
     setImages([]);
     setRequiresMinShipping(false);
     setMinShippingQty('0');
+    setImageUrlInput('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

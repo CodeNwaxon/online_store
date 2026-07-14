@@ -24,19 +24,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         imageUrl = data.image;
       }
       
+      const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomo-store.vercel.app${imageUrl}`;
+      
       return {
         title: `${title} | Food Market | Nomo Storez`,
         description,
         openGraph: {
           title: `${title} | Nomo Storez`,
           description,
-          images: [imageUrl],
+          images: [
+            {
+              url: absoluteImageUrl,
+              width: 1200,
+              height: 630,
+              alt: title,
+            }
+          ],
         },
         twitter: {
           card: 'summary_large_image',
           title: `${title} | Nomo Storez`,
           description,
-          images: [imageUrl],
+          images: [absoluteImageUrl],
         }
       };
     }

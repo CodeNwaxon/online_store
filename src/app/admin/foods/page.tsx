@@ -220,6 +220,8 @@ export default function AdminFoods() {
     setMinShippingQty('0');
     setIncludeMeasurements(false);
     setSelectedMeasurements({});
+    setImages([]);
+    setImageUrlInput('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

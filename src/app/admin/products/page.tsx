@@ -312,6 +312,7 @@ function AdminProductsContent() {
     setIsAddingCategory(false);
     setNewGroupName('');
     setNewCategoryName('');
+    setImageUrlInput('');
   };
 
   const handleCancel = () => {

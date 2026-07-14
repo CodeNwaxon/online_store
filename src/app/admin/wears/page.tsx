@@ -249,6 +249,7 @@ export default function AdminWears() {
     setRequiresMinShipping(false);
     setMinShippingQty('0');
     setIncludeColor(false);
+    setImageUrlInput('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
