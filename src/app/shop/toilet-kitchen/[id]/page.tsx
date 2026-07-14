@@ -24,6 +24,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         imageUrl = data.image;
       }
       
+      if (imageUrl.includes('res.cloudinary.com') && imageUrl.includes('/upload/')) {
+        if (!imageUrl.includes('/upload/c_')) {
+          imageUrl = imageUrl.replace('/upload/', '/upload/c_fill,w_800,h_800,q_80/');
+        }
+      }
+      
       const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomo-store.vercel.app${imageUrl}`;
       
       return {
@@ -32,14 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         openGraph: {
           title: `${title} | Nomo Storez`,
           description,
-          images: [
-            {
-              url: absoluteImageUrl,
-              width: 1200,
-              height: 630,
-              alt: title,
-            }
-          ],
+          images: [absoluteImageUrl],
         },
         twitter: {
           card: 'summary_large_image',
