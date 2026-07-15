@@ -48,7 +48,8 @@ service cloud.firestore {
 
     // Admin Staff Management
     match /admins/{adminId} {
-      allow read: if request.auth != null && (request.auth.uid == adminId || isAdmin());
+      // Allow public read so that special store queries work for unauthenticated/regular users
+      allow read: if true;
       allow create, delete: if isCEO();
       allow update: if isCEO() || (
         request.auth != null && 
