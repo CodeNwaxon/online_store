@@ -60,11 +60,15 @@ export default function Navbar() {
     const lastPage = localStorage.getItem('lastVisitedPage');
     const hasRedirected = sessionStorage.getItem('hasRedirectedLastPage');
 
-    // If we're on the site root and have a saved last page, redirect once per tab
-    if (pathname === '/' && lastPage && lastPage !== '/' && !hasRedirected) {
+    // Mark as redirected on the very first execution in this tab, 
+    // so we don't intercept organic client-side navigation to Home later.
+    if (!hasRedirected) {
       sessionStorage.setItem('hasRedirectedLastPage', 'true');
-      router.push(lastPage);
-      return;
+      // If we're on the site root on initial load and have a saved last page, redirect
+      if (pathname === '/' && lastPage && lastPage !== '/') {
+        router.replace(lastPage);
+        return;
+      }
     }
 
     // Save the user's current page (except admin, checkout, or root)
