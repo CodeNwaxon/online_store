@@ -1,5 +1,8 @@
 import { Metadata } from 'next';
+import { adminDb } from '@/lib/firebaseAdmin';
 import WearsClient from './WearsClient';
+
+export const dynamic = 'force-dynamic';
 
 type Props = {
   searchParams: Promise<{ store?: string }>;
@@ -10,49 +13,40 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
   if (storeSlug) {
     try {
-      // Use the proven Firestore REST API (same pattern as root layout.tsx)
-      // to list all admins and find the one with matching specialStore slug
-      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-      const response = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/admins?pageSize=100`,
-        { next: { revalidate: 60 } }
-      );
+      const snap = await adminDb.collection('admins')
+        .where('specialStore.slug', '==', storeSlug)
+        .get();
 
-      if (response.ok) {
-        const data = await response.json();
-        const documents = data.documents || [];
+      if (!snap.empty) {
+        const store = snap.docs[0].data().specialStore;
+        
+        const storeName = store.name || storeSlug;
+        const storeSlogan = store.slogan || `Shop premium fashion from ${storeName} on Nomo Storez.`;
+        let bannerUrl = store.banner || '/images/placeholder.png';
 
-        // Find the admin doc whose specialStore.slug matches
-        for (const doc of documents) {
-          const specialStore = doc.fields?.specialStore?.mapValue?.fields;
-          if (specialStore && specialStore.slug?.stringValue === storeSlug) {
-            const storeName = specialStore.name?.stringValue || storeSlug;
-            const storeSlogan = specialStore.slogan?.stringValue || `Shop premium fashion from ${storeName} on Nomo Storez.`;
-            const bannerUrl = specialStore.banner?.stringValue || '';
-
-            return {
-              title: `${storeName} | Nomo Storez`,
-              description: storeSlogan,
-              openGraph: {
-                title: `${storeName} | Nomo Storez`,
-                description: storeSlogan,
-                url: `https://nomo-store.vercel.app/shop/wears?store=${storeSlug}`,
-                siteName: 'Nomo Storez',
-                images: bannerUrl
-                  ? [{ url: bannerUrl, width: 1200, height: 630, alt: storeName }]
-                  : [],
-                locale: 'en_US',
-                type: 'website',
-              },
-              twitter: {
-                card: 'summary_large_image',
-                title: `${storeName} | Nomo Storez`,
-                description: storeSlogan,
-                images: bannerUrl ? [bannerUrl] : [],
-              },
-            };
+        if (bannerUrl.includes('res.cloudinary.com') && bannerUrl.includes('/upload/')) {
+          if (!bannerUrl.includes('/upload/c_')) {
+            bannerUrl = bannerUrl.replace('/upload/', '/upload/c_fill,w_1200,h_630,q_80/');
           }
         }
+
+        const absoluteImageUrl = bannerUrl.startsWith('http') ? bannerUrl : `https://nomo-store.vercel.app${bannerUrl}`;
+
+        return {
+          title: `${storeName} | Nomo Storez`,
+          description: storeSlogan,
+          openGraph: {
+            title: `${storeName} | Nomo Storez`,
+            description: storeSlogan,
+            images: [absoluteImageUrl],
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: `${storeName} | Nomo Storez`,
+            description: storeSlogan,
+            images: [absoluteImageUrl],
+          },
+        };
       }
     } catch (err) {
       console.error('Error generating special store metadata:', err);
