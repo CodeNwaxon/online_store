@@ -3,8 +3,10 @@ export interface SpecialStore {
   slug: string;
   slogan?: string;
   banner?: string;
-  lastNameEdit?: string; // ISO date string
-  lastBannerEdit?: string; // ISO date string
+  lastNameEdit?: string; // Legacy
+  lastBannerEdit?: string; // Legacy
+  nameEditDates?: string[];
+  bannerEditDates?: string[];
   ownerEmail: string;
   ownerUid: string;
 }
@@ -19,19 +21,28 @@ export function generateStoreSlug(name: string): string {
 }
 
 /**
- * Checks if a vendor is allowed to edit a specific field (name or banner) based on the once-per-month rule.
+ * Checks if a vendor is allowed to edit a specific field (name or banner) based on the twice-per-month rule.
  * The rule resets on the 1st of every month.
  */
-export function canEditStoreField(lastEditDateStr: string | undefined, isCEO: boolean): { allowed: boolean; nextEditDate?: Date; reason?: string } {
+export function canEditStoreField(editDates: string[] | string | undefined, isCEO: boolean): { allowed: boolean; nextEditDate?: Date; reason?: string } {
   if (isCEO) return { allowed: true }; // CEO can always edit
 
-  if (!lastEditDateStr) return { allowed: true }; // Never edited before
+  if (!editDates) return { allowed: true }; // Never edited before
 
-  const lastEditDate = new Date(lastEditDateStr);
+  let dates: Date[] = [];
+  if (Array.isArray(editDates)) {
+    dates = editDates.map(d => new Date(d));
+  } else {
+    dates = [new Date(editDates)];
+  }
+
   const now = new Date();
+  
+  // Count how many edits happened in the current month
+  const currentMonthEdits = dates.filter(d => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth());
 
-  // If the last edit was in a previous calendar month or year, they can edit
-  if (now.getFullYear() > lastEditDate.getFullYear() || now.getMonth() > lastEditDate.getMonth()) {
+  // If less than 2 edits this month, they can edit
+  if (currentMonthEdits.length < 2) {
     return { allowed: true };
   }
 
@@ -40,6 +51,6 @@ export function canEditStoreField(lastEditDateStr: string | undefined, isCEO: bo
   return { 
     allowed: false, 
     nextEditDate: nextMonth,
-    reason: 'You can only change this field once per calendar month.' 
+    reason: 'You can only change this field twice per calendar month.' 
   };
 }

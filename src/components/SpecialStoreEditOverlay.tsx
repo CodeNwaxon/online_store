@@ -90,8 +90,8 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
       }
 
       // Check monthly edit restrictions for non-CEOs
-      const nameEditCheck = canEditStoreField(storeData.lastNameEdit, isCEO);
-      const bannerEditCheck = canEditStoreField(storeData.lastBannerEdit, isCEO);
+      const nameEditCheck = canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO);
+      const bannerEditCheck = canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO);
 
       let bannerUrl = storeData.banner || '';
       let bannerEdited = false;
@@ -128,6 +128,26 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         bannerEdited = true;
       }
 
+      let nameEditDates = storeData.nameEditDates || (storeData.lastNameEdit ? [storeData.lastNameEdit] : []);
+      let bannerEditDates = storeData.bannerEditDates || (storeData.lastBannerEdit ? [storeData.lastBannerEdit] : []);
+
+      if (nameEdited) {
+        const now = new Date();
+        nameEditDates = nameEditDates.filter(d => {
+          const date = new Date(d);
+          return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+        });
+        nameEditDates.push(new Date().toISOString());
+      }
+      if (bannerEdited) {
+        const now = new Date();
+        bannerEditDates = bannerEditDates.filter(d => {
+          const date = new Date(d);
+          return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+        });
+        bannerEditDates.push(new Date().toISOString());
+      }
+
       const updatedStoreData: SpecialStore = {
         name: name.trim(),
         slug: generateStoreSlug(name),
@@ -136,7 +156,9 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         ownerEmail: adminEmail,
         ownerUid: adminId,
         lastNameEdit: nameEdited ? new Date().toISOString() : (storeData.lastNameEdit || new Date().toISOString()),
-        lastBannerEdit: bannerEdited ? new Date().toISOString() : (storeData.lastBannerEdit || new Date().toISOString())
+        lastBannerEdit: bannerEdited ? new Date().toISOString() : (storeData.lastBannerEdit || new Date().toISOString()),
+        nameEditDates,
+        bannerEditDates
       };
 
       await updateDoc(docRef, { specialStore: updatedStoreData });
@@ -162,31 +184,39 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         </div>
 
         <div className="p-4 md:p-6 flex-1 overflow-y-auto space-y-6">
-          <label className="flex items-center gap-3 cursor-pointer p-3 border border-border rounded-xl hover:bg-muted/30 transition-colors">
-            <input
-              type="checkbox"
-              checked={isEnabled}
-              onChange={(e) => setIsEnabled(e.target.checked)}
-              className="accent-primary w-5 h-5"
-            />
-            <div>
-              <span className="font-bold block">Enable Special Store</span>
-              <span className="text-xs text-muted-foreground block">Allow this vendor to have a branded storefront</span>
-            </div>
-          </label>
-
-          {isEnabled && (
-            <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+          {isCEO && (
+            <label className="flex items-center gap-3 cursor-pointer p-3 border border-border rounded-xl hover:bg-muted/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={(e) => setIsEnabled(e.target.checked)}
+                className="accent-primary w-5 h-5"
+              />
               <div>
+                <span className="font-bold block">Enable Special Store</span>
+                <span className="text-xs text-muted-foreground block">Allow this vendor to have a branded storefront</span>
+              </div>
+            </label>
+          )}
+
+          {(isCEO ? isEnabled : true) && (
+            <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+              <div onClick={() => {
+                  const nameEditCheck = canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO);
+                  if (!isCEO && !nameEditCheck.allowed) {
+                    toast.error('Please contact CEO to change store name again this month.');
+                  }
+                }}>
                 <label className="block text-sm font-bold mb-1">Store Name *</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-border bg-background"
+                  disabled={!isCEO && !canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO).allowed}
+                  className="w-full p-3 rounded-xl border border-border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="e.g. Zara Boutique"
                 />
-                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the store name once per month.</p>}
+                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the store name twice per month.</p>}
               </div>
 
               <div>
@@ -200,7 +230,12 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                 />
               </div>
 
-              <div>
+              <div onClick={() => {
+                  const bannerEditCheck = canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO);
+                  if (!isCEO && !bannerEditCheck.allowed) {
+                    toast.error('Please contact CEO to change banner again this month.');
+                  }
+                }}>
                 <label className="block text-sm font-bold mb-1">Store Banner (URL or Upload File)</label>
                 <input
                   type="text"
@@ -210,10 +245,11 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                     setBannerPreview(e.target.value);
                     setBannerFile(null);
                   }}
-                  className="w-full p-3 rounded-xl border border-border bg-background mb-3"
+                  disabled={!isCEO && !canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO).allowed}
+                  className="w-full p-3 rounded-xl border border-border bg-background mb-3 disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="Paste image URL here..."
                 />
-                <div className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:bg-muted/50 transition-colors relative">
+                <div className={`border-2 border-dashed border-border rounded-xl p-4 text-center transition-colors relative ${(!isCEO && !canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO).allowed) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted/50'}`}>
                   {bannerPreview ? (
                     <div className="relative w-full h-32 rounded-lg overflow-hidden mb-2 border border-border">
                       <img src={bannerPreview} alt="Banner Preview" className="object-cover w-full h-full" />
@@ -228,10 +264,11 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                     type="file"
                     accept="image/*"
                     onChange={handleBannerChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    disabled={!isCEO && !canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO).allowed}
+                    className={`absolute inset-0 opacity-0 ${(!isCEO && !canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO).allowed) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                   />
                 </div>
-                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the banner once per month.</p>}
+                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the banner twice per month.</p>}
               </div>
             </div>
           )}

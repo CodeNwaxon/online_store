@@ -13,11 +13,12 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaImage, FaTimes, FaSearch, FaChevronDown, FaBoxes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaImage, FaTimes, FaSearch, FaChevronDown, FaBoxes, FaEdit } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
+import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -36,6 +37,7 @@ export default function AdminWears() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [admins, setAdmins] = useState<any[]>([]);
+  const [isStoreOverlayOpen, setIsStoreOverlayOpen] = useState(false);
 
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -426,6 +428,12 @@ export default function AdminWears() {
 
   return (
     <AdminGuard>
+      <SpecialStoreEditOverlay
+        isOpen={isStoreOverlayOpen}
+        onClose={() => setIsStoreOverlayOpen(false)}
+        adminId={user?.uid || ''}
+        adminEmail={user?.email || ''}
+      />
       <div className="space-y-8 pb-20 max-w-[1200px] mx-auto ">
         <header className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div>
@@ -438,7 +446,19 @@ export default function AdminWears() {
 
         {/* Form Section */}
         <section className="bg-card py-4 px-2 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-          <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg md:text-xl font-bold">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+            {!isCEO && user && (
+              <button
+                type="button"
+                onClick={() => setIsStoreOverlayOpen(true)}
+                className="p-2 md:px-4 md:py-2 text-xs md:text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold rounded-full flex items-center gap-2 transition-colors shadow-sm"
+                title="Edit Special Store"
+              >
+                <FaEdit /> <span className="hidden md:inline">Edit Store</span>
+              </button>
+            )}
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Vendor (auto-filled or dropdown for CEO) */}
             <div className="space-y-2">
