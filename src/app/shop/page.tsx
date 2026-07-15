@@ -17,9 +17,9 @@ function ShopContent() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState<string>('All');
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<string>(searchParams.get('group') || 'All');
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || initialCategory || 'All');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [visibleCount, setVisibleCount] = useState(84);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
@@ -207,7 +207,11 @@ function ShopContent() {
             </div>
             <button 
               onClick={() => {
-                const url = window.location.href;
+                const urlObj = new URL(window.location.origin + window.location.pathname);
+                if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+                if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+                if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+                const url = urlObj.toString();
                 const title = 'Our Collection | Nomo Storez';
                 if (navigator.share) {
                   navigator.share({ title, url }).catch(()=>{});

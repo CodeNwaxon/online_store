@@ -21,10 +21,10 @@ function WearsPageContent() {
   const [storeLoading, setStoreLoading] = useState(false);
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('All');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedPriceFilter, setSelectedPriceFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
+  const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(24);
@@ -230,7 +230,13 @@ function WearsPageContent() {
           </div>
           <button 
             onClick={() => {
-              const url = window.location.href;
+              const urlObj = new URL(window.location.origin + window.location.pathname);
+              if (storeSlug) urlObj.searchParams.set('store', storeSlug);
+              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+              if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+              if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
+              const url = urlObj.toString();
               const title = storeData ? `${storeData.name} | Nomo Storez` : 'Fashion & Wears | Nomo Storez';
               const text = storeData ? (storeData.slogan || `Shop premium fashion from ${storeData.name}`) : 'Explore our collection of trendy clothing, shoes, and stylish accessories.';
               if (navigator.share) {

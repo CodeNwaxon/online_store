@@ -1,21 +1,23 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 
-export default function FoodsPage() {
+function FoodsContent() {
+  const searchParams = useSearchParams();
   const [foods, setFoods] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('All');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedPriceFilter, setSelectedPriceFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
+  const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
 
   useEffect(() => {
     const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
@@ -126,7 +128,12 @@ export default function FoodsPage() {
           </div>
           <button 
             onClick={() => {
-              const url = window.location.href;
+              const urlObj = new URL(window.location.origin + window.location.pathname);
+              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+              if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+              if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
+              const url = urlObj.toString();
               const title = 'Food Market | Nomo Storez';
               if (navigator.share) {
                 navigator.share({ title, url }).catch(()=>{});
@@ -241,5 +248,13 @@ export default function FoodsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function FoodsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>}>
+      <FoodsContent />
+    </Suspense>
   );
 }

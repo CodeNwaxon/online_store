@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { FaSearch, FaCouch, FaChevronDown, FaStore, FaFilter, FaShareAlt } from 'react-icons/fa';
@@ -8,12 +8,14 @@ import ProductCard from '@/components/ProductCard';
 import { Product } from '@/data/products';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 
-export default function FurniturePage() {
+function FurnitureContent() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(24);
 
@@ -74,7 +76,10 @@ export default function FurniturePage() {
           </div>
           <button 
             onClick={() => {
-              const url = window.location.href;
+              const urlObj = new URL(window.location.origin + window.location.pathname);
+              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+              const url = urlObj.toString();
               const title = 'Furniture & Decor | Nomo Storez';
               if (navigator.share) {
                 navigator.share({ title, url }).catch(()=>{});
@@ -200,5 +205,13 @@ export default function FurniturePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function FurniturePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FDFBF9] flex items-center justify-center"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+      <FurnitureContent />
+    </Suspense>
   );
 }

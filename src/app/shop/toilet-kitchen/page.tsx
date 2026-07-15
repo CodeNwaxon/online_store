@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt } from 'react-icons/fa';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 
-export default function ToiletKitchenPage() {
+function ToiletKitchenContent() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<CategoryProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('All');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
+  const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(24);
@@ -47,7 +49,6 @@ export default function ToiletKitchenPage() {
       const uniqueCats = Array.from(new Set(groupProds.map(p => p.category).filter(Boolean)));
       setCategories(uniqueCats);
     }
-    setSelectedCategory('All');
   }, [selectedGroup, products]);
 
   const filteredProducts = products.filter(p => {
@@ -108,7 +109,11 @@ export default function ToiletKitchenPage() {
           </div>
           <button 
             onClick={() => {
-              const url = window.location.href;
+              const urlObj = new URL(window.location.origin + window.location.pathname);
+              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+              if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+              const url = urlObj.toString();
               const title = 'Toilet & Kitchen | Nomo Storez';
               if (navigator.share) {
                 navigator.share({ title, url }).catch(()=>{});
@@ -177,5 +182,13 @@ export default function ToiletKitchenPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ToiletKitchenPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FDFDFE] flex items-center justify-center"><div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" /></div>}>
+      <ToiletKitchenContent />
+    </Suspense>
   );
 }
