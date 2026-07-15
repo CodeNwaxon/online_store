@@ -209,7 +209,7 @@ function WearsPageContent() {
         </div>
       )}
 
-      <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-2 md:py-8 px-4 relative overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
         {storeData?.banner && (
           <div className="absolute inset-0 opacity-40 z-0">
             <img src={storeData.banner} alt="Store Banner" className="w-full h-full object-cover" />

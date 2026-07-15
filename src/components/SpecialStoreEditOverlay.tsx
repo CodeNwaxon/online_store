@@ -21,11 +21,12 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
   const { isCEO } = useAdmin();
   const [loading, setLoading] = useState(false);
   const [storeData, setStoreData] = useState<Partial<SpecialStore>>({});
-  
+
   const [name, setName] = useState('');
   const [slogan, setSlogan] = useState('');
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState('');
+  const [bannerUrlInput, setBannerUrlInput] = useState('');
   const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
@@ -41,12 +42,14 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             setName(data.specialStore.name || '');
             setSlogan(data.specialStore.slogan || '');
             setBannerPreview(data.specialStore.banner || '');
+            setBannerUrlInput(data.specialStore.banner || '');
             setIsEnabled(true);
           } else {
             setStoreData({});
             setName('');
             setSlogan('');
             setBannerPreview('');
+            setBannerUrlInput('');
             setIsEnabled(false);
           }
         }
@@ -64,6 +67,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
       const file = e.target.files[0];
       setBannerFile(file);
       setBannerPreview(URL.createObjectURL(file));
+      setBannerUrlInput('');
     }
   };
 
@@ -76,7 +80,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
     setLoading(true);
     try {
       const docRef = doc(db, 'admins', adminId);
-      
+
       if (!isEnabled) {
         // Remove specialStore completely
         await updateDoc(docRef, { specialStore: null });
@@ -114,6 +118,14 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         if (result.error) throw new Error(result.error);
         bannerUrl = result.secure_url;
         bannerEdited = true;
+      } else if (bannerUrlInput.trim() !== (storeData.banner || '')) {
+        if (!bannerEditCheck.allowed) {
+          toast.error(`Cannot edit banner. ${bannerEditCheck.reason} Available on: ${bannerEditCheck.nextEditDate?.toLocaleDateString()}`);
+          setLoading(false);
+          return;
+        }
+        bannerUrl = bannerUrlInput.trim();
+        bannerEdited = true;
       }
 
       const updatedStoreData: SpecialStore = {
@@ -138,10 +150,10 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
   };
 
   return (
-    <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
-        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/30">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+    <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+      <div className="bg-card w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+        <div className="p-4 md:p-6 border-b border-border flex justify-between items-center bg-muted/30">
+          <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
             <FaStore className="text-primary" /> Special Store Settings
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-full transition-colors">
@@ -149,11 +161,11 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
           </button>
         </div>
 
-        <div className="p-6 flex-1 overflow-y-auto space-y-6">
+        <div className="p-4 md:p-6 flex-1 overflow-y-auto space-y-6">
           <label className="flex items-center gap-3 cursor-pointer p-3 border border-border rounded-xl hover:bg-muted/30 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={isEnabled} 
+            <input
+              type="checkbox"
+              checked={isEnabled}
               onChange={(e) => setIsEnabled(e.target.checked)}
               className="accent-primary w-5 h-5"
             />
@@ -167,9 +179,9 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
               <div>
                 <label className="block text-sm font-bold mb-1">Store Name *</label>
-                <input 
-                  type="text" 
-                  value={name} 
+                <input
+                  type="text"
+                  value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full p-3 rounded-xl border border-border bg-background"
                   placeholder="e.g. Zara Boutique"
@@ -179,9 +191,9 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
 
               <div>
                 <label className="block text-sm font-bold mb-1">Slogan (Optional)</label>
-                <input 
-                  type="text" 
-                  value={slogan} 
+                <input
+                  type="text"
+                  value={slogan}
                   onChange={(e) => setSlogan(e.target.value)}
                   className="w-full p-3 rounded-xl border border-border bg-background"
                   placeholder="e.g. Your daily fashion"
@@ -189,11 +201,22 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-1">Store Banner (Optional)</label>
+                <label className="block text-sm font-bold mb-1">Store Banner (URL or Upload File)</label>
+                <input
+                  type="text"
+                  value={bannerUrlInput}
+                  onChange={(e) => {
+                    setBannerUrlInput(e.target.value);
+                    setBannerPreview(e.target.value);
+                    setBannerFile(null);
+                  }}
+                  className="w-full p-3 rounded-xl border border-border bg-background mb-3"
+                  placeholder="Paste image URL here..."
+                />
                 <div className="border-2 border-dashed border-border rounded-xl p-4 text-center hover:bg-muted/50 transition-colors relative">
                   {bannerPreview ? (
                     <div className="relative w-full h-32 rounded-lg overflow-hidden mb-2 border border-border">
-                      <Image src={bannerPreview} alt="Banner Preview" fill className="object-cover" />
+                      <img src={bannerPreview} alt="Banner Preview" className="object-cover w-full h-full" />
                     </div>
                   ) : (
                     <div className="py-6 flex flex-col items-center text-muted-foreground">
@@ -201,9 +224,9 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                       <span className="text-sm">Click to upload banner</span>
                     </div>
                   )}
-                  <input 
-                    type="file" 
-                    accept="image/*" 
+                  <input
+                    type="file"
+                    accept="image/*"
                     onChange={handleBannerChange}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
@@ -215,13 +238,13 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         </div>
 
         <div className="p-4 border-t border-border flex justify-end gap-3 bg-muted/30">
-          <button 
+          <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-bold border border-border rounded-lg hover:bg-muted"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleSave}
             disabled={loading}
             className="px-6 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"

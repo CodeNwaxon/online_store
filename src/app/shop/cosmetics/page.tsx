@@ -184,7 +184,7 @@ function CosmeticsPageContent() {
       )}
 
       {/* Header */}
-      <div className={`bg-gradient-to-r ${storeData ? 'from-pink-900 via-rose-800 to-pink-900' : 'from-pink-800 via-rose-600 to-pink-900'} text-white py-2 md:py-8 px-4 relative overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${storeData ? 'from-pink-900 via-rose-800 to-pink-900' : 'from-pink-800 via-rose-600 to-pink-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
         {storeData?.banner && (
           <div className="absolute inset-0 opacity-40 z-0">
             <img src={storeData.banner} alt="Store Banner" className="w-full h-full object-cover" />
