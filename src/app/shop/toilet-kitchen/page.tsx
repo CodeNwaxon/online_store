@@ -98,11 +98,11 @@ export default function ToiletKitchenPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFE] pb-20">
-      <div className="bg-gradient-to-r from-teal-800 via-cyan-700 to-teal-900 text-white py-4 md:py-8 px-4 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-teal-800 via-cyan-700 to-teal-900 text-white py-3 md:py-8 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"><FaBoxes size={300} /></div>
         <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4"><FaBoxes className="text-teal-300" /> Toilet & Kitchen</h1>
-          <p className="text-sm md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
+          <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4"><FaBoxes className="text-teal-300" /> Toilet & Kitchen</h1>
+          <p className="text-xs md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
         </div>
       </div>
 

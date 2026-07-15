@@ -2,14 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { FaSearch, FaUserTie, FaChevronDown, FaStore, FaFilter } from 'react-icons/fa';
+import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { FaSearch, FaUserTie, FaChevronDown, FaStore, FaFilter, FaTimes } from 'react-icons/fa';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
 
-export default function WearsPage() {
+function WearsPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const storeSlug = searchParams?.get('store');
+
   const [products, setProducts] = useState<CategoryProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [storeData, setStoreData] = useState<any>(null);
+  const [storeLoading, setStoreLoading] = useState(false);
+  const [activeStores, setActiveStores] = useState<any[]>([]);
+  const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -36,6 +46,50 @@ export default function WearsPage() {
       setLoading(false);
     });
     return () => unsub();
+  }, [storeData]);
+
+  // Fetch store data if slug exists
+  useEffect(() => {
+    if (!storeSlug) {
+      setStoreData(null);
+      return;
+    }
+    const fetchStore = async () => {
+      setStoreLoading(true);
+      try {
+        const q = query(collection(db, 'admins'), where('specialStore.slug', '==', storeSlug));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setStoreData(snap.docs[0].data().specialStore);
+        } else {
+          setStoreData(null);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setStoreLoading(false);
+      }
+    };
+    fetchStore();
+  }, [storeSlug]);
+
+  // Fetch all active special stores for dropdown
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const q = query(collection(db, 'admins'), where('specialStore', '!=', null));
+        const snap = await getDocs(q);
+        const stores = snap.docs
+          .map(doc => doc.data())
+          .filter(admin => admin.assignedRoutes?.includes('/ADMIN/WEARS') || admin.role === 'CEO')
+          .map(admin => admin.specialStore)
+          .filter(Boolean);
+        setActiveStores(stores);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStores();
   }, []);
 
   const priceFilters = [
@@ -59,6 +113,9 @@ export default function WearsPage() {
   }, [selectedGroup, products]);
 
   const filteredProducts = products.filter(p => {
+    // If a store is selected, ONLY show that vendor's products
+    if (storeData && p.vendor !== storeData.ownerEmail) return false;
+
     const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
@@ -76,14 +133,25 @@ export default function WearsPage() {
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
       <div className="min-h-screen bg-[#FDFBFD] pb-20">
-        <div className="bg-gradient-to-r from-purple-800 via-violet-700 to-purple-900 text-white py-4 md:py-8 px-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"><FaUserTie size={300} /></div>
+        <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
+          {storeData?.banner && (
+            <div className="absolute inset-0 opacity-40 z-0">
+              <img src={storeData.banner} alt="Store Banner" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50"></div>
+            </div>
+          )}
+          <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4 z-0"><FaUserTie size={300} /></div>
           <div className="max-w-[1200px] mx-auto relative z-10">
-            <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4"><FaUserTie className="text-purple-300" /> Fashion & Wears</h1>
-            <p className="text-sm md:text-xl text-purple-100 max-w-2xl">Explore our collection of trendy clothing, shoes, and stylish accessories.</p>
+            <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4">
+              <FaUserTie className="text-purple-300" />
+              {storeData ? storeData.name : 'Fashion & Wears'}
+            </h1>
+            <p className="text-sm md:text-xl text-purple-100 max-w-2xl">
+              {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Explore our collection of trendy clothing, shoes, and stylish accessories.'}
+            </p>
           </div>
         </div>
         <div className="py-32 flex flex-col items-center justify-center">
@@ -97,11 +165,22 @@ export default function WearsPage() {
   if (products.length === 0) {
     return (
       <div className="min-h-screen bg-[#FDFBFD] pb-20">
-        <div className="bg-gradient-to-r from-purple-800 via-violet-700 to-purple-900 text-white py-4 md:py-8 px-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"><FaUserTie size={300} /></div>
+        <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
+          {storeData?.banner && (
+            <div className="absolute inset-0 opacity-40 z-0">
+              <img src={storeData.banner} alt="Store Banner" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/50"></div>
+            </div>
+          )}
+          <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4 z-0"><FaUserTie size={300} /></div>
           <div className="max-w-[1200px] mx-auto relative z-10">
-            <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4"><FaUserTie className="text-purple-300" /> Fashion & Wears</h1>
-            <p className="text-sm md:text-xl text-purple-100 max-w-2xl">Explore our collection of trendy clothing, shoes, and stylish accessories.</p>
+            <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4">
+              <FaUserTie className="text-purple-300" />
+              {storeData ? storeData.name : 'Fashion & Wears'}
+            </h1>
+            <p className="text-sm md:text-xl text-purple-100 max-w-2xl">
+              {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Explore our collection of trendy clothing, shoes, and stylish accessories.'}
+            </p>
           </div>
         </div>
         <div className="py-20 md:py-32 text-center flex flex-col items-center justify-center">
@@ -115,12 +194,37 @@ export default function WearsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFBFD] pb-20">
-      <div className="bg-gradient-to-r from-purple-800 via-violet-700 to-purple-900 text-white py-4 md:py-8 px-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"><FaUserTie size={300} /></div>
+    <div className="min-h-screen bg-[#FDFBFD] pb-20 relative">
+      {/* Store Filter Badge */}
+      {storeData && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-10 fade-in duration-300">
+          <div className="bg-white/90 backdrop-blur border border-purple-200 shadow-xl rounded-full px-4 py-2 flex items-center gap-3">
+            <span className="text-xs font-bold text-purple-800 flex items-center gap-2">
+              <FaStore className="text-purple-500" /> {storeData.name}
+            </span>
+            <Link href="/shop/wears" className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors" title="Clear Store Filter">
+              <FaTimes size={10} />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-2 md:py-8 px-4 relative overflow-hidden`}>
+        {storeData?.banner && (
+          <div className="absolute inset-0 opacity-40 z-0">
+            <img src={storeData.banner} alt="Store Banner" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/50"></div>
+          </div>
+        )}
+        <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4 z-0"><FaUserTie size={300} /></div>
         <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4"><FaUserTie className="text-purple-300" /> Fashion & Wears</h1>
-          <p className="text-sm md:text-xl text-purple-100 max-w-2xl">Explore our collection of trendy clothing, shoes, and stylish accessories.</p>
+          <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4">
+            <FaUserTie className="text-purple-300" />
+            {storeData ? storeData.name : 'Fashion & Wears'}
+          </h1>
+          <p className="text-xs md:text-xl text-purple-100 max-w-2xl">
+            {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Explore our collection of trendy clothing, shoes, and stylish accessories.'}
+          </p>
         </div>
       </div>
 
@@ -134,11 +238,11 @@ export default function WearsPage() {
               ))}
             </div>
             <div className="grid grid-cols-3 md:flex flex-row gap-2 md:gap-3 w-full md:w-auto max-md:px-1 flex-1 md:max-w-xl">
-              <div className="col-span-2 relative flex-1 min-w-[200px]">
+              <div className="col-span-2 md:col-span-1 relative flex-1 min-w-[200px]">
                 <input type="text" placeholder="Search wears..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full py-2.5 pr-4 pl-8 md:pl-10 rounded-md md:rounded-xl border border-gray-200 bg-slate-50 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all text-xs md:text-sm" />
                 <FaSearch size={16} className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
-              <div className="col-span-1 relative w-full sm:w-48">
+              <div className="col-span-1 relative w-full sm:w-40">
                 <select
                   value={selectedPriceFilter}
                   onChange={(e) => setSelectedPriceFilter(e.target.value)}
@@ -147,6 +251,54 @@ export default function WearsPage() {
                   {priceFilters.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
                 <FaFilter className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+              </div>
+
+              {/* Special Stores Dropdown */}
+              <div className="col-span-3 md:col-span-1 relative w-full sm:w-48">
+                {storeData ? (
+                  <button
+                    onClick={() => router.push('/shop/wears')}
+                    className="w-full px-4 py-2.5 rounded-md md:rounded-xl bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-between text-xs md:text-sm font-bold shadow-sm transition-colors"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FaStore className="shrink-0" />
+                      <span className="truncate">{storeData.name}</span>
+                    </div>
+                    <FaTimes className="text-[12px] shrink-0 ml-2" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsStoreDropdownOpen(!isStoreDropdownOpen)}
+                    className="w-full px-4 py-2.5 rounded-md md:rounded-xl bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-between text-xs md:text-sm font-bold shadow-sm transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FaStore />
+                      <span className="truncate">Special Stores</span>
+                    </div>
+                    <FaChevronDown className="text-[10px] shrink-0 ml-2" />
+                  </button>
+                )}
+
+                {!storeData && isStoreDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-full md:w-56 bg-white border border-purple-100 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                      {activeStores.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-muted-foreground font-semibold">No stores available</div>
+                      ) : activeStores.map(store => (
+                        <button
+                          key={store.slug}
+                          onClick={() => {
+                            setIsStoreDropdownOpen(false);
+                            router.push(`/shop/wears?store=${store.slug}`);
+                          }}
+                          className="w-full text-left p-3 hover:bg-purple-50 text-xs font-bold text-gray-800 transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          {store.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -186,5 +338,13 @@ export default function WearsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function WearsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FDFBFD] flex items-center justify-center"><div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}>
+      <WearsPageContent />
+    </Suspense>
   );
 }

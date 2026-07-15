@@ -19,6 +19,7 @@ import { toast } from 'react-hot-toast';
 import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
+import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/PRODUCTS',
@@ -90,6 +91,10 @@ export default function AdminManagement() {
   const [vendorDeletePasskey, setVendorDeletePasskey] = useState('');
   const [vendorDeleteError, setVendorDeleteError] = useState('');
   const [vendorDeleteLoading, setVendorDeleteLoading] = useState(false);
+
+  // Special Store State
+  const [editStoreAdminId, setEditStoreAdminId] = useState<string | null>(null);
+  const [editStoreAdminEmail, setEditStoreAdminEmail] = useState('');
 
   useEffect(() => {
     // Fetch current admins
@@ -283,7 +288,7 @@ export default function AdminManagement() {
       toast.error('Please enter both old and new vendor emails.');
       return;
     }
-    
+
     setTransferLoading(true);
     try {
       const collectionsToUpdate = ['foods', 'products', 'cosmetics', 'wears', 'toilet_kitchen'];
@@ -292,21 +297,42 @@ export default function AdminManagement() {
       for (const colName of collectionsToUpdate) {
         const q = query(collection(db, colName), where('vendor', '==', oldVendorEmail));
         const snap = await getDocs(q);
-        
+
         for (const documentSnap of snap.docs) {
           await updateDoc(doc(db, colName, documentSnap.id), { vendor: newVendorEmail });
           totalUpdated++;
         }
       }
 
-      if (totalUpdated > 0) {
-        toast.success(`Transferred ${totalUpdated} products to ${newVendorEmail}.`);
+      // Transfer Special Store branding if exists
+      const oldAdmin = admins.find(a => a.email === oldVendorEmail);
+      const newAdmin = admins.find(a => a.email === newVendorEmail);
+
+      let storeTransferred = false;
+      if (oldAdmin?.specialStore && newAdmin) {
+        const updatedSpecialStore = {
+          ...oldAdmin.specialStore,
+          ownerEmail: newAdmin.email,
+          ownerUid: newAdmin.uid
+        };
+
+        // We use setDoc with merge to ensure it works even if admin document doesn't fully exist (though it should)
+        await setDoc(doc(db, 'admins', newAdmin.id), { specialStore: updatedSpecialStore }, { merge: true });
+        
+        // Remove from old admin, we use updateDoc or setDoc
+        await setDoc(doc(db, 'admins', oldAdmin.id), { specialStore: null }, { merge: true });
+        storeTransferred = true;
+      }
+
+      if (totalUpdated > 0 || storeTransferred) {
+        if (totalUpdated > 0) toast.success(`Transferred ${totalUpdated} products to ${newVendorEmail}.`);
+        if (storeTransferred) toast.success(`Transferred Special Store '${oldAdmin?.specialStore?.name}' to ${newVendorEmail}.`);
         setOldVendorEmail('');
         setNewVendorEmail('');
         setOldVendorSearch('');
         setNewVendorSearch('');
       } else {
-        toast.error(`No products found for vendor ${oldVendorEmail}.`);
+        toast.error(`No products or Special Store found for vendor ${oldVendorEmail}.`);
       }
     } catch (error) {
       console.error(error);
@@ -557,13 +583,12 @@ export default function AdminManagement() {
                 <label className="block text-xs font-bold mb-3 text-muted-foreground uppercase tracking-widest">Assign Duties (Select Links)</label>
                 <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                   {savedUrls.map((route) => (
-                    <label 
-                      key={route} 
-                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                        editingAdmin.assignedRoutes?.includes(route) 
-                          ? 'border-primary bg-primary/5 text-primary' 
-                          : 'border-border hover:border-border/80 text-muted-foreground'
-                      }`}
+                    <label
+                      key={route}
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${editingAdmin.assignedRoutes?.includes(route)
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : 'border-border hover:border-border/80 text-muted-foreground'
+                        }`}
                     >
                       <input
                         type="checkbox"
@@ -616,9 +641,9 @@ export default function AdminManagement() {
           <div className="flex flex-col md:flex-row gap-2 mb-6">
             <div className="flex-1 flex items-center bg-background border border-border rounded-md overflow-hidden focus-within:border-primary transition-colors">
               <span className="pl-3 py-3 text-muted-foreground text-sm font-bold bg-muted/30 border-r border-border">/admin/</span>
-              <input 
-                type="text" 
-                placeholder="management" 
+              <input
+                type="text"
+                placeholder="management"
                 className="flex-1 p-3 bg-transparent text-sm focus:outline-none"
                 value={urlLink}
                 onChange={(e) => setUrlLink(e.target.value)}
@@ -736,22 +761,22 @@ export default function AdminManagement() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => setEditingAdmin({ ...admin })}
-                      className="text-primary p-2 hover:bg-primary/10 rounded-full"
-                      title="Edit admin routes"
-                    >
-                      <FaEdit size={14} />
-                    </button>
-                    <button
-                      onClick={() => openRemoveOverlay(admin.id, admin.email)}
-                      className="text-secondary p-2 hover:bg-secondary/10 rounded-full"
-                      title="Remove admin"
-                    >
-                      <FaTrash size={14} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setEditingAdmin({ ...admin })}
+                    className="text-primary p-2 hover:bg-primary/10 rounded-full"
+                    title="Edit admin routes"
+                  >
+                    <FaEdit size={14} />
+                  </button>
+                  <button
+                    onClick={() => openRemoveOverlay(admin.id, admin.email)}
+                    className="text-secondary p-2 hover:bg-secondary/10 rounded-full"
+                    title="Remove admin"
+                  >
+                    <FaTrash size={14} />
+                  </button>
                 </div>
+              </div>
             ))}
           </div>
         </section>
@@ -803,7 +828,7 @@ export default function AdminManagement() {
         <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
           <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaStore /> Vendor Management</h2>
           <p className="text-sm text-muted-foreground mb-6">View current vendors (admins) and transfer product ownership to a new email address.</p>
-          
+
           <div className="mb-8">
             <h3 className="font-bold text-sm mb-3">Current Admins (Vendors)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -828,6 +853,17 @@ export default function AdminManagement() {
                       />
                       <span className="text-[0.6rem] font-bold text-muted-foreground">VIP</span>
                     </label>
+                    {/* Special Store Settings */}
+                    <button
+                      onClick={() => {
+                        setEditStoreAdminId(admin.id);
+                        setEditStoreAdminEmail(admin.email);
+                      }}
+                      className={`${admin.specialStore ? 'text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted-foreground/10'} p-2 rounded-full transition-colors ml-2`}
+                      title="Special Store Settings"
+                    >
+                      <FaStore size={12} />
+                    </button>
                     {/* Delete */}
                     <button
                       onClick={() => openVendorDeleteOverlay(admin.id, admin.email)}
@@ -847,7 +883,7 @@ export default function AdminManagement() {
 
           <h3 className="font-bold text-sm mb-3 flex items-center gap-2"><FaExchangeAlt /> Transfer Product Access</h3>
           <p className="text-[0.65rem] text-muted-foreground mb-4 italic">* Both Old and New Vendor searches will look up your current Admin Staff.</p>
-          
+
           {oldVendorEmail && newVendorEmail && oldVendorEmail === newVendorEmail && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-xs font-bold animate-pulse">
               ⚠️ Error: Old Vendor and New Vendor emails cannot be the same.
@@ -1109,6 +1145,19 @@ export default function AdminManagement() {
             </p>
           )}
         </section>
+
+        {/* SPECIAL STORE EDIT OVERLAY */}
+        {editStoreAdminId && (
+          <SpecialStoreEditOverlay
+            adminId={editStoreAdminId}
+            adminEmail={editStoreAdminEmail}
+            isOpen={true}
+            onClose={() => {
+              setEditStoreAdminId(null);
+              setEditStoreAdminEmail('');
+            }}
+          />
+        )}
       </div>
     </AdminGuard>
   );

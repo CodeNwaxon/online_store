@@ -13,7 +13,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUserTie, FaBoxes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaImage, FaTimes, FaSearch, FaChevronDown, FaBoxes } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
@@ -35,9 +35,12 @@ export default function AdminWears() {
   const { user, isCEO } = useAdmin();
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
+  const [admins, setAdmins] = useState<any[]>([]);
 
   // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedVendorEmail, setSelectedVendorEmail] = useState('');
+  const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [name, setName] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [price, setPrice] = useState('');
@@ -197,8 +200,17 @@ export default function AdminWears() {
     }, (error) => {
       console.warn("Wears listener error:", error);
     });
+
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!isCEO) return;
+    const unsub = onSnapshot(collection(db, 'admins'), (snap) => {
+      setAdmins(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, [isCEO]);
 
   const handleAddImageUrl = () => {
     if (!imageUrlInput) return;
@@ -231,6 +243,7 @@ export default function AdminWears() {
 
   const resetForm = () => {
     setEditingId(null);
+    setSelectedVendorEmail('');
     setName('');
     setCostPrice('');
     setPrice('');
@@ -312,7 +325,7 @@ export default function AdminWears() {
       } else {
         await addDoc(collection(db, 'wears'), {
           ...productData,
-          vendor: user?.email || '',
+          vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
           createdAt: new Date().toISOString()
         });
         toast.success('Product added!');
@@ -333,6 +346,7 @@ export default function AdminWears() {
       return;
     }
     setEditingId(product.id);
+    setSelectedVendorEmail((product as any).vendor || '');
     setName(product.name);
     setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
     setPrice(formatPriceInput((product.price || 0).toString()));
@@ -426,15 +440,81 @@ export default function AdminWears() {
         <section className="bg-card py-4 px-2 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <h2 className="text-lg md:text-xl font-bold mb-6">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Vendor (auto-filled, read-only) */}
+            {/* Vendor (auto-filled or dropdown for CEO) */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-purple-700">Vendor</label>
-              <input
-                readOnly
-                value={user?.email || ''}
-                type="text"
-                className="w-full p-3 rounded-md border border-purple-200 bg-muted text-sm font-semibold text-muted-foreground cursor-not-allowed"
-              />
+              {isCEO ? (
+                <div className="relative">
+                  <div
+                    onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                    className="w-full p-3 rounded-md border border-purple-200 bg-background flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      {selectedVendorEmail ? (
+                        (() => {
+                          const vendor = admins.find(a => a.email === selectedVendorEmail) || (selectedVendorEmail === user?.email ? user : null);
+                          const storeName = vendor?.specialStore?.name || (selectedVendorEmail === user?.email ? 'Me' : null);
+                          return (
+                            <>
+                              {storeName && <span className="text-[10px] md:text-xs font-bold">{storeName}</span>}
+                              <span className={`text-[8px] md:text-[10px] font-semibold text-muted-foreground ${!storeName ? 'md:text-xs text-[10px]' : ''}`}>
+                                {selectedVendorEmail}
+                              </span>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-sm font-semibold text-muted-foreground">Select Vendor</span>
+                      )}
+                    </div>
+                    <FaChevronDown className="text-purple-400 text-xs" />
+                  </div>
+
+                  {isVendorDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-md shadow-xl z-50 max-h-60 overflow-y-auto">
+                      <div
+                        onClick={() => {
+                          setSelectedVendorEmail(user?.email || '');
+                          setIsVendorDropdownOpen(false);
+                        }}
+                        className="p-3 hover:bg-muted cursor-pointer border-b border-border transition-colors"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-[10px] md:text-xs font-bold">Me</span>
+                          <span className="text-[8px] md:text-[10px] font-semibold text-muted-foreground">{user?.email}</span>
+                        </div>
+                      </div>
+
+                      {admins.filter(a => a.email !== user?.email && (a.assignedRoutes?.includes('/ADMIN/WEARS') || a.role === 'CEO')).map(admin => (
+                        <div
+                          key={admin.id}
+                          onClick={() => {
+                            setSelectedVendorEmail(admin.email);
+                            setIsVendorDropdownOpen(false);
+                          }}
+                          className="p-3 hover:bg-muted cursor-pointer border-b border-border last:border-0 transition-colors"
+                        >
+                          <div className="flex flex-col">
+                            {admin.specialStore?.name && (
+                              <span className="text-[10px] md:text-xs font-bold">{admin.specialStore.name}</span>
+                            )}
+                            <span className={`text-[8px] md:text-[10px] font-semibold text-muted-foreground ${!admin.specialStore?.name ? 'md:text-xs text-[10px]' : ''}`}>
+                              {admin.email}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <input
+                  readOnly
+                  value={user?.email || ''}
+                  type="text"
+                  className="w-full p-3 rounded-md border border-purple-200 bg-muted text-sm font-semibold text-muted-foreground cursor-not-allowed"
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -559,10 +639,10 @@ export default function AdminWears() {
 
             <div className="space-y-2 mb-6">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={includeColor || isShoeGroup || isClothGroup} 
-                  onChange={(e) => setIncludeColor(e.target.checked)} 
+                <input
+                  type="checkbox"
+                  checked={includeColor || isShoeGroup || isClothGroup}
+                  onChange={(e) => setIncludeColor(e.target.checked)}
                   className="size-4 accent-purple-600"
                   disabled={isShoeGroup || isClothGroup} // always true for these
                 />
@@ -774,7 +854,7 @@ export default function AdminWears() {
                     required
                     value={quantity}
                     onChange={e => setQuantity(e.target.value)}
-                    onBlur={e => { const v = parseInt(e.target.value); if(isNaN(v) || v < 1) setQuantity('1'); }}
+                    onBlur={e => { const v = parseInt(e.target.value); if (isNaN(v) || v < 1) setQuantity('1'); }}
                     onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
                     type="number"
                     min="1"

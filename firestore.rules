@@ -49,7 +49,12 @@ service cloud.firestore {
     // Admin Staff Management
     match /admins/{adminId} {
       allow read: if request.auth != null && (request.auth.uid == adminId || isAdmin());
-      allow write: if isCEO();
+      allow create, delete: if isCEO();
+      allow update: if isCEO() || (
+        request.auth != null && 
+        request.auth.uid == adminId && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['specialStore'])
+      );
     }
 
     // Site Settings

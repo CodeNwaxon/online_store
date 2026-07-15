@@ -139,7 +139,16 @@ export default function Navbar() {
     fetchTemplates();
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-      setUnreadOrders(snap.size);
+      let count = 0;
+      snap.forEach(docSnap => {
+        const order = docSnap.data();
+        if (isCEO || adminData?.vip) {
+          count++;
+        } else if (order.items?.some((item: any) => item.vendor === adminData?.email)) {
+          count++;
+        }
+      });
+      setUnreadOrders(count);
     }, (error) => {
       console.warn("Navbar orders listener error:", error);
     });

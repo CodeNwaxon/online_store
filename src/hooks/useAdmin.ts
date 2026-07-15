@@ -5,6 +5,7 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { verifyCEO } from '@/actions/admin';
+import { SpecialStore } from '@/lib/specialStoreTypes';
 
 export interface AdminData {
   uid: string;
@@ -14,6 +15,7 @@ export interface AdminData {
   name?: string;
   image?: string;
   vip?: boolean;
+  specialStore?: SpecialStore;
 }
 
 export function useAdmin() {

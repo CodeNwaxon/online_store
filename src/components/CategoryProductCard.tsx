@@ -27,6 +27,7 @@ export interface CategoryProduct {
   requiresMinShipping?: boolean;
   minShippingQty?: number;
   measurements?: string;
+  vendor?: string;
 }
 
 interface CategoryProductCardProps {

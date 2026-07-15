@@ -110,15 +110,15 @@ export default function FoodsPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-800 via-green-700 to-emerald-900 text-white py-4 md:py-8 px-4 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-800 via-green-700 to-emerald-900 text-white py-3 md:py-8 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
           <FaUtensils size={300} />
         </div>
         <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4">
+          <h1 className="text-2xl md:text-5xl font-black mb-1 md:mb-4 flex items-center gap-4">
             <FaLeaf className="text-green-300" /> Food Market
           </h1>
-          <p className="text-sm md:text-xl text-green-100 max-w-2xl">
+          <p className="text-xs md:text-xl text-green-100 max-w-2xl">
             Fresh, delicious, and healthy choices curated just for you. Browse our premium selection.
           </p>
         </div>

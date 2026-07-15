@@ -20,21 +20,21 @@ export default function FurniturePage() {
     const q = query(collection(db, 'products'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
-      
+
       const sortedProds = [...prods].sort((a: any, b: any) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       // Filter for only Furniture group
       const furnitureProds = sortedProds.filter(p => p.group && p.group.toLowerCase() === 'furniture');
-      
+
       setProducts(furnitureProds);
 
       const uniqueCats = Array.from(new Set(furnitureProds.map(p => p.category).filter(Boolean)));
       setCategories(uniqueCats);
-      
+
       setLoading(false);
     }, (error) => {
       console.warn("Furniture listener error:", error);
@@ -44,10 +44,10 @@ export default function FurniturePage() {
   }, []);
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
@@ -58,15 +58,15 @@ export default function FurniturePage() {
   return (
     <div className="min-h-screen bg-[#FDFBF9] pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-900 via-yellow-900 to-amber-950 text-white py-4 md:py-8 px-4 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-900 via-yellow-900 to-amber-950 text-white py-3 md:py-8 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
           <FaCouch size={300} />
         </div>
         <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-2 md:mb-4 flex items-center gap-4">
+          <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4">
             <FaCouch className="text-amber-300" /> Furniture & Decor
           </h1>
-          <p className="text-sm md:text-xl text-amber-100 max-w-2xl">
+          <p className="text-xs md:text-xl text-amber-100 max-w-2xl">
             Discover premium furniture and beautiful artifacts for your space.
           </p>
         </div>
@@ -158,9 +158,9 @@ export default function FurniturePage() {
             <>
               <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-4 md:gap-6">
                 {displayedProducts.map(product => (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product} 
+                  <ProductCard
+                    key={product.id}
+                    product={product}
                   />
                 ))}
               </div>
