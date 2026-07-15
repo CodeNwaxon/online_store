@@ -202,11 +202,11 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
           {(isCEO ? isEnabled : true) && (
             <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
               <div onClick={() => {
-                  const nameEditCheck = canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO);
-                  if (!isCEO && !nameEditCheck.allowed) {
-                    toast.error('Please contact CEO to change store name again this month.');
-                  }
-                }}>
+                const nameEditCheck = canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO);
+                if (!isCEO && !nameEditCheck.allowed) {
+                  toast.error('Please contact CEO to change store name again this month.');
+                }
+              }}>
                 <label className="block text-sm font-bold mb-1">Store Name *</label>
                 <input
                   type="text"
@@ -216,7 +216,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                   className="w-full p-3 rounded-xl border border-border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="e.g. Zara Boutique"
                 />
-                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the store name twice per month.</p>}
+                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the store name twice per month  or contact CEO.</p>}
               </div>
 
               <div>
@@ -231,11 +231,11 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
               </div>
 
               <div onClick={() => {
-                  const bannerEditCheck = canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO);
-                  if (!isCEO && !bannerEditCheck.allowed) {
-                    toast.error('Please contact CEO to change banner again this month.');
-                  }
-                }}>
+                const bannerEditCheck = canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO);
+                if (!isCEO && !bannerEditCheck.allowed) {
+                  toast.error('Please contact CEO to change banner again this month.');
+                }
+              }}>
                 <label className="block text-sm font-bold mb-1">Store Banner (URL or Upload File)</label>
                 <input
                   type="text"
