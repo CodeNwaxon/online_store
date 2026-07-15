@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
-import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaFilter, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 function CosmeticsPageContent() {
   const searchParams = useSearchParams();
@@ -194,13 +195,31 @@ function CosmeticsPageContent() {
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
           <FaBoxes size={300} />
         </div>
-        <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4">
-            <FaBoxes className="text-pink-300" /> {storeData ? storeData.name : 'Cosmetics & Beauty'}
-          </h1>
-          <p className="text-xs md:text-xl text-pink-100 max-w-2xl">
-            {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Discover our range of premium skincare, makeup, and beauty products.'}
-          </p>
+        <div className="max-w-[1200px] mx-auto relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4">
+              <FaBoxes className="text-pink-300" /> {storeData ? storeData.name : 'Cosmetics & Beauty'}
+            </h1>
+            <p className="text-xs md:text-xl text-pink-100 max-w-2xl">
+              {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Discover our range of premium skincare, makeup, and beauty products.'}
+            </p>
+          </div>
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const title = storeData ? storeData.name : 'Cosmetics & Beauty | Nomo Storez';
+              if (navigator.share) {
+                navigator.share({ title, url }).catch(()=>{});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Page link copied!');
+              }
+            }}
+            className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+            title="Share this page"
+          >
+            <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
         </div>
       </div>
 

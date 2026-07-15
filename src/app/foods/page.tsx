@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
-import { FaLeaf, FaUtensils, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 export default function FoodsPage() {
   const [foods, setFoods] = useState<ShopProduct[]>([]);
@@ -114,13 +115,31 @@ export default function FoodsPage() {
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4">
           <FaUtensils size={300} />
         </div>
-        <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-1 md:mb-4 flex items-center gap-4">
-            <FaLeaf className="text-green-300" /> Food Market
-          </h1>
-          <p className="text-xs md:text-xl text-green-100 max-w-2xl">
-            Fresh, delicious, and healthy choices curated just for you. Browse our premium selection.
-          </p>
+        <div className="max-w-[1200px] mx-auto relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-5xl font-black mb-1 md:mb-4 flex items-center gap-4">
+              <FaLeaf className="text-green-300" /> Food Market
+            </h1>
+            <p className="text-xs md:text-xl text-green-100 max-w-2xl">
+              Fresh, delicious, and healthy choices curated just for you. Browse our premium selection.
+            </p>
+          </div>
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const title = 'Food Market | Nomo Storez';
+              if (navigator.share) {
+                navigator.share({ title, url }).catch(()=>{});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Page link copied!');
+              }
+            }}
+            className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+            title="Share this page"
+          >
+            <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
         </div>
       </div>
 

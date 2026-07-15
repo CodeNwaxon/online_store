@@ -192,9 +192,27 @@ export default function ProductDetailClient() {
   return (
     <div className="py-12 max-md:py-4">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
-        <Link href={product.group?.toLowerCase() === 'furniture' ? '/shop/furniture' : '/shop'} className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
-          <FaArrowLeft size={16} /> Back to {product.group?.toLowerCase() === 'furniture' ? 'Furniture' : 'Shop'}
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href={product.group?.toLowerCase() === 'furniture' ? '/shop/furniture' : '/shop'} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit">
+            <FaArrowLeft size={16} /> Back to {product.group?.toLowerCase() === 'furniture' ? 'Furniture' : 'Shop'}
+          </Link>
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const title = `${product.name} | Nomo Storez`;
+              if (navigator.share) {
+                navigator.share({ title, url }).catch(()=>{});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Page link copied!');
+              }
+            }}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-muted"
+            title="Share this product"
+          >
+            <FaShareAlt size={16} /> <span className="hidden sm:inline">Share</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">
           {/* Images Section */}

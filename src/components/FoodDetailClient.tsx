@@ -162,9 +162,27 @@ export default function FoodDetailClient() {
   return (
     <div className="py-12 max-md:py-4 bg-slate-50 min-h-screen">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
-        <Link href="/foods" className="flex items-center gap-2 text-green-700 mb-8 hover:text-green-900 transition-colors w-fit font-semibold">
-          <FaArrowLeft size={16} /> Back to Food Market
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/foods" className="flex items-center gap-2 text-green-700 hover:text-green-900 transition-colors w-fit font-semibold">
+            <FaArrowLeft size={16} /> Back to Food Market
+          </Link>
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const title = `${food.name} | Nomo Storez`;
+              if (navigator.share) {
+                navigator.share({ title, url }).catch(()=>{});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Page link copied!');
+              }
+            }}
+            className="flex items-center gap-2 text-green-700 hover:text-green-900 transition-colors p-2 rounded-md hover:bg-green-50 font-semibold"
+            title="Share this food"
+          >
+            <FaShareAlt size={16} /> <span className="hidden sm:inline">Share</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-green-100">
           {/* Images Section */}

@@ -4,8 +4,9 @@ import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt } from 'react-icons/fa';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { useLikeStore } from '@/store/useLikeStore';
@@ -199,9 +200,27 @@ function ShopContent() {
     <div className="pt-6 pb-14 md:py-16">
       <div className="max-w-[1440px] mx-auto px-2 md:px-6">
         <header className="px-2 md:px-0 mb-4 md:mb-12 flex justify-between items-center flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-bold mb-0 md:mb-2">Our Collection</h1>
-            <p className="-mt-1 text-[10px] md:text-base text-muted-foreground">Explore our range of premium African-inspired goods.</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl md:text-4xl font-bold mb-0 md:mb-2">Our Collection</h1>
+              <p className="-mt-1 text-[10px] md:text-base text-muted-foreground">Explore our range of premium African-inspired goods.</p>
+            </div>
+            <button 
+              onClick={() => {
+                const url = window.location.href;
+                const title = 'Our Collection | Nomo Storez';
+                if (navigator.share) {
+                  navigator.share({ title, url }).catch(()=>{});
+                } else {
+                  navigator.clipboard.writeText(url);
+                  toast.success('Page link copied!');
+                }
+              }}
+              className="p-2 border border-border rounded-full hover:bg-muted transition-colors text-muted-foreground"
+              title="Share this page"
+            >
+              <FaShareAlt className="w-4 h-4" />
+            </button>
           </div>
           <Link href="/installments" className="text-xs md:text-base bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
             <FaCreditCard /> Installmental Payment

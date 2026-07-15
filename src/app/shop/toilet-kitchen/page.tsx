@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { FaSearch, FaBoxes, FaChevronDown, FaStore } from 'react-icons/fa';
+import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt } from 'react-icons/fa';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 export default function ToiletKitchenPage() {
   const [products, setProducts] = useState<CategoryProduct[]>([]);
@@ -100,9 +101,27 @@ export default function ToiletKitchenPage() {
     <div className="min-h-screen bg-[#FDFDFE] pb-20">
       <div className="bg-gradient-to-r from-teal-800 via-cyan-700 to-teal-900 text-white py-3 md:py-8 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"><FaBoxes size={300} /></div>
-        <div className="max-w-[1200px] mx-auto relative z-10">
-          <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4"><FaBoxes className="text-teal-300" /> Toilet & Kitchen</h1>
-          <p className="text-xs md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
+        <div className="max-w-[1200px] mx-auto relative z-10 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4"><FaBoxes className="text-teal-300" /> Toilet & Kitchen</h1>
+            <p className="text-xs md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
+          </div>
+          <button 
+            onClick={() => {
+              const url = window.location.href;
+              const title = 'Toilet & Kitchen | Nomo Storez';
+              if (navigator.share) {
+                navigator.share({ title, url }).catch(()=>{});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Page link copied!');
+              }
+            }}
+            className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+            title="Share this page"
+          >
+            <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
         </div>
       </div>
 
