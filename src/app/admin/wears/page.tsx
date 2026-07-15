@@ -312,6 +312,7 @@ export default function AdminWears() {
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
+        vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
       };
 
       if (editingId) {
@@ -327,7 +328,6 @@ export default function AdminWears() {
       } else {
         await addDoc(collection(db, 'wears'), {
           ...productData,
-          vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
           createdAt: new Date().toISOString()
         });
         toast.success('Product added!');
