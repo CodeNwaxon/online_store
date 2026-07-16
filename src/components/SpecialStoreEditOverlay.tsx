@@ -223,7 +223,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
 
   return (
     <div className="fixed inset-0 z-[1500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
-      <div className="bg-card w-full max-w-lg rounded-xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+      <div className="bg-card w-full max-w-lg max-h-[90vh] rounded-xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
         <div className="p-4 md:p-6 border-b border-border flex justify-between items-center bg-muted/30">
           <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
             <FaStore className="text-primary" /> Special Store Settings
