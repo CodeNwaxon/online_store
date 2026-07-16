@@ -25,6 +25,7 @@ export interface AppNotification {
 
 interface NotificationState {
   notifications: AppNotification[];
+  dismissedNotificationIds: string[];
   addNotification: (notif: AppNotification) => void;
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
@@ -108,11 +109,15 @@ export const useNotificationStore = create<NotificationState>()(
   persist(
     (set, get) => ({
       notifications: [],
+      dismissedNotificationIds: [],
 
       addNotification: (notif) =>
         set((state) => {
           // Avoid duplicates by id
           if (state.notifications.some(n => n.id === notif.id)) return state;
+          // Avoid adding notifications that were already deleted/dismissed
+          if (state.dismissedNotificationIds?.includes(notif.id)) return state;
+          
           return {
             notifications: [notif, ...state.notifications].slice(0, 200), // keep max 200
           };
@@ -121,6 +126,7 @@ export const useNotificationStore = create<NotificationState>()(
       removeNotification: (id) =>
         set((state) => ({
           notifications: state.notifications.filter(n => n.id !== id),
+          dismissedNotificationIds: [...(state.dismissedNotificationIds || []), id].slice(-1000), // keep history of dismissed
         })),
 
       markAsRead: (id) =>
@@ -135,7 +141,13 @@ export const useNotificationStore = create<NotificationState>()(
           notifications: state.notifications.map(n => ({ ...n, read: true })),
         })),
 
-      clearAll: () => set({ notifications: [] }),
+      clearAll: () => set((state) => {
+        const idsToDismiss = state.notifications.map(n => n.id);
+        return { 
+          notifications: [],
+          dismissedNotificationIds: [...(state.dismissedNotificationIds || []), ...idsToDismiss].slice(-1000)
+        };
+      }),
 
       getUnreadCount: (filters) => {
         const filtered = filterNotifications(get().notifications, filters);
