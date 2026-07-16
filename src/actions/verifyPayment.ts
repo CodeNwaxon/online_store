@@ -57,6 +57,9 @@ interface OrderItem {
   size?: string;
   category?: string;
   vendor?: string;
+  selectedMeasurement?: string;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 interface OrderData {
@@ -126,7 +129,22 @@ export async function verifyAndFulfillOrder(
     if (!productData) {
       return { success: false, error: `Item ${item.name} not found in products.` };
     }
-    serverCalculatedTotal += (productData.price || 0) * item.quantity;
+    
+    let itemPrice = productData.price || 0;
+    
+    if (item.selectedMeasurement && productData.measurements) {
+      try {
+        const parsed = JSON.parse(productData.measurements);
+        const mPrice = Number(parsed[item.selectedMeasurement]);
+        if (!isNaN(mPrice) && mPrice > 0) {
+           itemPrice = mPrice;
+        }
+      } catch (e) {
+        // Fallback for old format or invalid JSON
+      }
+    }
+    
+    serverCalculatedTotal += itemPrice * item.quantity;
   }
 
   // Validate shipping fee
