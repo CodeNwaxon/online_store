@@ -26,6 +26,7 @@ export interface AppNotification {
 interface NotificationState {
   notifications: AppNotification[];
   dismissedNotificationIds: string[];
+  seenNotificationIds: string[];
   addNotification: (notif: AppNotification) => void;
   removeNotification: (id: string) => void;
   markAsRead: (id: string) => void;
@@ -110,16 +111,22 @@ export const useNotificationStore = create<NotificationState>()(
     (set, get) => ({
       notifications: [],
       dismissedNotificationIds: [],
+      seenNotificationIds: [],
 
       addNotification: (notif) =>
         set((state) => {
-          // Avoid duplicates by id
+          // Avoid duplicates by id in current list
           if (state.notifications.some(n => n.id === notif.id)) return state;
-          // Avoid adding notifications that were already deleted/dismissed
+          
+          // Avoid adding notifications that were explicitly deleted/dismissed
           if (state.dismissedNotificationIds?.includes(notif.id)) return state;
+
+          // Avoid adding notifications that were previously seen and naturally dropped out of the 200 limit
+          if (state.seenNotificationIds?.includes(notif.id)) return state;
           
           return {
             notifications: [notif, ...state.notifications].slice(0, 200), // keep max 200
+            seenNotificationIds: [...(state.seenNotificationIds || []), notif.id].slice(-2000), // keep track of last 2000 seen to prevent zombie respawns
           };
         }),
 
