@@ -38,6 +38,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 export default function AdminOrders() {
   const { adminData, isCEO } = useAdmin();
   const [orders, setOrders] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,11 +52,19 @@ export default function AdminOrders() {
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snap) => {
+    const unsubscribeOrders = onSnapshot(q, (snap) => {
       setOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
-    return () => unsubscribe();
+    
+    const unsubscribeAdmins = onSnapshot(collection(db, 'admins'), (snap) => {
+      setAdmins(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubscribeOrders();
+      unsubscribeAdmins();
+    };
   }, []);
 
   const markAsRead = async (order: any) => {
@@ -482,7 +491,11 @@ export default function AdminOrders() {
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Ordered Items</h4>
                 <div className="space-y-3">
-                  {selectedOrder.items.map((item: any, i: number) => (
+                  {selectedOrder.items.map((item: any, i: number) => {
+                    const vendorAdmin = admins.find(a => a.email === item.vendor);
+                    const vendorStore = vendorAdmin?.specialStore;
+                    
+                    return (
                     <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-md md:rounded-2xl border border-border/50">
                       <div className="relative w-16 h-16 rounded-xl border border-border overflow-hidden shrink-0">
                         <Image src={item.image} alt={item.name} fill className="object-cover" sizes="120px" />
@@ -492,13 +505,21 @@ export default function AdminOrders() {
                           {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
                         </h5>
                         <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
+                        
+                        {(isCEO || adminData?.vip) && vendorStore && (vendorStore.accountNumber || vendorStore.phoneNumber) && (
+                          <div className="mt-2 flex flex-col gap-1 border-t border-border/30 pt-2">
+                            <p className="text-[9px] text-primary font-black uppercase tracking-widest">Vendor Info ({vendorStore.name})</p>
+                            {vendorStore.accountNumber && <p className="text-[10px] text-muted-foreground font-medium">Account: <span className="font-bold text-foreground">{vendorStore.accountNumber}</span></p>}
+                            {vendorStore.phoneNumber && <p className="text-[10px] text-muted-foreground font-medium">Phone: <span className="font-bold text-foreground">{vendorStore.phoneNumber}</span></p>}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground font-bold">Qty: {item.quantity}</p>
                         <p className="font-black text-sm text-primary">₦{(item.price * item.quantity).toLocaleString()}</p>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
 

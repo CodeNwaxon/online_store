@@ -173,6 +173,7 @@ export default function Checkout() {
           quantity: item.quantity,
           price: dbProducts[item.id]?.price || item.price,
           selectedMeasurement: (item as any).selectedMeasurement,
+          customShippingAmount: dbProducts[item.id]?.customShippingAmount,
         }));
 
         // Calculate shipping

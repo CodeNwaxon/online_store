@@ -15,6 +15,7 @@ interface NotificationPanelProps {
 export default function NotificationPanel({ isOpen, onClose, notifications }: NotificationPanelProps) {
   const { removeNotification, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -168,13 +169,16 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                     </div>
 
                     {/* Expanded Content */}
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className={`overflow-y-auto custom-scrollbar transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[500px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
                       <div className="pt-3 border-t border-border text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
                         {notif.message}
                       </div>
                       
                       {notif.image && (
-                        <div className="mt-3 relative w-full h-32 rounded-lg overflow-hidden border border-border bg-muted/50">
+                        <div 
+                          className="mt-3 relative w-full h-32 rounded-lg overflow-hidden border border-border bg-muted/50 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); setSelectedImage(notif.image!); }}
+                        >
                           <Image src={notif.image} alt="Notification Image" fill className="object-contain" />
                         </div>
                       )}
@@ -223,6 +227,24 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
           )}
         </div>
       </div>
+
+      {/* Full Image Overlay - covers entire page */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative w-full h-full">
+            <Image src={selectedImage} alt="Full screen image" fill className="object-contain" />
+            <button 
+              onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }} 
+              className="absolute top-4 right-4 md:top-6 md:right-6 text-white bg-white/20 hover:bg-white/40 backdrop-blur-sm p-3 rounded-full transition-all duration-200 shadow-lg"
+            >
+              <FaTimes size={22} />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

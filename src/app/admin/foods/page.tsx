@@ -43,6 +43,8 @@ export default function AdminFoods() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [size, setSize] = useState('');
+  const [isCustomShipping, setIsCustomShipping] = useState(false);
+  const [customShippingAmount, setCustomShippingAmount] = useState('');
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
 
@@ -212,6 +214,8 @@ export default function AdminFoods() {
     setCategory('');
     setQuantity('1');
     setSize('');
+    setIsCustomShipping(false);
+    setCustomShippingAmount('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -232,7 +236,7 @@ export default function AdminFoods() {
     if (!price.trim()) return toast.error('Selling price is required.');
     if (!group) return toast.error('Please select a group.');
     if (!category) return toast.error('Please select a category.');
-    if (!size) return toast.error('Please select a product size.');
+    if (!size && !isCustomShipping) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
 
     // Validate measurement prices
@@ -272,6 +276,7 @@ export default function AdminFoods() {
         category: formatStructure(category),
         quantity: Number(quantity),
         size: size || 'medium',
+        customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         measurements: includeMeasurements && Object.keys(selectedMeasurements).length > 0
           ? JSON.stringify(
               Object.fromEntries(
@@ -314,6 +319,8 @@ export default function AdminFoods() {
     setCategory(food.category || '');
     setQuantity(food.quantity?.toString() || '1');
     setSize(food.size || '');
+    setIsCustomShipping(!!(food as any).customShippingAmount);
+    setCustomShippingAmount((food as any).customShippingAmount ? formatPriceInput((food as any).customShippingAmount.toString()) : '');
     setRequiresMinShipping(food.requiresMinShipping || false);
     setMinShippingQty(food.minShippingQty?.toString() || '0');
     
@@ -540,7 +547,15 @@ export default function AdminFoods() {
 
               <div className="space-y-2">
                 <label className="text-sm font-bold">Product Size (Shipping)</label>
-                <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
+                <select required value={isCustomShipping ? 'custom' : size} onChange={e => {
+                  if (e.target.value === 'custom') {
+                    setIsCustomShipping(true);
+                    setSize('');
+                  } else {
+                    setIsCustomShipping(false);
+                    setSize(e.target.value);
+                  }
+                }} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
                   <option value="">Select Size</option>
                   <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
                   <option value="large">Large {sizePrices['large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['large']}` : ''}</option>
@@ -548,7 +563,21 @@ export default function AdminFoods() {
                   <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
                   <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
                   <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
+                  <option value="custom" className="text-green-700 font-bold">Customise Shipping Amount</option>
                 </select>
+                {isCustomShipping && (
+                   <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                      <label className="text-[0.65rem] font-bold text-green-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                      <input
+                        type="text"
+                        required={isCustomShipping}
+                        value={customShippingAmount}
+                        onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                        placeholder="e.g. 5,000"
+                        className="w-full p-2 rounded-md border border-green-500/50 bg-background text-sm focus:border-green-600 outline-none transition-all font-bold"
+                      />
+                   </div>
+                )}
               </div>
             </div>
 

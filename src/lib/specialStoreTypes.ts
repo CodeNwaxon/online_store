@@ -7,6 +7,10 @@ export interface SpecialStore {
   lastBannerEdit?: string; // Legacy
   nameEditDates?: string[];
   bannerEditDates?: string[];
+  accountNumber?: string;
+  phoneNumber?: string;
+  accountNumberEditDates?: string[];
+  phoneNumberEditDates?: string[];
   ownerEmail: string;
   ownerUid: string;
 }

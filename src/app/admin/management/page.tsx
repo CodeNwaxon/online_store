@@ -837,8 +837,13 @@ export default function AdminManagement() {
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-sm text-primary truncate">{admin.email}</p>
                     {admin.vip && (
-                      <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 mt-1">
+                      <span className="inline-flex items-center gap-1 text-[0.6rem] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 mt-1 mr-2">
                         <FaCrown size={8} /> VIP
+                      </span>
+                    )}
+                    {admin.specialStore && (
+                      <span className="text-[10px] text-muted-foreground mt-1 inline-block truncate max-w-full">
+                        Store: <span className="font-bold text-foreground">{admin.specialStore.name}</span>
                       </span>
                     )}
                   </div>

@@ -18,7 +18,7 @@ function CosmeticsPageContent() {
   const [products, setProducts] = useState<CategoryProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
-  const [storeLoading, setStoreLoading] = useState(false);
+  const [storeLoading, setStoreLoading] = useState(!!storeSlug);
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
@@ -30,6 +30,8 @@ function CosmeticsPageContent() {
   const [visibleCount, setVisibleCount] = useState(54);
 
   useEffect(() => {
+    if (storeSlug && storeLoading) return; // Wait for store data
+
     const q = query(collection(db, 'cosmetics'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
@@ -40,9 +42,11 @@ function CosmeticsPageContent() {
         return dateB - dateA;
       });
 
-      setProducts(sortedProds);
+      const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
 
-      const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
+      setProducts(filteredForStore);
+
+      const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
       setGroups(uniqueGroups);
 
       setLoading(false);
@@ -51,7 +55,7 @@ function CosmeticsPageContent() {
       setLoading(false);
     });
     return () => unsub();
-  }, [storeData]);
+  }, [storeData, storeSlug, storeLoading]);
 
   // Fetch store data if slug exists
   useEffect(() => {
@@ -118,8 +122,6 @@ function CosmeticsPageContent() {
   }, [selectedGroup, products]);
 
   const filteredProducts = products.filter(p => {
-    // If a store is selected, ONLY show that vendor's products
-    if (storeData && p.vendor !== storeData.ownerEmail) return false;
 
     const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -250,7 +252,7 @@ function CosmeticsPageContent() {
             <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between px-2 py-3 md:py-6 md:px-24 mb-0 bg-white border-y md:border border-pink-100 shadow-sm">
 
               {/* Groups Pill Buttons */}
-              <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
+              <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#db2777' } as React.CSSProperties}>
                 <button
                   onClick={() => {
                     setSelectedGroup('All');

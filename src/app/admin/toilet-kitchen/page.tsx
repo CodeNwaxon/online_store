@@ -44,6 +44,8 @@ export default function AdminToiletKitchen() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [size, setSize] = useState('');
+  const [isCustomShipping, setIsCustomShipping] = useState(false);
+  const [customShippingAmount, setCustomShippingAmount] = useState('');
   const [requiresMinShipping, setRequiresMinShipping] = useState(false);
   const [minShippingQty, setMinShippingQty] = useState('0');
 
@@ -196,6 +198,8 @@ export default function AdminToiletKitchen() {
     setImages([]);
     setRequiresMinShipping(false);
     setMinShippingQty('0');
+    setIsCustomShipping(false);
+    setCustomShippingAmount('');
     setImageUrlInput('');
   };
 
@@ -207,7 +211,7 @@ export default function AdminToiletKitchen() {
     if (!price.trim()) return toast.error('Selling price is required.');
     if (!group) return toast.error('Please select a brand/group.');
     if (!category) return toast.error('Please select a category.');
-    if (!size) return toast.error('Please select a product size.');
+    if (!size && !isCustomShipping) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
 
     const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
@@ -238,6 +242,7 @@ export default function AdminToiletKitchen() {
         size: size || 'medium',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
+        customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
       };
@@ -273,6 +278,8 @@ export default function AdminToiletKitchen() {
     setSize(product.size || '');
     setRequiresMinShipping(product.requiresMinShipping || false);
     setMinShippingQty(product.minShippingQty?.toString() || '0');
+    setIsCustomShipping(!!(product as any).customShippingAmount);
+    setCustomShippingAmount((product as any).customShippingAmount ? formatPriceInput((product as any).customShippingAmount.toString()) : '');
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -471,7 +478,15 @@ export default function AdminToiletKitchen() {
 
               <div className="space-y-2">
                 <label className="text-sm font-bold">Product Size</label>
-                <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
+                <select required value={isCustomShipping ? 'custom' : size} onChange={e => {
+                  if (e.target.value === 'custom') {
+                    setIsCustomShipping(true);
+                    setSize('');
+                  } else {
+                    setIsCustomShipping(false);
+                    setSize(e.target.value);
+                  }
+                }} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
                   <option value="">Select Size</option>
                   <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
                   <option value="large">Large {sizePrices['large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['large']}` : ''}</option>
@@ -479,7 +494,21 @@ export default function AdminToiletKitchen() {
                   <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
                   <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
                   <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
+                  <option value="custom" className="text-teal-700 font-bold">Customise Shipping Amount</option>
                 </select>
+                {isCustomShipping && (
+                   <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                      <label className="text-[0.65rem] font-bold text-teal-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                      <input
+                        type="text"
+                        required={isCustomShipping}
+                        value={customShippingAmount}
+                        onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                        placeholder="e.g. 5,000"
+                        className="w-full p-2 rounded-md border border-teal-500/50 bg-background text-sm focus:border-teal-600 outline-none transition-all font-bold"
+                      />
+                   </div>
+                )}
               </div>
             </div>
 

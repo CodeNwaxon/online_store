@@ -27,6 +27,8 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState('');
   const [bannerUrlInput, setBannerUrlInput] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
@@ -43,6 +45,8 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             setSlogan(data.specialStore.slogan || '');
             setBannerPreview(data.specialStore.banner || '');
             setBannerUrlInput(data.specialStore.banner || '');
+            setAccountNumber(data.specialStore.accountNumber || '');
+            setPhoneNumber(data.specialStore.phoneNumber || '');
             setIsEnabled(true);
           } else {
             setStoreData({});
@@ -50,6 +54,8 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             setSlogan('');
             setBannerPreview('');
             setBannerUrlInput('');
+            setAccountNumber('');
+            setPhoneNumber('');
             setIsEnabled(false);
           }
         }
@@ -92,10 +98,14 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
       // Check monthly edit restrictions for non-CEOs
       const nameEditCheck = canEditStoreField(storeData.nameEditDates || storeData.lastNameEdit, isCEO);
       const bannerEditCheck = canEditStoreField(storeData.bannerEditDates || storeData.lastBannerEdit, isCEO);
+      const accountEditCheck = canEditStoreField(storeData.accountNumberEditDates, isCEO);
+      const phoneEditCheck = canEditStoreField(storeData.phoneNumberEditDates, isCEO);
 
       let bannerUrl = storeData.banner || '';
       let bannerEdited = false;
       let nameEdited = false;
+      let accountEdited = false;
+      let phoneEdited = false;
 
       if (name.trim() !== storeData.name) {
         if (!nameEditCheck.allowed) {
@@ -128,8 +138,28 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         bannerEdited = true;
       }
 
+      if (accountNumber.trim() !== (storeData.accountNumber || '')) {
+        if (!accountEditCheck.allowed) {
+          toast.error(`Cannot edit account number. ${accountEditCheck.reason} Available on: ${accountEditCheck.nextEditDate?.toLocaleDateString()}`);
+          setLoading(false);
+          return;
+        }
+        accountEdited = true;
+      }
+
+      if (phoneNumber.trim() !== (storeData.phoneNumber || '')) {
+        if (!phoneEditCheck.allowed) {
+          toast.error(`Cannot edit phone number. ${phoneEditCheck.reason} Available on: ${phoneEditCheck.nextEditDate?.toLocaleDateString()}`);
+          setLoading(false);
+          return;
+        }
+        phoneEdited = true;
+      }
+
       let nameEditDates = storeData.nameEditDates || (storeData.lastNameEdit ? [storeData.lastNameEdit] : []);
       let bannerEditDates = storeData.bannerEditDates || (storeData.lastBannerEdit ? [storeData.lastBannerEdit] : []);
+      let accountNumberEditDates = storeData.accountNumberEditDates || [];
+      let phoneNumberEditDates = storeData.phoneNumberEditDates || [];
 
       if (nameEdited) {
         const now = new Date();
@@ -147,18 +177,38 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         });
         bannerEditDates.push(new Date().toISOString());
       }
+      if (accountEdited) {
+        const now = new Date();
+        accountNumberEditDates = accountNumberEditDates.filter(d => {
+          const date = new Date(d);
+          return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+        });
+        accountNumberEditDates.push(new Date().toISOString());
+      }
+      if (phoneEdited) {
+        const now = new Date();
+        phoneNumberEditDates = phoneNumberEditDates.filter(d => {
+          const date = new Date(d);
+          return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+        });
+        phoneNumberEditDates.push(new Date().toISOString());
+      }
 
       const updatedStoreData: SpecialStore = {
         name: name.trim(),
         slug: generateStoreSlug(name),
         slogan: slogan.trim(),
         banner: bannerUrl,
+        accountNumber: accountNumber.trim(),
+        phoneNumber: phoneNumber.trim(),
         ownerEmail: adminEmail,
         ownerUid: adminId,
         lastNameEdit: nameEdited ? new Date().toISOString() : (storeData.lastNameEdit || new Date().toISOString()),
         lastBannerEdit: bannerEdited ? new Date().toISOString() : (storeData.lastBannerEdit || new Date().toISOString()),
         nameEditDates,
-        bannerEditDates
+        bannerEditDates,
+        accountNumberEditDates,
+        phoneNumberEditDates
       };
 
       await updateDoc(docRef, { specialStore: updatedStoreData });
@@ -269,6 +319,42 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                   />
                 </div>
                 {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the banner twice per month.</p>}
+              </div>
+
+              <div onClick={() => {
+                const accountEditCheck = canEditStoreField(storeData.accountNumberEditDates, isCEO);
+                if (!isCEO && !accountEditCheck.allowed) {
+                  toast.error('Please contact CEO to change account number again this month.');
+                }
+              }}>
+                <label className="block text-sm font-bold mb-1">Account Number</label>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  disabled={!isCEO && !canEditStoreField(storeData.accountNumberEditDates, isCEO).allowed}
+                  className="w-full p-3 rounded-xl border border-border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
+                  placeholder="e.g. 1234567890 (Bank Name)"
+                />
+                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the account number twice per month.</p>}
+              </div>
+
+              <div onClick={() => {
+                const phoneEditCheck = canEditStoreField(storeData.phoneNumberEditDates, isCEO);
+                if (!isCEO && !phoneEditCheck.allowed) {
+                  toast.error('Please contact CEO to change phone number again this month.');
+                }
+              }}>
+                <label className="block text-sm font-bold mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  disabled={!isCEO && !canEditStoreField(storeData.phoneNumberEditDates, isCEO).allowed}
+                  className="w-full p-3 rounded-xl border border-border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
+                  placeholder="e.g. 08012345678"
+                />
+                {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the phone number twice per month.</p>}
               </div>
             </div>
           )}

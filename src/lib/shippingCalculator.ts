@@ -10,6 +10,7 @@ export interface CartItem {
   quantity: number;
   price: number;
   selectedMeasurement?: string;
+  customShippingAmount?: number | null;
 }
 
 export interface ShippingItemBreakdown {
@@ -53,7 +54,9 @@ export const calculateCartShippingForArea = (
 ): ShippingBreakdown => {
   const expandedUnits = cartItems.flatMap((item) => {
     const size = normalizeShippingSize(item.size);
-    let unitShipping = areaData.prices?.[size] ?? 0;
+    let unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
+      ? item.customShippingAmount
+      : (areaData.prices?.[size] ?? 0);
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();
@@ -96,7 +99,9 @@ export const calculateCartShippingForArea = (
 
   const itemBreakdown = cartItems.map((item) => {
     const size = normalizeShippingSize(item.size);
-    let unitShipping = areaData.prices?.[size] ?? 0;
+    let unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
+      ? item.customShippingAmount
+      : (areaData.prices?.[size] ?? 0);
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();

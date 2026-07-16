@@ -98,6 +98,8 @@ function AdminProductsContent() {
   const [productCode, setProductCode] = useState('');
   const [size, setSize] = useState('');
   const [ramRom, setRamRom] = useState('');
+  const [isCustomShipping, setIsCustomShipping] = useState(false);
+  const [customShippingAmount, setCustomShippingAmount] = useState('');
 
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -313,6 +315,8 @@ function AdminProductsContent() {
     setNewGroupName('');
     setNewCategoryName('');
     setImageUrlInput('');
+    setIsCustomShipping(false);
+    setCustomShippingAmount('');
   };
 
   const handleCancel = () => {
@@ -347,7 +351,7 @@ function AdminProductsContent() {
       toast.error('RDP price (Cost Price) is required.');
       return;
     }
-    if (!size) {
+    if (!size && !isCustomShipping) {
       toast.error('Please select a product size.');
       return;
     }
@@ -403,6 +407,7 @@ function AdminProductsContent() {
         oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
         promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
         size: size || 'medium',
+        customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         ramRom: ramRom.trim() || '',
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
@@ -455,6 +460,8 @@ function AdminProductsContent() {
     setRdpPrice(product.rdpPrice ? formatPriceInput(product.rdpPrice.toString()) : '');
     setProductCode(product.productCode || '');
     setSize(product.size || '');
+    setIsCustomShipping(!!product.customShippingAmount);
+    setCustomShippingAmount(product.customShippingAmount ? formatPriceInput(product.customShippingAmount.toString()) : '');
     setRamRom(product.ramRom || '');
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -740,7 +747,15 @@ function AdminProductsContent() {
             {/* Product Size */}
             <div className="space-y-2">
               <label className="text-xs md:text-sm font-bold">Product Size</label>
-              <select required value={size} onChange={e => setSize(e.target.value)} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
+              <select required value={isCustomShipping ? 'custom' : size} onChange={e => {
+                if (e.target.value === 'custom') {
+                  setIsCustomShipping(true);
+                  setSize('');
+                } else {
+                  setIsCustomShipping(false);
+                  setSize(e.target.value);
+                }
+              }} className="w-full p-3 rounded-md border border-border bg-background text-[11px] md:text-sm">
                 <option value="">Select Size</option>
                 <option value="extra-large">Extra Large {sizePrices['extra-large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-large']}` : ''}</option>
                 <option value="large">Large {sizePrices['large'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['large']}` : ''}</option>
@@ -748,7 +763,21 @@ function AdminProductsContent() {
                 <option value="small">Small {sizePrices['small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['small']}` : ''}</option>
                 <option value="extra-small">Extra Small {sizePrices['extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-small']}` : ''}</option>
                 <option value="extra-extra-small">Extra Extra Small {sizePrices['extra-extra-small'] ? `\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${sizePrices['extra-extra-small']}` : ''}</option>
+                <option value="custom" className="text-primary font-bold">Customise Shipping Amount</option>
               </select>
+              {isCustomShipping && (
+                 <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                    <label className="text-[0.65rem] font-bold text-secondary mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                    <input
+                      type="text"
+                      required={isCustomShipping}
+                      value={customShippingAmount}
+                      onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                      placeholder="e.g. 5,000"
+                      className="w-full p-2 rounded-md border border-secondary/50 bg-background text-sm focus:border-secondary outline-none transition-all font-bold"
+                    />
+                 </div>
+              )}
             </div>
 
             {/* Promotion */}

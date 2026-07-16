@@ -18,7 +18,7 @@ function WearsPageContent() {
   const [products, setProducts] = useState<CategoryProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
-  const [storeLoading, setStoreLoading] = useState(false);
+  const [storeLoading, setStoreLoading] = useState(!!storeSlug);
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
@@ -30,6 +30,8 @@ function WearsPageContent() {
   const [visibleCount, setVisibleCount] = useState(24);
 
   useEffect(() => {
+    if (storeSlug && storeLoading) return; // Wait for store data to be fetched
+
     const q = query(collection(db, 'wears'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
@@ -38,8 +40,11 @@ function WearsPageContent() {
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      setProducts(sortedProds);
-      const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
+
+      const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
+
+      setProducts(filteredForStore);
+      const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
       setGroups(uniqueGroups);
       setLoading(false);
     }, (error) => {
@@ -47,7 +52,7 @@ function WearsPageContent() {
       setLoading(false);
     });
     return () => unsub();
-  }, [storeData]);
+  }, [storeData, storeSlug, storeLoading]);
 
   // Fetch store data if slug exists
   useEffect(() => {
@@ -114,8 +119,6 @@ function WearsPageContent() {
   }, [selectedGroup, products]);
 
   const filteredProducts = products.filter(p => {
-    // If a store is selected, ONLY show that vendor's products
-    if (storeData && p.vendor !== storeData.ownerEmail) return false;
 
     const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
@@ -257,7 +260,7 @@ function WearsPageContent() {
       <div className="mx-auto mt-0">
         <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10">
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between px-2 py-3 md:py-6 md:px-24 mb-0 bg-white border-y md:border border-purple-100 shadow-sm">
-            <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
+            <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#9333ea' } as React.CSSProperties}>
               <button onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); }} className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedGroup === 'All' ? 'bg-purple-600 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-purple-50'}`}>ALL GROUPS</button>
               {groups.map(group => (
                 <button key={group} onClick={() => { setSelectedGroup(group); setSelectedCategory('All'); }} className={`px-3 py-1.5 md:px-5 md:py-2 text-[9px] md:text-xs rounded-md transition-colors whitespace-nowrap font-bold ${selectedGroup === group ? 'bg-purple-600 text-white border-transparent' : 'bg-transparent text-gray-700 border border-gray-200 hover:bg-purple-50'}`}>{group.toUpperCase()}</button>
