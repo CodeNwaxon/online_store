@@ -470,7 +470,7 @@ export default function CategoryProductCard({
                               setTempSelectedMeasurement(m);
                             }}
                           >
-                            {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                            {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
                           </button>
                         );
                       })}

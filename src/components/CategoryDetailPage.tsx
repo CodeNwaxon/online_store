@@ -295,7 +295,7 @@ export default function CategoryDetailPage({
                         key={i}
                         className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md"
                       >
-                        {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                        {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
                       </span>
                     );
                   })}
@@ -498,7 +498,7 @@ export default function CategoryDetailPage({
                                     setTempSelectedMeasurement(m);
                                   }}
                                 >
-                                  {m} {mPrice && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                                  {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
                                 </button>
                               );
                             })}

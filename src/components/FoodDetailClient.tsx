@@ -242,7 +242,7 @@ export default function FoodDetailClient() {
                         key={i}
                         className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900"
                       >
-                        {m} {mPrice ? ` — ₦${Number(mPrice).toLocaleString()}` : ''}
+                        {m} {mPrice && Number(mPrice) > 0 ? ` — ₦${Number(mPrice).toLocaleString()}` : ''}
                       </span>
                     );
                   })}
@@ -408,7 +408,7 @@ export default function FoodDetailClient() {
                               }}
                             >
                               <span>{m}</span>
-                              {mPrice && <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>₦{Number(mPrice).toLocaleString()}</span>}
+                              {mPrice && Number(mPrice) > 0 && <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>₦{Number(mPrice).toLocaleString()}</span>}
                             </button>
                           );
                         })}
