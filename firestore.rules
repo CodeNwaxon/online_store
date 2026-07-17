@@ -163,6 +163,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Stats history snapshots used by the admin stats dashboard
+    match /stats_history/{id} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isCEO();
+    }
+
     // ─── 5. SAFETY NET ────────────────────────────────────────────
     
     match /{document=**} {

@@ -18,6 +18,8 @@ import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
+import VendorSalesHistory from '@/components/VendorSalesHistory';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -30,6 +32,7 @@ const parsePriceInput = (value: string) => {
 };
 
 export default function AdminFoods() {
+  const { user, isCEO, adminData } = useAdmin();
   const [foods, setFoods] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -51,6 +54,7 @@ export default function AdminFoods() {
   // Measurements State
   const [includeMeasurements, setIncludeMeasurements] = useState(false);
   const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, string>>({});
+  const [selectedMeasurementCosts, setSelectedMeasurementCosts] = useState<Record<string, string>>({});
 
   const grainMeasurements = ['1 cup', '1 congo', '1 mudu', '1 paint rubber', '1/4 bag (quarter bag)', '1/2 bag (half bag)', '1 bag', '2 bags'];
   const weightMeasurements = ['1 kg', '2 kg', '5 kg', '10 kg', '25 kg', '50 kg'];
@@ -65,10 +69,23 @@ export default function AdminFoods() {
       }
       return copy;
     });
+    setSelectedMeasurementCosts(prev => {
+      const copy = { ...prev };
+      if (m in copy) {
+        delete copy[m];
+      } else {
+        copy[m] = '';
+      }
+      return copy;
+    });
   };
 
   const setMeasurementPrice = (m: string, value: string) => {
     setSelectedMeasurements(prev => ({ ...prev, [m]: value }));
+  };
+
+  const setMeasurementCost = (m: string, value: string) => {
+    setSelectedMeasurementCosts(prev => ({ ...prev, [m]: value }));
   };
 
   // Dynamic Groups & Categories State
@@ -224,6 +241,7 @@ export default function AdminFoods() {
     setMinShippingQty('0');
     setIncludeMeasurements(false);
     setSelectedMeasurements({});
+    setSelectedMeasurementCosts({});
     setImages([]);
     setImageUrlInput('');
   };
@@ -239,13 +257,21 @@ export default function AdminFoods() {
     if (!size && !isCustomShipping) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
 
-    // Validate measurement prices
+    // Validate measurement prices and costs
     if (includeMeasurements && Object.keys(selectedMeasurements).length > 0) {
       for (const [mName, mPrice] of Object.entries(selectedMeasurements)) {
         if (mName === '1 bag' || mName === '1 kg') continue; // these use default product price
         const parsed = parseFloat(mPrice.replace(/,/g, ''));
         if (!mPrice.trim() || isNaN(parsed) || parsed < 1) {
-          return toast.error(`Please enter a valid price (minimum ₦1) for "${mName}".`);
+          return toast.error(`Please enter a valid selling price (minimum ₦1) for "${mName}".`);
+        }
+      }
+
+      for (const [mName, mCost] of Object.entries(selectedMeasurementCosts)) {
+        if (mName === '1 bag' || mName === '1 kg') continue;
+        const parsed = parseFloat(mCost.replace(/,/g, ''));
+        if (!mCost.trim() || isNaN(parsed) || parsed < 1) {
+          return toast.error(`Please enter a valid cost price (minimum ₦1) for "${mName}".`);
         }
       }
     }
@@ -284,13 +310,28 @@ export default function AdminFoods() {
               )
             )
           : '',
+        measurementCostPrices: includeMeasurements && Object.keys(selectedMeasurementCosts).length > 0
+          ? JSON.stringify(
+              Object.fromEntries(
+                Object.entries(selectedMeasurementCosts).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
+              )
+            )
+          : '',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
+        vendor: user?.email || '',
       };
 
       if (editingId) {
+        const existingFood = foods.find(f => f.id === editingId);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+        if (!hasFullAccess && existingFood && (existingFood as any).vendor && (existingFood as any).vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          setLoading(false);
+          return;
+        }
         await updateDoc(doc(db, 'foods', editingId), foodData);
         toast.success('Food item updated!');
       } else {
@@ -310,6 +351,11 @@ export default function AdminFoods() {
   };
 
   const handleEdit = (food: ShopProduct) => {
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+        if (!hasFullAccess && (food as any).vendor && (food as any).vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          return;
+        }
     setEditingId(food.id);
     setName(food.name);
     setCostPrice(formatPriceInput((food.costPrice || 0).toString()));
@@ -344,9 +390,26 @@ export default function AdminFoods() {
         });
         setSelectedMeasurements(mObj);
       }
+
+      const foodMeasurementCosts = (food as any).measurementCostPrices;
+      if (foodMeasurementCosts) {
+        try {
+          const parsedCosts = JSON.parse(foodMeasurementCosts);
+          const costObj: Record<string, string> = {};
+          Object.entries(parsedCosts).forEach(([k, v]) => {
+            costObj[k] = formatPriceInput(String(v));
+          });
+          setSelectedMeasurementCosts(costObj);
+        } catch {
+          setSelectedMeasurementCosts({});
+        }
+      } else {
+        setSelectedMeasurementCosts({});
+      }
     } else {
       setIncludeMeasurements(false);
       setSelectedMeasurements({});
+      setSelectedMeasurementCosts({});
     }
 
     setImages((food.images || []).map(url => ({ type: 'url', value: url })));
@@ -355,6 +418,13 @@ export default function AdminFoods() {
 
   const confirmDelete = async () => {
     if (!foodToDelete) return;
+        const existingFood = foods.find(f => f.id === foodToDelete);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+        if (!hasFullAccess && existingFood && (existingFood as any).vendor && (existingFood as any).vendor !== user?.email) {
+          toast.error('You can only delete your own items.');
+          setFoodToDelete(null);
+          return;
+        }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'foods', foodToDelete));
@@ -367,7 +437,10 @@ export default function AdminFoods() {
     }
   };
 
-  const filteredFoods = foods.filter(f => {
+  const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+  const visibleFoods = hasFullAccess ? foods : foods.filter(f => (f as any).vendor === user?.email);
+
+  const filteredFoods = visibleFoods.filter(f => {
     const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (searchTerms.length === 0) {
       return filterGroup === 'All' || f.group === filterGroup;
@@ -412,6 +485,8 @@ export default function AdminFoods() {
               <FaUtensils className="text-green-600" /> Food Market Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Manage food items in your market.</p>
+          </div>
+          <div className="flex gap-3 items-center w-full md:w-auto">
           </div>
         </header>
 
@@ -608,16 +683,29 @@ export default function AdminFoods() {
                             <span className="font-bold">{m}</span>
                           </div>
                           {m in selectedMeasurements && m !== '1 bag' && (
-                            <div className="flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                              <span className="text-[10px] font-bold text-green-800">₦</span>
-                              <input
-                                type="text"
-                                placeholder="Price"
-                                value={selectedMeasurements[m]}
-                                onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
-                                onClick={e => e.stopPropagation()}
-                                className="w-full p-1.5 rounded border border-green-300 bg-white text-xs font-bold focus:border-green-500 focus:ring-1 focus:ring-green-500/30 outline-none"
-                              />
+                            <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-green-800">₦</span>
+                                <input
+                                  type="text"
+                                  placeholder="Sell"
+                                  value={selectedMeasurements[m]}
+                                  onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full p-1.5 rounded border border-green-300 bg-white text-xs font-bold focus:border-green-500 focus:ring-1 focus:ring-green-500/30 outline-none"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-amber-700">Cost</span>
+                                <input
+                                  type="text"
+                                  placeholder="Cost"
+                                  value={selectedMeasurementCosts[m] || ''}
+                                  onChange={e => setMeasurementCost(m, formatPriceInput(e.target.value))}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full p-1.5 rounded border border-amber-300 bg-white text-xs font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none"
+                                />
+                              </div>
                             </div>
                           )}
                           {m in selectedMeasurements && m === '1 bag' && (
@@ -652,7 +740,7 @@ export default function AdminFoods() {
                             </div>
                           )}
                           {m in selectedMeasurements && m === '1 kg' && (
-                            <span className="text-[10px] font-bold text-green-700 italic">Uses default product price</span>
+                            <span className="text-[10px] font-bold text-green-700 italic">Uses default product price & cost</span>
                           )}
                         </div>
                       ))}
@@ -804,7 +892,10 @@ export default function AdminFoods() {
         {/* List Section */}
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
+              <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="foods" allowAll />
+            </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input

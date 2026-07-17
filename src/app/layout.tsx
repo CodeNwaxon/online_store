@@ -62,7 +62,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import VisitorTracker from "@/components/VisitorTracker";
 import BadgeManager from "@/components/BadgeManager";
-import { Toaster } from "react-hot-toast";
+import ToasterProvider from "@/components/ToasterProvider";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -73,7 +73,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
-        <Toaster position="top-center" reverseOrder={false} />
+        <ToasterProvider />
         <Suspense><VisitorTracker /></Suspense>
         <Suspense><BadgeManager /></Suspense>
         <Navbar />

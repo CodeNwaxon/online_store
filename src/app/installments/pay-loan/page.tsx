@@ -443,7 +443,7 @@ export default function PayLoanPage() {
   return (
     <div className="py-16">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-        <Toaster position="top-center" />
+
 
         <div className="flex justify-between items-start mb-12 max-md:flex-col max-md:gap-4">
           <div>

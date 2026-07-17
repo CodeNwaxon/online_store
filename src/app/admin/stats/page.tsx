@@ -18,6 +18,9 @@ function AdminStatsContent() {
   const [view, setView] = useState<'stats' | 'inventory' | 'history'>(initialTab);
   const [products, setProducts] = useState<any[]>([]);
   const [foods, setFoods] = useState<any[]>([]);
+  const [cosmetics, setCosmetics] = useState<any[]>([]);
+  const [wears, setWears] = useState<any[]>([]);
+  const [toiletKitchen, setToiletKitchen] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [cartOrders, setCartOrders] = useState<any[]>([]);
   const [historyList, setHistoryList] = useState<any[]>([]);
@@ -32,6 +35,23 @@ function AdminStatsContent() {
   // Visitor state
   const [visitorData, setVisitorData] = useState<Record<string, number>>({});
   const [showVisitorOverlay, setShowVisitorOverlay] = useState(false);
+  const [hiddenHistoryIds, setHiddenHistoryIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const hidden = localStorage.getItem('hidden_history_ids');
+    if (hidden) {
+      try {
+        setHiddenHistoryIds(JSON.parse(hidden));
+      } catch (e) {}
+    }
+  }, []);
+
+  const hideHistory = (ids: string[]) => {
+    const updated = [...hiddenHistoryIds, ...ids];
+    setHiddenHistoryIds(updated);
+    localStorage.setItem('hidden_history_ids', JSON.stringify(updated));
+  };
+  const [expandedHistoryMonth, setExpandedHistoryMonth] = useState<string | null>(null);
 
   // Ref to prevent auto-save feedback loop (flicker fix)
   const lastSavedSnapshotRef = useRef<string>('');
@@ -87,7 +107,25 @@ function AdminStatsContent() {
       console.warn("Stats foods listener error:", error);
     });
 
-    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); unsubFoods(); };
+    const unsubCosmetics = onSnapshot(collection(db, 'cosmetics'), (snap) => {
+      setCosmetics(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats cosmetics listener error:", error);
+    });
+
+    const unsubWears = onSnapshot(collection(db, 'wears'), (snap) => {
+      setWears(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats wears listener error:", error);
+    });
+
+    const unsubToiletKitchen = onSnapshot(collection(db, 'toilet_kitchen'), (snap) => {
+      setToiletKitchen(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats toilet_kitchen listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); unsubFoods(); unsubCosmetics(); unsubWears(); unsubToiletKitchen(); };
   }, [isAuthenticated]);
 
   // Helper to check if a date is within the current calendar month
@@ -108,11 +146,123 @@ function AdminStatsContent() {
   const cancelledInstallments = sales.filter(s => s.status === 'cleared' && s.refundDetails && isCurrentMonth(s.refundDetails.clearedAt || s.updatedAt || s.createdAt));
   const cartOrdersCurrentMonth = cartOrders.filter(o => isCurrentMonth(o.createdAt || o.updatedAt));
 
-  const cartRevenue = cartOrdersCurrentMonth.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-  const installmentRevenue = completedInstallments.reduce((acc, s) => acc + (s.totalAmountPaid || s.totalAmount || s.product?.price || 0), 0);
+  const normalizeGroupValue = (value?: string | null) => (value || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+  const resolveProductFromItem = (item: any) => {
+    if (!item?.id) return null;
+
+    const foundProduct = products.find(p => p.id === item.id);
+    if (foundProduct) return foundProduct;
+
+    const foundFood = foods.find(f => f.id === item.id);
+    if (foundFood) return foundFood;
+
+    const foundCosmetic = cosmetics.find(c => c.id === item.id);
+    if (foundCosmetic) return foundCosmetic;
+
+    const foundWear = wears.find(w => w.id === item.id);
+    if (foundWear) return foundWear;
+
+    const foundToiletKitchen = toiletKitchen.find(t => t.id === item.id);
+    if (foundToiletKitchen) return foundToiletKitchen;
+
+    return null;
+  };
+
+  const getGroupName = (product: any, item: any) => {
+    const groupCandidate = product?.group || product?.category || item?.group || item?.category || item?.productCategory || item?.collectionName || '';
+    const normalized = normalizeGroupValue(groupCandidate);
+
+    if (normalized === 'foods' || normalized === 'food') return 'FOODS';
+    if (normalized === 'cosmetics' || normalized === 'cosmetic') return 'COSMETICS';
+    if (normalized === 'wears' || normalized === 'wear') return 'WEARS';
+    if (normalized === 'toiletkitchen' || normalized === 'toilet' || normalized === 'kitchen') return 'TOILET & KITCHEN';
+    if (item?.id && (foods.some(f => f.id === item.id) || normalizeGroupValue(item?.category) === 'food')) return 'FOODS';
+    if (item?.id && (cosmetics.some(c => c.id === item.id) || normalizeGroupValue(item?.category) === 'cosmetic')) return 'COSMETICS';
+    if (item?.id && (wears.some(w => w.id === item.id) || normalizeGroupValue(item?.category) === 'wear')) return 'WEARS';
+    if (item?.id && (toiletKitchen.some(t => t.id === item.id) || normalizeGroupValue(item?.category) === 'toiletkitchen')) return 'TOILET & KITCHEN';
+
+    return (groupCandidate || 'OTHER').toString().toUpperCase();
+  };
+
+  const getMeasurementValue = (product: any, item: any, field: 'price' | 'cost') => {
+    const measurementKey = item?.selectedMeasurement;
+    if (measurementKey) {
+      const measurements = product?.measurements;
+      const costPrices = product?.measurementCostPrices;
+      try {
+        if (field === 'price' && measurements) {
+          const parsed = JSON.parse(measurements);
+          const value = Number(parsed[measurementKey]);
+          if (!Number.isNaN(value) && value > 0) return value;
+        }
+        if (field === 'cost' && costPrices) {
+          const parsed = JSON.parse(costPrices);
+          const value = Number(parsed[measurementKey]);
+          if (!Number.isNaN(value) && value > 0) return value;
+        }
+      } catch {
+        // ignore malformed measurement payloads
+      }
+    }
+
+    if (field === 'price') {
+      const saleValue = item?.measurementPrice ?? product?.price ?? item?.price ?? item?.sellPrice ?? 0;
+      const parsed = Number(saleValue);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    const costValue = item?.rdpPrice ?? item?.costPrice ?? product?.measurementCostPrices ?? product?.rdpPrice ?? product?.costPrice ?? 0;
+    const parsed = Number(costValue);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getItemCost = (product: any, item: any) => {
+    const measurementCost = getMeasurementValue(product, item, 'cost');
+    if (measurementCost > 0) return measurementCost;
+
+    const costValue = product?.rdpPrice ?? product?.costPrice ?? item?.rdpPrice ?? item?.costPrice ?? 0;
+    const parsed = Number(costValue);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const getItemSellPrice = (product: any, item: any) => {
+    const measurementPrice = getMeasurementValue(product, item, 'price');
+    if (measurementPrice > 0) return measurementPrice;
+
+    const saleValue = product?.price ?? item?.price ?? item?.sellPrice ?? 0;
+    const parsed = Number(saleValue);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const createFallbackProduct = (item: any) => ({
+    id: item?.id || item?.productId || item?.product?.id || `fallback-${Math.random().toString(36).slice(2, 8)}`,
+    name: item?.name || item?.productName || 'Unknown Product',
+    group: item?.group || item?.category || '',
+    category: item?.category || item?.productCategory || '',
+    price: item?.price || 0,
+    rdpPrice: item?.rdpPrice || item?.costPrice || 0,
+  });
+
+  const cartRevenue = cartOrdersCurrentMonth.reduce((acc, order) => {
+    if (!order?.items || !Array.isArray(order.items)) return acc;
+
+    return acc + order.items.reduce((sum: number, item: any) => {
+      const matchedProduct = resolveProductFromItem(item);
+      const sellPrice = getItemSellPrice(matchedProduct || createFallbackProduct(item), item);
+      return sum + (sellPrice * Number(item.quantity || 1));
+    }, 0);
+  }, 0);
+
+  const installmentRevenue = completedInstallments.reduce((acc, s) => {
+    const product = products.find(p => p.id === (s.productId || s.product?.id));
+    const sellPrice = Number(s.totalAmountPaid || s.totalAmount || s.product?.price || product?.price || 0);
+    return acc + sellPrice;
+  }, 0);
+
   const cancelledRevenue = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
 
-  const totalRevenue = cartRevenue + installmentRevenue + cancelledRevenue;
+  const totalRevenue = cartRevenue + installmentRevenue;
 
   const revenueByGroup = [...completedInstallments, ...cartOrdersCurrentMonth].reduce((acc: any, s) => {
     let group = 'OTHER';
@@ -128,17 +278,12 @@ function AdminStatsContent() {
       acc[group] = (acc[group] || 0) + amount;
     } else if (s.items && Array.isArray(s.items)) {
       s.items.forEach((item: any) => {
-        let itemGroup = 'OTHER';
-        const foundProduct = products.find(p => p.id === item.id);
-        const foundFood = foods.find(f => f.id === item.id);
-        
-        if (foundProduct?.group) {
-          itemGroup = foundProduct.group.toUpperCase();
-        } else if (foundFood || item.category === 'Food') {
-          itemGroup = 'FOODS';
-        }
-        
-        acc[itemGroup] = (acc[itemGroup] || 0) + (item.price * item.quantity);
+        const matchedProduct = resolveProductFromItem(item);
+        const itemGroup = getGroupName(matchedProduct || createFallbackProduct(item), item);
+        const quantity = Number(item.quantity || 1);
+        const sellPrice = getItemSellPrice(matchedProduct || createFallbackProduct(item), item);
+
+        acc[itemGroup] = (acc[itemGroup] || 0) + (sellPrice * quantity);
       });
     }
 
@@ -159,20 +304,10 @@ function AdminStatsContent() {
       acc[group] = (acc[group] || 0) + cost;
     } else if (s.items && Array.isArray(s.items)) {
       s.items.forEach((item: any) => {
-        let itemGroup = 'OTHER';
-        const foundProduct = products.find(p => p.id === item.id);
-        const foundFood = foods.find(f => f.id === item.id);
-
-        let itemCost = 0;
-        if (foundProduct?.group) {
-          itemGroup = foundProduct.group.toUpperCase();
-          itemCost = (foundProduct.rdpPrice || item.rdpPrice || 0) * item.quantity;
-        } else if (foundFood || item.category === 'Food') {
-          itemGroup = 'FOODS';
-          itemCost = (foundFood?.costPrice || item.costPrice || item.rdpPrice || 0) * item.quantity;
-        } else {
-          itemCost = (item.rdpPrice || item.costPrice || 0) * item.quantity;
-        }
+        const matchedProduct = resolveProductFromItem(item);
+        const itemGroup = getGroupName(matchedProduct || createFallbackProduct(item), item);
+        const quantity = Number(item.quantity || 1);
+        const itemCost = getItemCost(matchedProduct || createFallbackProduct(item), item) * quantity;
 
         acc[itemGroup] = (acc[itemGroup] || 0) + itemCost;
       });
@@ -181,8 +316,25 @@ function AdminStatsContent() {
     return acc;
   }, {});
 
-  const totalRdpCost = Object.values(rdpCostByGroup).reduce((sum: number, c: any) => sum + c, 0);
-  const totalProfit = totalRevenue - totalRdpCost;
+  const totalRdpCost = [...completedInstallments, ...cartOrdersCurrentMonth].reduce((acc: number, s: any) => {
+    const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
+
+    if (isInstallment) {
+      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
+      const cost = Number(liveProduct?.rdpPrice || s.product?.rdpPrice || liveProduct?.costPrice || s.product?.costPrice || 0);
+      return acc + cost;
+    }
+
+    if (!s.items || !Array.isArray(s.items)) return acc;
+
+    return acc + s.items.reduce((sum: number, item: any) => {
+      const matchedProduct = resolveProductFromItem(item);
+      const itemCost = getItemCost(matchedProduct || createFallbackProduct(item), item);
+      return sum + (itemCost * Number(item.quantity || 1));
+    }, 0);
+  }, 0);
+
+  const totalProfit = Math.max(0, totalRevenue - totalRdpCost);
 
   const activeAndCompletedInstallments = sales.filter(s => s.status !== 'cleared');
   const totalInstallmentDealsAmount = activeAndCompletedInstallments.reduce((acc, s) => acc + (s.totalAmount || s.product?.price || 0), 0);
@@ -191,16 +343,20 @@ function AdminStatsContent() {
     const cost = liveProduct?.rdpPrice || s.product?.rdpPrice || 0;
     return acc + cost;
   }, 0);
-  const totalInstallmentDealsProfit = totalInstallmentDealsAmount - totalInstallmentDealsRdpCost;
+  const totalInstallmentDealsProfit = Math.max(0, totalInstallmentDealsAmount - totalInstallmentDealsRdpCost);
 
   const totalCancelledDealsAmount = cancelledInstallments.reduce((acc, s) => acc + (s.totalAmount || s.product?.price || 0), 0);
-  const totalCancelledDealsProfit = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
+  const totalCancelledDealsProfit = Math.max(0, cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0));
 
   const salesCountByProduct = [...completedInstallments].reduce((acc: any, s) => {
     const pid = s.product?.id || s.productId;
     if (pid) acc[pid] = (acc[pid] || 0) + 1;
     return acc;
   }, {});
+
+  function accSalesCount(pid: string, qty: number) {
+    if (pid) salesCountByProduct[pid] = (salesCountByProduct[pid] || 0) + qty;
+  }
 
   cartOrdersCurrentMonth.forEach(o => {
     if (o.items && Array.isArray(o.items)) {
@@ -210,27 +366,70 @@ function AdminStatsContent() {
     }
   });
 
-  function accSalesCount(pid: string, qty: number) {
-    if (pid) salesCountByProduct[pid] = (salesCountByProduct[pid] || 0) + qty;
-  }
+  const allProducts = [...products, ...foods, ...cosmetics, ...wears, ...toiletKitchen];
 
   const topProducts = Object.entries(salesCountByProduct)
-    .map(([id, count]) => ({
-      product: products.find(p => p.id === id),
-      count: count as number
-    }))
+    .map(([id, count]) => {
+      const matchedProduct = allProducts.find(p => p.id === id);
+      return {
+        product: matchedProduct || createFallbackProduct({ id, name: id, category: '', group: '' }),
+        count: count as number
+      };
+    })
     .filter(item => item.product)
     .sort((a, b) => b.count - a.count);
 
-  const getTopByGroup = (groupName: string, limit: number) => {
-    const upperGroup = groupName.toUpperCase();
-    const items = topProducts.filter(item => (item.product.group || '').toUpperCase() === upperGroup);
-    if (items.length > 0) return items.slice(0, limit);
 
-    // Fallback: list products of this group from backend (with 0 sold count) so the card shows up immediately
-    return products
-      .filter(p => (p.group || '').toUpperCase() === upperGroup)
-      .map(p => ({ product: p, count: 0 }))
+  const matchesGroup = (product: any, groupName: string) => {
+    const target = normalizeGroupValue(groupName);
+    if (!target || !product) return false;
+
+    if (target === 'foods' && foods.some(f => f.id === product.id)) return true;
+    if (target === 'cosmetics' && cosmetics.some(c => c.id === product.id)) return true;
+    if (target === 'wears' && wears.some(w => w.id === product.id)) return true;
+    if (target === 'toiletkitchen' && toiletKitchen.some(t => t.id === product.id)) return true;
+
+    const productGroup = normalizeGroupValue(product?.group || product?.category || '');
+    const productCategory = normalizeGroupValue(product?.category || '');
+    const productName = normalizeGroupValue(product?.name || '');
+    const productCollection = normalizeGroupValue(product?.collectionName || product?.collection || '');
+
+    const aliases = {
+      foods: ['food', 'foods', 'foodmarket', 'grocery', 'grain', 'grains', 'meat', 'meats', 'oil', 'oli', 'seasoning', 'cookingseasoning', 'cereal', 'cereals', 'garin'],
+      cosmetics: ['cosmetic', 'cosmetics', 'beauty', 'bodylotion', 'lotion', 'cream', 'skincare'],
+      wears: ['wear', 'wears', 'fashion', 'apparel', 'clothing', 'shoes'],
+      toiletkitchen: ['toiletkitchen', 'toilet', 'kitchen', 'bathroom', 'home', 'utensil', 'utensils'],
+      electronics: ['electronics', 'electronic', 'gadgets', 'tech', 'phone', 'phones', 'laptop', 'laptops'],
+      furniture: ['furniture', 'furnitures', 'homefurniture', 'chair', 'table', 'bed'],
+    } as Record<string, string[]>;
+
+    const allowed = aliases[target] || [target];
+
+    if (allowed.includes(productGroup) || allowed.includes(productCategory) || allowed.includes(productCollection)) return true;
+    if (target === 'foods' && productName.includes('food')) return true;
+
+    return false;
+  };
+
+  const getTopGeneral = (limit: number) => {
+    const items = topProducts.filter(item => {
+      const id = item.product.id;
+      return foods.find(f => f.id === id) ||
+             cosmetics.find(c => c.id === id) ||
+             wears.find(w => w.id === id) ||
+             toiletKitchen.find(t => t.id === id) ||
+             matchesGroup(item.product, 'FOODS') ||
+             matchesGroup(item.product, 'COSMETICS') ||
+             matchesGroup(item.product, 'WEARS') ||
+             matchesGroup(item.product, 'TOILET & KITCHEN');
+    });
+    return items.slice(0, limit);
+  };
+
+  const getTopByGroup = (groupName: string, limit: number) => {
+    const topTenGlobal = topProducts.slice(0, 10);
+    return topTenGlobal
+      .filter(item => item.product && matchesGroup(item.product, groupName))
       .slice(0, limit);
   };
 
@@ -266,6 +465,12 @@ function AdminStatsContent() {
       count: item.count
     }));
 
+    // Top 5 General snapshot (Cosmetics, Wears, Toilet & Kitchen, Foods)
+    const top5GeneralSnapshot = getTopGeneral(5).map(item => ({
+      name: item.product?.name || 'Unknown Product',
+      count: item.count
+    }));
+
     // Top 5 for other groups snapshot
     const otherGroupsSnapshots = otherGroups.reduce((acc: any, g: string) => {
       acc[g] = getTopByGroup(g, 5).map(item => ({
@@ -276,12 +481,30 @@ function AdminStatsContent() {
     }, {});
 
     // Groups revenue/profit array
-    const groupsSnapshot = ['ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
+    const groupsSnapshot = ['ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', 'FOODS', ...otherGroups].map(group => {
       const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const profit = rev - cost;
       return { name: group, revenue: rev, profit };
     });
+
+    // All purchased items snapshot
+    const allPurchasedItemsMap = new Map();
+    [...completedInstallments, ...cartOrdersCurrentMonth].forEach((s: any) => {
+      const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
+      if (isInstallment) {
+        const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
+        const name = liveProduct?.name || s.product?.name || 'Unknown Installment';
+        allPurchasedItemsMap.set(name, (allPurchasedItemsMap.get(name) || 0) + 1);
+      } else if (s.items && Array.isArray(s.items)) {
+        s.items.forEach((item: any) => {
+          allPurchasedItemsMap.set(item.name, (allPurchasedItemsMap.get(item.name) || 0) + item.quantity);
+        });
+      }
+    });
+    const allPurchasedItemsSnapshot = Array.from(allPurchasedItemsMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
 
     const timer = setTimeout(async () => {
       // Create a fingerprint of current values to avoid re-saving identical data
@@ -305,7 +528,9 @@ function AdminStatsContent() {
           topSelling: top10SellingSnapshot,
           topElectronics: top5ElectronicsSnapshot,
           topFurniture: top5FurnitureSnapshot,
+          topGeneral: top5GeneralSnapshot,
           topOtherGroups: otherGroupsSnapshots,
+          allPurchasedItems: allPurchasedItemsSnapshot,
           createdAt: now.toISOString()
         }, { merge: true });
         lastSavedSnapshotRef.current = snapshotFingerprint;
@@ -335,13 +560,11 @@ function AdminStatsContent() {
 
       if (passkeyInput === correctPasskey) {
         if (showPasskeyModal?.type === 'delete' && showPasskeyModal.id) {
-          await deleteDoc(doc(db, 'stats_history', showPasskeyModal.id));
-          toast.success('History record deleted successfully');
+          hideHistory([showPasskeyModal.id]);
+          toast.success('History record hidden successfully');
         } else if (showPasskeyModal?.type === 'clear_all') {
-          for (const item of historyList) {
-            await deleteDoc(doc(db, 'stats_history', item.id));
-          }
-          toast.success('All history records cleared');
+          hideHistory(historyList.map(item => item.id));
+          toast.success('All history records hidden');
         } else if (showPasskeyModal?.type === 'delete_visitor_month' && showPasskeyModal.monthKey) {
           const currentYear = new Date().getFullYear();
           const monthKey = `${currentYear}_${showPasskeyModal.monthKey}`;
@@ -430,7 +653,7 @@ function AdminStatsContent() {
   const otherGroups = Array.from(new Set(
     products
       .map(p => (p.group || '').trim().toUpperCase())
-      .filter(g => g !== '' && g !== 'ELECTRONICS' && g !== 'FURNITURE')
+      .filter(g => g !== '' && g !== 'ELECTRONICS' && g !== 'FURNITURE' && g !== 'COSMETICS' && g !== 'WEARS' && g !== 'TOILET & KITCHEN' && g !== 'FOODS')
   ));
 
   // Dynamic top cards list
@@ -444,7 +667,7 @@ function AdminStatsContent() {
       icon: <FaChartLine size={18} className="md:size-[24px]" />
     },
     // Dynamic Group Cards
-    ...['FOODS', 'ELECTRONICS', 'FURNITURE', ...otherGroups].map(group => {
+    ...['FOODS', 'ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', ...otherGroups].map(group => {
       const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const profit = rev - cost;
@@ -492,7 +715,7 @@ function AdminStatsContent() {
 
   return (
     <div className="space-y-10 pb-20">
-      <Toaster position="top-center" />
+
       <header className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 md:p-6 md:rounded-xl border border-border shadow-sm">
         <div className="text-center md:text-left">
           <h1 className="text-xl md:text-2xl font-bold">Store Insights</h1>
@@ -528,8 +751,6 @@ function AdminStatsContent() {
 
       {view === 'stats' && (
         <div className="space-y-10">
-          {/* TOP CARDS */}
-          {/* TOP CARDS */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-6 px-3 md:px-0">
             {cardsList.map((card, index) => {
               const isLast = index === cardsList.length - 1;
@@ -559,9 +780,7 @@ function AdminStatsContent() {
             })}
           </div>
 
-          {/* INSTALLMENT REVENUE & PROFITS SUMMARY */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 px-3 md:px-0">
-            {/* Total Installment Revenue Card */}
             <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
               <div>
@@ -585,7 +804,6 @@ function AdminStatsContent() {
               </div>
             </div>
 
-            {/* Cancelled Installment Profits Card */}
             <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div className="absolute top-0 left-0 w-2 h-full bg-red-500" />
               <div>
@@ -611,7 +829,6 @@ function AdminStatsContent() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {/* TOP 10 OVERALL */}
             <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
               <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2 underline decoration-primary decoration-4 underline-offset-8">Top 10 Selling Items</h2>
               <div className="space-y-4">
@@ -620,7 +837,13 @@ function AdminStatsContent() {
                     <div className="flex items-center gap-3 md:gap-4 min-w-0">
                       <span className="text-base md:text-lg font-black text-muted-foreground w-5 md:w-6">#{i + 1}</span>
                       <div className="relative w-10 h-10 md:w-12 md:h-12 rounded border border-border overflow-hidden shrink-0">
-                        <Image src={item.product.images?.[0] || item.product.image} alt={item.product.name} fill className="object-cover" />
+                        {(item.product.images?.[0] || item.product.image) ? (
+                          <Image src={item.product.images?.[0] || item.product.image} alt={item.product.name} fill className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <FaBoxOpen className="text-muted-foreground opacity-20" size={20} />
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <Link href={`/admin/products?edit=${item.product.id}`} className="hover:underline">
@@ -638,60 +861,13 @@ function AdminStatsContent() {
               </div>
             </section>
 
-            {/* CATEGORY BREAKDOWN */}
             <div className="space-y-6 md:space-y-10">
-              {(() => {
-                const electronicsItems = getTopByGroup('Electronics', 5);
-                const allElectronicsZero = electronicsItems.length === 0 || electronicsItems.every(item => item.count === 0);
-                return (
-                  <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
-                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Electronics</h2>
-                    {allElectronicsZero ? (
-                      <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {electronicsItems.map((item, i) => (
-                          <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
-                            <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
-                            <span className="font-bold">{item.count} units</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                );
-              })()}
-
-              {(() => {
-                const furnitureItems = getTopByGroup('Furniture', 5);
-                const allFurnitureZero = furnitureItems.length === 0 || furnitureItems.every(item => item.count === 0);
-                return (
-                  <section className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
-                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 Furniture</h2>
-                    {allFurnitureZero ? (
-                      <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {furnitureItems.map((item, i) => (
-                          <div key={item.product.id} className="flex justify-between items-center text-xs md:text-sm">
-                            <span className="text-muted-foreground">{i + 1}. {item.product.name}</span>
-                            <span className="font-bold">{item.count} units</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                );
-              })()}
-
-              {otherGroups.map(group => {
+              {['Electronics', 'Furniture', 'Cosmetics', 'Wears', 'Foods', 'Toilet & Kitchen'].map(group => {
                 const topItems = getTopByGroup(group, 5);
-                if (topItems.length === 0) return null;
-                const allZero = topItems.every(item => item.count === 0);
-                const displayName = group.charAt(0).toUpperCase() + group.slice(1).toLowerCase();
+                const allZero = topItems.length === 0 || topItems.every(item => item.count === 0);
                 return (
                   <section key={group} className="bg-card p-4 md:p-8 md:rounded-xl border border-border shadow-sm">
-                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 {displayName}</h2>
+                    <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2">Top 5 {group}</h2>
                     {allZero ? (
                       <p className="text-xs md:text-sm text-muted-foreground italic">No Top 5 products found</p>
                     ) : (
@@ -713,17 +889,11 @@ function AdminStatsContent() {
       )}
 
       {view === 'inventory' && (
-        /* INVENTORY VIEW */
         <section className="bg-card rounded-md md:rounded-xl border border-border shadow-sm overflow-hidden">
           <div className="p-4 md:p-6 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
               <h2 className="font-bold text-lg text-center md:text-left">Product Inventory</h2>
               <p className="text-[10px] md:text-xs text-muted-foreground text-center md:text-left">Update quantities directly or click to edit full details.</p>
-              <div className="flex items-center justify-center md:justify-start gap-2 text-[9px] text-muted-foreground mt-1 md:hidden font-medium">
-                <span>Products ({products.length})</span>
-                <span className="opacity-40">•</span>
-                <span>Categories ({uniqueCategoriesCount})</span>
-              </div>
             </div>
             <div className="relative w-full md:w-64">
               <input
@@ -737,21 +907,24 @@ function AdminStatsContent() {
             </div>
           </div>
 
-          {/* ── MOBILE CARD LIST (2-row layout) ── */}
           <div className="md:hidden divide-y divide-border">
             {filteredInventory.slice(0, visibleInventory).map(product => (
               <div key={product.id} className="p-3 flex flex-col gap-2">
-                {/* Row 1: Image + Name */}
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className="relative w-10 h-10 rounded-md border border-border overflow-hidden shrink-0">
-                    <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
+                    {(product.images?.[0] || product.image) ? (
+                      <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <FaBoxOpen className="text-muted-foreground opacity-20" size={20} />
+                      </div>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[0.8rem] leading-tight truncate" title={product.name}>{product.name}</p>
                     <p className="text-[0.65rem] text-muted-foreground">₦{product.price.toLocaleString()}</p>
                   </div>
                 </div>
-                {/* Row 2: Quantity controls + Action */}
                 <div className="flex items-center justify-between pl-1">
                   <div className="flex items-center gap-2">
                     <button
@@ -789,13 +962,12 @@ function AdminStatsContent() {
             ))}
           </div>
 
-          {/* ── DESKTOP TABLE ── */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/50 text-xs font-bold uppercase text-muted-foreground">
-                  <th className="px-6 py-4">Product <span className="hidden md:inline">({products.length})</span></th>
-                  <th className="px-6 py-4">Category <span className="hidden md:inline">({uniqueCategoriesCount})</span></th>
+                  <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4 text-center">Stock</th>
                   <th className="px-6 py-4 text-right">Action</th>
@@ -807,7 +979,13 @@ function AdminStatsContent() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="relative w-10 h-10 rounded-md border border-border overflow-hidden shrink-0">
-                          <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
+                          {(product.images?.[0] || product.image) ? (
+                            <Image src={product.images?.[0] || product.image} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <FaBoxOpen className="text-muted-foreground opacity-20" size={20} />
+                            </div>
+                          )}
                         </div>
                         <span className="font-bold text-sm truncate max-w-[200px]">{product.name}</span>
                       </div>
@@ -857,7 +1035,7 @@ function AdminStatsContent() {
           </div>
 
           {filteredInventory.length > visibleInventory && (
-            <div className="text-center p-6 border-t border-border flex flex-col items-center justify-center gap-4 animate-[fadeIn_0.5s_ease-out]">
+            <div className="text-center p-6 border-t border-border flex flex-col items-center justify-center gap-4">
               <div className="text-xs text-muted-foreground font-medium tracking-wide">
                 Showing {Math.min(visibleInventory, filteredInventory.length)} of {filteredInventory.length} items
               </div>
@@ -865,9 +1043,8 @@ function AdminStatsContent() {
                 className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-border bg-background hover:bg-muted text-foreground hover:text-primary px-4 py-2 text-xs md:text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md active:scale-95 active:shadow-sm"
                 onClick={() => setVisibleInventory(prev => prev + 40)}
               >
-                <span className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <span>Load More Products</span>
-                <FaChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-y-0.5 transition-all duration-300 ease-out" />
+                <FaChevronDown className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-all duration-300 ease-out" />
               </button>
             </div>
           )}
@@ -885,7 +1062,7 @@ function AdminStatsContent() {
                 Archived performance snapshots of completed months.
               </p>
             </div>
-            {historyList.length > 0 && (
+            {historyList.filter(item => !hiddenHistoryIds.includes(item.id)).length > 0 && (
               <button
                 onClick={() => handleActionWithPasskey('clear_all')}
                 className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-md md:rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-md shadow-red-600/20"
@@ -896,7 +1073,7 @@ function AdminStatsContent() {
           </div>
 
           <div className="p-2 md:p-6 space-y-6">
-            {historyList.length === 0 ? (
+            {historyList.filter(item => !hiddenHistoryIds.includes(item.id)).length === 0 ? (
               <div className="py-24 text-center space-y-4">
                 <div className="w-16 h-16 bg-muted text-muted-foreground rounded-full flex items-center justify-center mx-auto">
                   <FaHistory size={28} />
@@ -908,7 +1085,7 @@ function AdminStatsContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-8">
-                {historyList.map((item) => (
+                {historyList.filter(item => !hiddenHistoryIds.includes(item.id)).map((item) => (
                   <div
                     key={item.id}
                     className="bg-card border-2 border-border rounded-md md:rounded-xl p-2 md:p-8 shadow-sm relative overflow-hidden flex flex-col gap-6"
@@ -976,6 +1153,29 @@ function AdminStatsContent() {
                             ) : (
                               <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
                                 {item.topSelling.map((prod: any, idx: number) => (
+                                  <li key={idx} className="leading-tight">
+                                    <span className="text-foreground font-black">{prod.name}</span>
+                                    <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {item.topGeneral && item.topGeneral.length > 0 && (() => {
+                        const allZero = item.topGeneral.every((prod: any) => prod.count === 0);
+                        return (
+                          <div className="bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 space-y-3">
+                            <h4 className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                              <FaBoxOpen className="text-teal-600 size-3" /> Top 5 General
+                            </h4>
+                            {allZero ? (
+                              <p className="text-[9px] md:text-xs text-muted-foreground italic">No Top 5 general products found</p>
+                            ) : (
+                              <ol className="list-decimal pl-4 space-y-1.5 text-[9px] md:text-xs font-bold text-foreground/80">
+                                {item.topGeneral.map((prod: any, idx: number) => (
                                   <li key={idx} className="leading-tight">
                                     <span className="text-foreground font-black">{prod.name}</span>
                                     <span className="text-muted-foreground font-normal"> ({prod.count} sold)</span>
@@ -1058,6 +1258,33 @@ function AdminStatsContent() {
                             );
                           })}
                         </>
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 border-t border-dashed border-border/80 pt-4">
+                      <button
+                        onClick={() => setExpandedHistoryMonth(expandedHistoryMonth === item.id ? null : item.id)}
+                        className="text-sm font-bold text-primary flex items-center gap-2 hover:underline focus:outline-none"
+                      >
+                        Sales General History <FaChevronDown className={`transition-transform ${expandedHistoryMonth === item.id ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {expandedHistoryMonth === item.id && (
+                        <div className="mt-4 bg-muted/20 p-4 rounded-md md:rounded-lg border border-border/40 max-h-[300px] overflow-y-auto">
+                          <h4 className="text-[10px] md:text-xs font-black text-muted-foreground uppercase tracking-widest mb-3">All Purchased Items</h4>
+                          {item.allPurchasedItems && item.allPurchasedItems.length > 0 ? (
+                            <ul className="space-y-2 text-xs">
+                              {item.allPurchasedItems.map((prod: any, idx: number) => (
+                                <li key={idx} className="flex justify-between items-center bg-card p-2 rounded-md border border-border/50">
+                                  <span className="font-bold text-foreground truncate mr-2">{prod.name}</span>
+                                  <span className="text-muted-foreground font-black bg-muted px-2 py-0.5 rounded-full whitespace-nowrap">{prod.count} qty</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No detailed purchase history available for this month.</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

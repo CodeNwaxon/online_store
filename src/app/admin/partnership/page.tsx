@@ -308,7 +308,7 @@ export default function AdminPartnership() {
 
   return (
     <AdminGuard>
-      <Toaster position="top-center" />
+
       <div className="max-w-[1200px] mx-auto  md:px-4 md:px-0 space-y-8 pb-20">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>

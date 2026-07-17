@@ -376,6 +376,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                     return;
                   }
 
+                  const toastId = toast.loading(`Adding ${food.name}...`);
+                  
                   // Check quantity in cart vs available stock
                   const cartItem = cartItems.find(item => item.id === food.id);
                   const currentInCart = cartItem ? cartItem.quantity : 0;
@@ -383,13 +385,13 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                     const docSnap = await getDoc(doc(db, 'foods', food.id));
                     const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (food.quantity || 0);
                     if (currentInCart + 1 > liveQty) {
-                      toast.error(`Only ${liveQty} available in stock for ${food.name}`, { duration: 3000 });
+                      toast.error(`Only ${liveQty} available in stock for ${food.name}`, { id: toastId, duration: 3000 });
                       return;
                     }
                   } catch (err) {
                     // If check fails, fallback to local quantity
                     if (currentInCart + 1 > (food.quantity || 0)) {
-                      toast.error(`Only ${food.quantity || 0} available in stock for ${food.name}`, { duration: 3000 });
+                      toast.error(`Only ${food.quantity || 0} available in stock for ${food.name}`, { id: toastId, duration: 3000 });
                       return;
                     }
                   }
@@ -402,7 +404,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                     description: food.description,
                   };
                   addItem(cartProduct as any);
-                  toast.success(`${food.name} added to cart`);
+                  toast.success(`${food.name} added to cart`, { id: toastId });
                 }}
               >
                 <FaShoppingCart size={14} /> Buy

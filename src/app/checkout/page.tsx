@@ -754,7 +754,9 @@ export default function Checkout() {
                     selectedColor: item.selectedColor || null,
                     selectedMeasurement: item.selectedMeasurement || null,
                     category: item.category,
-                    vendor: dbProducts[item.id]?.vendor || null
+                    vendor: dbProducts[item.id]?.vendor || null,
+                    measurementPrice: item.measurementPrice || null,
+                    measurementCostPrice: item.measurementCostPrice || null,
                   })),
                   totalAmount: finalTotalAmount,
                   shippingFee: shippingCost > 0 ? shippingCost : 0,

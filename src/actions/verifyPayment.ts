@@ -60,6 +60,8 @@ interface OrderItem {
   selectedMeasurement?: string;
   selectedSize?: string;
   selectedColor?: string;
+  measurementPrice?: number | null;
+  measurementCostPrice?: number | null;
 }
 
 interface OrderData {
@@ -131,6 +133,7 @@ export async function verifyAndFulfillOrder(
     }
     
     let itemPrice = productData.price || 0;
+    let itemCost = productData.rdpPrice || productData.costPrice || 0;
     
     if (item.selectedMeasurement && productData.measurements) {
       try {
@@ -138,6 +141,18 @@ export async function verifyAndFulfillOrder(
         const mPrice = Number(parsed[item.selectedMeasurement]);
         if (!isNaN(mPrice) && mPrice > 0) {
            itemPrice = mPrice;
+        }
+      } catch (e) {
+        // Fallback for old format or invalid JSON
+      }
+    }
+
+    if (item.selectedMeasurement && productData.measurementCostPrices) {
+      try {
+        const parsedCost = JSON.parse(productData.measurementCostPrices);
+        const mCost = Number(parsedCost[item.selectedMeasurement]);
+        if (!isNaN(mCost) && mCost > 0) {
+          itemCost = mCost;
         }
       } catch (e) {
         // Fallback for old format or invalid JSON
@@ -210,7 +225,19 @@ export async function verifyAndFulfillOrder(
           }
         }
 
-        const rdpPrice = productDoc ? (productDoc?.data()?.rdpPrice || productDoc?.data()?.costPrice || 0) : 0;
+        const productData = productDoc?.data();
+        let rdpPrice = productData ? (productData.rdpPrice || productData.costPrice || 0) : 0;
+        if (item.selectedMeasurement && productData?.measurementCostPrices) {
+          try {
+            const parsedCosts = JSON.parse(String(productData.measurementCostPrices));
+            const selectedCost = Number(parsedCosts[item.selectedMeasurement]);
+            if (!isNaN(selectedCost) && selectedCost > 0) {
+              rdpPrice = selectedCost;
+            }
+          } catch (e) {
+            // ignore invalid measurement cost data
+          }
+        }
         const vendorEmail = productDoc ? (productDoc?.data()?.vendor || null) : (item.vendor || null);
         totalProfitForReferral += Math.max(0, sellPrice - rdpPrice) * item.quantity;
 

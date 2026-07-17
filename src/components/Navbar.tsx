@@ -142,17 +142,55 @@ export default function Navbar() {
     };
     fetchTemplates();
 
+    let isInitialOrdersLoad = true;
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
       let count = 0;
       snap.forEach(docSnap => {
-        const order = docSnap.data();
-        if (isCEO || adminData?.vip) {
+        const orderData = docSnap.data();
+        const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+        if (hasOrderAccess) {
           count++;
-        } else if (order.items?.some((item: any) => item.vendor === adminData?.email)) {
+        } else if (orderData.items?.some((item: any) => item.vendor === adminData?.email)) {
           count++;
         }
       });
       setUnreadOrders(count);
+
+      snap.docChanges().forEach(change => {
+        if (isInitialOrdersLoad) return;
+        if (change.type !== 'added') return;
+
+        const orderData = change.doc.data();
+        const isVendorOrder = Boolean(orderData.items?.some((item: any) => item.vendor === adminData?.email));
+        const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+        const shouldNotify = hasOrderAccess || isVendorOrder;
+        if (!shouldNotify) return;
+
+        addNotification({
+          id: `order-${change.doc.id}`,
+          type: isVendorOrder ? 'vendor_order' : 'order',
+          title: isVendorOrder ? 'New Vendor Order' : 'New Order',
+          message: isVendorOrder
+            ? `A new purchase was made for one of your products.`
+            : `A new purchase was made in the store.`,
+          createdAt: orderData.createdAt || new Date().toISOString(),
+          read: false,
+          link: '/admin/orders',
+          adminRoute: '/ADMIN/ORDERS',
+          vendorEmail: isVendorOrder ? adminData?.email : undefined,
+          orderItems: (orderData.items || []).map((item: any) => ({
+            name: item.name || 'Product',
+            image: item.image || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor,
+          })),
+          orderId: change.doc.id,
+        });
+      });
+
+      isInitialOrdersLoad = false;
     }, (error) => {
       console.warn("Navbar orders listener error:", error);
     });
@@ -230,6 +268,13 @@ export default function Navbar() {
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           const data = change.doc.data();
+          
+          // If this broadcast is meant for a specific customer (like a delivery notification), 
+          // skip it if the current user is not that customer.
+          if (data.customerUid && data.customerUid !== user.uid) {
+            return;
+          }
+          
           addNotification({
             id: change.doc.id,
             type: 'broadcast',

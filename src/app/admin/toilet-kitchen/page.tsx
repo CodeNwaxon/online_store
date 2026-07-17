@@ -18,6 +18,8 @@ import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
+import VendorSalesHistory from '@/components/VendorSalesHistory';
+import { useAdmin } from '@/hooks/useAdmin';
 
 
 const formatPriceInput = (value: string) => {
@@ -31,6 +33,7 @@ const parsePriceInput = (value: string) => {
 };
 
 export default function AdminToiletKitchen() {
+  const { user, isCEO, adminData } = useAdmin();
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -245,9 +248,17 @@ export default function AdminToiletKitchen() {
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
+        vendor: user?.email || '',
       };
 
       if (editingId) {
+        const existingProduct = products.find(p => p.id === editingId);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+        if (!hasFullAccess && existingProduct && (existingProduct as any).vendor && (existingProduct as any).vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          setLoading(false);
+          return;
+        }
         await updateDoc(doc(db, 'toilet_kitchen', editingId), productData);
         toast.success('Product updated!');
       } else {
@@ -267,6 +278,11 @@ export default function AdminToiletKitchen() {
   };
 
   const handleEdit = (product: ShopProduct) => {
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+        if (!hasFullAccess && (product as any).vendor && (product as any).vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          return;
+        }
     setEditingId(product.id);
     setName(product.name);
     setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
@@ -286,6 +302,13 @@ export default function AdminToiletKitchen() {
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
+        const existingProduct = products.find(p => p.id === productToDelete);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+        if (!hasFullAccess && existingProduct && (existingProduct as any).vendor && (existingProduct as any).vendor !== user?.email) {
+          toast.error('You can only delete your own items.');
+          setProductToDelete(null);
+          return;
+        }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'toilet_kitchen', productToDelete));
@@ -298,7 +321,10 @@ export default function AdminToiletKitchen() {
     }
   };
 
-  const filteredProducts = products.filter(p => {
+  const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+  const visibleProducts = hasFullAccess ? products : products.filter(p => (p as any).vendor === user?.email);
+
+  const filteredProducts = visibleProducts.filter(p => {
     const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (searchTerms.length === 0) {
       return filterGroup === 'All' || p.group === filterGroup;
@@ -343,6 +369,8 @@ export default function AdminToiletKitchen() {
               <FaBoxes className="text-teal-600" /> Toilet & Kitchen Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Manage WC, sinks, washers, and accessories.</p>
+          </div>
+          <div className="flex gap-3 items-center w-full md:w-auto">
           </div>
         </header>
 
@@ -639,8 +667,11 @@ export default function AdminToiletKitchen() {
 
         {/* List Section */}
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+          <div className="flex flex-col gap-2 mb-6 w-full md:w-auto">
             <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+            <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="toilet_kitchen" allowAll />
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input

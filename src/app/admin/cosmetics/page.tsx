@@ -20,6 +20,7 @@ import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import { useAdmin } from '@/hooks/useAdmin';
+import VendorSalesHistory from '@/components/VendorSalesHistory';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -32,7 +33,7 @@ const parsePriceInput = (value: string) => {
 };
 
 export default function AdminCosmetics() {
-  const { user, isCEO } = useAdmin();
+  const { user, isCEO, adminData } = useAdmin();
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -335,8 +336,8 @@ export default function AdminCosmetics() {
     }
   };
 
-  // Filter products: admins only see their own, CEO sees all
-  const visibleProducts = isCEO ? products : products.filter(p => (p as any).vendor === user?.email);
+  const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/COSMETICS'));
+  const visibleProducts = hasFullAccess ? products : products.filter(p => (p as any).vendor === user?.email);
 
   const filteredProducts = visibleProducts.filter(p => {
     const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -389,6 +390,8 @@ export default function AdminCosmetics() {
               <FaBoxes className="text-pink-600" /> Cosmetics Management
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Manage cosmetics and beauty products.</p>
+          </div>
+          <div className="flex gap-3 items-center w-full md:w-auto">
           </div>
         </header>
 
@@ -774,8 +777,11 @@ export default function AdminCosmetics() {
 
         {/* List Section */}
         <section className="bg-card py-4 px-1.5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+          <div className="flex flex-col gap-2 mb-6 w-full md:w-auto">
             <h2 className="ml-3 text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+            <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="cosmetics" allowAll />
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input

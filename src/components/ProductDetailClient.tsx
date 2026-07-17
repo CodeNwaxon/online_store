@@ -321,23 +321,24 @@ export default function ProductDetailClient() {
                 <button
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
+                    const toastId = toast.loading(`Adding ${product.name}...`);
                     const existing = cartItems.find(item => item.id === product.id);
                     const currentInCart = existing ? existing.quantity : 0;
                     try {
                       const docSnap = await getDoc(doc(db, 'products', product.id));
                       const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
                       if (currentInCart + 1 > liveQty) {
-                        toast.error(`Only ${liveQty} available in stock`, { duration: 3000 });
+                        toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     } catch (err) {
                       if (currentInCart + 1 > (product.quantity ?? 0)) {
-                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { duration: 3000 });
+                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     }
                     addItem(product);
-                    toast.success(`${product.name} added to cart`);
+                    toast.success(`${product.name} added to cart`, { id: toastId });
                   }}
                 >
                   <FaShoppingCart size={18} className="max-md:hidden" /> Add to Cart

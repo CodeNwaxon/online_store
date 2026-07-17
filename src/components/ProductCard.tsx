@@ -331,6 +331,12 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
               onClick={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                
+                const toastId = toast.loading(`Adding ${product.name}...`, {
+                  position: 'bottom-center',
+                  style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' }
+                });
+
                 // Check quantity in cart vs available stock
                 const existing = cartItems.find(item => item.id === product.id);
                 const currentInCart = existing ? existing.quantity : 0;
@@ -338,17 +344,18 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                   const docSnap = await getDoc(doc(db, 'products', product.id));
                   const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
                   if (currentInCart + 1 > liveQty) {
-                    toast.error(`Only ${liveQty} available in stock`, { duration: 3000 });
+                    toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                     return;
                   }
                 } catch (err) {
                   if (currentInCart + 1 > (product.quantity ?? 0)) {
-                    toast.error(`Only ${product.quantity ?? 0} available in stock`, { duration: 3000 });
+                    toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
                     return;
                   }
                 }
                 addItem(product);
                 toast.success(`${product.name} added to cart`, {
+                  id: toastId,
                   style: {
                     fontSize: '11px',
                     padding: '4px 8px',

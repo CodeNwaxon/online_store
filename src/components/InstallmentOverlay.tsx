@@ -19,7 +19,7 @@ interface InstallmentOverlayProps {
 }
 
 export default function InstallmentOverlay({ product, plan, onClose }: InstallmentOverlayProps) {
-  const [mainImage, setMainImage] = useState(product.image);
+  const [mainImage, setMainImage] = useState(product.images?.[0] || product.image || '');
   const [isFullImageOpen, setIsFullImageOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [downPaymentDisplay, setDownPaymentDisplay] = useState('');
@@ -35,6 +35,18 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
 
   // Removed Delivery State
   const [areas, setAreas] = useState<any[]>([]);
+
+  const sanitizeImageUrl = (url: string) => {
+    if (!url) return '/images/placeholder.png';
+    try {
+      if (url.includes('_next/image?url=')) {
+        const urlObj = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+        const actualUrl = urlObj.searchParams.get('url');
+        if (actualUrl) return actualUrl;
+      }
+    } catch (e) { }
+    return url;
+  };
 
   useEffect(() => {
     // Real-time settings listener
@@ -223,7 +235,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       productId: product.id,
       productName: product.name,
       productCategory: product.category,
-      productImage: product.image,
+      productImage: product.images?.[0] || product.image || '',
       basePrice: product.price,
       totalAmount: totalAmount,
       downPaymentAmount: amountToPay,
@@ -325,7 +337,12 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
             className="w-full aspect-square bg-muted rounded-[var(--radius)] overflow-hidden cursor-zoom-in mb-4 relative"
             onClick={() => setIsFullImageOpen(true)}
           >
-            <img src={mainImage} alt={product.name} className="w-full h-full object-cover" />
+            <img 
+              src={sanitizeImageUrl(mainImage)} 
+              alt={product.name} 
+              className="w-full h-full object-cover" 
+              onError={(e) => { e.currentTarget.src = '/images/placeholder.png'; }}
+            />
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded">
@@ -335,7 +352,12 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
                 onClick={() => setMainImage(img)}
                 className={`w-[60px] h-[60px] rounded-lg overflow-hidden shrink-0 cursor-pointer border ${mainImage === img ? 'border-2 border-primary' : 'border-border'}`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover" />
+                <img 
+                  src={sanitizeImageUrl(img)} 
+                  alt="" 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => { e.currentTarget.src = '/images/placeholder.png'; }}
+                />
               </div>
             ))}
           </div>

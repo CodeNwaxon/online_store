@@ -431,7 +431,7 @@ function LoanCheckoutContent() {
       )}
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-        <Toaster position="top-center" />
+
         
         <Link href="/installments/pay-loan" className="flex items-center gap-2 text-muted-foreground mb-8 hover:text-foreground transition-colors w-fit">
           <FaChevronLeft /> Back to Loan Tracking

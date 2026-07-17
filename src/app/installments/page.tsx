@@ -170,6 +170,18 @@ function InstallmentsContent() {
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
+  const sanitizeImageUrl = (url: string) => {
+    if (!url) return '/images/placeholder.png';
+    try {
+      if (url.includes('_next/image?url=')) {
+        const urlObj = new URL(url.startsWith('http') ? url : `http://localhost${url}`);
+        const actualUrl = urlObj.searchParams.get('url');
+        if (actualUrl) return actualUrl;
+      }
+    } catch (e) { }
+    return url;
+  };
+
   useEffect(() => {
     // Add smooth scrolling for hash navigation
     if (!loading && window.location.hash === '#search-section') {
@@ -241,7 +253,7 @@ function InstallmentsContent() {
   return (
     <div className="py-16">
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
-        <Toaster position="top-center" />
+
 
         {/* Header & Pay Loan Button */}
         <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
@@ -357,9 +369,10 @@ function InstallmentsContent() {
               <div className="h-[200px] bg-muted relative p-2">
                 <div className="relative w-full h-full overflow-hidden rounded-md shadow-inner">
                   <img
-                    src={product.images?.[0] || product.image}
+                    src={sanitizeImageUrl(product.images?.[0] || product.image || '')}
                     alt={product.name}
                     className="w-full h-full object-contain transition-all duration-300 hover:scale-110"
+                    onError={(e) => { e.currentTarget.src = '/images/placeholder.png'; }}
                   />
                 </div>
               </div>

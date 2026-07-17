@@ -116,7 +116,7 @@ export default function AdminOrders() {
       const orderToNotify = selectedOrder?.id === orderId ? selectedOrder : orders.find(o => o.id === orderId);
       if (orderToNotify?.userId && orderToNotify.userId !== 'guest') {
         const tSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
-        const template = tSnap.exists() ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly.';
+        const template = tSnap.exists() && tSnap.data().orderDelivered ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly.';
         
         await addDoc(collection(db, 'broadcasts'), {
           type: 'delivery',
@@ -128,6 +128,18 @@ export default function AdminOrders() {
           orderId: orderToNotify.id,
           createdAt: new Date().toISOString()
         });
+      }
+
+      // Automatically open WhatsApp to notify the customer
+      if (orderToNotify?.phone) {
+        let phone = orderToNotify.phone.replace(/\D/g, '');
+        if (phone.startsWith('0')) phone = '234' + phone.slice(1);
+        
+        const receiptUrl = `${window.location.origin}/receipt/${orderToNotify.id}`;
+        const waMessage = `Hello ${orderToNotify.customerName},\n\nYour order from our store has been marked as delivered and should arrive shortly!\n\nYou can view and download your Customer's Copy Receipt here:\n${receiptUrl}\n\nThank you for shopping with us!`;
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
+        
+        window.open(waUrl, '_blank');
       }
     } catch (err) {
       console.error("Failed to send delivery notification", err);
@@ -226,15 +238,17 @@ export default function AdminOrders() {
     printWindow.document.close();
   };
 
+  const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+
   const filteredOrders = orders.map(order => {
-    if (isCEO || adminData?.vip) return order;
+    if (hasOrderAccess) return order;
     const myItems = order.items ? order.items.filter((item: any) => item.vendor === adminData?.email) : [];
     return { ...order, items: myItems };
   }).filter(order => {
     // Hide soft-deleted orders from admin view
     if (order.deleted) return false;
-    // Hide order if the vendor doesn't have any items in it
-    if (!isCEO && !adminData?.vip && (!order.items || order.items.length === 0)) return false;
+    // Hide order if the vendor doesn't have any items in it and doesn't have full order access
+    if (!hasOrderAccess && (!order.items || order.items.length === 0)) return false;
 
     const matchesSearch =
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -252,7 +266,7 @@ export default function AdminOrders() {
 
   return (
     <div className="max-w-[1400px] mx-auto pb-20">
-      <Toaster position="top-center" />
+
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">

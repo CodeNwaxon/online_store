@@ -8,11 +8,12 @@ interface CartItem extends Product {
   selectedColor?: string;
   selectedMeasurement?: string;
   measurementPrice?: number;
+  measurementCostPrice?: number | null;
 }
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product & { selectedColor?: string, selectedMeasurement?: string, measurementPrice?: number }) => void;
+  addItem: (product: Product & { selectedColor?: string, selectedMeasurement?: string, measurementPrice?: number, measurementCostPrice?: number | null }) => void;
   removeItem: (productId: string, selectedSize?: string, selectedColor?: string, selectedMeasurement?: string) => void;
   updateQuantity: (productId: string, quantity: number, selectedSize?: string, selectedColor?: string, selectedMeasurement?: string) => void;
   clearCart: () => void;

@@ -81,7 +81,7 @@ export default function Contact() {
 
   return (
     <div className="py-16 max-md:py-8">
-      <Toaster position="top-center" />
+
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="text-center mb-16">
           <h1 className="text-4xl max-md:text-3xl font-bold mb-4">Get In Touch</h1>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
 import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
@@ -21,6 +21,8 @@ function CosmeticsPageContent() {
   const [storeLoading, setStoreLoading] = useState(!!storeSlug);
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
+  const [navigatingStoreSlug, setNavigatingStoreSlug] = useState<string | null>(null);
+  const navigationResetTimerRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
@@ -120,6 +122,34 @@ function CosmeticsPageContent() {
     }
     setSelectedCategory('All');
   }, [selectedGroup, products]);
+
+  useEffect(() => {
+    return () => {
+      if (navigationResetTimerRef.current) {
+        window.clearTimeout(navigationResetTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleStoreNavigation = (slug: string) => {
+    if (storeSlug === slug) {
+      setIsStoreDropdownOpen(false);
+      return;
+    }
+
+    if (navigationResetTimerRef.current) {
+      window.clearTimeout(navigationResetTimerRef.current);
+    }
+
+    setNavigatingStoreSlug(slug);
+    setIsStoreDropdownOpen(false);
+    router.push(`/shop/cosmetics?store=${slug}`);
+
+    navigationResetTimerRef.current = window.setTimeout(() => {
+      setNavigatingStoreSlug(null);
+      navigationResetTimerRef.current = null;
+    }, 1200);
+  };
 
   const filteredProducts = products.filter(p => {
 
@@ -316,14 +346,22 @@ function CosmeticsPageContent() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => setIsStoreDropdownOpen(!isStoreDropdownOpen)}
-                      className="w-full px-4 py-2.5 rounded-md md:rounded-xl bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-between text-xs md:text-sm font-bold shadow-sm transition-colors"
+                      onClick={() => {
+                        if (navigatingStoreSlug) return;
+                        setIsStoreDropdownOpen(!isStoreDropdownOpen);
+                      }}
+                      disabled={Boolean(navigatingStoreSlug)}
+                      className={`w-full px-4 py-2.5 rounded-md md:rounded-xl bg-pink-600 hover:bg-pink-700 text-white flex items-center justify-between text-xs md:text-sm font-bold shadow-sm transition-colors ${Boolean(navigatingStoreSlug) ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                       <div className="flex items-center gap-2">
-                        <FaStore />
+                        {Boolean(navigatingStoreSlug) ? (
+                          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+                        ) : (
+                          <FaStore className="shrink-0" />
+                        )}
                         <span className="truncate">Special Stores</span>
                       </div>
-                      <FaChevronDown className="text-[10px] shrink-0 ml-2" />
+                      {Boolean(navigatingStoreSlug) ? null : <FaChevronDown className="text-[10px] shrink-0 ml-2" />}
                     </button>
                   )}
 
@@ -335,13 +373,12 @@ function CosmeticsPageContent() {
                         ) : activeStores.map(store => (
                           <button
                             key={store.slug}
-                            onClick={() => {
-                              setIsStoreDropdownOpen(false);
-                              router.push(`/shop/cosmetics?store=${store.slug}`);
-                            }}
-                            className="w-full text-left p-3 hover:bg-pink-50 text-xs font-bold text-gray-800 transition-colors border-b border-gray-50 last:border-0"
+                            onClick={() => handleStoreNavigation(store.slug)}
+                            disabled={navigatingStoreSlug === store.slug}
+                            className="w-full text-left p-3 hover:bg-pink-50 text-xs font-bold text-gray-800 transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between gap-2"
                           >
-                            {store.name}
+                            <span className="truncate">{store.name}</span>
+                            <FaStore className="text-pink-500 shrink-0" />
                           </button>
                         ))}
                       </div>

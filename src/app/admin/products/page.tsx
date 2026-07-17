@@ -24,6 +24,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import DistributionManager from '@/components/DistributionManager';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import { useAdmin } from '@/hooks/useAdmin';
+import VendorSalesHistory from '@/components/VendorSalesHistory';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -69,7 +70,7 @@ const parseDate = (dateVal: any) => {
 
 
 function AdminProductsContent() {
-  const { isCEO } = useAdmin();
+  const { user, isCEO, adminData } = useAdmin();
   const searchParams = useSearchParams();
   const router = useRouter();
   const editParam = searchParams.get('edit');
@@ -414,10 +415,18 @@ function AdminProductsContent() {
         manufacturer: manufacturer.trim() || 'Unknown',
         warranty: warranty.trim() || '',
         updatedAt: new Date().toISOString(),
+        vendor: user?.email || '',
       };
 
 
       if (editingId) {
+        const existingProduct = products.find(p => p.id === editingId);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+        if (!hasFullAccess && existingProduct && existingProduct.vendor && existingProduct.vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          setLoading(false);
+          return;
+        }
         await updateDoc(doc(db, 'products', editingId), productData);
         toast.success('Product updated!');
       } else {
@@ -443,6 +452,11 @@ function AdminProductsContent() {
   };
 
   const handleEdit = (product: any) => {
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+        if (!hasFullAccess && product.vendor && product.vendor !== user?.email) {
+          toast.error('You can only edit your own items.');
+          return;
+        }
     setEditingId(product.id);
     setName(product.name);
     setDescription(product.description);
@@ -473,6 +487,13 @@ function AdminProductsContent() {
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
+        const existingProduct = products.find(p => p.id === productToDelete);
+        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+        if (!hasFullAccess && existingProduct && existingProduct.vendor && existingProduct.vendor !== user?.email) {
+          toast.error('You can only delete your own items.');
+          setProductToDelete(null);
+          return;
+        }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'products', productToDelete));
@@ -485,7 +506,10 @@ function AdminProductsContent() {
     }
   };
 
-  const filteredProducts = products.filter(p => {
+  const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+  const visibleProducts = hasFullAccess ? products : products.filter(p => p.vendor === user?.email);
+
+  const filteredProducts = visibleProducts.filter(p => {
     const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
     if (searchTerms.length === 0) {
       const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
@@ -532,14 +556,16 @@ function AdminProductsContent() {
           <h1 className="text-2xl md:text-3xl font-bold">Product Management</h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage your store inventory and promos.</p>
         </div>
-        {isCEO && (
-          <button
-            onClick={() => setIsDistributionOpen(true)}
-            className="bg-secondary text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-secondary/90 transition-colors"
-          >
-            Distribution fee
-          </button>
-        )}
+        <div className="flex gap-3 items-center w-full md:w-auto">
+          {isCEO && (
+            <button
+              onClick={() => setIsDistributionOpen(true)}
+              className="bg-secondary text-white px-4 py-2 rounded-md font-bold text-sm hover:bg-secondary/90 transition-colors"
+            >
+              Distribution fee
+            </button>
+          )}
+        </div>
       </header>
 
       <DistributionManager isOpen={isDistributionOpen} onClose={() => setIsDistributionOpen(false)} />
@@ -1031,9 +1057,12 @@ function AdminProductsContent() {
 
       {/* PRODUCT LIST & FILTERS */}
       <section className="space-y-6 md:space-y-8 px-4 md:px-0 pt-16 border-t border-border/50">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
+              <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="products" allowAll />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
             <div className="relative w-full sm:w-64">
               <input
                 type="text"

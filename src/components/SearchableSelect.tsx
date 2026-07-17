@@ -35,7 +35,7 @@ export default function SearchableSelect({ options, value, onChange, placeholder
         className="w-full p-3 rounded-md border border-border bg-background text-sm disabled:bg-muted"
       >
         <option value="">{placeholder}</option>
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        {options.map((opt, index) => <option key={`${opt}-${index}`} value={opt}>{opt}</option>)}
       </select>
     );
   }
@@ -89,9 +89,9 @@ export default function SearchableSelect({ options, value, onChange, placeholder
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-2 text-sm text-muted-foreground italic text-center">No results found</div>
             ) : (
-              filteredOptions.map(opt => (
+              filteredOptions.map((opt, index) => (
                 <div
-                  key={opt}
+                  key={`${opt}-${index}`}
                   className={`px-3 py-2 text-sm cursor-pointer hover:bg-muted rounded ${value === opt ? 'bg-primary/10 font-bold text-primary' : ''}`}
                   onClick={() => { onChange(opt); setIsOpen(false); setSearch(''); }}
                 >
