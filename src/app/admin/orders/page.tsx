@@ -56,7 +56,7 @@ export default function AdminOrders() {
       setOrders(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
-    
+
     const unsubscribeAdmins = onSnapshot(collection(db, 'admins'), (snap) => {
       setAdmins(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -104,10 +104,10 @@ export default function AdminOrders() {
 
   const markAsDelivered = async (e: React.MouseEvent, orderId: string) => {
     e.stopPropagation();
-    
+
     // Set delivered to true
     await updateDoc(doc(db, 'orders', orderId), { delivered: true });
-    
+
     setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, delivered: true } : prev);
     toast.success('Order marked as delivered');
 
@@ -117,7 +117,7 @@ export default function AdminOrders() {
       if (orderToNotify?.userId && orderToNotify.userId !== 'guest') {
         const tSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
         const template = tSnap.exists() && tSnap.data().orderDelivered ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly.';
-        
+
         await addDoc(collection(db, 'broadcasts'), {
           type: 'delivery',
           title: 'Order Delivered',
@@ -134,11 +134,11 @@ export default function AdminOrders() {
       if (orderToNotify?.phone) {
         let phone = orderToNotify.phone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '234' + phone.slice(1);
-        
+
         const receiptUrl = `${window.location.origin}/receipt/${orderToNotify.id}`;
-        const waMessage = `Hello ${orderToNotify.customerName},\n\nYour order from our store has been marked as delivered and should arrive shortly!\n\nYou can view and download your Customer's Copy Receipt here:\n${receiptUrl}\n\nThank you for shopping with us!`;
+        const waMessage = `Hello ${orderToNotify.customerName},\n\nYour order from our store has been *delivered* and should arrive shortly!\n\nYou can view and download your *Customer's Copy Receipt* here:\n${receiptUrl}\n\nThank you for shopping with us!`;
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
-        
+
         window.open(waUrl, '_blank');
       }
     } catch (err) {
@@ -508,32 +508,33 @@ export default function AdminOrders() {
                   {selectedOrder.items.map((item: any, i: number) => {
                     const vendorAdmin = admins.find(a => a.email === item.vendor);
                     const vendorStore = vendorAdmin?.specialStore;
-                    
+
                     return (
-                    <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-md md:rounded-2xl border border-border/50">
-                      <div className="relative w-16 h-16 rounded-xl border border-border overflow-hidden shrink-0">
-                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="120px" />
+                      <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-md md:rounded-2xl border border-border/50">
+                        <div className="relative w-16 h-16 rounded-xl border border-border overflow-hidden shrink-0">
+                          <Image src={item.image} alt={item.name} fill className="object-cover" sizes="120px" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h5 className="font-black text-sm truncate">
+                            {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
+                          </h5>
+                          <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
+
+                          {(isCEO || adminData?.vip) && vendorStore && (vendorStore.accountNumber || vendorStore.phoneNumber) && (
+                            <div className="mt-2 flex flex-col gap-1 border-t border-border/30 pt-2">
+                              <p className="text-[9px] text-primary font-black uppercase tracking-widest">Vendor Info ({vendorStore.name})</p>
+                              {vendorStore.accountNumber && <p className="text-[10px] text-muted-foreground font-medium">Account: <span className="font-bold text-foreground">{vendorStore.accountNumber}</span></p>}
+                              {vendorStore.phoneNumber && <p className="text-[10px] text-muted-foreground font-medium">Phone: <span className="font-bold text-foreground">{vendorStore.phoneNumber}</span></p>}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground font-bold">Qty: {item.quantity}</p>
+                          <p className="font-black text-sm text-primary">₦{(item.price * item.quantity).toLocaleString()}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h5 className="font-black text-sm truncate">
-                          {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
-                        </h5>
-                        <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
-                        
-                        {(isCEO || adminData?.vip) && vendorStore && (vendorStore.accountNumber || vendorStore.phoneNumber) && (
-                          <div className="mt-2 flex flex-col gap-1 border-t border-border/30 pt-2">
-                            <p className="text-[9px] text-primary font-black uppercase tracking-widest">Vendor Info ({vendorStore.name})</p>
-                            {vendorStore.accountNumber && <p className="text-[10px] text-muted-foreground font-medium">Account: <span className="font-bold text-foreground">{vendorStore.accountNumber}</span></p>}
-                            {vendorStore.phoneNumber && <p className="text-[10px] text-muted-foreground font-medium">Phone: <span className="font-bold text-foreground">{vendorStore.phoneNumber}</span></p>}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground font-bold">Qty: {item.quantity}</p>
-                        <p className="font-black text-sm text-primary">₦{(item.price * item.quantity).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                 </div>
               </div>
 
