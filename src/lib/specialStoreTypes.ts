@@ -8,8 +8,12 @@ export interface SpecialStore {
   nameEditDates?: string[];
   bannerEditDates?: string[];
   accountNumber?: string;
+  accountName?: string;
+  bankName?: string;
   phoneNumber?: string;
   accountNumberEditDates?: string[];
+  accountNameEditDates?: string[];
+  bankNameEditDates?: string[];
   phoneNumberEditDates?: string[];
   ownerEmail: string;
   ownerUid: string;
