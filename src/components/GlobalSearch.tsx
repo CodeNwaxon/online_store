@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { FaSearch, FaSpinner } from 'react-icons/fa';
 import Link from 'next/link';
+import Fuse from 'fuse.js';
 
 interface SearchItem {
   id: string;
@@ -14,6 +15,8 @@ interface SearchItem {
   image: string;
   isPromo?: boolean;
   category: string;
+  group?: string;
+  manufacturer?: string;
 }
 
 interface GlobalSearchProps {
@@ -95,7 +98,9 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   oldPrice: data.oldPrice,
                   image: data.images?.[0] || data.image || '/images/placeholder.png',
                   isPromo: data.isPromo || false,
-                  category: colName
+                  category: colName,
+                  group: data.group || '',
+                  manufacturer: data.manufacturer || ''
                 } as SearchItem;
               });
             } catch (err) {
@@ -118,18 +123,26 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
       const q = query.toLowerCase().trim();
       
       const queryWords = q.split(/\s+/);
-      let searchTerms = [q, ...queryWords];
+      const searchTermsSet = new Set<string>();
       
+      searchTermsSet.add(q);
       queryWords.forEach(word => {
+        searchTermsSet.add(word);
         if (searchSynonyms[word]) {
-          searchTerms = [...searchTerms, ...searchSynonyms[word]];
+          searchSynonyms[word].forEach(syn => searchTermsSet.add(syn));
         }
       });
       
-      const filtered = itemsToSearch.filter(item => {
-        const itemName = item.name.toLowerCase();
-        return searchTerms.some(term => itemName.includes(term));
+      const expandedQuery = Array.from(searchTermsSet).join(' ');
+      
+      const fuse = new Fuse(itemsToSearch, {
+        keys: ['name', 'category', 'group', 'manufacturer'],
+        threshold: 0.3,
+        ignoreLocation: true
       });
+      
+      const results = fuse.search(expandedQuery);
+      const filtered = results.map(r => r.item);
       
       setResults(filtered);
       setIsOpen(true);

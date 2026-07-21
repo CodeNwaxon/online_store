@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { useLikeStore } from '@/store/useLikeStore';
+import Fuse from 'fuse.js';
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -127,46 +128,24 @@ function ShopContent() {
       .filter((c): c is string => !!c)
   )).sort();
 
-  const filteredProducts = products.filter(product => {
+  const baseFilteredProducts = products.filter(product => {
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
     const isVisible = (product.quantity ?? 0) > 0;
-
-    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    let matchesSearch = true;
-    if (searchTerms.length > 0) {
-      const normalize = (str: string) => {
-        if (!str) return '';
-        return str.toLowerCase()
-          .replace(/sh/g, 'ch')
-          .replace(/s/g, 'c')
-          .replace(/ph/g, 'f')
-          .replace(/k/g, 'c')
-          .replace(/\s/g, '');
-      };
-
-      matchesSearch = searchTerms.every(term => {
-        const normTerm = normalize(term);
-        const checkField = (fieldVal: string) => {
-          if (!fieldVal) return false;
-          const lowerVal = fieldVal.toLowerCase();
-          const normVal = normalize(fieldVal);
-          return lowerVal.includes(term) || normVal.includes(normTerm);
-        };
-
-        return (
-          checkField(product.name) ||
-          checkField(product.group || '') ||
-          checkField(product.category || '') ||
-          checkField(product.manufacturer || '')
-        );
-      });
-    }
-
-    return matchesGroup && matchesCategory && matchesSearch && matchesLiked && matchesPromo && isVisible;
+    return matchesGroup && matchesCategory && matchesLiked && matchesPromo && isVisible;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category', 'manufacturer'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   const sortedFilteredProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'top_rated') {

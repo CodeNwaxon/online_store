@@ -8,6 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
+import Fuse from 'fuse.js';
 import { toast } from 'react-hot-toast';
 
 function CosmeticsPageContent() {
@@ -151,10 +152,7 @@ function CosmeticsPageContent() {
     }, 1200);
   };
 
-  const filteredProducts = products.filter(p => {
-
-    const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-
+  const baseFilteredProducts = products.filter(p => {
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
 
@@ -166,8 +164,18 @@ function CosmeticsPageContent() {
       if (selectedPriceFilter === 'low' && p.price >= 10000) matchesPrice = false;
     }
 
-    return matchesSearch && matchesGroup && matchesCategory && matchesPrice;
+    return matchesGroup && matchesCategory && matchesPrice;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category', 'description'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 

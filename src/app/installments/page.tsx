@@ -11,6 +11,7 @@ import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'f
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 import { useSearchParams } from 'next/navigation';
+import Fuse from 'fuse.js';
 
 function InstallmentsContent() {
   const searchParams = useSearchParams();
@@ -129,44 +130,22 @@ function InstallmentsContent() {
     return () => unsubscribe();
   }, []);
 
-  const filteredProducts = products.filter(product => {
+  const baseFilteredProducts = products.filter(product => {
     const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     const isVisible = (product.quantity ?? 0) > 0;
-
-    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    let matchesSearch = true;
-    if (searchTerms.length > 0) {
-      const normalize = (str: string) => {
-        if (!str) return '';
-        return str.toLowerCase()
-          .replace(/sh/g, 'ch')
-          .replace(/s/g, 'c')
-          .replace(/ph/g, 'f')
-          .replace(/k/g, 'c')
-          .replace(/\s/g, '');
-      };
-
-      matchesSearch = searchTerms.every(term => {
-        const normTerm = normalize(term);
-        const checkField = (fieldVal: string) => {
-          if (!fieldVal) return false;
-          const lowerVal = fieldVal.toLowerCase();
-          const normVal = normalize(fieldVal);
-          return lowerVal.includes(term) || normVal.includes(normTerm);
-        };
-
-        return (
-          checkField(product.name) ||
-          checkField(product.group || '') ||
-          checkField(product.category || '') ||
-          checkField(product.manufacturer || '')
-        );
-      });
-    }
-
-    return matchesGroup && matchesCategory && matchesSearch && isVisible;
+    return matchesGroup && matchesCategory && isVisible;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category', 'manufacturer'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 

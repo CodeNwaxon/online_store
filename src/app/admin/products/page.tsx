@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaLink, FaTimes, FaSearch, FaBox, FaCheck, FaStar, FaSave, FaChevronDown } from 'react-icons/fa';
+import Fuse from 'fuse.js';
 import Image from 'next/image';
 import ProductCard from '@/components/ProductCard';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -526,43 +527,21 @@ function AdminProductsContent() {
   const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
   const visibleProducts = hasFullAccess ? products : products.filter(p => p.vendor === user?.email);
 
-  const filteredProducts = visibleProducts.filter(p => {
-    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (searchTerms.length === 0) {
-      const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
-      return matchesGroup;
-    }
+  const baseFilteredProducts = visibleProducts.filter(p => {
+    if (filterGroup === 'Low Stock') return (p.quantity ?? 0) <= 5;
+    if (filterGroup === 'All') return true;
+    return p.group === filterGroup;
+  });
 
-    const normalize = (str: string) => {
-      if (!str) return '';
-      return str.toLowerCase()
-        .replace(/sh/g, 'ch')
-        .replace(/s/g, 'c')
-        .replace(/ph/g, 'f')
-        .replace(/k/g, 'c')
-        .replace(/\s/g, '');
-    };
-
-    const matchesSearch = searchTerms.every(term => {
-      const normTerm = normalize(term);
-      const checkField = (fieldVal: string) => {
-        if (!fieldVal) return false;
-        const lowerVal = fieldVal.toLowerCase();
-        const normVal = normalize(fieldVal);
-        return lowerVal.includes(term) || normVal.includes(normTerm);
-      };
-
-      return (
-        checkField(p.name) ||
-        checkField(p.group) ||
-        checkField(p.category) ||
-        checkField(p.manufacturer)
-      );
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category', 'manufacturer'],
+      threshold: 0.3,
+      ignoreLocation: true
     });
-
-    const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
-    return matchesSearch && matchesGroup;
-  }).sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })().sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
@@ -1115,6 +1094,7 @@ function AdminProductsContent() {
               onChange={e => setFilterGroup(e.target.value)}
             >
               <option value="All">All Groups</option>
+              <option value="Low Stock">Low Stock (≤ 5)</option>
               {groups.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>

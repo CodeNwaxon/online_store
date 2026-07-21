@@ -21,6 +21,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import { useAdmin } from '@/hooks/useAdmin';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
+import Fuse from 'fuse.js';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -339,41 +340,21 @@ export default function AdminCosmetics() {
   const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/COSMETICS'));
   const visibleProducts = hasFullAccess ? products : products.filter(p => (p as any).vendor === user?.email);
 
-  const filteredProducts = visibleProducts.filter(p => {
-    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (searchTerms.length === 0) {
-      return filterGroup === 'All' || p.group === filterGroup;
-    }
-
-    const normalize = (str: string) => {
-      if (!str) return '';
-      return str.toLowerCase()
-        .replace(/sh/g, 'ch')
-        .replace(/s/g, 'c')
-        .replace(/ph/g, 'f')
-        .replace(/k/g, 'c')
-        .replace(/\s/g, '');
-    };
-
-    const matchesSearch = searchTerms.every(term => {
-      const normTerm = normalize(term);
-      const checkField = (fieldVal: string) => {
-        if (!fieldVal) return false;
-        const lowerVal = fieldVal.toLowerCase();
-        const normVal = normalize(fieldVal);
-        return lowerVal.includes(term) || normVal.includes(normTerm);
-      };
-
-      return (
-        checkField(p.name) ||
-        checkField(p.group || '') ||
-        checkField(p.category || '')
-      );
-    });
-
-    const matchesGroup = filterGroup === 'All' || p.group === filterGroup;
-    return matchesSearch && matchesGroup;
+  const baseFilteredProducts = visibleProducts.filter(p => {
+    if (filterGroup === 'Low Stock') return (p.quantity ?? 0) <= 5;
+    if (filterGroup === 'All') return true;
+    return p.group === filterGroup;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   return (
     <AdminGuard>
@@ -777,11 +758,11 @@ export default function AdminCosmetics() {
 
         {/* List Section */}
         <section className="bg-card py-4 px-1.5 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
-          <div className="flex flex-col gap-2 mb-6 w-full md:w-auto">
-            <h2 className="ml-3 text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
-            <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="cosmetics" allowAll />
-          </div>
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+              <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="cosmetics" allowAll />
+            </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
               <div className="relative w-full sm:w-64">
                 <input
@@ -799,6 +780,7 @@ export default function AdminCosmetics() {
                 onChange={e => setFilterGroup(e.target.value)}
               >
                 <option value="All">All Brands</option>
+                <option value="Low Stock">Low Stock (≤ 5)</option>
                 {groups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>

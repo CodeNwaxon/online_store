@@ -20,6 +20,7 @@ import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
 import { useAdmin } from '@/hooks/useAdmin';
+import Fuse from 'fuse.js';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -440,41 +441,21 @@ export default function AdminFoods() {
   const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
   const visibleFoods = hasFullAccess ? foods : foods.filter(f => (f as any).vendor === user?.email);
 
-  const filteredFoods = visibleFoods.filter(f => {
-    const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (searchTerms.length === 0) {
-      return filterGroup === 'All' || f.group === filterGroup;
-    }
-
-    const normalize = (str: string) => {
-      if (!str) return '';
-      return str.toLowerCase()
-        .replace(/sh/g, 'ch')
-        .replace(/s/g, 'c')
-        .replace(/ph/g, 'f')
-        .replace(/k/g, 'c')
-        .replace(/\s/g, '');
-    };
-
-    const matchesSearch = searchTerms.every(term => {
-      const normTerm = normalize(term);
-      const checkField = (fieldVal: string) => {
-        if (!fieldVal) return false;
-        const lowerVal = fieldVal.toLowerCase();
-        const normVal = normalize(fieldVal);
-        return lowerVal.includes(term) || normVal.includes(normTerm);
-      };
-
-      return (
-        checkField(f.name) ||
-        checkField(f.group || '') ||
-        checkField(f.category || '')
-      );
-    });
-
-    const matchesGroup = filterGroup === 'All' || f.group === filterGroup;
-    return matchesSearch && matchesGroup;
+  const baseFilteredFoods = visibleFoods.filter(f => {
+    if (filterGroup === 'Low Stock') return (f.quantity ?? 0) <= 5;
+    if (filterGroup === 'All') return true;
+    return f.group === filterGroup;
   });
+
+  const filteredFoods = (() => {
+    if (!searchQuery.trim()) return baseFilteredFoods;
+    const fuse = new Fuse(baseFilteredFoods, {
+      keys: ['name', 'group', 'category'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   return (
     <AdminGuard>
@@ -913,6 +894,7 @@ export default function AdminFoods() {
                 onChange={e => setFilterGroup(e.target.value)}
               >
                 <option value="All">All Groups</option>
+                <option value="Low Stock">Low Stock (≤ 5)</option>
                 {groups.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>

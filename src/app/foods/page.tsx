@@ -7,6 +7,7 @@ import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
+import Fuse from 'fuse.js';
 
 function FoodsContent() {
   const searchParams = useSearchParams();
@@ -56,11 +57,8 @@ function FoodsContent() {
   ];
 
   // Filtering Logic
-  const filteredFoods = useMemo(() => {
+  const baseFilteredFoods = useMemo(() => {
     return foods.filter(f => {
-      // Search
-      if (searchQuery && !f.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-
       // Group
       if (selectedGroup !== 'All' && f.group !== selectedGroup) return false;
 
@@ -77,7 +75,17 @@ function FoodsContent() {
 
       return true;
     });
-  }, [foods, searchQuery, selectedGroup, selectedCategory, selectedPriceFilter]);
+  }, [foods, selectedGroup, selectedCategory, selectedPriceFilter]);
+
+  const filteredFoods = useMemo(() => {
+    if (!searchQuery.trim()) return baseFilteredFoods;
+    const fuse = new Fuse(baseFilteredFoods, {
+      keys: ['name', 'group', 'category', 'description'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  }, [baseFilteredFoods, searchQuery]);
 
   if (loading) {
     return (

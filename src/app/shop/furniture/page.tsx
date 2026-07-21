@@ -6,6 +6,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { FaSearch, FaCouch, FaChevronDown, FaStore, FaFilter, FaShareAlt } from 'react-icons/fa';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/data/products';
+import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
@@ -46,15 +47,20 @@ function FurnitureContent() {
     return () => unsub();
   }, []);
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = searchQuery === '' ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-
+  const baseFilteredProducts = products.filter(p => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
+    return matchesCategory;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'category', 'description'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 

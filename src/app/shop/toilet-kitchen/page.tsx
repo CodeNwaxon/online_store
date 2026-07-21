@@ -6,6 +6,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt } from 'react-icons/fa';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
+import Fuse from 'fuse.js';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 
@@ -51,12 +52,21 @@ function ToiletKitchenContent() {
     }
   }, [selectedGroup, products]);
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = searchQuery === '' || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  const baseFilteredProducts = products.filter(p => {
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    return matchesSearch && matchesGroup && matchesCategory;
+    return matchesGroup && matchesCategory;
   });
+
+  const filteredProducts = (() => {
+    if (!searchQuery.trim()) return baseFilteredProducts;
+    const fuse = new Fuse(baseFilteredProducts, {
+      keys: ['name', 'group', 'category', 'description'],
+      threshold: 0.3,
+      ignoreLocation: true
+    });
+    return fuse.search(searchQuery.trim()).map(r => r.item);
+  })();
 
   const displayedProducts = filteredProducts.slice(0, visibleCount);
 
