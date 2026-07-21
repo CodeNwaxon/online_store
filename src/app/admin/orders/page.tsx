@@ -238,17 +238,50 @@ export default function AdminOrders() {
     printWindow.document.close();
   };
 
-  const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+  // Maps admin route paths to the Firestore collection names used at checkout
+  const ROUTE_TO_COLLECTION: Record<string, string> = {
+    '/ADMIN/PRODUCTS':      'products',
+    '/ADMIN/FOODS':         'foods',
+    '/ADMIN/WEARS':         'wears',
+    '/ADMIN/COSMETICS':     'cosmetics',
+    '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+  };
+
+  // Which Firestore collections this admin is allowed to see orders for.
+  // CEO: all  |  VIP: collections matching their assigned routes  |  Regular: own vendor email only
+  const allowedCollections: string[] | 'all' | 'vendor-only' = (() => {
+    if (isCEO) return 'all';
+    if (adminData?.vip) {
+      const cols = (adminData.assignedRoutes || []).flatMap(route =>
+        ROUTE_TO_COLLECTION[route] ? [ROUTE_TO_COLLECTION[route]] : []
+      );
+      return cols.length > 0 ? cols : [];
+    }
+    return 'vendor-only';
+  })();
 
   const filteredOrders = orders.map(order => {
-    if (hasOrderAccess) return order;
-    const myItems = order.items ? order.items.filter((item: any) => item.vendor === adminData?.email) : [];
+    if (allowedCollections === 'all') return order;
+
+    if (allowedCollections === 'vendor-only') {
+      // Regular (non-VIP) admin: only show their own products
+      const myItems = order.items
+        ? order.items.filter((item: any) => item.vendor === adminData?.email)
+        : [];
+      return { ...order, items: myItems };
+    }
+
+    // VIP admin: show items from their allowed collections
+    // Fallback: if collectionName is missing on the item (old orders), show nothing for that item
+    const myItems = order.items
+      ? order.items.filter((item: any) => item.collectionName && allowedCollections.includes(item.collectionName))
+      : [];
     return { ...order, items: myItems };
   }).filter(order => {
     // Hide soft-deleted orders from admin view
     if (order.deleted) return false;
-    // Hide order if the vendor doesn't have any items in it and doesn't have full order access
-    if (!hasOrderAccess && (!order.items || order.items.length === 0)) return false;
+    // Hide order if the admin doesn't have full access and there are no items for them
+    if (allowedCollections !== 'all' && (!order.items || order.items.length === 0)) return false;
 
     const matchesSearch =
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -440,24 +473,26 @@ export default function AdminOrders() {
               <div className="flex flex-wrap gap-4 text-sm opacity-90 font-bold items-center">
                 <div className="flex items-center gap-2"><FaCalendarAlt /> {new Date(selectedOrder.createdAt).toLocaleString()}</div>
                 <div className="flex items-center gap-2"><FaCreditCard /> ID: {selectedOrder.id.substring(0, 10).toUpperCase()}</div>
-                {!selectedOrder.delivered ? (
-                  <button
-                    onClick={(e) => markAsDelivered(e, selectedOrder.id)}
-                    className="px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors shadow-sm"
-                  >
-                    Mark Delivered
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmUnmark(selectedOrder.id);
-                      setShowPasskeyModal(selectedOrder.id);
-                    }}
-                    className="px-3 py-1 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors shadow-sm"
-                  >
-                    Unmark Delivered
-                  </button>
+                {(isCEO || adminData?.vip) && (
+                  !selectedOrder.delivered ? (
+                    <button
+                      onClick={(e) => markAsDelivered(e, selectedOrder.id)}
+                      className="px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors shadow-sm"
+                    >
+                      Mark Delivered
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmUnmark(selectedOrder.id);
+                        setShowPasskeyModal(selectedOrder.id);
+                      }}
+                      className="px-3 py-1 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors shadow-sm"
+                    >
+                      Unmark Delivered
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -520,10 +555,13 @@ export default function AdminOrders() {
                           </h5>
                           <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
 
-                          {(isCEO || adminData?.vip) && vendorStore && (vendorStore.accountNumber || vendorStore.phoneNumber) && (
+                          {(isCEO || adminData?.vip) && vendorStore && (vendorStore.accountNumber || vendorStore.phoneNumber || vendorStore.accountName) && (
                             <div className="mt-2 flex flex-col gap-1 border-t border-border/30 pt-2">
-                              <p className="text-[9px] text-primary font-black uppercase tracking-widest">Vendor Info ({vendorStore.name})</p>
-                              {vendorStore.accountNumber && <p className="text-[10px] text-muted-foreground font-medium">Account: <span className="font-bold text-foreground">{vendorStore.accountNumber}</span></p>}
+                              <p className="text-[9px] text-primary font-black uppercase tracking-widest">Vendor Info</p>
+                              {vendorStore.name && <p className="text-[10px] text-muted-foreground font-medium">Store Name: <span className="font-bold text-foreground">{vendorStore.name}</span></p>}
+                              {vendorStore.accountName && <p className="text-[10px] text-muted-foreground font-medium">Acct Name: <span className="font-bold text-foreground">{vendorStore.accountName}</span></p>}
+                              {vendorStore.bankName && <p className="text-[10px] text-muted-foreground font-medium">Bank: <span className="font-bold text-foreground">{vendorStore.bankName}</span></p>}
+                              {vendorStore.accountNumber && <p className="text-[10px] text-muted-foreground font-medium">Acct No: <span className="font-bold text-foreground">{vendorStore.accountNumber}</span></p>}
                               {vendorStore.phoneNumber && <p className="text-[10px] text-muted-foreground font-medium">Phone: <span className="font-bold text-foreground">{vendorStore.phoneNumber}</span></p>}
                             </div>
                           )}

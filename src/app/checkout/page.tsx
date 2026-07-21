@@ -68,16 +68,21 @@ export default function Checkout() {
   }, []);
 
   const [dbProducts, setDbProducts] = useState<Record<string, any>>({});
+  // Maps product ID → the Firestore collection it belongs to
+  const [dbProductCollection, setDbProductCollection] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
-    const unsubs = collections.map(collName => 
+    const unsubs = collections.map(collName =>
       onSnapshot(collection(db, collName), (snap) => {
         setDbProducts(prev => {
           const newMap = { ...prev };
-          snap.forEach(doc => {
-            newMap[doc.id] = doc.data();
-          });
+          snap.forEach(doc => { newMap[doc.id] = doc.data(); });
+          return newMap;
+        });
+        setDbProductCollection(prev => {
+          const newMap = { ...prev };
+          snap.forEach(doc => { newMap[doc.id] = collName; });
           return newMap;
         });
       })
@@ -755,6 +760,9 @@ export default function Checkout() {
                     selectedMeasurement: item.selectedMeasurement || null,
                     category: item.category,
                     vendor: dbProducts[item.id]?.vendor || null,
+                    // Which Firestore collection this item came from — used by VIP admins
+                    // to see only orders that contain items from their assigned pages
+                    collectionName: dbProductCollection[item.id] || null,
                     measurementPrice: item.measurementPrice || null,
                     measurementCostPrice: item.measurementCostPrice || null,
                   })),

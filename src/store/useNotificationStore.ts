@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export interface AppNotification {
   id: string;
-  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order';
+  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered';
   title: string;
   message: string;
   image?: string;

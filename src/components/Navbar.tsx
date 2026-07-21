@@ -277,7 +277,7 @@ export default function Navbar() {
           
           addNotification({
             id: change.doc.id,
-            type: 'broadcast',
+            type: (data.type === 'delivery' ? 'order_delivered' : data.type) || 'broadcast',
             title: data.title,
             message: data.message,
             image: data.image,

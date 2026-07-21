@@ -376,6 +376,23 @@ function AdminProductsContent() {
       return;
     }
 
+    // Promo price validation
+    if (isPromo) {
+      const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+      if (parsedPromo <= 0) {
+        toast.error('Promo Price is required.');
+        return;
+      }
+      if (parsedPromo >= parsedPrice) {
+        toast.error('Promo Price must be lower than the Sales Price (Selling Price).');
+        return;
+      }
+      if (parsedPromo <= parsedRdp) {
+        toast.error('Promo Price must be higher than the Cost Price (RDP Price). You cannot sell at a loss.');
+        return;
+      }
+    }
+
 
 
     if (images.length === 0) {
@@ -823,14 +840,33 @@ function AdminProductsContent() {
                       <input readOnly value={price} type="text" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
                     </div>
                     <div className="flex-1">
-                      <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase">Promo Price (₦)</label>
+                      <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase flex justify-between items-center">
+                        <span>Promo Price (₦)</span>
+                        {oldPrice.trim() !== '' && (() => {
+                          const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+                          const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
+                          const parsedCost  = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+                          if (parsedPromo >= parsedSales) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be lower than Sales Price</span>;
+                          if (parsedCost > 0 && parsedPromo <= parsedCost) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be higher than Cost Price</span>;
+                          return null;
+                        })()}
+                      </label>
                       <input
                         required
                         value={oldPrice}
                         onChange={e => setOldPrice(formatPriceInput(e.target.value))}
                         type="text"
                         placeholder="e.g. 45,000"
-                        className="w-full p-2 rounded-md border border-primary bg-background text-sm font-bold focus:ring-2 ring-primary/20 outline-none"
+                        className={`w-full p-2 rounded-md border bg-background text-sm font-bold focus:ring-2 outline-none transition-all ${
+                          oldPrice.trim() !== '' && (() => {
+                            const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+                            const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
+                            const parsedCost  = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+                            return parsedPromo >= parsedSales || (parsedCost > 0 && parsedPromo <= parsedCost);
+                          })()
+                            ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                            : 'border-primary focus:ring-primary/20'
+                        }`}
                       />
                     </div>
                   </div>
