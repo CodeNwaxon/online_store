@@ -17,6 +17,7 @@ interface SearchItem {
   category: string;
   group?: string;
   manufacturer?: string;
+  productCode?: string;
 }
 
 interface GlobalSearchProps {
@@ -100,7 +101,8 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   isPromo: data.isPromo || false,
                   category: colName,
                   group: data.group || '',
-                  manufacturer: data.manufacturer || ''
+                  manufacturer: data.manufacturer || '',
+                  productCode: data.productCode || ''
                 } as SearchItem;
               });
             } catch (err) {
