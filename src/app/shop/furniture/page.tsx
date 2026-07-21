@@ -17,7 +17,7 @@ function FurnitureContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
   const [categories, setCategories] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(24);
+  const [visibleCount, setVisibleCount] = useState(86);
 
   useEffect(() => {
     const q = query(collection(db, 'products'), orderBy('updatedAt', 'desc'));

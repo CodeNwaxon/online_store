@@ -29,7 +29,7 @@ function WearsPageContent() {
   const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [visibleCount, setVisibleCount] = useState(24);
+  const [visibleCount, setVisibleCount] = useState(86);
 
   useEffect(() => {
     if (storeSlug && storeLoading) return; // Wait for store data to be fetched

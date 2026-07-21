@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
-import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt } from 'react-icons/fa';
+import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 
@@ -18,6 +18,7 @@ function FoodsContent() {
   const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
   const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
+  const [visibleCount, setVisibleCount] = useState(86);
 
   useEffect(() => {
     const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
@@ -156,7 +157,7 @@ function FoodsContent() {
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between px-2 py-3 md:py-6 md:px-24 mb-0 bg-white border-y md:border border-green-100 shadow-sm">
 
             {/* Groups Pill Buttons */}
-            <div className="flex gap-2 max-md:w-full max-md:overflow-x-auto max-md:pb-2 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] flex-nowrap md:flex-wrap px-2 md:px-0">
+            <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#16a34a' } as React.CSSProperties}>
               {groups.map(group => (
                 <button
                   key={group}
@@ -240,11 +241,25 @@ function FoodsContent() {
             </button>
           </div>
         ) : (
-          <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
-            {filteredFoods.map((food) => (
-              <ShopCard key={food.id} food={food} />
-            ))}
-          </div>
+          <>
+            <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
+              {filteredFoods.slice(0, visibleCount).map((food) => (
+                <ShopCard key={food.id} food={food} />
+              ))}
+            </div>
+
+            {filteredFoods.length > visibleCount && (
+              <div className="text-center mt-12 flex justify-center">
+                <button
+                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-green-200 bg-white hover:bg-green-50 text-green-700 px-6 py-3 text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-green-300 hover:shadow-md"
+                  onClick={() => setVisibleCount(prev => prev + 24)}
+                >
+                  <span>Load More Foods</span>
+                  <FaChevronDown className="w-3 h-3 group-hover:translate-y-0.5 transition-all duration-300 ease-out" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
