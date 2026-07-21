@@ -55,6 +55,37 @@ export default function AdminWears() {
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
   const [color, setColor] = useState('');
 
+  // Measurements State (for Materials)
+  const [includeMeasurements, setIncludeMeasurements] = useState(false);
+  const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, string>>({});
+  const [selectedMeasurementCosts, setSelectedMeasurementCosts] = useState<Record<string, string>>({});
+
+  const materialMeasurements = ['1 yard', '2 yards', '3 yards', '4 yards', '5 yards', '6 yards', '8 yards', '10 yards', '12 yards'];
+  const trouserMeasurements = ['1 trouser length', '2 trouser lengths', '3 trouser lengths', '4 trouser lengths', '5 trouser lengths'];
+
+  const toggleMeasurement = (m: string) => {
+    setSelectedMeasurements(prev => {
+      const copy = { ...prev };
+      if (m in copy) delete copy[m];
+      else copy[m] = '';
+      return copy;
+    });
+    setSelectedMeasurementCosts(prev => {
+      const copy = { ...prev };
+      if (m in copy) delete copy[m];
+      else copy[m] = '';
+      return copy;
+    });
+  };
+
+  const setMeasurementPrice = (m: string, value: string) => {
+    setSelectedMeasurements(prev => ({ ...prev, [m]: value }));
+  };
+
+  const setMeasurementCost = (m: string, value: string) => {
+    setSelectedMeasurementCosts(prev => ({ ...prev, [m]: value }));
+  };
+
   // Size definitions
   const menShoeSizes = ['45', '44', '43', '42', '41', '40', '39', '38', '36', '32', '30'];
   const womenShoeSizes = ['42', '41', '40', '39', '38', '37', '36', '35', '34', '33'];
@@ -64,6 +95,17 @@ export default function AdminWears() {
 
   const isShoeGroup = group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe';
   const isClothGroup = group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes';
+  const isMaterialGroup = group?.toLowerCase() === 'material' || group?.toLowerCase() === 'materials';
+
+  useEffect(() => {
+    if (isMaterialGroup) {
+      setIncludeMeasurements(true);
+    } else {
+      setIncludeMeasurements(false);
+      setSelectedMeasurements({});
+      setSelectedMeasurementCosts({});
+    }
+  }, [isMaterialGroup]);
 
   const toggleSize = (sz: string) => {
     setSizeQuantities(prev => {
@@ -269,6 +311,9 @@ export default function AdminWears() {
     setIsCustomShipping(false);
     setCustomShippingAmount('');
     setIncludeColor(false);
+    setIncludeMeasurements(false);
+    setSelectedMeasurements({});
+    setSelectedMeasurementCosts({});
     setImageUrlInput('');
   };
 
@@ -280,9 +325,28 @@ export default function AdminWears() {
     if (!price.trim()) return toast.error('Selling price is required.');
     if (!group) return toast.error('Please select a brand/group.');
     if (!category) return toast.error('Please select a category.');
-    if (!size && !isCustomShipping) return toast.error('Please select a shipping size.');
+    if (!size && !isCustomShipping && !isMaterialGroup) return toast.error('Please select a shipping size.');
     if ((isShoeGroup || isClothGroup) && Object.keys(sizeQuantities).length === 0) return toast.error('Please select at least one product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
+
+    // Validate measurement prices and costs
+    if (isMaterialGroup && includeMeasurements && Object.keys(selectedMeasurements).length > 0) {
+      for (const [mName, mPrice] of Object.entries(selectedMeasurements)) {
+        if (mName === '1 yard') continue; // uses default product price
+        const parsed = parseFloat(mPrice.replace(/,/g, ''));
+        if (!mPrice.trim() || isNaN(parsed) || parsed < 1) {
+          return toast.error(`Please enter a valid selling price (minimum ₦1) for "${mName}".`);
+        }
+      }
+
+      for (const [mName, mCost] of Object.entries(selectedMeasurementCosts)) {
+        if (mName === '1 yard') continue;
+        const parsed = parseFloat(mCost.replace(/,/g, ''));
+        if (!mCost.trim() || isNaN(parsed) || parsed < 1) {
+          return toast.error(`Please enter a valid cost price (minimum ₦1) for "${mName}".`);
+        }
+      }
+    }
 
     const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
     const parsedPrice = parseFloat(price.replace(/,/g, '')) || 0;
@@ -316,6 +380,12 @@ export default function AdminWears() {
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
+        measurements: isMaterialGroup && includeMeasurements && Object.keys(selectedMeasurements).length > 0
+          ? JSON.stringify(Object.fromEntries(Object.entries(selectedMeasurements).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])))
+          : '',
+        measurementCostPrices: isMaterialGroup && includeMeasurements && Object.keys(selectedMeasurementCosts).length > 0
+          ? JSON.stringify(Object.fromEntries(Object.entries(selectedMeasurementCosts).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])))
+          : '',
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
         vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
@@ -370,6 +440,43 @@ export default function AdminWears() {
     setMinShippingQty(product.minShippingQty?.toString() || '0');
     setIsCustomShipping(!!(product as any).customShippingAmount);
     setCustomShippingAmount((product as any).customShippingAmount ? formatPriceInput((product as any).customShippingAmount.toString()) : '');
+    
+    // Load measurements if they exist
+    const prodMeasurements = (product as any).measurements;
+    if (prodMeasurements) {
+      setIncludeMeasurements(true);
+      try {
+        const parsed = JSON.parse(prodMeasurements);
+        const mObj: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          mObj[k] = v === 0 ? '' : formatPriceInput(v!.toString());
+        }
+        setSelectedMeasurements(mObj);
+      } catch (e) {
+        setSelectedMeasurements({});
+      }
+      
+      const prodMeasurementCosts = (product as any).measurementCostPrices;
+      if (prodMeasurementCosts) {
+        try {
+          const parsedCosts = JSON.parse(prodMeasurementCosts);
+          const costObj: Record<string, string> = {};
+          for (const [k, v] of Object.entries(parsedCosts)) {
+            costObj[k] = v === 0 ? '' : formatPriceInput(v!.toString());
+          }
+          setSelectedMeasurementCosts(costObj);
+        } catch (e) {
+          setSelectedMeasurementCosts({});
+        }
+      } else {
+        setSelectedMeasurementCosts({});
+      }
+    } else {
+      setIncludeMeasurements(false);
+      setSelectedMeasurements({});
+      setSelectedMeasurementCosts({});
+    }
+
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -768,6 +875,124 @@ export default function AdminWears() {
                 {Object.keys(sizeQuantities).length > 0 && (
                   <div className="text-xs font-bold text-purple-700 pt-2 border-t border-purple-200">
                     Total Stock: {Object.values(sizeQuantities).reduce((a, b) => a + (parseInt(b as any) || 0), 0)} | Selected: {Object.keys(sizeQuantities).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isMaterialGroup && (
+              <div className="space-y-2 mb-6">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                  <input
+                    type="checkbox"
+                    checked={includeMeasurements}
+                    onChange={(e) => setIncludeMeasurements(e.target.checked)}
+                    className="size-4 accent-purple-600"
+                  />
+                  Add Material Measurements (Yards, Trouser lengths)
+                </label>
+
+                {includeMeasurements && (
+                  <div className="space-y-4 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-bold block">Available Measurements (tick to add)</label>
+
+                    {/* Yards Measurements */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Yards</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {materialMeasurements.map(m => (
+                          <div key={`ym-${m}`} className={`flex flex-col gap-1.5 p-2 rounded border text-xs transition-colors ${m in selectedMeasurements ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`}>
+                            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleMeasurement(m)}>
+                              <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-purple-600 pointer-events-none" />
+                              <span className="font-bold">{m}</span>
+                            </div>
+                            {m in selectedMeasurements && m !== '1 yard' && (
+                              <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-purple-800">Sell: ₦</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Price"
+                                    value={selectedMeasurements[m]}
+                                    onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full p-1.5 rounded border border-purple-300 bg-white text-xs font-bold focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 outline-none"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-amber-700">Cost: ₦</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Cost"
+                                    value={selectedMeasurementCosts[m] || ''}
+                                    onChange={e => setMeasurementCost(m, formatPriceInput(e.target.value))}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full p-1.5 rounded border border-amber-300 bg-white text-xs font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {m in selectedMeasurements && m === '1 yard' && (
+                              <span className="text-[10px] font-bold text-purple-700 italic">Uses default product price & cost</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Trouser Lengths */}
+                    <div>
+                      <p className="text-xs font-black text-purple-800 mb-1.5">Trouser Lengths</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {trouserMeasurements.map(m => (
+                          <div key={`tm-${m}`} className={`flex flex-col gap-1.5 p-2 rounded border text-xs transition-colors ${m in selectedMeasurements ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`}>
+                            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleMeasurement(m)}>
+                              <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-purple-600 pointer-events-none" />
+                              <span className="font-bold">{m}</span>
+                            </div>
+                            {m in selectedMeasurements && (
+                              <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-purple-800">Sell: ₦</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Price"
+                                    value={selectedMeasurements[m]}
+                                    onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full p-1.5 rounded border border-purple-300 bg-white text-xs font-bold focus:border-purple-500 focus:ring-1 focus:ring-purple-500/30 outline-none"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-amber-700">Cost: ₦</span>
+                                  <input
+                                    type="text"
+                                    placeholder="Cost"
+                                    value={selectedMeasurementCosts[m] || ''}
+                                    onChange={e => setMeasurementCost(m, formatPriceInput(e.target.value))}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full p-1.5 rounded border border-amber-300 bg-white text-xs font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {Object.keys(selectedMeasurements).length > 0 && (
+                      <div className="text-xs font-bold text-purple-700 pt-2 border-t border-purple-200 space-y-1">
+                        <p>Selected Measurements:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(selectedMeasurements).map(([m, p]) => (
+                            <span key={m} className="inline-flex items-center gap-1 bg-purple-200/60 px-2 py-0.5 rounded-full">
+                              {m}{m === '1 yard' ? ' — default price' : p ? ` — ₦${p}` : ' (no price)'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

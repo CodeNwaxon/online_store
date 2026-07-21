@@ -131,16 +131,30 @@ export async function GET(request: Request) {
         const flagKey = `day${daysLate}`;
         if (!lateFlags[flagKey]) {
           const daysLeft = 6 - daysLate; // 5, 4, 3, 2, 1
+          const msg = `You have ${daysLeft} day${daysLeft > 1 ? 's' : ''} of grace period remaining before a ${lateFeePercent}% late fee penalty is applied.`;
+          
           emailsToSend.push(
             sendEmail({
               to: customerEmail,
               subject: `Urgent: Installment Payment Overdue (${daysLeft} day${daysLeft > 1 ? 's' : ''} grace left)`,
               html: `<p>Hi ${loan.customerName || 'there'},</p>
               <p>Your installment payment of ₦${pendingPayment.amount.toLocaleString()} for <strong>${loan.productName}</strong> was due on ${new Date(deadline).toDateString()}.</p>
-              <p>You have <strong>${daysLeft} day${daysLeft > 1 ? 's' : ''} of grace period remaining</strong> before a ${lateFeePercent}% late fee penalty is applied to your remaining balance.</p>
+              <p>${msg}</p>
               <p>Please log into your dashboard and make the payment immediately to avoid extra charges.</p>`
             }).then(() => adminDb.collection('installments').doc(doc.id).update({ [`lateFlags.${flagKey}`]: true }))
           );
+
+          if (loan.userId) {
+            emailsToSend.push(
+              adminDb.collection('broadcasts').add({
+                title: 'Installment Overdue',
+                message: msg,
+                type: 'delivery', // using delivery maps to personal notification
+                customerUid: loan.userId,
+                createdAt: new Date().toISOString()
+              })
+            );
+          }
         }
       } else if (daysLate >= 6) {
         // Day 6 penalty application + Monthly reminders
@@ -169,6 +183,8 @@ export async function GET(request: Request) {
             payments: updatedPayments
           };
 
+          const msg = `Your grace period has expired. A ${lateFeePercent}% late fee has been applied. Your new monthly payment is ₦${newMonthlyPayment.toLocaleString()}.`;
+
           emailsToSend.push(
             sendEmail({
               to: customerEmail,
@@ -180,6 +196,18 @@ export async function GET(request: Request) {
               <p>Please log into your dashboard and make the payment as soon as possible.</p>`
             }).then(() => adminDb.collection('installments').doc(doc.id).update(updateObj))
           );
+
+          if (loan.userId) {
+            emailsToSend.push(
+              adminDb.collection('broadcasts').add({
+                title: 'Late Fee Applied',
+                message: msg,
+                type: 'delivery',
+                customerUid: loan.userId,
+                createdAt: new Date().toISOString()
+              })
+            );
+          }
         } else {
           // It's been applied. Check if we need to send a monthly reminder (every 30 days)
           const lastReminder = lateFlags.lastPenaltyReminder || 0;
@@ -194,6 +222,18 @@ export async function GET(request: Request) {
                 <p>Please settle this immediately.</p>`
               }).then(() => adminDb.collection('installments').doc(doc.id).update({ 'lateFlags.lastPenaltyReminder': now }))
             );
+
+            if (loan.userId) {
+              emailsToSend.push(
+                adminDb.collection('broadcasts').add({
+                  title: 'Overdue Payment Reminder',
+                  message: `Your installment payment is severely overdue. Current monthly payment: ₦${loan.monthlyAmount.toLocaleString()}`,
+                  type: 'delivery',
+                  customerUid: loan.userId,
+                  createdAt: new Date().toISOString()
+                })
+              );
+            }
           }
         }
       }
