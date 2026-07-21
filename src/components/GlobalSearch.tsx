@@ -136,7 +136,7 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
       const expandedQuery = Array.from(searchTermsSet).join(' ');
       
       const fuse = new Fuse(itemsToSearch, {
-        keys: ['name', 'category', 'group', 'manufacturer'],
+        keys: ['name', 'category', 'group', 'manufacturer', 'productCode'],
         threshold: 0.3,
         ignoreLocation: true
       });

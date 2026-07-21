@@ -55,7 +55,7 @@ function FurnitureContent() {
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
     const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'category', 'description'],
+      keys: ['name', 'category', 'description', 'productCode'],
       threshold: 0.3,
       ignoreLocation: true
     });

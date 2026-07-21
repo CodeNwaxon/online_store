@@ -450,7 +450,7 @@ export default function AdminFoods() {
   const filteredFoods = (() => {
     if (!searchQuery.trim()) return baseFilteredFoods;
     const fuse = new Fuse(baseFilteredFoods, {
-      keys: ['name', 'group', 'category'],
+      keys: ['name', 'group', 'category', 'productCode'],
       threshold: 0.3,
       ignoreLocation: true
     });

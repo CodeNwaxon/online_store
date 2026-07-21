@@ -140,7 +140,7 @@ function ShopContent() {
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
     const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'manufacturer'],
+      keys: ['name', 'group', 'category', 'manufacturer', 'productCode'],
       threshold: 0.3,
       ignoreLocation: true
     });

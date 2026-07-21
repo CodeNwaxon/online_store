@@ -517,7 +517,7 @@ export default function AdminWears() {
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
     const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category'],
+      keys: ['name', 'group', 'category', 'productCode'],
       threshold: 0.3,
       ignoreLocation: true
     });

@@ -80,7 +80,7 @@ function FoodsContent() {
   const filteredFoods = useMemo(() => {
     if (!searchQuery.trim()) return baseFilteredFoods;
     const fuse = new Fuse(baseFilteredFoods, {
-      keys: ['name', 'group', 'category', 'description'],
+      keys: ['name', 'group', 'category', 'description', 'productCode'],
       threshold: 0.3,
       ignoreLocation: true
     });
