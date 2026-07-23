@@ -226,7 +226,7 @@ export default function AdminOrders() {
               <div class="divider"></div>
               ${order.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -563,7 +563,7 @@ export default function AdminOrders() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h5 className="font-black text-sm truncate">
-                            {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
+                            {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>}
                           </h5>
                           <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
 

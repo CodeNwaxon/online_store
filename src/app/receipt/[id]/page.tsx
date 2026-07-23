@@ -95,7 +95,7 @@ export default function ReceiptPage() {
           {order.items?.map((item: any, idx: number) => (
             <div key={idx} className="flex justify-between mb-3 text-xs">
               <span className="text-slate-600 max-w-[190px]">
-                {item.name} {item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})` : ''} x{item.quantity}
+                {item.name} {item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x{item.quantity}
               </span>
               <span className="font-black">₦{(item.price * item.quantity).toLocaleString()}</span>
             </div>
