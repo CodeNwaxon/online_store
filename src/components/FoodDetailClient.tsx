@@ -24,6 +24,7 @@ export default function FoodDetailClient() {
   const { isApprovedPartner, partnerData } = usePartner();
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
+  const [tempSelectedColor, setTempSelectedColor] = useState('');
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
@@ -138,6 +139,15 @@ export default function FoodDetailClient() {
     }
   }
   const measurementKeys = Object.keys(parsedMeasurements);
+
+  // Parse colors
+  const colors = food.color ? food.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+
+  const getContrastTextColor = (colorName: string) => {
+    const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+    if (lightColors.some(lc => colorName.toLowerCase().includes(lc))) return 'text-black';
+    return 'text-white';
+  };
 
   const whatsappMessage = `I want to order ${food.name}, priced at ₦${food.price.toLocaleString()} from your Food Market.`;
   const whatsappUrl = `https://wa.me/${contactNumber}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -282,9 +292,10 @@ export default function FoodDetailClient() {
                 <button
                   className={`text-base md:flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 p-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg`}
                   onClick={async () => {
-                    if (sizeKeys.length > 0 || measurementKeys.length > 0) {
+                    if (sizeKeys.length > 0 || measurementKeys.length > 0 || colors.length > 0) {
                       setShowSizeOverlay(true);
                       setTempSelectedMeasurement('');
+                      setTempSelectedColor(colors.length > 0 ? 'Any Color' : '');
                       return;
                     }
 
@@ -330,7 +341,7 @@ export default function FoodDetailClient() {
             )}
 
             {/* Size/Measurement Selection Overlay */}
-            {showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && (
+            {showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0 || colors.length > 0) && (
               <div
                 className="fixed inset-0 bg-background/60 backdrop-blur-[3px] z-50 p-4 flex items-center justify-center animate-in fade-in duration-200"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
@@ -345,6 +356,79 @@ export default function FoodDetailClient() {
                   >
                     ✕
                   </button>
+
+                  {/* Color Selection */}
+                  {colors.length > 0 && (
+                    <>
+                      <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Color</h3>
+                      <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40 mb-4">
+                        <button
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
+                        >
+                          Any Color
+                        </button>
+                        {colors.map((c: string) => (
+                          <button
+                            key={c}
+                            className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor(c); }}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                      {sizeKeys.length === 0 && measurementKeys.length === 0 && (
+                        <div className="mt-2 pt-4 border-t border-border">
+                          <button
+                            className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? 'bg-green-600 hover:bg-green-700 text-white shadow-md' : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
+                            style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                            disabled={!tempSelectedColor}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!tempSelectedColor) return;
+                              const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                              const existing = cartItems.find(item => item.id === food.id && item.selectedColor === finalColor);
+                              const currentInCart = existing ? existing.quantity : 0;
+                              try {
+                                const docSnap = await getDoc(doc(db, 'foods', food.id));
+                                const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (food.quantity ?? 0);
+                                if (currentInCart + 1 > liveQty) {
+                                  toast.error(`Only ${liveQty} available in stock`, { duration: 3000 });
+                                  return;
+                                }
+                              } catch (err) {
+                                if (currentInCart + 1 > (food.quantity ?? 0)) {
+                                  toast.error(`Only ${food.quantity ?? 0} available in stock`, { duration: 3000 });
+                                  return;
+                                }
+                              }
+                              const cartProduct: any = {
+                                id: food.id,
+                                name: food.name,
+                                price: food.price,
+                                image: food.images?.[0] || '/images/placeholder.png',
+                                category: 'Food',
+                                description: food.description,
+                              };
+                              if (finalColor) cartProduct.selectedColor = finalColor;
+                              addItem(cartProduct as any);
+                              toast.success(`${food.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {
+                                style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                                position: 'bottom-center',
+                                duration: 2000,
+                              });
+                              setShowSizeOverlay(false);
+                            }}
+                          >
+                            Add to Cart
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                   
                   {sizeKeys.length > 0 && (
                     <>
@@ -422,7 +506,8 @@ export default function FoodDetailClient() {
                             e.stopPropagation();
                             if (!tempSelectedMeasurement) return;
 
-                            const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement);
+                            const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement && item.selectedColor === finalColor);
                             const currentInCart = existing ? existing.quantity : 0;
                             if (currentInCart + 1 > (food.quantity ?? 0)) {
                               toast.error(`Only ${food.quantity ?? 0} available in stock`);
@@ -431,7 +516,7 @@ export default function FoodDetailClient() {
                             const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
                             const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
 
-                            addItem({
+                            const cartProduct: any = {
                               id: food.id,
                               name: food.name,
                               price: measurePrice,
@@ -440,8 +525,10 @@ export default function FoodDetailClient() {
                               description: food.description,
                               selectedMeasurement: tempSelectedMeasurement,
                               measurementPrice: measurePrice,
-                            } as any);
-                            toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {
+                            };
+                            if (finalColor) cartProduct.selectedColor = finalColor;
+                            addItem(cartProduct as any);
+                            toast.success(`${food.name} (${tempSelectedMeasurement}${finalColor ? ` - ${finalColor}` : ''}) added to cart`, {
                               style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                               position: 'bottom-center',
                               duration: 2000,

@@ -1284,6 +1284,14 @@ export default function AdminManagement() {
                     {shippingMaxDaysInput || 3} days
                   </span>
                 </div>
+                <div className="flex items-center justify-between text-sm pt-2">
+                  <span className="font-medium flex items-center gap-1.5">
+                    🆕 New Tag Duration
+                  </span>
+                  <span className="font-bold tabular-nums text-primary">
+                    {newTagDurationDaysInput || 5} days
+                  </span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">

@@ -49,6 +49,9 @@ export default function ProductDetailClient() {
   const { isApprovedPartner, partnerData } = usePartner();
   const [installmentMinAmount, setInstallmentMinAmount] = useState<number>(20000);
 
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('');
+
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037'); // Default fallback
 
@@ -291,13 +294,17 @@ export default function ProductDetailClient() {
                 </div>
               );
             })()}
-            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${theme.accent}`}>
-              {product.name}
-              {(product as any).ram && (product as any).rom && (
-                <span className="text-black text-sm md:text-base font-normal ml-2">
+            <h1 className={`text-xl md:text-3xl font-bold mb-2 flex items-baseline flex-wrap gap-x-2 ${theme.accent}`}>
+              <span>{product.name}</span>
+              {product.ramRom ? (
+                <span className="text-black text-xs md:text-sm font-normal">
+                  ({product.ramRom})
+                </span>
+              ) : (product as any).ram && (product as any).rom ? (
+                <span className="text-black text-xs md:text-sm font-normal">
                   ({(product as any).ram} / {(product as any).rom})
                 </span>
-              )}
+              ) : null}
             </h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
@@ -363,6 +370,15 @@ export default function ProductDetailClient() {
                 <button
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
+                    if (product.color && product.color.trim()) {
+                      const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
+                      if (colors.length > 0) {
+                        setShowColorModal(true);
+                        setSelectedColor('Any Color');
+                        return;
+                      }
+                    }
+
                     const toastId = toast.loading(`Adding ${product.name}...`);
                     const existing = cartItems.find(item => item.id === product.id);
                     const currentInCart = existing ? existing.quantity : 0;
@@ -437,6 +453,104 @@ export default function ProductDetailClient() {
           warrantyValue={product.warranty}
         />
       </div>
+
+      {/* Color Selection Overlay — matches ProductCard overlay */}
+      {showColorModal && (() => {
+        const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+        const getContrastTextColor = (colorName: string) => {
+          const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+          if (lightColors.some(lc => colorName.toLowerCase().includes(lc))) return 'text-black';
+          return 'text-white';
+        };
+        return colors.length > 0 ? (
+          <div
+            className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowColorModal(false); setSelectedColor(''); }}
+          >
+            <div
+              className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[400px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowColorModal(false); setSelectedColor(''); }}
+                className="absolute top-3 right-3 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+              >
+                ✕
+              </button>
+
+              <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Color</h3>
+              <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+                <button
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${selectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor('Any Color'); }}
+                >
+                  Any Color
+                </button>
+                {colors.map((c: string) => (
+                  <button
+                    key={c}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${selectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    style={selectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor(c); }}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 pt-2 border-t border-border">
+                <button
+                  className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!selectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (selectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(selectedColor)} hover:opacity-90`)}`}
+                  style={selectedColor && selectedColor !== 'Any Color' ? { backgroundColor: selectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                  disabled={!selectedColor}
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!selectedColor) return;
+
+                    const finalColor = selectedColor === 'Any Color' ? undefined : selectedColor;
+
+                    const toastId = toast.loading(`Adding ${product.name}...`, {
+                      position: 'bottom-center',
+                      style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' }
+                    });
+
+                    const existing = cartItems.find(item => item.id === product.id && item.selectedColor === finalColor);
+                    const currentInCart = existing ? existing.quantity : 0;
+                    try {
+                      const docSnap = await getDoc(doc(db, 'products', product.id));
+                      const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                      if (currentInCart + 1 > liveQty) {
+                        toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
+                        return;
+                      }
+                    } catch (err) {
+                      if (currentInCart + 1 > (product.quantity ?? 0)) {
+                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                        return;
+                      }
+                    }
+                    const cartProduct = { ...product } as any;
+                    if (finalColor) {
+                      cartProduct.selectedColor = finalColor;
+                    }
+                    addItem(cartProduct);
+                    toast.success(`${product.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {
+                      id: toastId,
+                      style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                      position: 'bottom-center',
+                      duration: 2000,
+                    });
+                    setShowColorModal(false);
+                    setSelectedColor('');
+                  }}
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {/* Related Products Carousel (Independent Container) */}
       <div className="max-w-[1600px] mx-auto w-full px-2 md:px-6 mt-12">
