@@ -14,7 +14,7 @@ interface StoreRatingStarsProps {
 export default function StoreRatingStars({
   salesCount,
   textColor = 'text-amber-400',
-  size = 16,
+  size = 14,
   showSalesText = true,
   className = '',
 }: StoreRatingStarsProps) {
