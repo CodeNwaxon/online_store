@@ -141,8 +141,17 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           let showNewTag = false;
           if ((product as any).isNewItem === true) {
              showNewTag = true;
-          } else if ((product as any).isNewItem !== false) {
-             const createdAtTime = (product as any).createdAt ? new Date((product as any).createdAt).getTime() : 0;
+          } else {
+             let createdAtTime = 0;
+             if ((product as any).createdAt) {
+                if (typeof (product as any).createdAt === 'object' && 'seconds' in (product as any).createdAt) {
+                   createdAtTime = (product as any).createdAt.seconds * 1000;
+                } else if (typeof (product as any).createdAt.toMillis === 'function') {
+                   createdAtTime = (product as any).createdAt.toMillis();
+                } else {
+                   createdAtTime = new Date((product as any).createdAt).getTime();
+                }
+             }
              if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
                  showNewTag = true;
              }

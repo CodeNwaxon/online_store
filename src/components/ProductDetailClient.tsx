@@ -256,6 +256,39 @@ export default function ProductDetailClient() {
             <div className={`text-sm font-semibold uppercase mb-2 ${theme.accent}`}>
               {product.group} / {product.category}
             </div>
+            {(() => {
+              let showNewTag = false;
+              let createdAtTime = 0;
+              if (product.createdAt) {
+                if (typeof product.createdAt === 'object' && 'seconds' in product.createdAt) {
+                  createdAtTime = (product.createdAt as any).seconds * 1000;
+                } else if (typeof (product.createdAt as any).toMillis === 'function') {
+                  createdAtTime = (product.createdAt as any).toMillis();
+                } else {
+                  createdAtTime = new Date(product.createdAt).getTime();
+                }
+              }
+              if (product.isNewItem === true) {
+                showNewTag = true;
+              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+                showNewTag = true;
+              }
+              
+              return (
+                <div className="mb-2 flex items-center gap-2 flex-wrap">
+                  {showNewTag && (
+                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
+                      NEW
+                    </span>
+                  )}
+                  {createdAtTime > 0 && (
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
+                      Added on: {new Date(createdAtTime).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             <h1 className={`text-xl md:text-3xl font-bold mb-2 ${theme.accent}`}>{product.name}</h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
@@ -370,6 +403,9 @@ export default function ProductDetailClient() {
               <div><strong>Category:</strong> {product.category}</div>
               {product.manufacturer && (
                 <div><strong>Manufacturer:</strong> {product.manufacturer}</div>
+              )}
+              {product.ramRom && (
+                <div><strong>RAM/ROM:</strong> {product.ramRom} GB</div>
               )}
               {product.warranty && (
                 <div className="flex items-center gap-2">

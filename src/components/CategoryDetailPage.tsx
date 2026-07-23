@@ -256,6 +256,39 @@ export default function CategoryDetailPage({
             <div className={`text-sm font-semibold uppercase mb-2 ${themeConfig.accent}`}>
               {product.group} / {product.category}
             </div>
+            {(() => {
+              let showNewTag = false;
+              let createdAtTime = 0;
+              if ((product as any).createdAt) {
+                if (typeof (product as any).createdAt === 'object' && 'seconds' in (product as any).createdAt) {
+                  createdAtTime = (product as any).createdAt.seconds * 1000;
+                } else if (typeof (product as any).createdAt.toMillis === 'function') {
+                  createdAtTime = (product as any).createdAt.toMillis();
+                } else {
+                  createdAtTime = new Date((product as any).createdAt).getTime();
+                }
+              }
+              if ((product as any).isNewItem === true) {
+                showNewTag = true;
+              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+                showNewTag = true;
+              }
+              
+              return (
+                <div className="mb-2 flex items-center gap-2 flex-wrap">
+                  {showNewTag && (
+                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
+                      NEW
+                    </span>
+                  )}
+                  {createdAtTime > 0 && (
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
+                      Added on: {new Date(createdAtTime).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             <h1 className={`text-xl md:text-3xl font-bold mb-2 ${themeConfig.accent}`}>{product.name}</h1>
 
             <div className={`text-2xl font-bold mb-8 ${themeConfig.accent} flex items-center gap-3`}>
@@ -584,6 +617,9 @@ export default function CategoryDetailPage({
             <div className="mt-8 p-6 bg-muted rounded-[var(--radius)] text-sm space-y-2">
               <div><strong>Brand / Group:</strong> {product.group}</div>
               <div><strong>Category:</strong> {product.category}</div>
+              {(product as any).ramRom && (
+                <div><strong>RAM/ROM:</strong> {(product as any).ramRom} GB</div>
+              )}
             </div>
           </div>
         </div>

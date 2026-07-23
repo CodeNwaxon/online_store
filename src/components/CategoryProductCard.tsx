@@ -167,6 +167,29 @@ export default function CategoryProductCard({
             <span className="font-bold text-gray-800 dark:text-zinc-200">{sizeLabel}</span>
           </div>
         )}
+        {(() => {
+          let showNewTag = false;
+          let createdAtTime = 0;
+          if ((product as any).createdAt) {
+             if (typeof (product as any).createdAt === 'object' && 'seconds' in (product as any).createdAt) {
+                createdAtTime = (product as any).createdAt.seconds * 1000;
+             } else if (typeof (product as any).createdAt.toMillis === 'function') {
+                createdAtTime = (product as any).createdAt.toMillis();
+             } else {
+                createdAtTime = new Date((product as any).createdAt).getTime();
+             }
+          }
+          if ((product as any).isNewItem === true) {
+             showNewTag = true;
+          } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+             showNewTag = true;
+          }
+          return showNewTag ? (
+            <span className={`absolute top-0.5 ${sizeLabel ? 'left-[65px] md:left-[70px]' : 'left-0.5'} bg-red-600 text-white px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-30 shadow-sm flex items-center animate-pulse`}>
+              NEW
+            </span>
+          ) : null;
+        })()}
         {(product.quantity ?? 0) <= 0 && (
           <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 p-2 text-center select-none">
             <div className="bg-red-600/90 text-white font-black text-[10px] md:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full shadow-lg border border-white/20 transform rotate-[-5deg] animate-pulse">

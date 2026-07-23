@@ -242,8 +242,17 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
           let showNewTag = false;
           if ((food as any).isNewItem === true) {
              showNewTag = true;
-          } else if ((food as any).isNewItem !== false) {
-             const createdAtTime = food.createdAt ? new Date(food.createdAt).getTime() : 0;
+          } else {
+             let createdAtTime = 0;
+             if (food.createdAt) {
+                if (typeof food.createdAt === 'object' && 'seconds' in food.createdAt) {
+                   createdAtTime = (food.createdAt as any).seconds * 1000;
+                } else if (typeof (food.createdAt as any).toMillis === 'function') {
+                   createdAtTime = (food.createdAt as any).toMillis();
+                } else {
+                   createdAtTime = new Date(food.createdAt).getTime();
+                }
+             }
              if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
                  showNewTag = true;
              }
