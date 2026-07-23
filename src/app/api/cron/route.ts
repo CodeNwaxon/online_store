@@ -4,6 +4,14 @@ import { sendEmail } from '@/lib/sendEmail';
 
 export async function GET(request: Request) {
   try {
+    // Security check: Verify Authorization header against CRON_SECRET
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized cron trigger' }, { status: 401 });
+    }
+
     // 1. Process Abandoned Carts (Pending Transactions)
     const pendingSnap = await adminDb.collection('pending_transactions')
       .where('status', '==', 'pending')

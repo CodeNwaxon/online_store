@@ -144,11 +144,11 @@ export default function AdminOrders() {
 
         const receiptUrl = `${window.location.origin}/receipt/${orderToNotify.id}`;
         const isShip = orderToNotify.deliveryMethod === 'ship';
-        const deliveryNote = isShip 
+        const deliveryNote = isShip
           ? `\n\n📌 *Delivery Note:* Estimated delivery time is max *${shippingMaxDays} business ${shippingMaxDays === 1 ? 'day' : 'days'}* (items often arrive earlier!). If your order is not delivered within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you are guaranteed a full refund.`
           : '';
 
-        const waMessage = `Hello ${orderToNotify.customerName},\n\nWarm greetings from our store! 🌟\n\nYour order has been *delivered* and should arrive shortly!${deliveryNote}\n\nYou can view and download your *Customer's Copy Receipt* here:\n${receiptUrl}\n\nThank you for shopping with us!`;
+        const waMessage = `Hello ${orderToNotify.customerName},\n\nWarm greetings from *NOMO STOREZ* !!! 🌟\n\nYour order has been *delivered* and should arrive shortly!${deliveryNote}\n\nYou can view and download your *Customer's Copy Receipt* here:\n${receiptUrl}\n\nThank you for shopping with us!`;
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
 
         window.open(waUrl, '_blank');
@@ -252,10 +252,10 @@ export default function AdminOrders() {
 
   // Maps admin route paths to the Firestore collection names used at checkout
   const ROUTE_TO_COLLECTION: Record<string, string> = {
-    '/ADMIN/PRODUCTS':      'products',
-    '/ADMIN/FOODS':         'foods',
-    '/ADMIN/WEARS':         'wears',
-    '/ADMIN/COSMETICS':     'cosmetics',
+    '/ADMIN/PRODUCTS': 'products',
+    '/ADMIN/FOODS': 'foods',
+    '/ADMIN/WEARS': 'wears',
+    '/ADMIN/COSMETICS': 'cosmetics',
     '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
   };
 
