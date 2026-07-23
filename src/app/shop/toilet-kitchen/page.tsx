@@ -9,6 +9,9 @@ import Link from 'next/link';
 import Fuse from 'fuse.js';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
+import { useLikeStore } from '@/store/useLikeStore';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 
 function ToiletKitchenContent() {
   const searchParams = useSearchParams();
@@ -17,9 +20,12 @@ function ToiletKitchenContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
+  const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(24);
+  const { likedProductIds } = useLikeStore();
+  const { storeTypeSales } = useStoreSales();
 
   useEffect(() => {
     const q = query(collection(db, 'toilet_kitchen'), orderBy('updatedAt', 'desc'));
@@ -52,10 +58,29 @@ function ToiletKitchenContent() {
     }
   }, [selectedGroup, products]);
 
+  const priceFilters = [
+    { label: 'All Prices', value: 'All' },
+    { label: 'My favourite', value: 'favourite' },
+    { label: 'High-End / Expensive (> 100,000)', value: 'high' },
+    { label: '50,000 - 100,000', value: 'mid-high' },
+    { label: 'Mid-Range (10,000 - 50,000)', value: 'mid' },
+    { label: 'Low Price / Below 10,000', value: 'low' },
+  ];
+
   const baseFilteredProducts = products.filter(p => {
     const matchesGroup = selectedGroup === 'All' || p.group === selectedGroup;
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    return matchesGroup && matchesCategory;
+
+    let matchesPrice = true;
+    if (selectedPriceFilter !== 'All') {
+      if (selectedPriceFilter === 'favourite') matchesPrice = !!likedProductIds[p.id];
+      else if (selectedPriceFilter === 'high' && p.price <= 100000) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid-high' && (p.price < 50000 || p.price > 100000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid' && (p.price < 10000 || p.price >= 50000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'low' && p.price >= 10000) matchesPrice = false;
+    }
+
+    return matchesGroup && matchesCategory && matchesPrice;
   });
 
   const filteredProducts = (() => {
@@ -116,6 +141,7 @@ function ToiletKitchenContent() {
           <div>
             <h1 className="text-2xl md:text-5xl font-black mb-0 md:mb-4 flex items-center gap-4"><FaBoxes className="text-teal-300" /> Toilet & Kitchen</h1>
             <p className="text-xs md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
+            <StoreRatingStars salesCount={storeTypeSales.toilet_kitchen} textColor="text-teal-100" className="mt-2" />
           </div>
           <button 
             onClick={() => {
@@ -150,9 +176,19 @@ function ToiletKitchenContent() {
               ))}
             </div>
             <div className="grid grid-cols-3 md:flex flex-row gap-2 md:gap-3 w-full md:w-auto max-md:px-1 flex-1 md:max-w-xl">
-              <div className="col-span-3 relative flex-1 min-w-[200px]">
+              <div className="col-span-2 md:col-span-1 relative flex-1 min-w-[200px]">
                 <input type="text" placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full py-2.5 pr-4 pl-8 md:pl-10 rounded-md md:rounded-xl border border-gray-200 bg-slate-50 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all text-xs md:text-sm" />
                 <FaSearch size={16} className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
+              <div className="col-span-1 relative w-full sm:w-40">
+                <select
+                  value={selectedPriceFilter}
+                  onChange={(e) => setSelectedPriceFilter(e.target.value)}
+                  className="w-full appearance-none px-4 py-2.5 pr-10 rounded-md md:rounded-xl border border-gray-200 bg-slate-50 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none text-xs md:text-sm font-semibold text-gray-700 cursor-pointer"
+                >
+                  {priceFilters.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+                <FaChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
               </div>
             </div>
           </div>

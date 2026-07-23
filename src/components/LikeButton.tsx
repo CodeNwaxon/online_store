@@ -71,9 +71,9 @@ export default function LikeButton({ productId }: LikeButtonProps) {
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleLike(); }}
         className={`flex items-center transition-transform duration-200 hover:scale-125 ${isLiked ? 'text-[#ff4d4f]' : 'text-muted-foreground'}`}
       >
-        {isLiked ? <FaHeart size={18} /> : <FaRegHeart size={18} />}
+        {isLiked ? <FaHeart size={12} /> : <FaRegHeart size={12} />}
       </button>
-      <span className="text-[0.85rem] text-muted-foreground font-semibold">
+      <span className="text-[9px] text-muted-foreground font-semibold">
         {likes}
       </span>
     </div>

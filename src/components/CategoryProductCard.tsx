@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
+import LikeButton from './LikeButton';
 
 export interface CategoryProduct {
   id: string;
@@ -250,6 +251,7 @@ export default function CategoryProductCard({
           <div className="text-[0.65rem] text-muted-foreground dark:text-zinc-400 uppercase tracking-wider">
             {product.category}
           </div>
+          {!isAdmin && <LikeButton productId={product.id} />}
         </div>
 
         <div className="flex flex-col mb-0.5">

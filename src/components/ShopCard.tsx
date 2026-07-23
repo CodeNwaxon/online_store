@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { createPortal } from 'react-dom';
+import LikeButton from './LikeButton';
 
 export interface ShopProduct {
   id: string;
@@ -283,6 +284,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
             <h3 className="capitalize text-lg max-md:text-base font-bold text-gray-900 leading-tight line-clamp-2">
               {food.name}
             </h3>
+            {!isAdmin && <LikeButton productId={food.id} />}
           </div>
           {food.description && (
             <button

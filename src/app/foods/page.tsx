@@ -8,6 +8,9 @@ import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown } fro
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import Fuse from 'fuse.js';
+import { useLikeStore } from '@/store/useLikeStore';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 
 function FoodsContent() {
   const searchParams = useSearchParams();
@@ -20,6 +23,8 @@ function FoodsContent() {
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
   const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
   const [visibleCount, setVisibleCount] = useState(86);
+  const { likedProductIds } = useLikeStore();
+  const { storeTypeSales } = useStoreSales();
 
   useEffect(() => {
     const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
@@ -50,6 +55,7 @@ function FoodsContent() {
 
   const priceFilters = [
     { label: 'All Prices', value: 'All' },
+    { label: 'My favourite', value: 'favourite' },
     { label: 'High-End / Expensive (> 100,000)', value: 'high' },
     { label: '50,000 - 100,000', value: 'mid-high' },
     { label: 'Mid-Range (10,000 - 50,000)', value: 'mid' },
@@ -67,6 +73,7 @@ function FoodsContent() {
 
       // Price
       if (selectedPriceFilter !== 'All') {
+        if (selectedPriceFilter === 'favourite' && !likedProductIds[f.id]) return false;
         if (selectedPriceFilter === 'high' && f.price <= 100000) return false;
         if (selectedPriceFilter === 'mid-high' && (f.price < 50000 || f.price > 100000)) return false;
         if (selectedPriceFilter === 'mid' && (f.price < 10000 || f.price >= 50000)) return false;
@@ -134,6 +141,7 @@ function FoodsContent() {
             <p className="text-xs md:text-xl text-green-100 max-w-2xl">
               Fresh, delicious, and healthy choices curated just for you. Browse our premium selection.
             </p>
+            <StoreRatingStars salesCount={storeTypeSales.food} textColor="text-green-100" className="mt-2" />
           </div>
           <button 
             onClick={() => {

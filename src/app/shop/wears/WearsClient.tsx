@@ -10,6 +10,9 @@ import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProdu
 import Link from 'next/link';
 import Fuse from 'fuse.js';
 import { toast } from 'react-hot-toast';
+import { useLikeStore } from '@/store/useLikeStore';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 
 function WearsPageContent() {
   const searchParams = useSearchParams();
@@ -31,6 +34,9 @@ function WearsPageContent() {
   const [groups, setGroups] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(86);
+  const { likedProductIds } = useLikeStore();
+  const { getVendorSales, storeTypeSales } = useStoreSales();
+  const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.wears;
 
   useEffect(() => {
     if (storeSlug && storeLoading) return; // Wait for store data to be fetched
@@ -103,6 +109,7 @@ function WearsPageContent() {
 
   const priceFilters = [
     { label: 'All Prices', value: 'All' },
+    { label: 'My favourite', value: 'favourite' },
     { label: 'High-End / Expensive (> 100,000)', value: 'high' },
     { label: '50,000 - 100,000', value: 'mid-high' },
     { label: 'Mid-Range (10,000 - 50,000)', value: 'mid' },
@@ -155,10 +162,11 @@ function WearsPageContent() {
 
     let matchesPrice = true;
     if (selectedPriceFilter !== 'All') {
-      if (selectedPriceFilter === 'high' && p.price <= 100000) matchesPrice = false;
-      if (selectedPriceFilter === 'mid-high' && (p.price < 50000 || p.price > 100000)) matchesPrice = false;
-      if (selectedPriceFilter === 'mid' && (p.price < 10000 || p.price >= 50000)) matchesPrice = false;
-      if (selectedPriceFilter === 'low' && p.price >= 10000) matchesPrice = false;
+      if (selectedPriceFilter === 'favourite') matchesPrice = !!likedProductIds[p.id];
+      else if (selectedPriceFilter === 'high' && p.price <= 100000) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid-high' && (p.price < 50000 || p.price > 100000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid' && (p.price < 10000 || p.price >= 50000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'low' && p.price >= 10000) matchesPrice = false;
     }
 
     return matchesGroup && matchesCategory && matchesPrice;
@@ -269,6 +277,7 @@ function WearsPageContent() {
             <p className="text-xs md:text-xl text-purple-100 max-w-2xl">
               {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Explore our collection of trendy clothing, shoes, and stylish accessories.'}
             </p>
+            <StoreRatingStars salesCount={currentSalesCount} textColor="text-purple-100" className="mt-2" />
           </div>
           <button 
             onClick={() => {

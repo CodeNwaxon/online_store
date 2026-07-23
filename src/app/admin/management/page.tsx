@@ -16,10 +16,11 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown } from 'react-icons/fa';
+import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown, FaInfoCircle, FaStar } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
+import { useStarThresholds } from '@/hooks/useStarThresholds';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/PRODUCTS',
@@ -95,6 +96,34 @@ export default function AdminManagement() {
   // Special Store State
   const [editStoreAdminId, setEditStoreAdminId] = useState<string | null>(null);
   const [editStoreAdminEmail, setEditStoreAdminEmail] = useState('');
+
+  // Star Threshold State
+  const liveThresholds = useStarThresholds();
+  const [editableThresholds, setEditableThresholds] = useState<{[star: number]: number}>({ 1: 20, 2: 50, 3: 100, 4: 250, 5: 500 });
+  const [showThresholdConfirm, setShowThresholdConfirm] = useState(false);
+  const [thresholdSaveLoading, setThresholdSaveLoading] = useState(false);
+
+  // Sync editable thresholds when live values load
+  useEffect(() => {
+    if (liveThresholds) {
+      setEditableThresholds(liveThresholds as {[star: number]: number});
+    }
+  }, [liveThresholds]);
+
+  // Save star thresholds handler
+  const handleSaveThresholds = async () => {
+    setThresholdSaveLoading(true);
+    try {
+      await updateDoc(doc(db, 'settings', 'general'), { starThresholds: editableThresholds });
+      toast.success('Star thresholds updated successfully!');
+      setShowThresholdConfirm(false);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save star thresholds');
+    } finally {
+      setThresholdSaveLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Fetch current admins
@@ -1094,6 +1123,101 @@ export default function AdminManagement() {
             <FaSave /> Save CEO Profile
           </button>
         </section>
+
+        {/* STAR THRESHOLDS SECTION */}
+        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
+          <h2 className="text-lg md:text-xl font-bold mb-2 flex items-center gap-2">
+            <FaStar className="text-amber-400" /> Star Thresholds
+          </h2>
+          <p className="text-xs md:text-sm text-muted-foreground mb-6">
+            Set the number of successful sales required for each star rating. Changes apply in real-time across all store pages.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            {([1, 2, 3, 4, 5] as const).map((star) => (
+              <div key={star} className="flex flex-col">
+                <label className="text-xs md:text-sm font-bold mb-1.5 flex items-center gap-1.5">
+                  <span className="flex items-center gap-0.5">
+                    {Array.from({ length: star }).map((_, i) => (
+                      <FaStar key={i} className="text-amber-400" size={10} />
+                    ))}
+                  </span>
+                  {star} Star
+                  <span className="relative group">
+                    <FaInfoCircle className="text-muted-foreground cursor-help" size={12} />
+                    <span className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 w-44 bg-foreground text-background p-2 rounded shadow-lg text-[10px] text-center z-50 pointer-events-none">
+                      Minimum sales needed to earn a {star}-star rating.
+                    </span>
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-full p-2.5 rounded-md border border-border bg-background text-sm font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                  value={editableThresholds[star] ?? ''}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setEditableThresholds(prev => ({ ...prev, [star]: isNaN(val) ? 0 : val }));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            disabled={thresholdSaveLoading}
+            onClick={() => setShowThresholdConfirm(true)}
+            className="w-full md:w-auto bg-primary text-white px-8 py-3 rounded-md font-bold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <FaSave size={14} /> Save Thresholds
+          </button>
+        </section>
+
+        {/* STAR THRESHOLD CONFIRMATION MODAL */}
+        {showThresholdConfirm && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full border border-border animate-in fade-in zoom-in-95 duration-200">
+              <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+                <FaStar className="text-amber-400" /> Confirm Threshold Update
+              </h3>
+              <p className="text-xs text-muted-foreground mb-5">
+                Are you sure you want to update the star rating thresholds? This will take effect immediately across all store pages.
+              </p>
+
+              <div className="bg-muted/50 rounded-lg p-4 mb-6 space-y-2">
+                {([1, 2, 3, 4, 5] as const).map((star) => (
+                  <div key={star} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      {Array.from({ length: star }).map((_, i) => (
+                        <FaStar key={i} className="text-amber-400" size={11} />
+                      ))}
+                      <span className="ml-1">{star} Star</span>
+                    </span>
+                    <span className="font-bold tabular-nums">
+                      {editableThresholds[star] || 0} sales
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowThresholdConfirm(false)}
+                  className="px-5 py-2.5 bg-muted text-foreground rounded-md text-sm font-medium hover:bg-muted/80 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveThresholds}
+                  disabled={thresholdSaveLoading}
+                  className="px-5 py-2.5 bg-primary text-white rounded-md text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {thresholdSaveLoading ? 'Saving…' : 'Confirm & Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PASSKEY SECTION */}
         <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm border-secondary/30">

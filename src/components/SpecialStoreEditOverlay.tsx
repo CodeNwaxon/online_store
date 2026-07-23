@@ -9,6 +9,8 @@ import { uploadImageToCloudinary } from '@/actions/upload';
 import Image from 'next/image';
 import { SpecialStore, generateStoreSlug, canEditStoreField } from '@/lib/specialStoreTypes';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 
 interface SpecialStoreEditOverlayProps {
   adminId: string;
@@ -19,6 +21,8 @@ interface SpecialStoreEditOverlayProps {
 
 export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, onClose }: SpecialStoreEditOverlayProps) {
   const { isCEO } = useAdmin();
+  const { getVendorSales } = useStoreSales();
+  const salesCount = getVendorSales(adminEmail);
   const [loading, setLoading] = useState(false);
   const [storeData, setStoreData] = useState<Partial<SpecialStore>>({});
 
@@ -328,6 +332,10 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                   className="w-full p-3 rounded-xl border border-border bg-background"
                   placeholder="e.g. Your daily fashion"
                 />
+                <div className="mt-2.5 p-3 rounded-xl bg-muted/40 border border-border/50 flex flex-col gap-1">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Store Rating & Performance</span>
+                  <StoreRatingStars salesCount={salesCount} textColor="text-foreground" className="mt-1" />
+                </div>
               </div>
 
               <div onClick={() => {

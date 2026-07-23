@@ -10,6 +10,9 @@ import Fuse from 'fuse.js';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
+import { useLikeStore } from '@/store/useLikeStore';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 
 function FurnitureContent() {
   const searchParams = useSearchParams();
@@ -17,8 +20,11 @@ function FurnitureContent() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams?.get('category') || 'All');
+  const [selectedPriceFilter, setSelectedPriceFilter] = useState(searchParams?.get('price') || 'All');
   const [categories, setCategories] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(86);
+  const { likedProductIds } = useLikeStore();
+  const { storeTypeSales } = useStoreSales();
 
   useEffect(() => {
     const q = query(collection(db, 'products'), orderBy('updatedAt', 'desc'));
@@ -47,9 +53,28 @@ function FurnitureContent() {
     return () => unsub();
   }, []);
 
+  const priceFilters = [
+    { label: 'All Prices', value: 'All' },
+    { label: 'My favourite', value: 'favourite' },
+    { label: 'High-End / Expensive (> 100,000)', value: 'high' },
+    { label: '50,000 - 100,000', value: 'mid-high' },
+    { label: 'Mid-Range (10,000 - 50,000)', value: 'mid' },
+    { label: 'Low Price / Below 10,000', value: 'low' },
+  ];
+
   const baseFilteredProducts = products.filter(p => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    return matchesCategory;
+
+    let matchesPrice = true;
+    if (selectedPriceFilter !== 'All') {
+      if (selectedPriceFilter === 'favourite') matchesPrice = !!likedProductIds[p.id];
+      else if (selectedPriceFilter === 'high' && p.price <= 100000) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid-high' && (p.price < 50000 || p.price > 100000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'mid' && (p.price < 10000 || p.price >= 50000)) matchesPrice = false;
+      else if (selectedPriceFilter === 'low' && p.price >= 10000) matchesPrice = false;
+    }
+
+    return matchesCategory && matchesPrice;
   });
 
   const filteredProducts = (() => {
@@ -79,6 +104,7 @@ function FurnitureContent() {
             <p className="text-xs md:text-xl text-amber-100 max-w-2xl">
               Discover premium furniture and beautiful artifacts for your space.
             </p>
+            <StoreRatingStars salesCount={storeTypeSales.furniture} textColor="text-amber-100" className="mt-2" />
           </div>
           <button 
             onClick={() => {
@@ -147,7 +173,7 @@ function FurnitureContent() {
 
               <div className="grid grid-cols-3 md:flex flex-row gap-2 md:gap-3 w-full md:w-auto max-md:px-1 flex-1 md:max-w-xl">
                 {/* Search Bar */}
-                <div className="col-span-3 relative flex-1 min-w-[200px]">
+                <div className="col-span-2 md:col-span-1 relative flex-1 min-w-[200px]">
                   <input
                     type="text"
                     placeholder="Search furniture..."
@@ -159,6 +185,16 @@ function FurnitureContent() {
                     size={16}
                     className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400"
                   />
+                </div>
+                <div className="col-span-1 relative w-full sm:w-40">
+                  <select
+                    value={selectedPriceFilter}
+                    onChange={(e) => setSelectedPriceFilter(e.target.value)}
+                    className="w-full appearance-none px-4 py-2.5 pr-10 rounded-md md:rounded-xl border border-gray-200 bg-slate-50 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none text-xs md:text-sm font-semibold text-gray-700 cursor-pointer"
+                  >
+                    {priceFilters.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                  <FaFilter className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
                 </div>
               </div>
             </div>

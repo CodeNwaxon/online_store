@@ -10,6 +10,8 @@ import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { useLikeStore } from '@/store/useLikeStore';
+import { useStoreSales } from '@/hooks/useStoreSales';
+import StoreRatingStars from '@/components/StoreRatingStars';
 import Fuse from 'fuse.js';
 
 function ShopContent() {
@@ -25,6 +27,7 @@ function ShopContent() {
   const [showLikedOnly, setShowLikedOnly] = useState(false);
   const [showPromoOnly, setShowPromoOnly] = useState(false);
   const { likedProductIds } = useLikeStore();
+  const { storeTypeSales } = useStoreSales();
   const [likesCounts, setLikesCounts] = useState<Record<string, number>>({});
   const [sortBy, setSortBy] = useState<'default' | 'top_rated' | 'newest'>('default');
 
@@ -183,6 +186,7 @@ function ShopContent() {
             <div>
               <h1 className="text-2xl md:text-4xl font-bold mb-0 md:mb-2">Our Collection</h1>
               <p className="-mt-1 text-[10px] md:text-base text-muted-foreground">Explore our range of premium African-inspired goods.</p>
+              <StoreRatingStars salesCount={storeTypeSales.shop} textColor="text-muted-foreground" className="mt-1" />
             </div>
             <button 
               onClick={() => {
