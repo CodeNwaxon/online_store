@@ -25,6 +25,8 @@ const getOrdinal = (d: number) => {
   }
 };
 
+import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
+
 interface ProductCardProps {
   product: Product;
   isAdmin?: boolean;
@@ -54,6 +56,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   const isFurniturePage = pathname?.includes('/shop/furniture');
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
+  const newTagDurationDays = useNewTagDurationDays();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [showColorOverlay, setShowColorOverlay] = useState(false);
@@ -152,7 +155,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                    createdAtTime = new Date((product as any).createdAt).getTime();
                 }
              }
-             if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+             if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
                  showNewTag = true;
              }
           }

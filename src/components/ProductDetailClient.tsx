@@ -13,6 +13,7 @@ import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import WarrantyModal from '@/components/WarrantyModal';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
+import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
 const cardThemes = [
   { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
@@ -33,6 +34,7 @@ const cardThemes = [
 export default function ProductDetailClient() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const newTagDurationDays = useNewTagDurationDays();
   const id = params.id as string;
   const themeParam = searchParams.get('theme');
   const themeIndex = themeParam ? parseInt(themeParam, 10) : 0;
@@ -270,7 +272,7 @@ export default function ProductDetailClient() {
               }
               if (product.isNewItem === true) {
                 showNewTag = true;
-              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
                 showNewTag = true;
               }
               
@@ -289,7 +291,14 @@ export default function ProductDetailClient() {
                 </div>
               );
             })()}
-            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${theme.accent}`}>{product.name}</h1>
+            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${theme.accent}`}>
+              {product.name}
+              {(product as any).ram && (product as any).rom && (
+                <span className="text-black text-sm md:text-base font-normal ml-2">
+                  ({(product as any).ram} / {(product as any).rom})
+                </span>
+              )}
+            </h1>
             {product.manufacturer && (
               <div className="text-lg text-muted-foreground mb-6">
                 Manufactured by <span className="font-semibold text-foreground">{product.manufacturer}</span>

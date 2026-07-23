@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
+import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
 interface CategoryDetailPageProps {
   id: string;
@@ -31,6 +32,7 @@ export default function CategoryDetailPage({
   backPath,
   categoryName
 }: CategoryDetailPageProps) {
+  const newTagDurationDays = useNewTagDurationDays();
   const [product, setProduct] = useState<CategoryProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
@@ -270,7 +272,7 @@ export default function CategoryDetailPage({
               }
               if ((product as any).isNewItem === true) {
                 showNewTag = true;
-              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
                 showNewTag = true;
               }
               
@@ -289,7 +291,14 @@ export default function CategoryDetailPage({
                 </div>
               );
             })()}
-            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${themeConfig.accent}`}>{product.name}</h1>
+            <h1 className={`text-xl md:text-3xl font-bold mb-2 ${themeConfig.accent}`}>
+              {product.name}
+              {(product as any).ram && (product as any).rom && (
+                <span className="text-black text-sm md:text-base font-normal ml-2">
+                  ({(product as any).ram} / {(product as any).rom})
+                </span>
+              )}
+            </h1>
 
             <div className={`text-2xl font-bold mb-8 ${themeConfig.accent} flex items-center gap-3`}>
               ₦{product.price.toLocaleString()}

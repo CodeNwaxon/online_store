@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { createPortal } from 'react-dom';
 import LikeButton from './LikeButton';
+import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
 export interface ShopProduct {
   id: string;
@@ -102,6 +103,7 @@ const themeStyles = {
 
 export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelete, themeColor = 'green' }: ShopCardProps) {
   const theme = themeStyles[themeColor];
+  const newTagDurationDays = useNewTagDurationDays();
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [imgError, setImgError] = useState(false);
@@ -253,7 +255,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                    createdAtTime = new Date(food.createdAt).getTime();
                 }
              }
-             if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+             if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
                  showNewTag = true;
              }
           }

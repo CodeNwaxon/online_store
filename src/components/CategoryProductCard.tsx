@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import LikeButton from './LikeButton';
+import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
 export interface CategoryProduct {
   id: string;
@@ -52,6 +53,7 @@ export default function CategoryProductCard({
   categoryName,
   detailPath
 }: CategoryProductCardProps) {
+  const newTagDurationDays = useNewTagDurationDays();
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
@@ -181,7 +183,7 @@ export default function CategoryProductCard({
           }
           if ((product as any).isNewItem === true) {
              showNewTag = true;
-          } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+          } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
              showNewTag = true;
           }
           return showNewTag ? (
