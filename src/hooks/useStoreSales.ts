@@ -54,12 +54,29 @@ export function useStoreSales() {
                 vSales[emailKey] = (vSales[emailKey] || 0) + qty;
               }
 
-              // Store type sales tracking
+              // Every item bought from the store increments the general Shop sales count
+              sSales.shop += qty;
+
+              // Store type specific sales tracking
               const coll = String(item.collectionName || '').toLowerCase();
               const group = String(item.group || '').toLowerCase();
               const category = String(item.category || '').toLowerCase();
+              const name = String(item.name || '').toLowerCase();
 
-              if (coll === 'foods' || group === 'foods' || category === 'food market') {
+              const isFurniture =
+                coll.includes('furniture') ||
+                group.includes('furniture') ||
+                category.includes('furniture') ||
+                name.includes('furniture') ||
+                name.includes('chair') ||
+                name.includes('table') ||
+                name.includes('sofa') ||
+                name.includes('desk') ||
+                name.includes('bed');
+
+              if (isFurniture) {
+                sSales.furniture += qty;
+              } else if (coll === 'foods' || group === 'foods' || category === 'food market' || group.includes('food')) {
                 sSales.food += qty;
               } else if (
                 coll === 'toilet_kitchen' ||
@@ -78,10 +95,6 @@ export function useStoreSales() {
                 sSales.wears += qty;
               } else if (coll === 'cosmetics' || group.includes('cosmetics') || category.includes('cosmetics')) {
                 sSales.cosmetics += qty;
-              } else if (group === 'furniture' || category === 'furniture') {
-                sSales.furniture += qty;
-              } else {
-                sSales.shop += qty;
               }
             });
           }

@@ -34,8 +34,10 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 
 export default function AdminOrders() {
+  const shippingMaxDays = useShippingMaxDays();
   const { adminData, isCEO } = useAdmin();
   const [orders, setOrders] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -116,12 +118,17 @@ export default function AdminOrders() {
       const orderToNotify = selectedOrder?.id === orderId ? selectedOrder : orders.find(o => o.id === orderId);
       if (orderToNotify?.userId && orderToNotify.userId !== 'guest') {
         const tSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
-        const template = tSnap.exists() && tSnap.data().orderDelivered ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly.';
+        const template = tSnap.exists() && tSnap.data().orderDelivered ? tSnap.data().orderDelivered : 'Your order has been delivered. You will get it shortly. Thank you for your patronage.';
+
+        const isShip = orderToNotify.deliveryMethod === 'ship';
+        const deliveryNote = isShip
+          ? `\n\n📌 Estimated Delivery Time: Max ${shippingMaxDays} Business ${shippingMaxDays === 1 ? 'Day' : 'Days'} (items may arrive earlier!). If your order does not arrive within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you get a full 100% refund.`
+          : '';
 
         await addDoc(collection(db, 'broadcasts'), {
           type: 'delivery',
           title: 'Order Delivered',
-          message: template,
+          message: `${template}${deliveryNote}`,
           customerUid: orderToNotify.userId,
           image: orderToNotify.items?.[0]?.image || '',
           orderItems: orderToNotify.items || [],
@@ -136,7 +143,12 @@ export default function AdminOrders() {
         if (phone.startsWith('0')) phone = '234' + phone.slice(1);
 
         const receiptUrl = `${window.location.origin}/receipt/${orderToNotify.id}`;
-        const waMessage = `Hello ${orderToNotify.customerName},\n\nYour order from our store has been *delivered* and should arrive shortly!\n\nYou can view and download your *Customer's Copy Receipt* here:\n${receiptUrl}\n\nThank you for shopping with us!`;
+        const isShip = orderToNotify.deliveryMethod === 'ship';
+        const deliveryNote = isShip 
+          ? `\n\n📌 *Delivery Note:* Estimated delivery time is max *${shippingMaxDays} business ${shippingMaxDays === 1 ? 'day' : 'days'}* (items often arrive earlier!). If your order is not delivered within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you are guaranteed a full refund.`
+          : '';
+
+        const waMessage = `Hello ${orderToNotify.customerName},\n\nWarm greetings from our store! 🌟\n\nYour order has been *delivered* and should arrive shortly!${deliveryNote}\n\nYou can view and download your *Customer's Copy Receipt* here:\n${receiptUrl}\n\nThank you for shopping with us!`;
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
 
         window.open(waUrl, '_blank');

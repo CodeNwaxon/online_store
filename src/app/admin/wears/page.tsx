@@ -265,8 +265,8 @@ export default function AdminWears() {
       toast.error('Please enter a valid URL');
       return;
     }
-    if (images.length >= 3) {
-      toast.error('Maximum 3 images allowed');
+    if (images.length >= 5) {
+      toast.error('Maximum 5 images allowed');
       return;
     }
     setImages([...images, { type: 'url', value: imageUrlInput }]);
@@ -276,8 +276,8 @@ export default function AdminWears() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    if (images.length + files.length > 3) {
-      toast.error('Maximum 3 images allowed');
+    if (images.length + files.length > 5) {
+      toast.error('Maximum 5 images allowed');
       return;
     }
     const newImages = Array.from(files).map(file => ({ type: 'file' as const, value: file }));
@@ -1041,7 +1041,7 @@ export default function AdminWears() {
             </div>
 
             <div className="space-y-4">
-              <label className="text-sm font-bold">Product Images (Max 3)</label>
+              <label className="text-sm font-bold">Product Images (Max 5)</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">

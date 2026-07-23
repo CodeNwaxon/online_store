@@ -14,8 +14,10 @@ import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@
 import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndFulfillOrder } from '@/actions/verifyPayment';
 import { createPendingTransaction } from '@/actions/pendingTransactions';
+import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 
 export default function Checkout() {
+  const shippingMaxDays = useShippingMaxDays();
   const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -398,14 +400,26 @@ export default function Checkout() {
   if (isSuccess) {
     return (
       <div className="py-16 min-h-[70vh] flex items-center justify-center">
-        <div className="text-center max-w-[500px] p-12 bg-card rounded-[var(--radius)] border border-border shadow-sm mx-4">
+        <div className="text-center max-w-[500px] p-8 md:p-12 bg-card rounded-[var(--radius)] border border-border shadow-sm mx-4">
           <div className="w-20 h-20 rounded-full bg-[#DEF7EC] text-[#03543F] flex items-center justify-center mx-auto mb-6">
             <FaCheckCircle size={30} />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Payment Successful!</h1>
-          <p className="text-muted-foreground mb-8 md:text-lg">
+          <p className="text-muted-foreground mb-6 md:text-lg">
             Thank you for your purchase. Your order is being processed and will be shipped shortly. Check your email for the receipt.
           </p>
+
+          {(finalOrderData?.deliveryMethod === 'ship' || deliveryMethod === 'ship') && (
+            <div className="mb-8 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-left text-xs md:text-sm shadow-sm">
+              <p className="font-bold mb-1 text-red-900 flex items-center gap-1.5">
+                🚚 Estimated Delivery Time: Max {shippingMaxDays} Business {shippingMaxDays === 1 ? 'Day' : 'Days'}
+              </p>
+              <p className="leading-relaxed">
+                Warm greetings! Please note your package may arrive <strong>earlier than {shippingMaxDays} {shippingMaxDays === 1 ? 'day' : 'days'}</strong>. However, if your order does not arrive within maximum {shippingMaxDays} {shippingMaxDays === 1 ? 'day' : 'days'}, you are entitled to a <strong>full 100% refund</strong>. Thank you for choosing us!
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 justify-center max-w-[280px] mx-auto">
             <button
               onClick={handlePrintReceipt}
@@ -759,6 +773,7 @@ export default function Checkout() {
                     selectedColor: item.selectedColor || null,
                     selectedMeasurement: item.selectedMeasurement || null,
                     category: item.category,
+                    group: dbProducts[item.id]?.group || (item as any).group || null,
                     vendor: dbProducts[item.id]?.vendor || null,
                     // Which Firestore collection this item came from — used by VIP admins
                     // to see only orders that contain items from their assigned pages

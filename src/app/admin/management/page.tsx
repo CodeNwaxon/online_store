@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import { useStarThresholds } from '@/hooks/useStarThresholds';
+import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/PRODUCTS',
@@ -97,9 +98,11 @@ export default function AdminManagement() {
   const [editStoreAdminId, setEditStoreAdminId] = useState<string | null>(null);
   const [editStoreAdminEmail, setEditStoreAdminEmail] = useState('');
 
-  // Star Threshold State
+  // Star Threshold State & Shipping Max Days State
   const liveThresholds = useStarThresholds();
+  const liveShippingMaxDays = useShippingMaxDays();
   const [editableThresholds, setEditableThresholds] = useState<{[star: number]: number}>({ 1: 20, 2: 50, 3: 100, 4: 250, 5: 500 });
+  const [shippingMaxDaysInput, setShippingMaxDaysInput] = useState<number>(3);
   const [showThresholdConfirm, setShowThresholdConfirm] = useState(false);
   const [thresholdSaveLoading, setThresholdSaveLoading] = useState(false);
 
@@ -110,16 +113,25 @@ export default function AdminManagement() {
     }
   }, [liveThresholds]);
 
-  // Save star thresholds handler
+  useEffect(() => {
+    if (liveShippingMaxDays !== undefined) {
+      setShippingMaxDaysInput(liveShippingMaxDays);
+    }
+  }, [liveShippingMaxDays]);
+
+  // Save star thresholds & shipping max days handler
   const handleSaveThresholds = async () => {
     setThresholdSaveLoading(true);
     try {
-      await updateDoc(doc(db, 'settings', 'general'), { starThresholds: editableThresholds });
-      toast.success('Star thresholds updated successfully!');
+      await updateDoc(doc(db, 'settings', 'general'), { 
+        starThresholds: editableThresholds,
+        shippingMaxDays: Number(shippingMaxDaysInput) || 3
+      });
+      toast.success('Star thresholds & shipping max days updated!');
       setShowThresholdConfirm(false);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save star thresholds');
+      toast.error('Failed to save settings');
     } finally {
       setThresholdSaveLoading(false);
     }
@@ -1164,6 +1176,33 @@ export default function AdminManagement() {
             ))}
           </div>
 
+          {/* SHIPPING MAXIMUM DATE / DAYS FIELD */}
+          <div className="mb-6 max-w-xs pt-4 border-t border-border">
+            <label className="text-xs md:text-sm font-bold mb-1.5 flex items-center gap-1.5">
+              <span>Shipping Maximum Date (Days)</span>
+              <span className="relative group">
+                <FaInfoCircle className="text-muted-foreground cursor-help" size={12} />
+                <span className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 w-52 bg-foreground text-background p-2 rounded shadow-lg text-[10px] text-center z-50 pointer-events-none">
+                  Maximum estimated delivery days shown to customer after payment and in WhatsApp notification.
+                </span>
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={30}
+                className="w-full p-2.5 rounded-md border border-border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                value={shippingMaxDaysInput}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setShippingMaxDaysInput(isNaN(val) || val < 1 ? 1 : val);
+                }}
+              />
+              <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">Days</span>
+            </div>
+          </div>
+
           <button
             disabled={thresholdSaveLoading}
             onClick={() => setShowThresholdConfirm(true)}
@@ -1198,6 +1237,14 @@ export default function AdminManagement() {
                     </span>
                   </div>
                 ))}
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-border/50">
+                  <span className="font-medium flex items-center gap-1.5">
+                    🚚 Shipping Maximum Date
+                  </span>
+                  <span className="font-bold tabular-nums text-primary">
+                    {shippingMaxDaysInput || 3} days
+                  </span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">

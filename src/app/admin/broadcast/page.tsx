@@ -14,7 +14,7 @@ export default function BroadcastAdmin() {
   
   // Templates state
   const [templates, setTemplates] = useState({
-    orderDelivered: 'Your order has been delivered. You will get it shortly.',
+    orderDelivered: 'Your order has been delivered. You will get it shortly. Thank you for your patronage.',
     partnershipApproved: 'Congratulations! Your partnership request has been approved.',
     vendorOrder: 'A new order containing your products has been placed.',
     installmentNotification: 'A new installment plan has been started. Please review and follow up accordingly.',
