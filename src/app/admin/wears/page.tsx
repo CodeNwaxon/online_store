@@ -399,7 +399,7 @@ export default function AdminWears() {
           setLoading(false);
           return;
         }
-        await updateDoc(doc(db, 'wears', editingId), productData);
+        await updateDoc(doc(db, 'wears', editingId), { ...productData, isNewItem: false });
         toast.success('Product updated!');
       } else {
         await addDoc(collection(db, 'wears'), {

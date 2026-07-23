@@ -109,7 +109,16 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
+  const [tempSelectedColor, setTempSelectedColor] = useState('');
   const [mounted, setMounted] = useState(false);
+
+  const getContrastTextColor = (colorName: string) => {
+    const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+    if (lightColors.some(c => colorName.toLowerCase().includes(c))) {
+      return 'text-black';
+    }
+    return 'text-white';
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -229,6 +238,22 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
             </div>
           </div>
         )}
+        {!(food as any).isPromo && (() => {
+          let showNewTag = false;
+          if ((food as any).isNewItem === true) {
+             showNewTag = true;
+          } else if ((food as any).isNewItem !== false) {
+             const createdAtTime = food.createdAt ? new Date(food.createdAt).getTime() : 0;
+             if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+                 showNewTag = true;
+             }
+          }
+          return showNewTag ? (
+            <span className="absolute top-0.5 left-0.5 bg-red-600 text-white px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-30 shadow-sm flex items-center animate-pulse">
+              NEW
+            </span>
+          ) : null;
+        })()}
         {isAdmin && (food.quantity ?? 0) <= 5 && (
           <div className="absolute top-1 right-2 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black z-[40] shadow-lg border-2 border-white animate-bounce">
             {food.quantity}
@@ -372,9 +397,10 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                   e.preventDefault();
                   e.stopPropagation();
 
-                  if (sizeKeys.length > 0 || measurementKeys.length > 0) {
+                  if (sizeKeys.length > 0 || measurementKeys.length > 0 || colors.length > 0) {
                     setShowSizeOverlay(true);
                     setTempSelectedMeasurement('');
+                    setTempSelectedColor('Any Color');
                     return;
                   }
 
@@ -415,8 +441,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
           )}
         </div>
 
-        {/* Size/Measurement Selection Overlay */}
-        {mounted && showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0) && createPortal(
+        {/* Size/Color/Measurement Selection Overlay */}
+        {mounted && showSizeOverlay && (sizeKeys.length > 0 || measurementKeys.length > 0 || colors.length > 0) && createPortal(
           <div
             className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
@@ -432,6 +458,100 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                 ✕
               </button>
               
+              {colors.length > 0 && (
+                <>
+                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight mt-2">Select Color</h3>
+                  <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+                    <button
+                      className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTempSelectedColor('Any Color');
+                      }}
+                    >
+                      Any Color
+                    </button>
+                    {colors.map(c => (
+                        <button
+                          key={c}
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                          style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            if (sizeKeys.length === 0 && measurementKeys.length === 0) {
+                              setTempSelectedColor(c);
+                            } else {
+                              setTempSelectedColor(c);
+                            }
+                          }}
+                        >
+                          {c}
+                        </button>
+                    ))}
+                  </div>
+                  {sizeKeys.length === 0 && measurementKeys.length === 0 && (
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <button
+                        className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.bgPrimary} ${theme.hoverBgPrimary} text-white` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
+                        style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                        disabled={!tempSelectedColor}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!tempSelectedColor) return;
+                          
+                          const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                          
+                          const toastId = toast.loading(`Adding ${food.name}...`, {
+                            position: 'bottom-center',
+                            style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' }
+                          });
+                          
+                          const existing = cartItems.find(item => item.id === food.id && item.selectedColor === finalColor);
+                          const currentInCart = existing ? existing.quantity : 0;
+                          try {
+                            const docSnap = await getDoc(doc(db, 'foods', food.id));
+                            const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (food.quantity ?? 0);
+                            if (currentInCart + 1 > liveQty) {
+                              toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
+                              return;
+                            }
+                          } catch (err) {
+                            if (currentInCart + 1 > (food.quantity ?? 0)) {
+                              toast.error(`Only ${food.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                              return;
+                            }
+                          }
+                          
+                          const cartProduct: any = {
+                            id: food.id,
+                            name: food.name,
+                            price: food.price,
+                            image: food.images?.[0] || '/images/placeholder.png',
+                            category: 'Food',
+                            description: food.description,
+                          };
+                          if (finalColor) cartProduct.selectedColor = finalColor;
+                          addItem(cartProduct as any);
+                          toast.success(`${food.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {
+                            id: toastId,
+                            style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                            position: 'bottom-center',
+                            duration: 2000,
+                          });
+                          setShowSizeOverlay(false);
+                        }}
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
               {sizeKeys.length > 0 && (
                 <>
                   <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Size</h3>
@@ -446,13 +566,20 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz);
+                            
+                            if (colors.length > 0 && !tempSelectedColor) {
+                              toast.error('Please select a color first');
+                              return;
+                            }
+                            
+                            const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                            const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz && item.selectedColor === finalColor);
                             const currentInCart = existing ? existing.quantity : 0;
                             if (currentInCart + 1 > qty) {
                               toast.error(`Only ${qty} available for size ${sz}`);
                               return;
                             }
-                            const cartProduct = {
+                            const cartProduct: any = {
                               id: food.id,
                               name: food.name,
                               price: food.price,
@@ -461,8 +588,9 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                               description: food.description,
                               selectedSize: sz,
                             };
+                            if (finalColor) cartProduct.selectedColor = finalColor;
                             addItem(cartProduct as any);
-                            toast.success(`${food.name} (${sz}) added to cart`, {
+                            toast.success(`${food.name} (${sz}${finalColor ? ` - ${finalColor}` : ''}) added to cart`, {
                               style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                               position: 'bottom-center',
                               duration: 2000,
@@ -507,8 +635,14 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         e.preventDefault();
                         e.stopPropagation();
                         if (!tempSelectedMeasurement) return;
+                        
+                        if (colors.length > 0 && !tempSelectedColor) {
+                          toast.error('Please select a color first');
+                          return;
+                        }
 
-                        const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement);
+                        const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                        const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement && item.selectedColor === finalColor);
                         const currentInCart = existing ? existing.quantity : 0;
                         if (currentInCart + 1 > (food.quantity ?? 0)) {
                           toast.error(`Only ${food.quantity ?? 0} available in stock`);
@@ -518,7 +652,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
                         const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
 
-                        const cartProduct = {
+                        const cartProduct: any = {
                           id: food.id,
                           name: food.name,
                           price: measurePrice,
@@ -528,8 +662,9 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                           selectedMeasurement: tempSelectedMeasurement,
                           measurementPrice: measurePrice,
                         };
+                        if (finalColor) cartProduct.selectedColor = finalColor;
                         addItem(cartProduct as any);
-                        toast.success(`${food.name} (${tempSelectedMeasurement}) added to cart`, {
+                        toast.success(`${food.name} (${tempSelectedMeasurement}${finalColor ? ` - ${finalColor}` : ''}) added to cart`, {
                           style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                           position: 'bottom-center',
                           duration: 2000,

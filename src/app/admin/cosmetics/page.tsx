@@ -274,8 +274,8 @@ export default function AdminCosmetics() {
           setLoading(false);
           return;
         }
-        await updateDoc(doc(db, 'cosmetics', editingId), productData);
-        toast.success('Product updated!');
+        await updateDoc(doc(db, 'cosmetics', editingId), { ...productData, isNewItem: false });
+        toast.success('Cosmetic updated!');
       } else {
         await addDoc(collection(db, 'cosmetics'), {
           ...productData,

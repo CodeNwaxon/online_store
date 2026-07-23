@@ -4,6 +4,7 @@ import { Product } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingCart, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -55,8 +56,25 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
   const cartItems = useCartStore((state) => state.items);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [showColorOverlay, setShowColorOverlay] = useState(false);
+  const [tempSelectedColor, setTempSelectedColor] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  const getContrastTextColor = (colorName: string) => {
+    const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+    if (lightColors.some(c => colorName.toLowerCase().includes(c))) {
+      return 'text-black';
+    }
+    return 'text-white';
+  };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const theme = cardThemes[index % 12];
+  const colors = (product as any).color ? (product as any).color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+  const scrollbarColor = '#6b7280';
 
 
   const cycleImage = (e: React.MouseEvent) => {
@@ -119,6 +137,22 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             )}
           </span>
         )}
+        {!product.isPromo && (() => {
+          let showNewTag = false;
+          if ((product as any).isNewItem === true) {
+             showNewTag = true;
+          } else if ((product as any).isNewItem !== false) {
+             const createdAtTime = (product as any).createdAt ? new Date((product as any).createdAt).getTime() : 0;
+             if (createdAtTime > 0 && (Date.now() - createdAtTime <= 5 * 24 * 60 * 60 * 1000)) {
+                 showNewTag = true;
+             }
+          }
+          return showNewTag ? (
+            <span className="absolute top-0.5 left-0.5 bg-red-600 text-white px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-10 shadow-sm flex items-center animate-pulse">
+              NEW
+            </span>
+          ) : null;
+        })()}
         {isAdmin && (product.quantity ?? 0) <= 5 && (
           <div className="absolute top-1 right-10 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black z-[40] shadow-lg border-2 border-white animate-bounce">
             {product.quantity}
@@ -178,6 +212,15 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
         </Link>
       ) : (
         CardContent
+      )}
+
+      {/* Color bar below image */}
+      {colors.length > 0 && (
+        <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
+          {colors.map((c: string, i: number) => (
+            <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white border border-gray-100 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
+          ))}
+        </div>
       )}
 
       <div className="p-3 max-md:p-2 flex-1 flex flex-col">
@@ -332,6 +375,12 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                 e.preventDefault();
                 e.stopPropagation();
                 
+                if (colors.length > 0) {
+                  setShowColorOverlay(true);
+                  setTempSelectedColor('Any Color');
+                  return;
+                }
+                
                 const toastId = toast.loading(`Adding ${product.name}...`, {
                   position: 'bottom-center',
                   style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' }
@@ -373,6 +422,106 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
           )}
         </div>
       </div>
+
+      {/* Color Selection Overlay */}
+      {mounted && showColorOverlay && colors.length > 0 && createPortal(
+        <div
+          className="fixed inset-0 bg-black/50 dark:bg-zinc-950/80 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowColorOverlay(false); }}
+        >
+          <div
+            className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[400px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowColorOverlay(false); }}
+              className="absolute top-3 right-3 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+            >
+              ✕
+            </button>
+            
+            <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Color</h3>
+            <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+              <button
+                className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setTempSelectedColor('Any Color');
+                }}
+              >
+                Any Color
+              </button>
+              {colors.map((c: string) => {
+                return (
+                  <button
+                    key={c}
+                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                    style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setTempSelectedColor(c);
+                    }}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 pt-2 border-t border-border">
+              <button
+                className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
+                style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                disabled={!tempSelectedColor}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!tempSelectedColor) return;
+                  
+                  const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                  
+                  const toastId = toast.loading(`Adding ${product.name}...`, {
+                    position: 'bottom-center',
+                    style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' }
+                  });
+                  
+                  const existing = cartItems.find(item => item.id === product.id && item.selectedColor === finalColor);
+                  const currentInCart = existing ? existing.quantity : 0;
+                  try {
+                    const docSnap = await getDoc(doc(db, 'products', product.id));
+                    const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                    if (currentInCart + 1 > liveQty) {
+                      toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
+                      return;
+                    }
+                  } catch (err) {
+                    if (currentInCart + 1 > (product.quantity ?? 0)) {
+                      toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                      return;
+                    }
+                  }
+                  const cartProduct = { ...product } as any;
+                  if (finalColor) {
+                    cartProduct.selectedColor = finalColor;
+                  }
+                  addItem(cartProduct);
+                  toast.success(`${product.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {
+                    id: toastId,
+                    style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
+                    position: 'bottom-center',
+                    duration: 2000,
+                  });
+                  setShowColorOverlay(false);
+                }}
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

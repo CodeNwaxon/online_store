@@ -260,7 +260,7 @@ export default function AdminToiletKitchen() {
           setLoading(false);
           return;
         }
-        await updateDoc(doc(db, 'toilet_kitchen', editingId), productData);
+        await updateDoc(doc(db, 'toilet_kitchen', editingId), { ...productData, isNewItem: false });
         toast.success('Product updated!');
       } else {
         await addDoc(collection(db, 'toilet_kitchen'), {

@@ -102,6 +102,8 @@ function AdminProductsContent() {
   const [ramRom, setRamRom] = useState('');
   const [isCustomShipping, setIsCustomShipping] = useState(false);
   const [customShippingAmount, setCustomShippingAmount] = useState('');
+  const [color, setColor] = useState('');
+  const [includeColor, setIncludeColor] = useState(false);
 
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
@@ -319,6 +321,8 @@ function AdminProductsContent() {
     setImageUrlInput('');
     setIsCustomShipping(false);
     setCustomShippingAmount('');
+    setColor('');
+    setIncludeColor(false);
   };
 
   const handleCancel = () => {
@@ -428,6 +432,7 @@ function AdminProductsContent() {
         size: size || 'medium',
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         ramRom: ramRom.trim() || '',
+        color: includeColor ? color.trim() : '',
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: manufacturer.trim() || 'Unknown',
@@ -445,10 +450,10 @@ function AdminProductsContent() {
           setLoading(false);
           return;
         }
-        await updateDoc(doc(db, 'products', editingId), productData);
+        await updateDoc(doc(db, 'products', editingId), { ...productData, isNewItem: false });
         toast.success('Product updated!');
       } else {
-        await addDoc(collection(db, 'products'), productData);
+        await addDoc(collection(db, 'products'), { ...productData, createdAt: new Date().toISOString() });
         toast.success('Product added!');
       }
       if (editParam) {
@@ -495,6 +500,8 @@ function AdminProductsContent() {
     setIsCustomShipping(!!product.customShippingAmount);
     setCustomShippingAmount(product.customShippingAmount ? formatPriceInput(product.customShippingAmount.toString()) : '');
     setRamRom(product.ramRom || '');
+    setColor(product.color || '');
+    setIncludeColor(!!product.color);
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -765,6 +772,32 @@ function AdminProductsContent() {
                 />
               </div>
             )}
+
+            {/* Color section */}
+            <div className="space-y-2 mb-6">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                <input
+                  type="checkbox"
+                  checked={includeColor}
+                  onChange={(e) => setIncludeColor(e.target.checked)}
+                  className="size-4 accent-primary"
+                />
+                Include Color Input
+              </label>
+              {includeColor && (
+                <div className="py-4 px-2 border border-primary/30 rounded-lg bg-primary/5 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm font-bold">Colors (comma separated)</label>
+                  <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                  {color && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {color.split(',').map((c, i) => c.trim() && (
+                        <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Product Size */}
             <div className="space-y-2">

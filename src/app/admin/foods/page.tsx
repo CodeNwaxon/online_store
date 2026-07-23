@@ -333,8 +333,8 @@ export default function AdminFoods() {
           setLoading(false);
           return;
         }
-        await updateDoc(doc(db, 'foods', editingId), foodData);
-        toast.success('Food item updated!');
+        await updateDoc(doc(db, 'foods', editingId), { ...foodData, isNewItem: false });
+        toast.success('Food updated!');
       } else {
         await addDoc(collection(db, 'foods'), {
           ...foodData,
