@@ -9,7 +9,8 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import WarrantyModal from '@/components/WarrantyModal';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
@@ -40,7 +41,11 @@ export default function ProductDetailClient() {
   const themeIndex = themeParam ? parseInt(themeParam, 10) : 0;
   const theme = !isNaN(themeIndex) ? cardThemes[themeIndex % 12] : cardThemes[0];
   const [product, setProduct] = useState<any>(null);
+  const [mainImage, setMainImage] = useState<string>('');
   const [loading, setLoading] = useState(true);
+
+  const { fetchCollection } = useProductCache();
+
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -101,40 +106,42 @@ export default function ProductDetailClient() {
     };
     fetchInstallmentSettings();
 
-    const unsubscribe = onSnapshot(collection(db, 'products'), (prodSnap) => {
-      const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-      
-      const currentProduct = dynamicProducts.find(p => p.id === id);
-      if (currentProduct) {
-        setProduct(currentProduct);
-      } else {
+    const loadProducts = async () => {
+      try {
+        const dynamicProducts = await fetchCollection('products') as any[];
+        
+        const currentProduct = dynamicProducts.find(p => p.id === id);
+        if (currentProduct) {
+          setProduct(currentProduct);
+        } else {
+          const staticProd = staticProducts.find((p) => p.id === id);
+          if (staticProd) setProduct(staticProd);
+        }
+
+        const parseDate = (dateVal: any) => {
+          if (!dateVal) return 0;
+          if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+          return new Date(dateVal).getTime() || 0;
+        };
+
+        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+          const dateA = parseDate(a.updatedAt);
+          const dateB = parseDate(b.updatedAt);
+          return dateB - dateA;
+        });
+        
+        setAllProducts(sortedProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
         const staticProd = staticProducts.find((p) => p.id === id);
         if (staticProd) setProduct(staticProd);
+        setAllProducts(staticProducts);
+      } finally {
+        setLoading(false);
       }
-
-      const parseDate = (dateVal: any) => {
-        if (!dateVal) return 0;
-        if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
-        return new Date(dateVal).getTime() || 0;
-      };
-
-      const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
-        const dateA = parseDate(a.updatedAt);
-        const dateB = parseDate(b.updatedAt);
-        return dateB - dateA;
-      });
-      
-      setAllProducts(sortedProducts);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching products:", error);
-      const staticProd = staticProducts.find((p) => p.id === id);
-      if (staticProd) setProduct(staticProd);
-      setAllProducts(staticProducts);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    
+    loadProducts();
   }, [id]);
 
   if (loading) {

@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
   } catch (error) {
-    console.error("Error generating metadata", error);
+    console.error("Error generating metadata:", error instanceof Error ? error.message : String(error));
   }
   
   return {

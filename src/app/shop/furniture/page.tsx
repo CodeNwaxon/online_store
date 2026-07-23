@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { FaSearch, FaCouch, FaChevronDown, FaStore, FaFilter, FaShareAlt } from 'react-icons/fa';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/data/products';
@@ -26,32 +27,29 @@ function FurnitureContent() {
   const { likedProductIds } = useLikeStore();
   const { storeTypeSales } = useStoreSales();
 
+  const { fetchCollection } = useProductCache();
+
   useEffect(() => {
-    const q = query(collection(db, 'products'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Product[];
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const sortedProds = await fetchCollection('products');
 
-      const sortedProds = [...prods].sort((a: any, b: any) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
+        // Filter for only Furniture group
+        const furnitureProds = sortedProds.filter((p: any) => p.group && p.group.toLowerCase() === 'furniture');
 
-      // Filter for only Furniture group
-      const furnitureProds = sortedProds.filter(p => p.group && p.group.toLowerCase() === 'furniture');
+        setProducts(furnitureProds as unknown as Product[]);
 
-      setProducts(furnitureProds);
-
-      const uniqueCats = Array.from(new Set(furnitureProds.map(p => p.category).filter(Boolean)));
-      setCategories(uniqueCats);
-
-      setLoading(false);
-    }, (error) => {
-      console.warn("Furniture listener error:", error);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+        const uniqueCats = Array.from(new Set(furnitureProds.map((p: any) => p.category).filter(Boolean)));
+        setCategories(uniqueCats);
+      } catch (error) {
+        console.warn("Furniture fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, [fetchCollection]);
 
   const priceFilters = [
     { label: 'All Prices', value: 'All' },

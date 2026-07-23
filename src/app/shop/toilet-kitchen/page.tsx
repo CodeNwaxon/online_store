@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt } from 'react-icons/fa';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
@@ -27,25 +28,24 @@ function ToiletKitchenContent() {
   const { likedProductIds } = useLikeStore();
   const { storeTypeSales } = useStoreSales();
 
+  const { fetchCollection } = useProductCache();
+
   useEffect(() => {
-    const q = query(collection(db, 'toilet_kitchen'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
-      const sortedProds = [...prods].sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
-      setProducts(sortedProds);
-      const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
-      setGroups(uniqueGroups);
-      setLoading(false);
-    }, (error) => {
-      console.warn("ToiletKitchen listener error:", error);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const sortedProds = await fetchCollection('toilet_kitchen');
+        setProducts(sortedProds);
+        const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
+        setGroups(uniqueGroups);
+      } catch (error) {
+        console.warn("ToiletKitchen fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, [fetchCollection]);
 
   useEffect(() => {
     if (selectedGroup === 'All') {

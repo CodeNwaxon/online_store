@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { FaSearch, FaUserTie, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
@@ -38,30 +39,29 @@ function WearsPageContent() {
   const { getVendorSales, storeTypeSales } = useStoreSales();
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.wears;
 
+  const { fetchCollection } = useProductCache();
+
   useEffect(() => {
     if (storeSlug && storeLoading) return; // Wait for store data to be fetched
 
-    const q = query(collection(db, 'wears'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
-      const sortedProds = [...prods].sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const sortedProds = await fetchCollection('wears');
+        const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
 
-      const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
+        setProducts(filteredForStore);
+        const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
+        setGroups(uniqueGroups);
+      } catch (error) {
+        console.warn("Wears fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setProducts(filteredForStore);
-      const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
-      setGroups(uniqueGroups);
-      setLoading(false);
-    }, (error) => {
-      console.warn("Wears listener error:", error);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [storeData, storeSlug, storeLoading]);
+    loadProducts();
+  }, [storeData, storeSlug, storeLoading, fetchCollection]);
 
   // Fetch store data if slug exists
   useEffect(() => {

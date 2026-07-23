@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
 
@@ -25,6 +26,8 @@ export default function FoodDetailClient() {
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
   const [tempSelectedColor, setTempSelectedColor] = useState('');
+
+  const { fetchCollection } = useProductCache();
 
   const [contactNumber, setContactNumber] = useState('2347034632037');
 
@@ -69,22 +72,23 @@ export default function FoodDetailClient() {
     };
     fetchSettings();
 
-    const q = query(collection(db, 'foods'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const dynamicFoods = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-      const currentFood = dynamicFoods.find(p => p.id === id);
-      
-      if (currentFood) {
-        setFood(currentFood);
+    const loadFoods = async () => {
+      try {
+        const dynamicFoods = await fetchCollection('foods') as any[];
+        const currentFood = dynamicFoods.find(p => p.id === id);
+        
+        if (currentFood) {
+          setFood(currentFood);
+        }
+        setAllFoods(dynamicFoods);
+      } catch (error) {
+        console.error("Error fetching foods:", error);
+      } finally {
+        setLoading(false);
       }
-      setAllFoods(dynamicFoods);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching foods:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    
+    loadFoods();
   }, [id]);
 
   if (loading) {

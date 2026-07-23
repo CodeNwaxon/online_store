@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
@@ -33,8 +34,12 @@ export default function CategoryDetailPage({
   categoryName
 }: CategoryDetailPageProps) {
   const newTagDurationDays = useNewTagDurationDays();
-  const [product, setProduct] = useState<CategoryProduct | null>(null);
+  const [mainImage, setMainImage] = useState<string>('');
   const [loading, setLoading] = useState(true);
+
+  const { fetchCollection } = useProductCache();
+
+  const [product, setProduct] = useState<CategoryProduct | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -94,29 +99,31 @@ export default function CategoryDetailPage({
     };
     fetchInstallmentSettings();
 
-    const unsubscribe = onSnapshot(collection(db, collectionName), (prodSnap) => {
-      const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as CategoryProduct[];
-      
-      const currentProduct = dynamicProducts.find(p => p.id === id);
-      if (currentProduct) {
-        setProduct(currentProduct);
+    const loadCategoryProducts = async () => {
+      try {
+        const dynamicProducts = await fetchCollection(collectionName) as CategoryProduct[];
+        
+        const currentProduct = dynamicProducts.find(p => p.id === id);
+        if (currentProduct) {
+          setProduct(currentProduct);
+        }
+
+        const sortedProducts = dynamicProducts.sort((a, b) => {
+          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        
+        setAllProducts(sortedProducts);
+      } catch (error) {
+        console.error(`Error fetching ${collectionName}:`, error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const sortedProducts = dynamicProducts.sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
-      
-      setAllProducts(sortedProducts);
-      setLoading(false);
-    }, (error) => {
-      console.error(`Error fetching ${collectionName}:`, error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [id, collectionName]);
+    loadCategoryProducts();
+  }, [id, collectionName, fetchCollection]);
 
   if (loading) {
     return (

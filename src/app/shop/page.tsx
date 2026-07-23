@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
@@ -31,11 +32,13 @@ function ShopContent() {
   const [likesCounts, setLikesCounts] = useState<Record<string, number>>({});
   const [sortBy, setSortBy] = useState<'default' | 'top_rated' | 'newest'>('default');
 
+  const { fetchCollection } = useProductCache();
+
   useEffect(() => {
-    setLoading(true);
-    const unsubscribe = onSnapshot(collection(db, 'products'), async (prodSnap) => {
+    const loadProducts = async () => {
+      setLoading(true);
       try {
-        const dynamicProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const dynamicProducts = await fetchCollection('products');
 
         // Auto-remove expired promos
         const now = new Date();
@@ -46,7 +49,6 @@ function ShopContent() {
         );
 
         if (expiredPromos.length > 0) {
-          let hasExpired = false;
           for (const promo of expiredPromos) {
             try {
               await updateDoc(doc(db, 'products', promo.id), {
@@ -54,13 +56,11 @@ function ShopContent() {
                 promoEndDate: null,
                 updatedAt: now.toISOString()
               });
-              hasExpired = true;
             } catch (err) {
               console.error("Error auto-removing promo:", err);
             }
           }
-          // If we updated documents, onSnapshot will fire again automatically.
-          if (hasExpired) return;
+          // After updates, ideally we'd refresh, but just updating the local state is fine for now
         }
 
         const parseDate = (dateVal: any) => {
@@ -82,14 +82,10 @@ function ShopContent() {
       } finally {
         setLoading(false);
       }
-    }, (error) => {
-      console.error("Error fetching products:", error);
-      setProducts(staticProducts);
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    loadProducts();
+  }, [fetchCollection]);
 
   useEffect(() => {
     const unsubscribeLikes = onSnapshot(collection(db, 'product_likes'), (snap) => {

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
@@ -38,33 +39,31 @@ function CosmeticsPageContent() {
   const { getVendorSales, storeTypeSales } = useStoreSales();
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.cosmetics;
 
+  const { fetchCollection } = useProductCache();
+
   useEffect(() => {
     if (storeSlug && storeLoading) return; // Wait for store data
 
-    const q = query(collection(db, 'cosmetics'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CategoryProduct[];
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const sortedProds = await fetchCollection('cosmetics');
 
-      const sortedProds = [...prods].sort((a, b) => {
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return dateB - dateA;
-      });
+        const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
 
-      const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
+        setProducts(filteredForStore);
 
-      setProducts(filteredForStore);
-
-      const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
-      setGroups(uniqueGroups);
-
-      setLoading(false);
-    }, (error) => {
-      console.warn("Cosmetics listener error:", error);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [storeData, storeSlug, storeLoading]);
+        const uniqueGroups = Array.from(new Set(filteredForStore.map(p => p.group).filter(Boolean)));
+        setGroups(uniqueGroups);
+      } catch (error) {
+        console.warn("Cosmetics fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProducts();
+  }, [storeData, storeSlug, storeLoading, fetchCollection]);
 
   // Fetch store data if slug exists
   useEffect(() => {

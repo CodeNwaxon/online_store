@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useProductCache } from '@/store/useProductCache';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
@@ -26,19 +27,22 @@ function FoodsContent() {
   const { likedProductIds } = useLikeStore();
   const { storeTypeSales } = useStoreSales();
 
-  useEffect(() => {
-    const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
-      setFoods(items);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching foods:", error);
-      setLoading(false);
-    });
+  const { fetchCollection } = useProductCache();
 
-    return () => unsub();
-  }, []);
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const sortedProds = await fetchCollection('foods');
+        setFoods(sortedProds as unknown as ShopProduct[]);
+      } catch (error) {
+        console.error("Error fetching foods:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, [fetchCollection]);
 
   // Derived unique filter options
   const groups = useMemo(() => {
