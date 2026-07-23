@@ -410,8 +410,8 @@ export default function Checkout() {
           </p>
 
           {(finalOrderData?.deliveryMethod === 'ship' || deliveryMethod === 'ship') && (
-            <div className="mb-8 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-left text-xs md:text-sm shadow-sm">
-              <p className="font-bold mb-1 text-red-900 flex items-center gap-1.5">
+            <div className="mb-8 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-left text-xs md:text-sm shadow-sm">
+              <p className="font-bold mb-1 text-blue-900 flex items-center gap-1.5">
                 🚚 Estimated Delivery Time: Max {shippingMaxDays} Business {shippingMaxDays === 1 ? 'Day' : 'Days'}
               </p>
               <p className="leading-relaxed">

@@ -56,7 +56,9 @@ interface OrderItem {
   image: string;
   size?: string;
   category?: string;
+  group?: string;
   vendor?: string;
+  collectionName?: string;
   selectedMeasurement?: string;
   selectedSize?: string;
   selectedColor?: string;
@@ -331,6 +333,77 @@ export async function verifyAndFulfillOrder(
         });
         delete (item as any)._collection; // clean up before saving to db
       }
+
+      // Increment public sales counts in settings/salesCounts
+      // This makes sales ratings visible to ALL users (including unauthenticated)
+      const salesCountsRef = adminDb.collection('settings').doc('salesCounts');
+
+      // First accumulate raw counts
+      let totalQty = 0;
+      const categoryCounts: Record<string, number> = { furniture: 0, food: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0 };
+      const vendorCounts: Record<string, number> = {};
+
+      for (const item of orderData.items) {
+        const qty = item.quantity || 1;
+        totalQty += qty;
+
+        const coll = String(item.collectionName || '').toLowerCase();
+        const group = String(item.group || '').toLowerCase();
+        const category = String(item.category || '').toLowerCase();
+        const itemName = String(item.name || '').toLowerCase();
+
+        const isFurniture =
+          coll.includes('furniture') ||
+          group.includes('furniture') ||
+          category.includes('furniture') ||
+          itemName.includes('furniture') ||
+          itemName.includes('chair') ||
+          itemName.includes('table') ||
+          itemName.includes('sofa') ||
+          itemName.includes('desk') ||
+          itemName.includes('bed');
+
+        if (isFurniture) {
+          categoryCounts.furniture += qty;
+        } else if (coll === 'foods' || group === 'foods' || group.includes('food') || category === 'food market') {
+          categoryCounts.food += qty;
+        } else if (
+          coll === 'toilet_kitchen' ||
+          group.includes('toilet') ||
+          group.includes('kitchen') ||
+          category.includes('toilet') ||
+          category.includes('kitchen')
+        ) {
+          categoryCounts.toilet_kitchen += qty;
+        } else if (
+          coll === 'wears' ||
+          group.includes('wears') ||
+          group.includes('clothing') ||
+          category.includes('wears')
+        ) {
+          categoryCounts.wears += qty;
+        } else if (coll === 'cosmetics' || group.includes('cosmetics') || category.includes('cosmetics')) {
+          categoryCounts.cosmetics += qty;
+        }
+
+        if (item.vendor) {
+          const vendorKey = String(item.vendor).toLowerCase().trim().replace(/\./g, '_');
+          vendorCounts[vendorKey] = (vendorCounts[vendorKey] || 0) + qty;
+        }
+      }
+
+      // Build the update object with FieldValue.increment
+      const salesUpdates: Record<string, any> = {
+        shop: FieldValue.increment(totalQty),
+      };
+      for (const [cat, count] of Object.entries(categoryCounts)) {
+        if (count > 0) salesUpdates[cat] = FieldValue.increment(count);
+      }
+      for (const [vendor, count] of Object.entries(vendorCounts)) {
+        salesUpdates[`vendors.${vendor}`] = FieldValue.increment(count);
+      }
+
+      transaction.set(salesCountsRef, salesUpdates, { merge: true });
 
       // Mark pending transaction as completed
       transaction.update(pendingTxRef, {
