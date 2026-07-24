@@ -20,7 +20,7 @@ export default function ReceiptPage() {
         if (docSnap.exists()) {
           setOrder({ id: docSnap.id, ...docSnap.data() });
         }
-        
+
         const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
         if (settingsSnap.exists()) {
           const data = settingsSnap.data();
@@ -173,9 +173,9 @@ export default function ReceiptPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-10 font-sans text-slate-900 pb-32">
-      <div className="w-[380px] mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        
+    <div className="min-h-screen bg-[#f8fafc] py-10 font-sans text-slate-900 pb-32 px-3">
+      <div className="w-full md:w-[380px] mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+
         {/* Customer Copy Banner */}
         <div className="bg-slate-800 text-white text-center py-1.5 text-[10px] font-black uppercase tracking-widest">
           Customer's Copy
@@ -189,7 +189,7 @@ export default function ReceiptPage() {
           <h2 className="text-sm font-bold text-slate-600 m-0 tracking-tight mt-1">Order Receipt</h2>
           <div className="text-[10px] font-bold text-slate-500 uppercase mt-2 tracking-widest">ID: {displayUid}</div>
         </div>
-        
+
         <div className="p-6">
           <div className="flex justify-between gap-3 mb-3.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Customer</span>
@@ -207,9 +207,9 @@ export default function ReceiptPage() {
             <span className="text-[10px] font-bold text-slate-500 uppercase">Address</span>
             <span className="text-xs font-bold text-slate-900 text-right">{order.address || 'N/A'}</span>
           </div>
-          
+
           <div className="border-t border-slate-200 my-5"></div>
-          
+
           {order.items?.map((item: any, idx: number) => (
             <div key={idx} className="flex justify-between mb-3 text-xs">
               <span className="text-slate-600 max-w-[190px]">
@@ -218,23 +218,23 @@ export default function ReceiptPage() {
               <span className="font-black">₦{(item.price * item.quantity).toLocaleString()}</span>
             </div>
           ))}
-          
+
           <div className="border-t border-slate-200 my-5"></div>
-          
+
           <div className="flex justify-between gap-3 mb-3.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Shipping Fee</span>
             <span className="text-xs font-bold text-slate-900 text-right">₦{shippingFee.toLocaleString()}</span>
           </div>
-          
+
           <div className="flex justify-between items-center mt-2">
             <span className="text-[11px] font-black text-slate-700 uppercase">Total Paid</span>
             <span className="text-2xl font-black text-[#D48806]">₦{order.totalAmount?.toLocaleString()}</span>
           </div>
         </div>
-        
+
         <div className="p-6 pt-5 bg-slate-50 border-t border-slate-200 text-center">
           <p className="text-[10px] font-bold text-slate-500">Thank you for shopping with us!</p>
-          <button 
+          <button
             onClick={handlePrintReceipt}
             className="mt-4 px-6 py-2 bg-slate-800 text-white text-[10px] font-black uppercase rounded-lg hover:bg-slate-700 transition-colors shadow-sm"
           >
