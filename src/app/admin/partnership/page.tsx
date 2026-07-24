@@ -126,10 +126,20 @@ export default function AdminPartnership() {
   };
 
   const handlePayOutstanding = async () => {
+    if (!ceoPasskey) return toast.error('CEO Password required.');
     const partner = payOutstandingPartner;
     if (!partner) return;
     setActionLoading(true);
     try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const currentPasskey = settingsDoc.data()?.passkey || 'admin1234';
+
+      if (ceoPasskey !== currentPasskey) {
+        toast.error('Incorrect CEO Password.');
+        setActionLoading(false);
+        return;
+      }
+
       const q = query(collection(db, 'orders'), where('referralCode', '==', partner.referralCode));
       const snap = await getDocs(q);
       const batch = writeBatch(db);
@@ -146,6 +156,7 @@ export default function AdminPartnership() {
       
       toast.success('Outstanding balance marked as paid.');
       setPayOutstandingPartner(null);
+      setCeoPasskey('');
     } catch (error) {
       toast.error('Failed to pay outstanding.');
     } finally {
@@ -590,19 +601,31 @@ export default function AdminPartnership() {
                 You are about to mark all outstanding balance as paid for:
               </p>
               <p className="font-black text-base text-foreground mb-1">{payOutstandingPartner.accountName}</p>
-              <p className="text-2xl font-black text-green-600 mb-6">
+              <p className="text-2xl font-black text-green-600 mb-4">
                 ₦{(payOutstandingPartner.outstandingEarnings || 0).toLocaleString()}
               </p>
+              
+              <div className="mb-6">
+                <p className="text-xs font-bold text-red-500 uppercase mb-2">Enter CEO Password to authorize</p>
+                <input
+                  type="password"
+                  value={ceoPasskey}
+                  onChange={e => setCeoPasskey(e.target.value)}
+                  placeholder="CEO Password"
+                  className="w-full p-3 rounded-xl border border-border bg-background text-sm text-center"
+                />
+              </div>
+
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPayOutstandingPartner(null)}
+                  onClick={() => { setPayOutstandingPartner(null); setCeoPasskey(''); }}
                   className="flex-1 py-3 rounded-xl font-bold text-sm border border-border hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handlePayOutstanding}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !ceoPasskey}
                   className="flex-1 py-3 rounded-xl font-bold text-sm bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
                   {actionLoading ? 'Processing...' : 'Yes, Mark Paid'}
