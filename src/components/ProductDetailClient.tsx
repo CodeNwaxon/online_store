@@ -109,7 +109,7 @@ export default function ProductDetailClient() {
     const loadProducts = async () => {
       try {
         const dynamicProducts = await fetchCollection('products') as any[];
-        
+
         const currentProduct = dynamicProducts.find(p => p.id === id);
         if (currentProduct) {
           setProduct(currentProduct);
@@ -129,7 +129,7 @@ export default function ProductDetailClient() {
           const dateB = parseDate(b.updatedAt);
           return dateB - dateA;
         });
-        
+
         setAllProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -140,7 +140,7 @@ export default function ProductDetailClient() {
         setLoading(false);
       }
     };
-    
+
     loadProducts();
   }, [id]);
 
@@ -172,7 +172,7 @@ export default function ProductDetailClient() {
         const actualUrl = urlObj.searchParams.get('url');
         if (actualUrl) return actualUrl;
       }
-    } catch (e) {}
+    } catch (e) { }
     return url;
   };
 
@@ -208,12 +208,12 @@ export default function ProductDetailClient() {
           <Link href={product.group?.toLowerCase() === 'furniture' ? '/shop/furniture' : '/shop'} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit">
             <FaArrowLeft size={16} /> Back to {product.group?.toLowerCase() === 'furniture' ? 'Furniture' : 'Shop'}
           </Link>
-          <button 
+          <button
             onClick={() => {
               const url = window.location.href;
               const title = `${product.name} | Nomo Storez`;
               if (navigator.share) {
-                navigator.share({ title, url }).catch(()=>{});
+                navigator.share({ title, url }).catch(() => { });
               } else {
                 navigator.clipboard.writeText(url);
                 toast.success('Page link copied!');
@@ -237,15 +237,50 @@ export default function ProductDetailClient() {
                 className="object-contain"
                 priority
               />
-              {isApprovedPartner && (
-                <button
-                  onClick={handleShareProduct}
-                  className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors z-10"
-                  title="Share with Referral Link"
-                >
-                  <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-              )}
+              <div className="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col items-end gap-2 z-10">
+                {isApprovedPartner && (
+                  <button
+                    onClick={handleShareProduct}
+                    className="bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors"
+                    title="Share with Referral Link"
+                  >
+                    <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+                )}
+                {(() => {
+                  let showNewTag = false;
+                  let createdAtTime = 0;
+                  if (product.createdAt) {
+                    if (typeof product.createdAt === 'object' && 'seconds' in product.createdAt) {
+                      createdAtTime = (product.createdAt as any).seconds * 1000;
+                    } else if (typeof (product.createdAt as any).toMillis === 'function') {
+                      createdAtTime = (product.createdAt as any).toMillis();
+                    } else {
+                      createdAtTime = new Date(product.createdAt).getTime();
+                    }
+                  }
+                  if (product.isNewItem === true) {
+                    showNewTag = true;
+                  } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
+                    showNewTag = true;
+                  }
+
+                  return (
+                    <div className="flex flex-col items-end gap-1 mt-1">
+                      {showNewTag && (
+                        <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
+                          NEW
+                        </span>
+                      )}
+                      {createdAtTime > 0 && (
+                        <span className="text-[8px] md:text-[9px] text-muted-foreground bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-border shadow-sm">
+                          Added on: {new Date(createdAtTime).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
 
             {productImages.length > 1 && (
@@ -268,39 +303,7 @@ export default function ProductDetailClient() {
             <div className={`text-sm font-semibold uppercase mb-2 ${theme.accent}`}>
               {product.group} / {product.category}
             </div>
-            {(() => {
-              let showNewTag = false;
-              let createdAtTime = 0;
-              if (product.createdAt) {
-                if (typeof product.createdAt === 'object' && 'seconds' in product.createdAt) {
-                  createdAtTime = (product.createdAt as any).seconds * 1000;
-                } else if (typeof (product.createdAt as any).toMillis === 'function') {
-                  createdAtTime = (product.createdAt as any).toMillis();
-                } else {
-                  createdAtTime = new Date(product.createdAt).getTime();
-                }
-              }
-              if (product.isNewItem === true) {
-                showNewTag = true;
-              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
-                showNewTag = true;
-              }
-              
-              return (
-                <div className="mb-2 flex items-center gap-2 flex-wrap">
-                  {showNewTag && (
-                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
-                      NEW
-                    </span>
-                  )}
-                  {createdAtTime > 0 && (
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
-                      Added on: {new Date(createdAtTime).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
+
             <h1 className={`text-xl md:text-3xl font-bold mb-2 flex items-baseline flex-wrap gap-x-2 ${theme.accent}`}>
               <span>{product.name}</span>
               {product.ramRom ? (
@@ -352,7 +355,7 @@ export default function ProductDetailClient() {
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
               <p className="text-muted-foreground leading-relaxed italic">
-                {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) => 
+                {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) =>
                   part.match(/^https?:\/\/nomo-store/) ? (
                     <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
                       {part}
@@ -585,7 +588,7 @@ function RelatedCarousel({
     if (p.size && current.size && p.size === current.size) score += 4;
     if (p.ramRom && current.ramRom && p.ramRom === current.ramRom) score += 4;
     if (p.group && current.group && p.group.toLowerCase() === current.group.toLowerCase()) score += 2;
-    
+
     // name similarity
     if (p.name && current.name) {
       const currentWords = current.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);

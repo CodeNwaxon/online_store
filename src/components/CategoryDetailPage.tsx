@@ -26,9 +26,9 @@ interface CategoryDetailPageProps {
   categoryName: string; // e.g. Cosmetics
 }
 
-export default function CategoryDetailPage({ 
-  id, 
-  collectionName, 
+export default function CategoryDetailPage({
+  id,
+  collectionName,
   themeConfig,
   backPath,
   categoryName
@@ -102,7 +102,7 @@ export default function CategoryDetailPage({
     const loadCategoryProducts = async () => {
       try {
         const dynamicProducts = await fetchCollection(collectionName) as CategoryProduct[];
-        
+
         const currentProduct = dynamicProducts.find(p => p.id === id);
         if (currentProduct) {
           setProduct(currentProduct);
@@ -113,7 +113,7 @@ export default function CategoryDetailPage({
           const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
           return dateB - dateA;
         });
-        
+
         setAllProducts(sortedProducts);
       } catch (error) {
         console.error(`Error fetching ${collectionName}:`, error);
@@ -153,7 +153,7 @@ export default function CategoryDetailPage({
         const actualUrl = urlObj.searchParams.get('url');
         if (actualUrl) return actualUrl;
       }
-    } catch (e) {}
+    } catch (e) { }
     return url;
   };
 
@@ -205,12 +205,12 @@ export default function CategoryDetailPage({
           <Link href={backPath} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit">
             <FaArrowLeft size={16} /> Back to {categoryName}
           </Link>
-          <button 
+          <button
             onClick={() => {
               const url = window.location.href;
               const title = `${product.name} | Nomo Storez`;
               if (navigator.share) {
-                navigator.share({ title, url }).catch(()=>{});
+                navigator.share({ title, url }).catch(() => { });
               } else {
                 navigator.clipboard.writeText(url);
                 toast.success('Page link copied!');
@@ -234,15 +234,50 @@ export default function CategoryDetailPage({
                 className="object-contain"
                 priority
               />
-              {isApprovedPartner && (
-                <button
-                  onClick={handleShareProduct}
-                  className="absolute top-2 right-2 md:top-4 md:right-4 bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors z-10"
-                  title="Share with Referral Link"
-                >
-                  <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-              )}
+              <div className="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col items-end gap-2 z-10">
+                {isApprovedPartner && (
+                  <button
+                    onClick={handleShareProduct}
+                    className="bg-white/90 backdrop-blur-sm p-2 md:p-3 rounded-full shadow-md text-[#4B0082] hover:bg-[#4B0082] hover:text-white transition-colors"
+                    title="Share with Referral Link"
+                  >
+                    <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+                )}
+                {(() => {
+                  let showNewTag = false;
+                  let createdAtTime = 0;
+                  if ((product as any).createdAt) {
+                    if (typeof (product as any).createdAt === 'object' && 'seconds' in (product as any).createdAt) {
+                      createdAtTime = (product as any).createdAt.seconds * 1000;
+                    } else if (typeof (product as any).createdAt.toMillis === 'function') {
+                      createdAtTime = (product as any).createdAt.toMillis();
+                    } else {
+                      createdAtTime = new Date((product as any).createdAt).getTime();
+                    }
+                  }
+                  if ((product as any).isNewItem === true) {
+                    showNewTag = true;
+                  } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
+                    showNewTag = true;
+                  }
+
+                  return (
+                    <div className="flex flex-col items-end gap-1 mt-1">
+                      {showNewTag && (
+                        <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
+                          NEW
+                        </span>
+                      )}
+                      {createdAtTime > 0 && (
+                        <span className="text-[8px] md:text-[9px] text-muted-foreground bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-border shadow-sm">
+                          Added on: {new Date(createdAtTime).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
 
             {productImages.length > 1 && (
@@ -265,39 +300,7 @@ export default function CategoryDetailPage({
             <div className={`text-sm font-semibold uppercase mb-2 ${themeConfig.accent}`}>
               {product.group} / {product.category}
             </div>
-            {(() => {
-              let showNewTag = false;
-              let createdAtTime = 0;
-              if ((product as any).createdAt) {
-                if (typeof (product as any).createdAt === 'object' && 'seconds' in (product as any).createdAt) {
-                  createdAtTime = (product as any).createdAt.seconds * 1000;
-                } else if (typeof (product as any).createdAt.toMillis === 'function') {
-                  createdAtTime = (product as any).createdAt.toMillis();
-                } else {
-                  createdAtTime = new Date((product as any).createdAt).getTime();
-                }
-              }
-              if ((product as any).isNewItem === true) {
-                showNewTag = true;
-              } else if (createdAtTime > 0 && (Date.now() - createdAtTime <= newTagDurationDays * 24 * 60 * 60 * 1000)) {
-                showNewTag = true;
-              }
-              
-              return (
-                <div className="mb-2 flex items-center gap-2 flex-wrap">
-                  {showNewTag && (
-                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm animate-pulse">
-                      NEW
-                    </span>
-                  )}
-                  {createdAtTime > 0 && (
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">
-                      Added on: {new Date(createdAtTime).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              );
-            })()}
+
             <h1 className={`text-xl md:text-3xl font-bold mb-2 ${themeConfig.accent}`}>
               {product.name}
               {(product as any).ram && (product as any).rom && (
@@ -355,7 +358,7 @@ export default function CategoryDetailPage({
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
               <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words overflow-hidden">
-                {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) => 
+                {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) =>
                   part.match(/^https?:\/\/nomo-store/) ? (
                     <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
                       {part}
@@ -392,12 +395,12 @@ export default function CategoryDetailPage({
 
                     const existing = cartItems.find(item => item.id === product.id);
                     const currentInCart = existing ? existing.quantity : 0;
-                    
+
                     if (currentInCart + 1 > (product.quantity ?? 0)) {
                       toast.error(`Only ${product.quantity ?? 0} available in stock`, { duration: 3000 });
                       return;
                     }
-                    
+
                     addItem({
                       id: product.id,
                       name: product.name,
@@ -480,13 +483,12 @@ export default function CategoryDetailPage({
                                 <button
                                   key={sz}
                                   disabled={qty <= 0}
-                                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                                    qty <= 0 
-                                      ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border' 
-                                      : tempSelectedSize === sz 
+                                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0
+                                      ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                                      : tempSelectedSize === sz
                                         ? `${themeConfig.btn} text-white border-transparent`
                                         : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                  }`}
+                                    }`}
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -508,11 +510,10 @@ export default function CategoryDetailPage({
                             {colors.map((c: string, i: number) => (
                               <button
                                 key={i}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
-                                  tempSelectedColor === c 
+                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedColor === c
                                     ? `${themeConfig.btn} text-white border-transparent`
                                     : 'bg-white border-gray-300 hover:bg-gray-50'
-                                }`}
+                                  }`}
                                 style={tempSelectedColor === c ? undefined : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, '') }}
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -536,11 +537,10 @@ export default function CategoryDetailPage({
                               return (
                                 <button
                                   key={i}
-                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${
-                                    tempSelectedMeasurement === m 
+                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedMeasurement === m
                                       ? `${themeConfig.btn} text-white border-transparent`
                                       : 'bg-white border-gray-300 hover:bg-gray-50'
-                                  }`}
+                                    }`}
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
@@ -558,27 +558,26 @@ export default function CategoryDetailPage({
 
                     <div className="mt-4 pt-4 border-t border-border shrink-0">
                       <button
-                        className={`w-full py-3 rounded-lg font-bold text-white transition-all text-sm ${
-                          !canAdd ? 'bg-gray-300 cursor-not-allowed text-gray-500' : `${themeConfig.btn}`
-                        }`}
+                        className={`w-full py-3 rounded-lg font-bold text-white transition-all text-sm ${!canAdd ? 'bg-gray-300 cursor-not-allowed text-gray-500' : `${themeConfig.btn}`
+                          }`}
                         disabled={!canAdd}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           if (!canAdd) return;
 
-                          const qtyToCheck = tempSelectedSize 
-                            ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize] 
+                          const qtyToCheck = tempSelectedSize
+                            ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize]
                             : product.quantity;
-                          
-                          const existing = cartItems.find(item => 
-                            item.id === product.id && 
-                            item.selectedSize === (tempSelectedSize || undefined) && 
+
+                          const existing = cartItems.find(item =>
+                            item.id === product.id &&
+                            item.selectedSize === (tempSelectedSize || undefined) &&
                             (item as any).selectedColor === (tempSelectedColor || undefined) &&
                             (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined)
                           );
                           const currentInCart = existing ? existing.quantity : 0;
-                          
+
                           if (currentInCart + 1 > (qtyToCheck ?? 0)) {
                             toast.error(`Only ${qtyToCheck ?? 0} available`);
                             return;
@@ -672,7 +671,7 @@ function RelatedCarousel({
     let score = 0;
     if (p.category === current.category && p.category) score += 5;
     if (p.group && current.group && p.group.toLowerCase() === current.group.toLowerCase()) score += 2;
-    
+
     if (p.name && current.name) {
       const currentWords = current.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
       const pWords = p.name.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
@@ -747,10 +746,10 @@ function RelatedCarousel({
       <div className="relative hidden sm:block px-8">
         <div className={`grid ${gridCols} gap-3 transition-all duration-500 ease-in-out`}>
           {displayedProducts.map((p, i) => (
-            <CategoryProductCard 
-              key={p.id} 
-              product={p} 
-              themeClass={themeConfig.btn.split(' ')[0]} 
+            <CategoryProductCard
+              key={p.id}
+              product={p}
+              themeClass={themeConfig.btn.split(' ')[0]}
               categoryName={categoryName}
               detailPath={`${backPath}/`}
             />
@@ -801,9 +800,9 @@ function RelatedCarousel({
         >
           {related.map((p, index) => (
             <div key={p.id} className="min-w-[48%] w-[48%] shrink-0 snap-start">
-              <CategoryProductCard 
-                product={p} 
-                themeClass={themeConfig.btn.split(' ')[0]} 
+              <CategoryProductCard
+                product={p}
+                themeClass={themeConfig.btn.split(' ')[0]}
                 categoryName={categoryName}
                 detailPath={`${backPath}/`}
               />
