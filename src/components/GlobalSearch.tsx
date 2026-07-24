@@ -127,7 +127,12 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   manufacturer: data.manufacturer || '',
                   productCode: data.productCode || '',
                   isNewItem: data.isNewItem || false,
-                  createdAt: data.createdAt?.toMillis?.() ? data.createdAt.toMillis() : (data.createdAt || 0)
+                  createdAt: (() => {
+                    if (!data.createdAt) return 0;
+                    if (typeof data.createdAt === 'object' && 'seconds' in data.createdAt) return data.createdAt.seconds * 1000;
+                    if (typeof data.createdAt.toMillis === 'function') return data.createdAt.toMillis();
+                    return new Date(data.createdAt).getTime() || 0;
+                  })()
                 } as SearchItem;
               });
             } catch (err) {
