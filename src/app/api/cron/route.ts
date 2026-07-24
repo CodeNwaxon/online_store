@@ -95,12 +95,12 @@ export async function GET(request: Request) {
     for (const [vendorEmail, lowStockCount] of Object.entries(vendorStock)) {
       if (lowStockCount > 0) {
          const lastReminder = lastStockReminders[vendorEmail] || 0;
-         // Send if more than 7 days have passed since last reminder
-         if (now - lastReminder >= SEVEN_DAYS) {
+         // Send if more than 30 days have passed since last reminder
+         if (now - lastReminder >= THIRTY_DAYS) {
            emailsToSend.push(
              sendEmail({
                to: vendorEmail,
-               subject: 'Weekly Stock Alert: Low Inventory',
+               subject: 'Monthly Stock Alert: Low Inventory',
                html: `<p>Hello Vendor,</p><p>You currently have <strong>${lowStockCount}</strong> items with low stock (10 or fewer remaining).</p><p>Please log into your vendor dashboard to restock these items soon!</p>`
              }).then(() => {
                 lastStockReminders[vendorEmail] = now;
