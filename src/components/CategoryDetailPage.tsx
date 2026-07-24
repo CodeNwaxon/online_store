@@ -584,7 +584,8 @@ export default function CategoryDetailPage({
                           }
 
                           const measurePriceStr = tempSelectedMeasurement ? parsedMeasurements[tempSelectedMeasurement] : null;
-                          const finalPrice = measurePriceStr ? Number(measurePriceStr) : product.price;
+                          const parsedMPrice = Number(measurePriceStr);
+                          const finalPrice = (parsedMPrice && !isNaN(parsedMPrice) && parsedMPrice > 0) ? parsedMPrice : product.price;
 
                           addItem({
                             id: product.id,

@@ -518,7 +518,8 @@ export default function FoodDetailClient() {
                               return;
                             }
                             const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
-                            const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
+                            const parsedMPrice = Number(measurePriceStr);
+                            const measurePrice = (parsedMPrice && !isNaN(parsedMPrice) && parsedMPrice > 0) ? parsedMPrice : food.price;
 
                             const cartProduct: any = {
                               id: food.id,

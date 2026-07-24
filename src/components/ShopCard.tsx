@@ -661,7 +661,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         }
                         
                         const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
-                        const measurePrice = measurePriceStr ? Number(measurePriceStr) : food.price;
+                        const parsedMPrice = Number(measurePriceStr);
+                        const measurePrice = (parsedMPrice && !isNaN(parsedMPrice) && parsedMPrice > 0) ? parsedMPrice : food.price;
 
                         const cartProduct: any = {
                           id: food.id,

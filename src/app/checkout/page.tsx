@@ -23,6 +23,9 @@ export default function Checkout() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [contactNumber, setContactNumber] = useState('2347034632037');
   const [showCityError, setShowCityError] = useState(false);
   const [showPickupOnlyError, setShowPickupOnlyError] = useState(false);
   const [minShippingOverlay, setMinShippingOverlay] = useState<{ name: string; needed: number, current: number, required: number } | null>(null);
@@ -51,9 +54,21 @@ export default function Checkout() {
   const [shippingError, setShippingError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isProcessingPayment || isSuccess || paymentError) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [isProcessingPayment, isSuccess, paymentError]);
+
+  useEffect(() => {
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'general'));
-      if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSiteName(data.siteName || '');
+        if (data.phones && data.phones.length > 0) {
+          setContactNumber(data.phones[0].number.replace(/\D/g, ''));
+        }
+      }
     };
     fetchSettings();
 
@@ -235,12 +250,12 @@ export default function Checkout() {
   const finalTotalAmount = getTotalPrice() + (shippingCost > 0 ? shippingCost : 0);
 
   const processOrder = async (reference?: any) => {
-    setLoading(true);
+    setIsProcessingPayment(true);
+    setPaymentError(null);
 
     try {
       if (!reference?.reference) {
-        toast.error('No payment reference found.');
-        setLoading(false);
+        setPaymentError('No payment reference found.');
         return;
       }
 
@@ -248,8 +263,7 @@ export default function Checkout() {
       const result = await verifyAndFulfillOrder(reference.reference);
 
       if (!result.success) {
-        toast.error(result.error || 'Payment verification failed.');
-        setLoading(false);
+        setPaymentError(result.error || 'Payment verification failed.');
         return;
       }
 
@@ -261,13 +275,12 @@ export default function Checkout() {
 
       setOrderId(result.orderId || null);
       setFinalOrderData(fullOrderData);
-      setLoading(false);
+      setIsProcessingPayment(false);
       setIsSuccess(true);
       clearCart();
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error('Something went wrong. Please try again.');
-      setLoading(false);
+      setPaymentError('Something went wrong. Please try again.');
     }
   };
 
@@ -430,6 +443,50 @@ export default function Checkout() {
             <Link href="/" className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-md font-semibold transition-colors text-center">Back to Home</Link>
             <Link href="/shop" className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center">Continue Shopping</Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isProcessingPayment) {
+    return (
+      <div className="py-16 min-h-[70vh] flex items-center justify-center">
+        <div className="text-center max-w-[500px] p-8 md:p-12 bg-card rounded-[var(--radius)] border border-border shadow-sm mx-4">
+          {!paymentError ? (
+            <>
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <h1 className="text-2xl font-bold mb-4">Processing your payment...</h1>
+              <p className="text-muted-foreground animate-pulse">
+                Please do not close this page. We are securely verifying your transaction.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-6">
+                <FaShieldAlt size={30} />
+              </div>
+              <h1 className="text-2xl font-bold mb-4">Payment Verification Failed</h1>
+              <p className="text-muted-foreground mb-6">
+                There was a problem completing your order. {paymentError}
+              </p>
+              <div className="flex flex-col gap-3 justify-center max-w-[280px] mx-auto">
+                <a
+                  href={`https://wa.me/${contactNumber}?text=${encodeURIComponent("*I need your help !!!* My payment just failed on the website. Error: " + paymentError)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#25D366] hover:bg-[#1DA851] text-white px-6 py-3 rounded-md font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  Contact Admin
+                </a>
+                <button
+                  onClick={() => { setIsProcessingPayment(false); setPaymentError(null); }}
+                  className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center mt-2"
+                >
+                  Try Again
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

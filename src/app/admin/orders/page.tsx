@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -88,8 +88,8 @@ export default function AdminOrders() {
           setSelectedOrder((prev: any) => prev?.id === confirmDelete ? null : prev);
           toast.success('Order removed from view');
         } else if (confirmUnmark) {
-          await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false });
-          setSelectedOrder((prev: any) => prev?.id === confirmUnmark ? { ...prev, delivered: false } : prev);
+          await updateDoc(doc(db, 'orders', confirmUnmark), { delivered: false, deliveredBy: null });
+          setSelectedOrder((prev: any) => prev?.id === confirmUnmark ? { ...prev, delivered: false, deliveredBy: null } : prev);
           toast.success('Order marked as undelivered');
         }
         setShowPasskeyModal(null);
@@ -108,9 +108,17 @@ export default function AdminOrders() {
     e.stopPropagation();
 
     // Set delivered to true
-    await updateDoc(doc(db, 'orders', orderId), { delivered: true });
+    const googleName = auth.currentUser?.displayName || '';
+    const roleText = isCEO ? 'CEO' : 'VIP Admin';
 
-    setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, delivered: true } : prev);
+    const deliveredBy = {
+      name: googleName,
+      role: roleText,
+      email: auth.currentUser?.email || ''
+    };
+    await updateDoc(doc(db, 'orders', orderId), { delivered: true, deliveredBy });
+
+    setSelectedOrder((prev: any) => prev?.id === orderId ? { ...prev, delivered: true, deliveredBy } : prev);
     toast.success('Order marked as delivered');
 
     // Send Notification to Customer
@@ -494,16 +502,25 @@ export default function AdminOrders() {
                       Mark Delivered
                     </button>
                   ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmUnmark(selectedOrder.id);
-                        setShowPasskeyModal(selectedOrder.id);
-                      }}
-                      className="px-3 py-1 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors shadow-sm"
-                    >
-                      Unmark Delivered
-                    </button>
+                    <div className="flex flex-col items-center md:items-end gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmUnmark(selectedOrder.id);
+                          setShowPasskeyModal(selectedOrder.id);
+                        }}
+                        className="px-3 py-1 bg-muted text-muted-foreground text-[10px] font-black rounded-lg hover:bg-border transition-colors shadow-sm"
+                      >
+                        Unmark Delivered
+                      </button>
+                      {selectedOrder.deliveredBy && (
+                        <div className="text-[10px] text-muted-foreground text-center md:text-right">
+                          <span className="font-bold">{selectedOrder.deliveredBy.name}</span>{' '}
+                          <span className="font-black text-[#FFD700]">{selectedOrder.deliveredBy.role || 'VIP Admin'}</span><br/>
+                          <span className="font-bold">{selectedOrder.deliveredBy.email}</span>
+                        </div>
+                      )}
+                    </div>
                   )
                 )}
               </div>

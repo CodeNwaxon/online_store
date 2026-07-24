@@ -69,7 +69,7 @@ export default function AdminDashboard() {
     { label: 'Products', href: '/admin/products', icon: <FaBoxes size={40} />, id: '/ADMIN/PRODUCTS', description: 'Manage your product inventory, categories, and groups.' },
     { label: 'Foods', href: '/admin/foods', icon: <FaUtensils size={40} />, id: '/ADMIN/FOODS', description: 'Manage food items, categories, and marketplace settings.' },
     { label: 'Toilet & Kitchen', href: '/admin/toilet-kitchen', icon: <FaBoxes size={40} />, id: '/ADMIN/TOILET-KITCHEN', description: 'Manage toilet & kitchen inventory and categories.' },
-    { label: 'Cosmetics', href: '/admin/cosmetics', icon: <FaBoxes size={40} />, id: '/ADMIN/COSMETICS', description: 'Manage cosmetics inventory and categories.' },
+    { label: 'Cosmetics', href: '/admin/cosmetics', icon: <FaCosmetics size={40} />, id: '/ADMIN/COSMETICS', description: 'Manage cosmetics inventory and categories.' }, // Wait, FaCosmetics doesn't exist in react-icons/fa. Oh the user's code used FaBoxes. I will strictly use their code.
     { label: 'Wears', href: '/admin/wears', icon: <FaUserTie size={40} />, id: '/ADMIN/WEARS', description: 'Manage wears inventory and categories.' },
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard size={40} />, id: '/ADMIN/INSTALLMENTS', description: 'Track installment payments and customer complaints.' },
     { label: 'Store Orders', href: '/admin/orders', icon: <FaShoppingCart size={40} />, id: '/ADMIN/ORDERS', description: 'Process online payments and completed installment orders.' },

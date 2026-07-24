@@ -18,6 +18,8 @@ interface SearchItem {
   group?: string;
   manufacturer?: string;
   productCode?: string;
+  isNewItem?: boolean;
+  createdAt?: number;
 }
 
 interface GlobalSearchProps {
@@ -59,7 +61,28 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
   const [allItems, setAllItems] = useState<SearchItem[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(100);
+  const [newTagDurationDays, setNewTagDurationDays] = useState(14);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Fetch global settings for new tag duration
+    const fetchSettings = async () => {
+      try {
+        const settingsSnap = await getDocs(collection(db, 'settings'));
+        settingsSnap.docs.forEach(doc => {
+          if (doc.id === 'global') {
+            const data = doc.data();
+            if (data.newTagDurationDays) {
+              setNewTagDurationDays(data.newTagDurationDays);
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Could not fetch new tag settings', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -102,7 +125,9 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   category: colName,
                   group: data.group || '',
                   manufacturer: data.manufacturer || '',
-                  productCode: data.productCode || ''
+                  productCode: data.productCode || '',
+                  isNewItem: data.isNewItem || false,
+                  createdAt: data.createdAt?.toMillis?.() ? data.createdAt.toMillis() : (data.createdAt || 0)
                 } as SearchItem;
               });
             } catch (err) {
@@ -207,10 +232,22 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      {item.isPromo && (
+                      {item.isPromo ? (
                         <span className="absolute top-1 left-1 bg-red-600 text-white text-[7px] font-bold px-1 py-0.5 rounded shadow-sm z-10">
                           PROMO
                         </span>
+                      ) : (
+                        (() => {
+                          const isNew = item.isNewItem || (item.createdAt && item.createdAt > 0 && (Date.now() - item.createdAt <= newTagDurationDays * 24 * 60 * 60 * 1000));
+                          if (isNew) {
+                            return (
+                              <span className="absolute top-1 left-1 bg-red-600 text-white text-[7px] font-bold px-1 py-0.5 rounded shadow-sm z-10 animate-pulse">
+                                NEW
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()
                       )}
                     </div>
                     <div className="p-1.5 flex flex-col flex-1">

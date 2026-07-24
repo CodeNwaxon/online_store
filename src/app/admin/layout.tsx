@@ -93,13 +93,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const filteredNav = navItems.filter(item => {
     if (item.id === 'dashboard') return true;
     if (isCEO) return true;
-    
-    // VIP admins with product routes should see the Orders link
-    if (adminData?.vip && item.id === '/ADMIN/ORDERS') {
-      const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN'].includes(r));
-      if (hasProductRoute) return true;
-    }
-    
     return adminData?.assignedRoutes?.includes(item.id);
   });
 
