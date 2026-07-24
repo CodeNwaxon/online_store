@@ -149,26 +149,31 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
 
       const q = query.toLowerCase().trim();
       
-      const queryWords = q.split(/\s+/);
-      const searchTermsSet = new Set<string>();
-      
-      searchTermsSet.add(q);
-      queryWords.forEach(word => {
-        searchTermsSet.add(word);
-        if (searchSynonyms[word]) {
-          searchSynonyms[word].forEach(syn => searchTermsSet.add(syn));
-        }
-      });
-      
-      const expandedQuery = Array.from(searchTermsSet).join(' ');
-      
       const fuse = new Fuse(itemsToSearch, {
         keys: ['name', 'category', 'group', 'manufacturer', 'productCode'],
         threshold: 0.3,
         ignoreLocation: true
       });
       
-      const results = fuse.search(expandedQuery);
+      let results = fuse.search(q);
+      
+      // If no results, try searching with synonyms
+      if (results.length === 0) {
+        const queryWords = q.split(/\s+/);
+        let hasSynonyms = false;
+        let synonymQuery = q;
+        
+        queryWords.forEach(word => {
+          if (searchSynonyms[word]) {
+            hasSynonyms = true;
+            synonymQuery += ' ' + searchSynonyms[word].join(' ');
+          }
+        });
+        
+        if (hasSynonyms) {
+          results = fuse.search(synonymQuery);
+        }
+      }
       const filtered = results.map(r => r.item);
       
       setResults(filtered);

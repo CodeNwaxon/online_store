@@ -140,7 +140,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             )}
           </span>
         )}
-        {!product.isPromo && (() => {
+        {(() => {
           let showNewTag = false;
           if ((product as any).isNewItem === true) {
              showNewTag = true;
@@ -160,7 +160,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
              }
           }
           return showNewTag ? (
-            <span className="absolute top-0.5 left-0.5 bg-red-600 text-white px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-10 shadow-sm flex items-center animate-pulse">
+            <span className={`absolute ${product.isPromo ? (product.promoEndDate ? 'top-12 md:top-14' : 'top-7 md:top-8') : 'top-0.5'} left-0.5 bg-red-600 text-white px-1.5 md:px-2 py-0.5 rounded text-[8px] md:text-xs font-bold z-10 shadow-sm flex items-center animate-pulse`}>
               NEW
             </span>
           ) : null;
