@@ -147,7 +147,21 @@ export default function Navbar() {
       let count = 0;
       snap.forEach(docSnap => {
         const orderData = docSnap.data();
-        const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+        let isVIPForOrder = false;
+        if (adminData?.vip) {
+          const ROUTE_TO_COLLECTION: Record<string, string> = {
+            '/ADMIN/PRODUCTS': 'products',
+            '/ADMIN/FOODS': 'foods',
+            '/ADMIN/WEARS': 'wears',
+            '/ADMIN/COSMETICS': 'cosmetics',
+            '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+          };
+          const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
+          isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
+        }
+
+        const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
+        
         if (hasOrderAccess) {
           count++;
         } else if (orderData.items?.some((item: any) => item.vendor === adminData?.email)) {
@@ -162,7 +176,22 @@ export default function Navbar() {
 
         const orderData = change.doc.data();
         const isVendorOrder = Boolean(orderData.items?.some((item: any) => item.vendor === adminData?.email));
-        const hasOrderAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/ORDERS'));
+        
+        let isVIPForOrder = false;
+        if (adminData?.vip) {
+          const ROUTE_TO_COLLECTION: Record<string, string> = {
+            '/ADMIN/PRODUCTS': 'products',
+            '/ADMIN/FOODS': 'foods',
+            '/ADMIN/WEARS': 'wears',
+            '/ADMIN/COSMETICS': 'cosmetics',
+            '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+          };
+          const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
+          isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
+        }
+
+        const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
+        
         const shouldNotify = hasOrderAccess || isVendorOrder;
         if (!shouldNotify) return;
 
@@ -401,6 +430,13 @@ export default function Navbar() {
   const filteredAdminLinks = adminLinks.filter(item => {
     if (item.id === 'dashboard') return true;
     if (isCEO) return true;
+    
+    // VIP admins with product routes should see the Orders link
+    if (adminData?.vip && item.id === '/ADMIN/ORDERS') {
+      const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN'].includes(r));
+      if (hasProductRoute) return true;
+    }
+
     return adminData?.assignedRoutes?.includes(item.id);
   });
 
