@@ -44,8 +44,8 @@ export default function ShippingBreakdown({ breakdown, isLoading, error }: Shipp
     <div className="rounded-[var(--radius)] border border-border bg-background p-4 space-y-4 shadow-sm">
       <div className="text-sm text-muted-foreground">Shipping fee is calculated as one full fee for the highest-cost item, and 50% for every other item.</div>
       <div className="grid gap-3">
-        {breakdown.itemBreakdown.map((item) => (
-          <div key={item.id} className="rounded-lg border border-border bg-muted/50 p-3">
+        {breakdown.itemBreakdown.map((item, index) => (
+          <div key={`${item.id}-${index}`} className="rounded-lg border border-border bg-muted/50 p-3">
             <div className="flex justify-between items-center gap-4">
               <div>
                 <div className="font-semibold">{item.name}</div>
