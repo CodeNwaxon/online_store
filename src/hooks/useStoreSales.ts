@@ -47,15 +47,27 @@ export function useStoreSales() {
               cosmetics: Number(data.cosmetics) || 0,
             });
 
+            const vSales: Record<string, number> = {};
+
             if (data.vendors && typeof data.vendors === 'object') {
-              const vSales: Record<string, number> = {};
               for (const [key, val] of Object.entries(data.vendors)) {
                 const numVal = Number(val) || 0;
                 vSales[key] = numVal;
                 vSales[key.replace(/_/g, '.')] = numVal;
               }
-              setVendorSales(vSales);
             }
+
+            // Also handle flattened keys like "vendors.codewithme_nw@gmail_com"
+            for (const [key, val] of Object.entries(data)) {
+              if (key.startsWith('vendors.')) {
+                const vendorKey = key.substring('vendors.'.length);
+                const numVal = Number(val) || 0;
+                vSales[vendorKey] = numVal;
+                vSales[vendorKey.replace(/_/g, '.')] = numVal;
+              }
+            }
+
+            setVendorSales(vSales);
             setLoading(false);
             return;
           }
@@ -148,7 +160,16 @@ export function useStoreSales() {
     if (!email) return 0;
     const cleanEmail = email.toLowerCase().trim();
     const underscoreEmail = cleanEmail.replace(/\./g, '_');
-    return vendorSales[cleanEmail] ?? vendorSales[underscoreEmail] ?? 0;
+    
+    return vendorSales[cleanEmail] ?? 
+           vendorSales[underscoreEmail] ?? 
+           vendorSales[encodeURIComponent(cleanEmail)] ??
+           vendorSales[encodeURIComponent(underscoreEmail)] ??
+           vendorSales[cleanEmail.replace('@', '%40')] ?? 
+           vendorSales[underscoreEmail.replace('@', '%40')] ?? 
+           vendorSales[cleanEmail.replace('@', '%@')] ?? 
+           vendorSales[underscoreEmail.replace('@', '%@')] ?? 
+           0;
   };
 
   return { vendorSales, storeTypeSales, getVendorSales, loading };
