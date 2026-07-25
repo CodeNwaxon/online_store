@@ -184,7 +184,7 @@ function ShopContent() {
               <p className="-mt-1 text-[10px] md:text-base text-muted-foreground">Explore our range of premium African-inspired goods.</p>
               <StoreRatingStars salesCount={storeTypeSales.shop} textColor="text-muted-foreground" className="mt-1" />
             </div>
-            <button 
+            <button
               onClick={() => {
                 const urlObj = new URL(window.location.origin + window.location.pathname);
                 if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -193,7 +193,7 @@ function ShopContent() {
                 const url = urlObj.toString();
                 const title = 'Our Collection | Nomo Storez';
                 if (navigator.share) {
-                  navigator.share({ title, url }).catch(()=>{});
+                  navigator.share({ title, url }).catch(() => { });
                 } else {
                   navigator.clipboard.writeText(url);
                   toast.success('Page link copied!');
@@ -256,10 +256,10 @@ function ShopContent() {
                 placeholder="Search by name, brand or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full py-2.5 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
+                className="text-xs md:text-sm w-full py-2 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
               />
               <FaSearch
-                size={18}
+                size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
             </div>
