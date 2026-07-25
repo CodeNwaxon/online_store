@@ -21,6 +21,7 @@ function CosmeticsPageContent() {
   const storeSlug = searchParams?.get('store');
 
   const [products, setProducts] = useState<CategoryProduct[]>([]);
+  const [allProductsCount, setAllProductsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
   const [storeLoading, setStoreLoading] = useState(!!storeSlug);
@@ -48,6 +49,7 @@ function CosmeticsPageContent() {
       setLoading(true);
       try {
         const sortedProds = await fetchCollection('cosmetics');
+        setAllProductsCount(sortedProds.length);
 
         const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
 
@@ -287,7 +289,7 @@ function CosmeticsPageContent() {
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
             We are currently stocking up our cosmetics collection. Check back soon for amazing beauty products.
           </p>
-          <Link href="/shop" className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2">
+          <Link href={allProductsCount > 0 ? "/shop/cosmetics" : "/shop"} className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2">
             <FaStore /> Continue Shopping
           </Link>
         </div>

@@ -21,6 +21,7 @@ function WearsPageContent() {
   const storeSlug = searchParams?.get('store');
 
   const [products, setProducts] = useState<CategoryProduct[]>([]);
+  const [allProductsCount, setAllProductsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
   const [storeLoading, setStoreLoading] = useState(!!storeSlug);
@@ -48,6 +49,7 @@ function WearsPageContent() {
       setLoading(true);
       try {
         const sortedProds = await fetchCollection('wears');
+        setAllProductsCount(sortedProds.length);
         const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
 
         setProducts(filteredForStore);
@@ -238,7 +240,7 @@ function WearsPageContent() {
           <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mb-6"><FaUserTie className="text-4xl text-purple-500" /></div>
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-slate-800">Coming Soon!</h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-8">We are currently stocking up our fashion collection. Check back soon for amazing wears.</p>
-          <Link href="/shop" className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2"><FaStore /> Continue Shopping</Link>
+          <Link href={allProductsCount > 0 ? "/shop/wears" : "/shop"} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2"><FaStore /> Continue Shopping</Link>
         </div>
       </div>
     );

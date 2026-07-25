@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
-import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown } from 'react-icons/fa';
+import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown, FaStore } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import Fuse from 'fuse.js';
@@ -122,8 +123,13 @@ function FoodsContent() {
           <p className="text-gray-600 mb-8 leading-relaxed">
             We are preparing the freshest and most delicious offerings for you. Our food market will be open very soon. Stay tuned!
           </p>
-          <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
-            <FaLeaf /> Farm Fresh Quality
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 px-4 py-3 rounded-full border border-emerald-100">
+              <FaLeaf /> Farm Fresh Quality
+            </div>
+            <Link href="/shop" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-full transition-colors flex items-center gap-2">
+              <FaStore /> Continue Shopping
+            </Link>
           </div>
         </div>
       </div>
@@ -147,7 +153,7 @@ function FoodsContent() {
             </p>
             <StoreRatingStars salesCount={storeTypeSales.food} textColor="text-green-100" className="mt-2" />
           </div>
-          <button 
+          <button
             onClick={() => {
               const urlObj = new URL(window.location.origin + window.location.pathname);
               if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -157,7 +163,7 @@ function FoodsContent() {
               const url = urlObj.toString();
               const title = 'Food Market | Nomo Storez';
               if (navigator.share) {
-                navigator.share({ title, url }).catch(()=>{});
+                navigator.share({ title, url }).catch(() => { });
               } else {
                 navigator.clipboard.writeText(url);
                 toast.success('Page link copied!');
