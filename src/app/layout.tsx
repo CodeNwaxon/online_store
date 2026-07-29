@@ -35,11 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      url: "https://nomo-store.vercel.app",
+      url: "https://nomo-stores.com",
       siteName: siteName,
       images: [
         {
-          url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1778079956/environment_zlryzu.jpg",
+          url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1784630699/dvr0zibndlomhqbhc8ah.png",
           width: 800,
           height: 600,
           alt: `${siteName} Logo`,
@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      images: ["https://res.cloudinary.com/dfwpxohxg/image/upload/v1778079956/environment_zlryzu.jpg"],
+      images: ["https://res.cloudinary.com/dfwpxohxg/image/upload/v1784630699/dvr0zibndlomhqbhc8ah.png"],
     },
   };
 }
