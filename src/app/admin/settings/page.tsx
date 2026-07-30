@@ -12,6 +12,9 @@ const SOCIAL_PLATFORMS = [
   { name: 'Instagram', icon: 'FaInstagram', placeholder: 'https://instagram.com/...' },
   { name: 'Facebook', icon: 'FaFacebook', placeholder: 'https://facebook.com/...' },
   { name: 'Twitter', icon: 'FaTwitter', placeholder: 'https://twitter.com/...' },
+  { name: 'TikTok', icon: 'FaTiktok', placeholder: 'https://tiktok.com/@...' },
+  { name: 'Telegram', icon: 'FaTelegramPlane', placeholder: 'https://t.me/...' },
+  { name: 'LinkedIn', icon: 'FaLinkedin', placeholder: 'https://linkedin.com/in/...' },
 ];
 
 export default function AdminSettings() {

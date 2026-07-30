@@ -26,6 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
+    metadataBase: new URL("https://nomo-stores.com"),
     title: `${siteName} | Premium African Inspired Goods`,
     description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
     manifest: "/manifest.json",

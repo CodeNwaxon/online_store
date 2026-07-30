@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaWhatsapp, FaYoutube, FaTiktok, FaShareAlt } from 'react-icons/fa';
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaWhatsapp, FaYoutube, FaTiktok, FaTelegramPlane, FaShareAlt } from 'react-icons/fa';
 import FooterInstall from './FooterInstall';
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
@@ -21,6 +21,7 @@ const ICON_MAP: any = {
   WhatsApp: <FaWhatsapp size={20} />,
   YouTube: <FaYoutube size={20} />,
   TikTok: <FaTiktok size={20} />,
+  Telegram: <FaTelegramPlane size={20} />,
 };
 
 export default function Footer() {

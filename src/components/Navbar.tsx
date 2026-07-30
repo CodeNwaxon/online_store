@@ -273,9 +273,31 @@ export default function Navbar() {
       console.warn("Navbar complaints listener error:", error);
     });
 
+    let isInitialPartnersLoad = true;
     const unsubPart = onSnapshot(query(collection(db, 'partners'), where('status', '==', 'pending')), (snap) => {
       partCount = snap.size;
       setUnreadPartners(partCount);
+
+      snap.docChanges().forEach(change => {
+        if (isInitialPartnersLoad) return;
+        if (change.type !== 'added') return;
+
+        const data = change.doc.data();
+        if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/PARTNERSHIP')) {
+          addNotification({
+            id: `partner-${change.doc.id}`,
+            type: 'partnership',
+            title: 'New Partnership Request',
+            message: `${data.email || data.accountName || 'Someone'} has applied to become a partner.`,
+            createdAt: data.createdAt || new Date().toISOString(),
+            read: false,
+            link: '/admin/partnership',
+            adminRoute: '/ADMIN/PARTNERSHIP',
+          });
+        }
+      });
+
+      isInitialPartnersLoad = false;
     }, (error) => {
       console.warn("Navbar partners listener error:", error);
     });
