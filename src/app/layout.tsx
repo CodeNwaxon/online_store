@@ -40,10 +40,16 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: siteName,
       images: [
         {
-          url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1784630699/dvr0zibndlomhqbhc8ah.png",
+          url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
           width: 800,
           height: 600,
           alt: `${siteName} Logo`,
+        },
+        {
+          url: "/nomoStore_building.jpeg",
+          width: 800,
+          height: 600,
+          alt: `${siteName} Store Building`,
         },
       ],
       locale: "en_US",
@@ -53,7 +59,10 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      images: ["https://res.cloudinary.com/dfwpxohxg/image/upload/v1784630699/dvr0zibndlomhqbhc8ah.png"],
+      images: [
+        "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
+        "/nomoStore_building.jpeg"
+      ],
     },
   };
 }
