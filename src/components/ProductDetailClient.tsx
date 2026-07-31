@@ -354,7 +354,7 @@ export default function ProductDetailClient() {
 
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
-              <p className="text-muted-foreground leading-relaxed italic max-md:max-h-[150px] max-md:overflow-y-auto max-md:pr-2 md:[&::-webkit-scrollbar]:hidden max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
+              <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words max-h-[150px] md:max-h-[250px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
                 {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) =>
                   part.match(/^https?:\/\/nomo-store/) ? (
                     <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">

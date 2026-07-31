@@ -81,6 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Toilet & Kitchen', href: '/admin/toilet-kitchen', icon: <FaBoxes />, id: '/ADMIN/TOILET-KITCHEN' },
     { label: 'Cosmetics', href: '/admin/cosmetics', icon: <FaBoxes />, id: '/ADMIN/COSMETICS' },
     { label: 'Wears', href: '/admin/wears', icon: <FaUserTie />, id: '/ADMIN/WEARS' },
+    { label: 'UK Used', href: '/admin/uk-used', icon: <FaHandshake />, id: '/ADMIN/UK-USED' },
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
     { label: 'Orders', href: '/admin/orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
@@ -169,7 +170,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 min-w-0 overflow-x-hidden ${pathname === '/admin/stats' ? 'p-1 md:p-4' : 'p-4 md:p-8'}`}>
+        <main className={`flex-1 min-w-0 overflow-x-hidden ${pathname === '/admin/stats' ? 'p-1 md:p-4' : 'py-4 px-3 md:p-8'}`}>
           {children}
         </main>
       </div>

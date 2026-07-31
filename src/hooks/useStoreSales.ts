@@ -11,6 +11,7 @@ export interface StoreTypeSales {
   toilet_kitchen: number;
   wears: number;
   cosmetics: number;
+  uk_used: number;
 }
 
 export function useStoreSales() {
@@ -22,6 +23,7 @@ export function useStoreSales() {
     toilet_kitchen: 0,
     wears: 0,
     cosmetics: 0,
+    uk_used: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +47,7 @@ export function useStoreSales() {
               toilet_kitchen: Number(data.toilet_kitchen) || 0,
               wears: Number(data.wears) || 0,
               cosmetics: Number(data.cosmetics) || 0,
+              uk_used: Number(data.uk_used) || 0,
             });
 
             const vSales: Record<string, number> = {};
@@ -91,7 +94,7 @@ export function useStoreSales() {
         collection(db, 'orders'),
         (snap) => {
           const vSales: Record<string, number> = {};
-          const sSales: StoreTypeSales = { shop: 0, food: 0, furniture: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0 };
+          const sSales: StoreTypeSales = { shop: 0, food: 0, furniture: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0, uk_used: 0 };
 
           snap.docs.forEach((d) => {
             const order = d.data() as any;
@@ -134,6 +137,8 @@ export function useStoreSales() {
                   sSales.wears += qty;
                 } else if (coll === 'cosmetics' || group.includes('cosmetics') || category.includes('cosmetics')) {
                   sSales.cosmetics += qty;
+                } else if (coll === 'uk_used' || group.includes('used') || category.includes('used')) {
+                  sSales.uk_used += qty;
                 }
               });
             }

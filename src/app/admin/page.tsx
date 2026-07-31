@@ -71,6 +71,7 @@ export default function AdminDashboard() {
     { label: 'Toilet & Kitchen', href: '/admin/toilet-kitchen', icon: <FaBoxes size={40} />, id: '/ADMIN/TOILET-KITCHEN', description: 'Manage toilet & kitchen inventory and categories.' },
     { label: 'Cosmetics', href: '/admin/cosmetics', icon: <FaBoxes size={40} />, id: '/ADMIN/COSMETICS', description: 'Manage cosmetics inventory and categories.' },
     { label: 'Wears', href: '/admin/wears', icon: <FaUserTie size={40} />, id: '/ADMIN/WEARS', description: 'Manage wears inventory and categories.' },
+    { label: 'UK Used', href: '/admin/uk-used', icon: <FaHandshake size={40} />, id: '/ADMIN/UK-USED', description: 'Manage UK Used items and categories.' },
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard size={40} />, id: '/ADMIN/INSTALLMENTS', description: 'Track installment payments and customer complaints.' },
     { label: 'Store Orders', href: '/admin/orders', icon: <FaShoppingCart size={40} />, id: '/ADMIN/ORDERS', description: 'Process online payments and completed installment orders.' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake size={40} />, id: '/ADMIN/PARTNERSHIP', description: 'Manage partnership applications and view payouts.' },

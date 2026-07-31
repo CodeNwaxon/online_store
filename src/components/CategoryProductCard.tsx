@@ -68,6 +68,7 @@ export default function CategoryProductCard({
 
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [showIssues, setShowIssues] = useState(false);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [tempSelectedSize, setTempSelectedSize] = useState<string>('');
@@ -288,7 +289,7 @@ export default function CategoryProductCard({
           </h3>
         </div>
 
-        <div className="mt-2 flex flex-col md:flex-row justify-between items-start">
+        <div className="mt-2 flex flex-col md:flex-row justify-between items-start w-full">
           <div className="flex flex-col justify-start items-start gap-1 mb-2">
             {product.group && (
               <span className="text-[0.65rem] text-muted-foreground dark:text-zinc-400 font-medium italic">
@@ -296,12 +297,28 @@ export default function CategoryProductCard({
               </span>
             )}
           </div>
-          <button
-            onClick={() => setShowDescription(true)}
-            className={`mb-2 md:mb-0 underline font-semibold text-[11px] md:text-xs text-primary dark:text-primary-400`}
-          >
-            Description
-          </button>
+          <div className="flex flex-wrap gap-2 items-center justify-end">
+            {(product.category === 'uk_used' || product.category === 'uk-used' || categoryName.toLowerCase().replace(/[^a-z0-9]/g, '') === 'ukused') && (
+              <button
+                type="button"
+                onClick={() => setShowIssues(true)}
+                className={`font-bold text-[11px] md:text-xs ${
+                  (product as any).hasIssues 
+                    ? 'text-red-800 dark:text-red-400 hover:opacity-80' 
+                    : 'text-emerald-700 dark:text-emerald-400 hover:opacity-80'
+                }`}
+              >
+                {(product as any).hasIssues ? 'Check Issues' : 'No Issues'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowDescription(true)}
+              className="underline font-semibold text-[11px] md:text-xs text-primary dark:text-primary-400"
+            >
+              Description
+            </button>
+          </div>
         </div>
         {product.minShippingQty && product.minShippingQty > 0 ? (
           <p className="mt-0 text-[9px] text-muted-foreground dark:text-zinc-400 font-medium">
@@ -330,12 +347,43 @@ export default function CategoryProductCard({
                   {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part, i) => 
                     part.match(/^https?:\/\/nomo-store/) ? (
                       <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                        {part}
+                         {part}
                       </a>
                     ) : (
                       <span key={i}>{part}</span>
                     )
                   )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showIssues && (
+          <div
+            className="absolute inset-0 bg-background/40 dark:bg-zinc-950/60 backdrop-blur-[3px] z-50 p-2 max-md:p-1 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssues(false); }}
+          >
+            <div
+              className="bg-card dark:bg-zinc-900 w-full max-h-[90%] rounded-md shadow-xl border border-border dark:border-zinc-800 p-3 max-md:p-2 flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssues(false); }}
+                className="absolute top-1.5 right-1.5 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted dark:hover:bg-zinc-800 text-foreground dark:text-zinc-300 z-10"
+              >
+                ✕
+              </button>
+              <h3 className={`text-[0.75rem] font-bold mb-1.5 pr-6 leading-tight ${
+                (product as any).hasIssues ? 'text-red-800 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+              }`}>
+                {(product as any).hasIssues ? 'Product Issues' : 'Product Status'} - {product.name}
+              </h3>
+              <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                <p className="text-[0.7rem] text-foreground/90 dark:text-zinc-300 whitespace-pre-wrap break-words overflow-hidden font-medium">
+                  {(product as any).hasIssues 
+                    ? ((product as any).issuesDescription || "No specific issue description provided.") 
+                    : "No issue with this product."}
                 </p>
               </div>
             </div>

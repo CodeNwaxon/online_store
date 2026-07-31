@@ -40,7 +40,7 @@ interface ShopCardProps {
   isFood?: boolean;
   onEdit?: (food: ShopProduct) => void;
   onDelete?: (id: string) => void;
-  themeColor?: 'green' | 'pink' | 'purple' | 'teal' | 'amber';
+  themeColor?: 'green' | 'pink' | 'purple' | 'teal' | 'amber' | 'gray';
 }
 
 const themeStyles = {
@@ -98,6 +98,17 @@ const themeStyles = {
     shadow: "shadow-[0_4px_20px_rgba(217,119,6,0.08)] hover:shadow-[0_8px_30px_rgba(217,119,6,0.15)]",
     divider: "from-amber-400 to-yellow-600",
     textPrice: "text-amber-600",
+  },
+  gray: {
+    bgGradient: "from-gray-50 to-slate-100",
+    textPrimary: "text-gray-600",
+    bgPrimary: "bg-gray-600",
+    hoverBgPrimary: "hover:bg-gray-700",
+    hoverBgLight: "hover:bg-gray-50",
+    border: "border-gray-200",
+    shadow: "shadow-[0_4px_20px_rgba(75,85,99,0.08)] hover:shadow-[0_8px_30px_rgba(75,85,99,0.15)]",
+    divider: "from-gray-400 to-slate-600",
+    textPrice: "text-gray-600",
   }
 };
 
@@ -108,6 +119,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   const cartItems = useCartStore((state) => state.items);
   const [imgError, setImgError] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
+  const [showIssues, setShowIssues] = useState(false);
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [showSizeOverlay, setShowSizeOverlay] = useState(false);
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
@@ -322,14 +334,29 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
             </h3>
             {!isAdmin && <LikeButton productId={food.id} />}
           </div>
-          {food.description && (
-            <button
-              onClick={() => setShowDescription(true)}
-              className={`text-xs ${theme.textPrimary} font-semibold hover:underline`}
-            >
-              Description
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2 items-center">
+            {(food.category === 'uk_used' || food.category === 'uk-used' || (food as any).hasIssues !== undefined) && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssues(true); }}
+                className={`font-bold text-[11px] md:text-xs ${
+                  (food as any).hasIssues 
+                    ? 'text-red-800 dark:text-red-400 hover:opacity-80' 
+                    : 'text-emerald-700 dark:text-emerald-400 hover:opacity-80'
+                }`}
+              >
+                {(food as any).hasIssues ? 'Check Issues' : 'No Issues'}
+              </button>
+            )}
+            {food.description && (
+              <button
+                onClick={() => setShowDescription(true)}
+                className={`underline text-xs ${theme.textPrimary} font-semibold`}
+              >
+                Description
+              </button>
+            )}
+          </div>
           {food.minShippingQty && food.minShippingQty > 0 ? (
             <p className="mt-0 text-[9px] text-muted-foreground font-medium">
               Min. shipping qty: {food.minShippingQty}
@@ -364,6 +391,37 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                       <span key={i}>{part}</span>
                     )
                   )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showIssues && (
+          <div
+            className="absolute inset-0 bg-background/40 backdrop-blur-[3px] z-50 p-2 max-md:p-1 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssues(false); }}
+          >
+            <div
+              className="bg-card w-full max-h-[90%] rounded-md shadow-xl border border-border p-3 max-md:p-2 flex flex-col relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssues(false); }}
+                className="absolute top-1.5 right-1.5 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+              >
+                ✕
+              </button>
+              <h3 className={`text-[0.75rem] font-bold mb-1.5 pr-6 leading-tight ${
+                (food as any).hasIssues ? 'text-red-800 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'
+              }`}>
+                {(food as any).hasIssues ? 'Product Issues' : 'Product Status'} - {food.name}
+              </h3>
+              <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                <p className="text-[0.7rem] text-foreground/90 whitespace-pre-wrap break-words overflow-hidden font-medium">
+                  {(food as any).hasIssues 
+                    ? ((food as any).issuesDescription || "No specific issue description provided.") 
+                    : "No issue with this product."}
                 </p>
               </div>
             </div>

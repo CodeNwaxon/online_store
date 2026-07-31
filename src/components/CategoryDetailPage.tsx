@@ -13,6 +13,9 @@ import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
+// Edit this constant to change the message prefix for the "Request Video" WhatsApp button
+const REQUEST_VIDEO_MESSAGE_PREFIX = "Hello, I would like to request a video for this product:";
+
 interface CategoryDetailPageProps {
   id: string;
   collectionName: string;
@@ -50,6 +53,7 @@ export default function CategoryDetailPage({
   const [tempSelectedSize, setTempSelectedSize] = useState('');
   const [tempSelectedColor, setTempSelectedColor] = useState('');
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState('');
+  const [showIssuesOverlay, setShowIssuesOverlay] = useState(false);
 
   // State for dynamic WhatsApp number
   const [contactNumber, setContactNumber] = useState('2347034632037');
@@ -303,12 +307,23 @@ export default function CategoryDetailPage({
 
             <h1 className={`text-xl md:text-3xl font-bold mb-2 ${themeConfig.accent}`}>
               {product.name}
-              {(product as any).ram && (product as any).rom && (
+              {((product as any).ram && (product as any).rom) && (
                 <span className="text-black text-sm md:text-base font-normal ml-2">
                   ({(product as any).ram} / {(product as any).rom})
                 </span>
               )}
+              {(product as any).ramRom && (
+                <span className="text-black text-sm md:text-base font-normal ml-2">
+                  ({(product as any).ramRom})
+                </span>
+              )}
             </h1>
+
+            {(product as any).warranty && (
+              <div className="mb-2 text-sm md:text-base font-bold text-gray-700 bg-gray-100 w-fit px-3 py-1 rounded-md">
+                🛡️ Warranty: {(product as any).warranty}
+              </div>
+            )}
 
             <div className={`text-2xl font-bold mb-8 ${themeConfig.accent} flex items-center gap-3`}>
               ₦{product.price.toLocaleString()}
@@ -355,9 +370,34 @@ export default function CategoryDetailPage({
               </div>
             )}
 
+            {collectionName === 'uk_used' && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                <a
+                  href={`https://wa.me/${contactNumber}?text=${encodeURIComponent(`${REQUEST_VIDEO_MESSAGE_PREFIX} *${product.name}*`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-[10px] md:text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-colors"
+                >
+                  <FaWhatsapp size={14} /> Request Video
+                </a>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowIssuesOverlay(true)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-md font-bold text-[10px] md:text-xs shadow-sm transition-colors border ${
+                    (product as any).hasIssues 
+                      ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200' 
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-100'
+                  }`}
+                >
+                  {(product as any).hasIssues ? '⚠️ Yes has Issues' : '✓ No Issues'}
+                </button>
+              </div>
+            )}
+
             <div className="mb-10">
               <h3 className="text-lg font-bold mb-3">Description</h3>
-              <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words overflow-hidden">
+              <p className="text-muted-foreground leading-relaxed italic whitespace-pre-wrap break-words max-h-[150px] md:max-h-[250px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
                 {product.description?.split(/(https?:\/\/nomo-store[^\s]*)/g).map((part: string, i: number) =>
                   part.match(/^https?:\/\/nomo-store/) ? (
                     <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline cursor-pointer">
@@ -453,6 +493,12 @@ export default function CategoryDetailPage({
               const needsMeasurement = measurementKeys.length > 0;
               const canAdd = (!needsSize || tempSelectedSize) && (!needsColor || tempSelectedColor) && (!needsMeasurement || tempSelectedMeasurement);
 
+              const getContrastTextColor = (colorName: string) => {
+                const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+                if (lightColors.some(lc => colorName.toLowerCase().includes(lc))) return 'text-black';
+                return 'text-white';
+              };
+
               return (
                 <div
                   className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
@@ -484,10 +530,10 @@ export default function CategoryDetailPage({
                                   key={sz}
                                   disabled={qty <= 0}
                                   className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${qty <= 0
-                                      ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
-                                      : tempSelectedSize === sz
-                                        ? `${themeConfig.btn} text-white border-transparent`
-                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                    ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                                    : tempSelectedSize === sz
+                                      ? `${themeConfig.btn} text-white border-transparent`
+                                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
                                     }`}
                                   onClick={(e) => {
                                     e.preventDefault();
@@ -507,14 +553,20 @@ export default function CategoryDetailPage({
                         <div className="mb-3">
                           <h3 className="text-base font-bold mb-3 text-foreground">Select Color</h3>
                           <div className="flex flex-wrap gap-2">
+                            <button
+                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
+                            >
+                              Any Color
+                            </button>
                             {colors.map((c: string, i: number) => (
                               <button
                                 key={i}
                                 className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedColor === c
-                                    ? `${themeConfig.btn} text-white border-transparent`
-                                    : 'bg-white border-gray-300 hover:bg-gray-50'
+                                  ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                                  : 'bg-white border-gray-300 hover:bg-gray-50'
                                   }`}
-                                style={tempSelectedColor === c ? undefined : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, '') }}
+                                style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, ''), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
@@ -538,8 +590,8 @@ export default function CategoryDetailPage({
                                 <button
                                   key={i}
                                   className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedMeasurement === m
-                                      ? `${themeConfig.btn} text-white border-transparent`
-                                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                                    ? `${themeConfig.btn} text-white border-transparent`
+                                    : 'bg-white border-gray-300 hover:bg-gray-50'
                                     }`}
                                   onClick={(e) => {
                                     e.preventDefault();
@@ -558,8 +610,9 @@ export default function CategoryDetailPage({
 
                     <div className="mt-4 pt-4 border-t border-border shrink-0">
                       <button
-                        className={`w-full py-3 rounded-lg font-bold text-white transition-all text-sm ${!canAdd ? 'bg-gray-300 cursor-not-allowed text-gray-500' : `${themeConfig.btn}`
+                        className={`w-full py-3 rounded-lg font-bold transition-all text-sm ${!canAdd ? 'bg-gray-300 cursor-not-allowed text-gray-500' : tempSelectedColor && tempSelectedColor !== 'Any Color' ? `${getContrastTextColor(tempSelectedColor)} hover:opacity-90` : `${themeConfig.btn} text-white`
                           }`}
+                        style={canAdd && tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
                         disabled={!canAdd}
                         onClick={(e) => {
                           e.preventDefault();
@@ -570,10 +623,12 @@ export default function CategoryDetailPage({
                             ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize]
                             : product.quantity;
 
+                          const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+
                           const existing = cartItems.find(item =>
                             item.id === product.id &&
                             item.selectedSize === (tempSelectedSize || undefined) &&
-                            (item as any).selectedColor === (tempSelectedColor || undefined) &&
+                            (item as any).selectedColor === (finalColor || undefined) &&
                             (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined)
                           );
                           const currentInCart = existing ? existing.quantity : 0;
@@ -601,12 +656,12 @@ export default function CategoryDetailPage({
                             manufacturer: product.group,
                             shipping: 0,
                             selectedSize: tempSelectedSize || undefined,
-                            selectedColor: tempSelectedColor || undefined,
+                            selectedColor: finalColor || undefined,
                             selectedMeasurement: tempSelectedMeasurement || undefined,
                             measurementPrice: measurePriceStr ? finalPrice : undefined,
                           } as any);
 
-                          const parts = [tempSelectedSize, tempSelectedColor, tempSelectedMeasurement].filter(Boolean);
+                          const parts = [tempSelectedSize, finalColor, tempSelectedMeasurement].filter(Boolean);
                           const label = parts.length > 0 ? ` (${parts.join(', ')})` : '';
                           toast.success(`${product.name}${label} added to cart`, {
                             style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
@@ -651,6 +706,54 @@ export default function CategoryDetailPage({
           backPath={backPath}
         />
       </div>
+      {showIssuesOverlay && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-200"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssuesOverlay(false); }}
+        >
+          <div
+            className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[420px] rounded-2xl md:rounded-xl shadow-2xl border border-border p-6 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowIssuesOverlay(false); }}
+              className="absolute top-3 right-3 text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted text-foreground z-10"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                (product as any).hasIssues ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+              }`}>
+                {(product as any).hasIssues ? '⚠️' : '✓'}
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-foreground">Product Status & Issues</h3>
+                <p className="text-xs text-muted-foreground">Condition check details</p>
+              </div>
+            </div>
+
+            <div className="mt-2 text-sm text-foreground bg-muted/30 p-4 rounded-lg border border-border/50 whitespace-pre-wrap leading-relaxed">
+              {(product as any).hasIssues ? (
+                <>
+                  <div className="font-bold text-amber-700 mb-1">Reported Issues:</div>
+                  {(product as any).issuesDescription || "This product has issues but no description was provided."}
+                </>
+              ) : (
+                "No issue with this product."
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowIssuesOverlay(false)}
+              className="w-full mt-6 py-2.5 bg-slate-950 hover:bg-slate-900 text-white rounded-lg text-sm font-bold transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -89,7 +89,7 @@ export default function Checkout() {
   const [dbProductCollection, setDbProductCollection] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen', 'uk_used'];
     const unsubs = collections.map(collName =>
       onSnapshot(collection(db, collName), (snap) => {
         setDbProducts(prev => {
@@ -479,7 +479,7 @@ export default function Checkout() {
                   Contact Admin
                 </a>
                 <button
-                  onClick={() => { setIsProcessingPayment(false); setPaymentError(null); }}
+                  onClick={() => { setIsProcessingPayment(false); setPaymentError(null); setLoading(false); }}
                   className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center mt-2"
                 >
                   Try Again

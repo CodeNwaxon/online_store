@@ -25,9 +25,17 @@ import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 
 const DEFAULT_INTERNAL_ROUTES = [
+  '/ADMIN/MANAGEMENT',
   '/ADMIN/PRODUCTS',
+  '/ADMIN/FOODS',
+  '/ADMIN/COSMETICS',
+  '/ADMIN/WEARS',
+  '/ADMIN/TOILET-KITCHEN',
+  '/ADMIN/UK-USED',
   '/ADMIN/INSTALLMENTS',
   '/ADMIN/ORDERS',
+  '/ADMIN/PARTNERSHIP',
+  '/ADMIN/BROADCAST',
   '/ADMIN/SETTINGS',
   '/ADMIN/STATS',
   '/ADMIN/ABOUT'

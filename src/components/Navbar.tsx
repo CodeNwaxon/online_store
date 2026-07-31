@@ -39,6 +39,7 @@ const adminLinks = [
   { href: '/admin/cosmetics', label: 'Cosmetics', icon: <FaBoxes />, id: '/ADMIN/COSMETICS' },
   { href: '/admin/wears', label: 'Wears', icon: <FaUserTie />, id: '/ADMIN/WEARS' },
   { href: '/admin/toilet-kitchen', label: 'Toilet & Kitchen', icon: <FaBoxes />, id: '/ADMIN/TOILET-KITCHEN' },
+  { href: '/admin/uk-used', label: 'UK Used', icon: <FaHandshake />, id: '/ADMIN/UK-USED' },
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
   { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
   { href: '/admin/partnership', label: 'Partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
@@ -490,7 +491,7 @@ export default function Navbar() {
                     </Link>
 
                     <div key="market-dropdown" className="relative group py-2">
-                      <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname.startsWith('/foods') || pathname.startsWith('/shop/cosmetics') || pathname.startsWith('/shop/wears') || pathname.startsWith('/shop/furniture') || pathname.startsWith('/shop/toilet-kitchen')) ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
+                      <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname.startsWith('/foods') || pathname.startsWith('/shop/cosmetics') || pathname.startsWith('/shop/wears') || pathname.startsWith('/shop/furniture') || pathname.startsWith('/shop/toilet-kitchen') || pathname.startsWith('/shop/uk-used')) ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
                         Market <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
                       </span>
                       <div className="absolute top-full left-0 mt-0 w-48 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
@@ -498,7 +499,8 @@ export default function Navbar() {
                         <Link href="/shop/cosmetics" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/cosmetics' ? 'text-primary font-bold' : 'text-foreground'}`}>Cosmetics</Link>
                         <Link href="/shop/wears" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/wears' ? 'text-primary font-bold' : 'text-foreground'}`}>Wears</Link>
                         <Link href="/shop/furniture" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/furniture' ? 'text-primary font-bold' : 'text-foreground'}`}>Furniture</Link>
-                        <Link href="/shop/toilet-kitchen" className={`px-4 py-3 text-sm hover:bg-muted font-medium ${pathname === '/shop/toilet-kitchen' ? 'text-primary font-bold' : 'text-foreground'}`}>Toilet & Kitchen</Link>
+                        <Link href="/shop/toilet-kitchen" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/toilet-kitchen' ? 'text-primary font-bold' : 'text-foreground'}`}>Toilet & Kitchen</Link>
+                        <Link href="/shop/uk-used" className={`px-4 py-3 text-sm hover:bg-muted font-medium ${pathname === '/shop/uk-used' ? 'text-primary font-bold' : 'text-foreground'}`}>UK Used</Link>
                       </div>
                     </div>
                   </div>
@@ -703,6 +705,12 @@ export default function Navbar() {
                         <div className="flex items-center gap-[0.85rem]">
                           <span className={`text-[0.85rem] ${pathname === '/shop/toilet-kitchen' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
                           Toilet & Kitchen
+                        </div>
+                      </Link>
+                      <Link href="/shop/uk-used" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/uk-used' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.85rem]">
+                          <span className={`text-[0.85rem] ${pathname === '/shop/uk-used' ? 'text-primary' : 'text-muted-foreground'}`}><FaHandshake /></span>
+                          UK Used
                         </div>
                       </Link>
                     </div>

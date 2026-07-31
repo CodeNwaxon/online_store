@@ -119,7 +119,7 @@ export async function verifyAndFulfillOrder(
   // Step 3: Re-verify product prices from the database to prevent price manipulation
   let serverCalculatedTotal = 0;
   for (const item of orderData.items) {
-    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+    const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen', 'uk_used'];
     let productData = null;
 
     for (const coll of collections) {
@@ -214,7 +214,7 @@ export async function verifyAndFulfillOrder(
       const itemsWithCostAndVendor: any[] = [];
       for (const item of orderData.items) {
         const sellPrice = item.price || 0;
-        const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+        const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen', 'uk_used'];
         let productDoc = null;
         let foundCollection = 'products'; // fallback
 
@@ -470,7 +470,7 @@ export async function verifyAndCreateInstallment(
   }
 
   // Step 2: Verify product price from the database
-  const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen'];
+  const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen', 'uk_used'];
   let productDoc: any = null;
   let foundCollection = 'products';
 

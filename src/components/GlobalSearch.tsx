@@ -109,7 +109,7 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
       if (!dataLoaded) {
         setIsLoading(true);
         try {
-          const collections = ['products', 'foods', 'cosmetics', 'wears', 'toilet_kitchen'];
+          const collections = ['products', 'foods', 'cosmetics', 'wears', 'toilet_kitchen', 'uk_used'];
           const fetchPromises = collections.map(async (colName) => {
             try {
               const snap = await getDocs(collection(db, colName));
@@ -197,6 +197,7 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
     if (item.category === 'cosmetics') return `/shop/cosmetics/${item.id}`;
     if (item.category === 'wears') return `/shop/wears/${item.id}`;
     if (item.category === 'toilet_kitchen') return `/shop/toilet-kitchen/${item.id}`;
+    if (item.category === 'uk_used') return `/shop/uk-used/${item.id}`;
     return `/product/${item.id}`;
   };
 
@@ -258,6 +259,11 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                           }
                           return null;
                         })()
+                      )}
+                      {item.category === 'uk_used' && (
+                        <span className="absolute bottom-1 right-1 bg-black text-white text-[7px] font-bold px-1 py-0.5 rounded shadow-sm z-10">
+                          USED
+                        </span>
                       )}
                     </div>
                     <div className="p-1.5 flex flex-col flex-1">

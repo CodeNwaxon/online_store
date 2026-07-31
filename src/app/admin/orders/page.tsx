@@ -51,6 +51,7 @@ export default function AdminOrders() {
   const [confirmUnmark, setConfirmUnmark] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [visibleCards, setVisibleCards] = useState(40);
+  const [ukUsedIds, setUkUsedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -63,11 +64,25 @@ export default function AdminOrders() {
       setAdmins(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    const unsubscribeUkUsed = onSnapshot(collection(db, 'uk_used'), (snap) => {
+      const ids = new Set<string>();
+      snap.forEach(doc => ids.add(doc.id));
+      setUkUsedIds(ids);
+    });
+
     return () => {
       unsubscribeOrders();
       unsubscribeAdmins();
+      unsubscribeUkUsed();
     };
   }, []);
+
+  const isUkUsedItem = (item: any) => {
+    return item.collectionName === 'uk_used' || 
+           item.category === 'uk_used' || 
+           (item.category && item.category.toLowerCase().replace(/[^a-z0-9]/g, '') === 'ukused') ||
+           ukUsedIds.has(item.id);
+  };
 
   const markAsRead = async (order: any) => {
     if (order.isNew) {
@@ -244,7 +259,7 @@ export default function AdminOrders() {
               <div class="divider"></div>
               ${order.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
+                  <span class="item-name">${item.name} ${isUkUsedItem(item) ? '<b style="background:#6b7280;color:#fff;padding:1px 5px;border-radius:8px;font-size:8px;margin-left:3px">Used</b>' : ''} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -394,21 +409,21 @@ export default function AdminOrders() {
                   </div>
                 )}
 
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${order.type === 'installment' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                <div className="flex flex-wrap justify-between items-start gap-3 mb-6">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${order.type === 'installment' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                       }`}>
                       {order.type === 'installment' ? <FaCreditCard /> : <FaShoppingBag />}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-sm leading-tight truncate max-w-[150px]">{order.customerName}</h3>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-sm leading-tight truncate" title={order.customerName}>{order.customerName}</h3>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate">
                         {order.type === 'installment' ? 'Installment Completed' : 'Online Payment'}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-black text-lg ${order.type === 'installment' ? 'text-muted-foreground' : 'text-green-700'}`}>
+                  <div className="text-right shrink-0 ml-auto">
+                    <p className={`font-black text-lg leading-tight ${order.type === 'installment' ? 'text-muted-foreground' : 'text-green-700'}`}>
                       ₦{order.totalAmount?.toLocaleString()}
                     </p>
                     <p className="text-[10px] text-muted-foreground font-bold">{new Date(order.createdAt).toLocaleDateString()}</p>
@@ -422,7 +437,7 @@ export default function AdminOrders() {
                         <Image src={item.image} alt={item.name} fill className="object-cover" sizes="48px" />
                       </div>
                       <span className="text-xs font-bold truncate flex-1">
-                        {item.name} {(item.selectedSize || item.selectedColor) && <span className="text-[9px] text-muted-foreground ml-1">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
+                        {item.name} {isUkUsedItem(item) && <span className="text-[8px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle">Used</span>} {(item.selectedSize || item.selectedColor) && <span className="text-[9px] text-muted-foreground ml-1">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
                       </span>
                       <span className="text-[10px] font-black text-muted-foreground">x{item.quantity}</span>
                     </div>
@@ -590,7 +605,7 @@ export default function AdminOrders() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h5 className="font-black text-sm truncate">
-                            {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>}
+                            {item.name} {isUkUsedItem(item) && <span className="text-[9px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle">Used</span>} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>}
                           </h5>
                           <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
 
