@@ -31,6 +31,8 @@ export default function AdminDashboard() {
         let count = 0;
         snap.forEach(docSnap => {
           const orderData = docSnap.data();
+          if (orderData.deleted) return; // Skip deleted orders
+          
           let isVIPForOrder = false;
           if (adminData?.vip) {
             const ROUTE_TO_COLLECTION: Record<string, string> = {
@@ -49,7 +51,7 @@ export default function AdminDashboard() {
 
           if (hasOrderAccess) {
             count++;
-          } else if (orderData.items?.some((item: any) => item.vendor === currentUser.email)) {
+          } else if (orderData.items?.some((item: any) => item.vendor?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim())) {
             count++;
           }
         });

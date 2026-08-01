@@ -148,6 +148,8 @@ export default function Navbar() {
       let count = 0;
       snap.forEach(docSnap => {
         const orderData = docSnap.data();
+        if (orderData.deleted) return; // Skip deleted orders
+        
         let isVIPForOrder = false;
         if (adminData?.vip) {
           const ROUTE_TO_COLLECTION: Record<string, string> = {
@@ -166,7 +168,7 @@ export default function Navbar() {
         
         if (hasOrderAccess) {
           count++;
-        } else if (orderData.items?.some((item: any) => item.vendor === adminData?.email)) {
+        } else if (orderData.items?.some((item: any) => item.vendor?.toLowerCase().trim() === adminData?.email?.toLowerCase().trim())) {
           count++;
         }
       });
@@ -499,10 +501,10 @@ export default function Navbar() {
     if (item.id === 'dashboard') return true;
     if (isCEO) return true;
     
-    // VIP admins with product routes should see the Orders link
-    if (adminData?.vip && item.id === '/ADMIN/ORDERS') {
-      const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN'].includes(r));
-      if (hasProductRoute) return true;
+    // Admins with product routes or a special store should automatically see the Orders link
+    if (item.id === '/ADMIN/ORDERS') {
+      const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN', '/ADMIN/UK-USED'].includes(r));
+      if (hasProductRoute || adminData?.specialStore) return true;
     }
 
     return adminData?.assignedRoutes?.includes(item.id);
