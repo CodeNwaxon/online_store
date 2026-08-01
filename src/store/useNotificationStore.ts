@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export interface AppNotification {
   id: string;
-  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered';
+  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered' | 'order_placed';
   title: string;
   message: string;
   image?: string;
@@ -83,8 +83,8 @@ function filterNotifications(
       return true;
     }
 
-    // Delivery notifications: only for the specific customer
-    if (notif.type === 'delivery') {
+    // Delivery and order placed notifications: only for the specific customer
+    if (notif.type === 'delivery' || notif.type === 'order_delivered' || notif.type === 'order_placed') {
       return notif.customerUid === filters.userUid;
     }
 
@@ -103,6 +103,9 @@ function filterNotifications(
     if (filters.isCEO || filters.isVip) return true;
 
     // Regular admins: check if they have the route permission
+    // EXCEPTION: Global 'order' notifications are strictly for CEO/VIP, even if the admin has /ADMIN/ORDERS route
+    if (notif.type === 'order') return false;
+
     const requiredRoute = notif.adminRoute || notifTypeToRoute[notif.type];
     if (!requiredRoute) return true;
     return filters.assignedRoutes?.includes(requiredRoute) ?? false;
@@ -169,7 +172,7 @@ export const useNotificationStore = create<NotificationState>()(
       },
     }),
     {
-      name: 'app-notifications-storage',
+      name: 'app-notifications-v2',
     }
   )
 );

@@ -146,8 +146,8 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${notif.type === 'broadcast' ? 'bg-blue-100 text-blue-700' : (notif.type === 'order' || notif.type === 'order_delivered' || notif.type === 'vendor_order') ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
-                            {notif.type === 'order_delivered' ? 'Order Delivered' : notif.type.replace('_', ' ')}
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${notif.type === 'broadcast' ? 'bg-blue-100 text-blue-700' : (notif.type === 'order' || notif.type === 'order_delivered' || notif.type === 'vendor_order' || notif.type === 'order_placed') ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                            {notif.type === 'order_delivered' ? 'Order Delivered' : notif.type === 'order_placed' ? 'Order Confirmed' : notif.type.replace('_', ' ')}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-semibold">
                             {new Date(notif.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

@@ -341,45 +341,49 @@ export default function Navbar() {
             linkLabel: data.linkLabel,
             createdAt: data.createdAt || new Date().toISOString(),
             read: false,
-            vendorEmail: data.vendorEmail
+            vendorEmail: data.vendorEmail,
+            customerUid: data.customerUid
           });
         }
       });
     }, (err) => console.warn("Broadcasts listener error:", err));
 
-    // Listen for System Notifications (New Orders, Installments, etc)
-    const unsubNotifications = onSnapshot(query(collection(db, 'notifications'), where('createdAt', '>', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())), (snap) => {
-      snap.docChanges().forEach(change => {
-        if (change.type === 'added') {
-          const data = change.doc.data();
-          // Access control:
-          // - Global order notifications (/ADMIN/ORDERS without vendorEmail): ONLY CEO and VIPs should see them.
-          // - Other global admin notifications (e.g., /ADMIN/PARTNERSHIP): Anyone with the route can see it.
-          const isGlobalOrderNotif = !data.vendorEmail && data.adminRoute === '/ADMIN/ORDERS';
-          const hasGlobalOrderAccess = isCEO || adminData?.vip;
-          const isOtherGlobalNotif = !data.vendorEmail && data.adminRoute !== '/ADMIN/ORDERS' && (isCEO || adminData?.assignedRoutes?.includes(data.adminRoute));
-          
-          const isGlobalAdminNotif = (isGlobalOrderNotif && hasGlobalOrderAccess) || isOtherGlobalNotif;
-          const isVendorNotif = data.vendorEmail && data.vendorEmail === user.email;
-          
-          if (isGlobalAdminNotif || isVendorNotif) {
-            addNotification({
-              id: change.doc.id,
-              type: data.type || 'notification',
-              title: data.title,
-              message: data.message,
-              image: data.image,
-              createdAt: data.createdAt || new Date().toISOString(),
-              read: false,
-              vendorEmail: data.vendorEmail,
-              adminRoute: data.adminRoute,
-              link: data.adminRoute?.toLowerCase() || '',
-              orderId: data.orderId,
-            });
+    // Listen for System Notifications (New Orders, Installments, etc) — ONLY for admins
+    let unsubNotifications = () => {};
+    if (isAdmin) {
+      unsubNotifications = onSnapshot(query(collection(db, 'notifications'), where('createdAt', '>', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())), (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            // Access control:
+            // - Global order notifications (/ADMIN/ORDERS without vendorEmail): ONLY CEO and VIPs should see them.
+            // - Other global admin notifications (e.g., /ADMIN/PARTNERSHIP): Anyone with the route can see it.
+            const isGlobalOrderNotif = !data.vendorEmail && data.adminRoute === '/ADMIN/ORDERS';
+            const hasGlobalOrderAccess = isCEO || adminData?.vip;
+            const isOtherGlobalNotif = !data.vendorEmail && data.adminRoute !== '/ADMIN/ORDERS' && (isCEO || adminData?.assignedRoutes?.includes(data.adminRoute));
+            
+            const isGlobalAdminNotif = (isGlobalOrderNotif && hasGlobalOrderAccess) || isOtherGlobalNotif;
+            const isVendorNotif = data.vendorEmail && data.vendorEmail === user.email;
+            
+            if (isGlobalAdminNotif || isVendorNotif) {
+              addNotification({
+                id: change.doc.id,
+                type: data.type || 'notification',
+                title: data.title,
+                message: data.message,
+                image: data.image,
+                createdAt: data.createdAt || new Date().toISOString(),
+                read: false,
+                vendorEmail: data.vendorEmail,
+                adminRoute: data.adminRoute,
+                link: data.adminRoute?.toLowerCase() || '',
+                orderId: data.orderId,
+              });
+            }
           }
-        }
-      });
-    }, (err) => console.warn("Notifications listener error:", err));
+        });
+      }, (err) => console.warn("Notifications listener error:", err));
+    }
 
     return () => {
       unsubBroadcasts();
