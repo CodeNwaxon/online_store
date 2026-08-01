@@ -18,7 +18,7 @@ export interface AppNotification {
   /** For customer-specific notifications — the user uid */
   customerUid?: string;
   /** order items for context */
-  orderItems?: { name: string; image: string; quantity: number; price: number; selectedSize?: string; selectedColor?: string }[];
+  orderItems?: { name: string; image: string; quantity: number; price: number; selectedSize?: string; selectedColor?: string; ram?: string; rom?: string }[];
   /** order id for linking */
   orderId?: string;
 }

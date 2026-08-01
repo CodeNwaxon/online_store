@@ -181,7 +181,7 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                         {notif.message}
                       </div>
                       
-                      {notif.image && (
+                      {notif.image && (!notif.orderItems || notif.orderItems.length === 0) && (
                         <div 
                           className="mt-3 relative w-full h-32 rounded-lg overflow-hidden border border-border bg-muted/50 cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={(e) => { e.stopPropagation(); setSelectedImage(Array.isArray(notif.image) ? notif.image[0] : notif.image!); }}
@@ -191,18 +191,21 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                       )}
 
                       {notif.orderItems && notif.orderItems.length > 0 && (
-                        <div className="mt-3 space-y-2">
+                        <div className="mt-3 flex flex-col gap-2">
                           {notif.orderItems.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-3 bg-muted/30 p-2 rounded-md text-xs">
-                              <div className="relative w-8 h-8 rounded border border-border overflow-hidden shrink-0">
-                                <Image src={item.image} alt={item.name} fill className="object-cover" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold truncate">{item.name}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')}) ` : ''} 
-                                  Qty: {item.quantity}
-                                </p>
+                            <div key={idx} className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                              <div className="flex items-center gap-2 w-full justify-between">
+                                <div className="relative w-8 h-8 rounded border border-border overflow-hidden shrink-0">
+                                  <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                </div>
+                                <div className="flex-1 min-w-0 text-right">
+                                  <p className="text-[8px] font-bold truncate">{item.name}</p>
+                                  <p className="text-[8px] font-medium text-muted-foreground">
+                                    {item.ram || item.rom ? `[${[item.ram, item.rom].filter(Boolean).join(', ')}] ` : ''}
+                                    {item.selectedSize || item.selectedColor ? `(${[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')}) ` : ''} 
+                                    Qty: {item.quantity}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           ))}

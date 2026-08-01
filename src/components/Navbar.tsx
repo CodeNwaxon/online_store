@@ -342,7 +342,8 @@ export default function Navbar() {
             createdAt: data.createdAt || new Date().toISOString(),
             read: false,
             vendorEmail: data.vendorEmail,
-            customerUid: data.customerUid
+            customerUid: data.customerUid,
+            orderItems: data.orderItems,
           });
         }
       });
@@ -378,6 +379,7 @@ export default function Navbar() {
                 adminRoute: data.adminRoute,
                 link: data.adminRoute?.toLowerCase() || '',
                 orderId: data.orderId,
+                orderItems: data.orderItems,
               });
             }
           }

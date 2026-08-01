@@ -435,27 +435,49 @@ export async function verifyAndFulfillOrder(
         type: 'order',
         title: 'New Order',
         message: templates.vendorOrder || 'A new order containing your products has been placed.',
-        image: firstImage,
         orderId: orderRef.id,
         createdAt: new Date().toISOString(),
         read: false,
         adminRoute: '/ADMIN/ORDERS',
+        orderItems: orderData.items.map((item: any) => ({
+          name: item.name || 'Product',
+          image: item.image || '',
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          selectedSize: item.selectedSize || '',
+          selectedColor: item.selectedColor || '',
+          ram: item.ram || '',
+          rom: item.rom || '',
+        })),
       });
 
       // 2. Create vendor-specific notifications
       //    (We handle hiding duplicate notifications in the frontend for VIP/CEO admins)
       for (const vendorEmail of vendorEmails) {
+        // Filter items to only this vendor's products
+        const vendorItems = orderData.items.filter((item: any) => item.vendor === vendorEmail);
+        const vendorFirstImage = vendorItems[0]?.image || firstImage;
+
         const vendorNotifRef = adminDb.collection('notifications').doc();
         transaction.set(vendorNotifRef, {
           type: 'vendor_order',
           title: 'New Order',
           message: templates.vendorOrder || 'A new order containing your products has been placed.',
-          image: firstImage,
           orderId: orderRef.id,
           vendorEmail: vendorEmail,
           createdAt: new Date().toISOString(),
           read: false,
           adminRoute: '/ADMIN/ORDERS',
+          orderItems: vendorItems.map((item: any) => ({
+            name: item.name || 'Product',
+            image: item.image || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            selectedSize: item.selectedSize || '',
+            selectedColor: item.selectedColor || '',
+            ram: item.ram || '',
+            rom: item.rom || '',
+          })),
         });
       }
 
@@ -466,10 +488,19 @@ export async function verifyAndFulfillOrder(
           type: 'order_placed',
           title: 'Order Placed Successfully',
           message: `Your order containing ${orderData.items?.[0]?.name || 'an item'}${orderData.items.length > 1 ? ` and ${orderData.items.length - 1} other item(s)` : ''} has been placed. We are preparing it for delivery.`,
-          image: firstImage,
           customerUid: orderData.userId,
           createdAt: new Date().toISOString(),
-          read: false
+          read: false,
+          orderItems: orderData.items.map((item: any) => ({
+            name: item.name || 'Product',
+            image: item.image || '',
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            selectedSize: item.selectedSize || '',
+            selectedColor: item.selectedColor || '',
+            ram: item.ram || '',
+            rom: item.rom || '',
+          })),
         });
       }
 

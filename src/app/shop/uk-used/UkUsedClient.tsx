@@ -100,7 +100,7 @@ function UkUsedPageContent() {
         const snap = await getDocs(q);
         const stores = snap.docs
           .map(doc => doc.data())
-          .filter(admin => admin.assignedRoutes?.includes('/ADMIN/UkUsed') || admin.role === 'CEO')
+          .filter(admin => admin.assignedRoutes?.includes('/ADMIN/UK-USED') || admin.role === 'CEO')
           .map(admin => admin.specialStore)
           .filter(Boolean);
         setActiveStores(stores);

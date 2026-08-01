@@ -163,18 +163,26 @@ export default function BroadcastAdmin() {
     }
   };
 
-  const verifyPasskey = () => {
+  const verifyPasskey = async () => {
     if (!passkeyInput) return;
     setIsVerifying(true);
-    setTimeout(() => {
-      if (passkeyInput === '5050') {
+    
+    try {
+      const settingsDoc = await getDoc(doc(db, 'settings', 'general'));
+      const currentPasskey = settingsDoc.data()?.passkey || 'admin1234';
+      
+      if (passkeyInput === currentPasskey) {
         executeClearNotifications();
       } else {
         toast.error('Invalid CEO passkey');
         setPasskeyInput('');
       }
+    } catch (error) {
+      console.error('Error verifying passkey:', error);
+      toast.error('Error verifying passkey');
+    } finally {
       setIsVerifying(false);
-    }, 1000);
+    }
   };
 
   return (

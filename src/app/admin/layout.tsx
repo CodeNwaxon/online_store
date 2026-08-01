@@ -20,8 +20,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     // Check auth state and only set up listeners if authenticated
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+    const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
         setUnreadCount(0);
         setUnreadOrders(0);
         setUnreadPartners(0);
@@ -32,7 +32,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       let compCount = 0;
 
       const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-        setUnreadOrders(snap.size);
+        let count = 0;
+        snap.forEach(docSnap => {
+          const orderData = docSnap.data();
+          let isVIPForOrder = false;
+          if (adminData?.vip) {
+            const ROUTE_TO_COLLECTION: Record<string, string> = {
+              '/ADMIN/PRODUCTS': 'products',
+              '/ADMIN/FOODS': 'foods',
+              '/ADMIN/WEARS': 'wears',
+              '/ADMIN/COSMETICS': 'cosmetics',
+              '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+              '/ADMIN/UK-USED': 'uk_used',
+            };
+            const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
+            isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
+          }
+
+          const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
+
+          if (hasOrderAccess) {
+            count++;
+          } else if (orderData.items?.some((item: any) => item.vendor === currentUser.email)) {
+            count++;
+          }
+        });
+        setUnreadOrders(count);
       }, (error) => {
         console.warn("Admin layout orders listener error:", error);
       });
@@ -66,7 +91,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
 
     return () => unsubAuth();
-  }, []);
+  }, [adminData, isCEO]);
 
   const handleSignOut = async () => {
     await signOut(auth);
