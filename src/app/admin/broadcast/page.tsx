@@ -5,12 +5,15 @@ import AdminGuard from '@/components/AdminGuard';
 import { FaBroadcastTower, FaImage, FaLink, FaPaperPlane, FaSave, FaCheckCircle, FaHandshake, FaStore, FaHistory, FaTrash, FaRedo, FaTimes, FaCreditCard } from 'react-icons/fa';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp, doc, getDoc, setDoc, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc, setDoc, onSnapshot, query, orderBy, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 
 export default function BroadcastAdmin() {
   const [loading, setLoading] = useState(false);
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false);
+  const [passkeyInput, setPasskeyInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Templates state
   const [templates, setTemplates] = useState({
@@ -137,6 +140,41 @@ export default function BroadcastAdmin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClearClick = () => {
+    setShowPasskeyModal(true);
+  };
+
+  const executeClearNotifications = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'notifications'));
+      const batch = writeBatch(db);
+      snap.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      toast.success('All notifications cleared successfully!');
+      setShowPasskeyModal(false);
+      setPasskeyInput('');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to clear notifications.');
+    }
+  };
+
+  const verifyPasskey = () => {
+    if (!passkeyInput) return;
+    setIsVerifying(true);
+    setTimeout(() => {
+      if (passkeyInput === '5050') {
+        executeClearNotifications();
+      } else {
+        toast.error('Invalid CEO passkey');
+        setPasskeyInput('');
+      }
+      setIsVerifying(false);
+    }, 1000);
   };
 
   return (
@@ -272,6 +310,18 @@ export default function BroadcastAdmin() {
             </button>
           </form>
 
+          {/* Clear Notifications Section */}
+          <div className="bg-card p-3 md:p-6 rounded-[var(--radius)] border border-border shadow-sm space-y-4 md:space-y-6">
+            <h2 className="text-lg font-bold flex items-center gap-2 border-b border-border pb-3 text-red-500">
+              <FaTrash /> Danger Zone
+            </h2>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Clear all system notifications (new orders, vendor alerts, installments). This will completely wipe the database logs to save space. It will NOT affect broadcasts.</p>
+              <button onClick={handleClearClick} className="w-full py-3 bg-red-600 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-sm hover:bg-red-700 transition-all">
+                <FaTrash /> Clear All Notifications
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Broadcast History */}
@@ -346,6 +396,45 @@ export default function BroadcastAdmin() {
             </div>
           )}
         </div>
+
+        {/* ── CEO PASSKEY MODAL ── */}
+        {showPasskeyModal && (
+          <div className="fixed inset-0 z-[6000] bg-black/80 flex items-center justify-center p-4 backdrop-blur-md">
+            <div className="bg-card p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border-2 border-red-500/50 animate-in slide-in-from-bottom duration-300">
+              <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FaTrash size={28} />
+              </div>
+              <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter text-red-500">Danger Zone</h3>
+              <p className="text-muted-foreground mb-8 text-xs font-bold uppercase tracking-widest opacity-80">
+                Enter CEO passkey to permanently wipe database notifications.
+              </p>
+              <input
+                type="password"
+                className="w-full bg-muted border border-border rounded-2xl p-5 text-center text-2xl font-black tracking-[1em] mb-6 focus:border-red-500 outline-none transition-all shadow-inner"
+                placeholder="••••"
+                autoFocus
+                value={passkeyInput}
+                onChange={(e) => setPasskeyInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && verifyPasskey()}
+              />
+              <div className="flex gap-4">
+                <button
+                  onClick={() => { setShowPasskeyModal(false); setPasskeyInput(''); }}
+                  className="flex-1 py-4 font-black text-xs uppercase border border-border rounded-2xl hover:bg-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isVerifying}
+                  onClick={verifyPasskey}
+                  className={`flex-1 py-4 font-black text-xs uppercase bg-red-600 text-white rounded-2xl shadow-lg shadow-red-600/20 transition-all ${isVerifying ? 'opacity-70 cursor-not-allowed' : 'hover:bg-red-700'}`}
+                >
+                  {isVerifying ? 'Verifying...' : 'Authorize Wipe'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminGuard>
   );

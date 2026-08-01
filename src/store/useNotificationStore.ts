@@ -90,6 +90,9 @@ function filterNotifications(
 
     // Vendor order notifications: only for the specific vendor
     if (notif.type === 'vendor_order') {
+      // CEO and VIP admins already receive the global 'order' notification,
+      // so we hide the duplicate 'vendor_order' from them.
+      if (filters.isCEO || filters.isVip) return false;
       return notif.vendorEmail === filters.userEmail;
     }
 

@@ -483,7 +483,16 @@ export default function CategoryProductCard({
               </button>
               
               <div className="overflow-y-auto pr-2 custom-scrollbar">
-                {sizeKeys.length > 0 && (
+                {(() => {
+                  const getContrastTextColor = (colorName: string) => {
+                    const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
+                    if (lightColors.some(lc => colorName.toLowerCase().includes(lc))) return 'text-black';
+                    return 'text-white';
+                  };
+
+                  return (
+                    <>
+                      {sizeKeys.length > 0 && (
                   <div className="mb-5">
                     <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Size</h3>
                     <div className="flex flex-wrap gap-2">
@@ -508,26 +517,36 @@ export default function CategoryProductCard({
                   </div>
                 )}
 
-                {colors.length > 0 && (
-                  <div className="mb-2">
-                    <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {colors.map((c, i) => (
-                        <button
-                          key={i}
-                          className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === c ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setTempSelectedColor(c);
-                          }}
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      {colors.length > 0 && (
+                        <div className="mb-2">
+                          <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
+                            >
+                              Any Color
+                            </button>
+                            {colors.map((c, i) => (
+                              <button
+                                key={i}
+                                className={`px-3 py-2 rounded-md text-xs font-bold border capitalize transition-colors ${tempSelectedColor === c
+                                  ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                                  : 'bg-white border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:border-gray-600 dark:hover:bg-zinc-700'
+                                  }`}
+                                style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, ''), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setTempSelectedColor(c);
+                                }}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                 {measurementKeys.length > 0 && (
                   <div className="mb-2">
@@ -546,13 +565,16 @@ export default function CategoryProductCard({
                             }}
                           >
                             {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
-                          </button>
-                        );
-                      })}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </>
+              );
+            })()}
+            </div>
 
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 shrink-0">
                 <button

@@ -156,7 +156,14 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                         <h4 className={`text-sm font-bold truncate pr-6 ${notif.read ? 'text-foreground' : 'text-primary'}`}>{notif.title}</h4>
                         
                         {!isExpanded && (
-                          <p className="text-xs text-muted-foreground truncate mt-1">{notif.message}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground truncate flex-1">{notif.message}</p>
+                            {(notif.image || (notif.orderItems && notif.orderItems.length > 0)) && (
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold shrink-0 bg-muted/50 px-2 py-0.5 rounded-full">
+                                Details <FaChevronDown size={8} />
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                       
@@ -177,9 +184,9 @@ export default function NotificationPanel({ isOpen, onClose, notifications }: No
                       {notif.image && (
                         <div 
                           className="mt-3 relative w-full h-32 rounded-lg overflow-hidden border border-border bg-muted/50 cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={(e) => { e.stopPropagation(); setSelectedImage(notif.image!); }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedImage(Array.isArray(notif.image) ? notif.image[0] : notif.image!); }}
                         >
-                          <Image src={notif.image} alt="Notification Image" fill className="object-contain" />
+                          <Image src={Array.isArray(notif.image) ? notif.image[0] : notif.image} alt="Notification Image" fill className="object-contain" />
                         </div>
                       )}
 

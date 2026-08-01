@@ -252,7 +252,48 @@ export async function GET(request: Request) {
     // Save updated reminder times
     await adminDb.collection('system_config').doc('last_stock_reminders').set(lastStockReminders, { merge: true });
 
-    return NextResponse.json({ success: true, message: 'Cron job executed successfully', emailsSent: emailsToSend.length });
+    // 4. Delete old notifications and broadcasts (older than 6 months)
+    const sixMonthsAgo = now - (180 * 24 * 60 * 60 * 1000);
+    const collectionsToClean = ['notifications', 'broadcasts'];
+    let deletedCount = 0;
+
+    for (const collName of collectionsToClean) {
+      const oldSnap = await adminDb.collection(collName).get();
+      
+      if (!oldSnap.empty) {
+        let currentBatch = adminDb.batch();
+        let batchSize = 0;
+
+        for (const doc of oldSnap.docs) {
+          const data = doc.data();
+          if (data.createdAt) {
+            const createdAt = new Date(data.createdAt).getTime();
+            if (createdAt < sixMonthsAgo) {
+              currentBatch.delete(doc.ref);
+              deletedCount++;
+              batchSize++;
+
+              // Commit in chunks of 450 to avoid Firestore 500 limit
+              if (batchSize >= 450) {
+                await currentBatch.commit();
+                currentBatch = adminDb.batch();
+                batchSize = 0;
+              }
+            }
+          }
+        }
+        
+        if (batchSize > 0) {
+          await currentBatch.commit();
+        }
+      }
+    }
+    
+    if (deletedCount > 0) {
+      console.log(`Deleted ${deletedCount} old notifications/broadcasts`);
+    }
+
+    return NextResponse.json({ success: true, message: 'Cron job executed successfully', emailsSent: emailsToSend.length, notificationsDeleted: deletedCount });
   } catch (error) {
     console.error("Cron Error:", error);
     return NextResponse.json({ success: false, error: 'Failed to process cron job' }, { status: 500 });

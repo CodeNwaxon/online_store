@@ -290,6 +290,7 @@ export default function AdminOrders() {
     '/ADMIN/WEARS': 'wears',
     '/ADMIN/COSMETICS': 'cosmetics',
     '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+    '/ADMIN/UK-USED': 'uk_used',
   };
 
   // Which Firestore collections this admin is allowed to see orders for.
@@ -311,9 +312,10 @@ export default function AdminOrders() {
     if (allowedCollections === 'vendor-only') {
       // Regular (non-VIP) admin: only show their own products
       const myItems = order.items
-        ? order.items.filter((item: any) => item.vendor === adminData?.email)
+        ? order.items.filter((item: any) => item.vendor?.toLowerCase().trim() === adminData?.email?.toLowerCase().trim())
         : [];
-      return { ...order, items: myItems };
+      const newTotal = myItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+      return { ...order, items: myItems, totalAmount: newTotal, shippingFee: 0 };
     }
 
     // VIP admin: show items from their allowed collections
@@ -321,7 +323,8 @@ export default function AdminOrders() {
     const myItems = order.items
       ? order.items.filter((item: any) => item.collectionName && allowedCollections.includes(item.collectionName))
       : [];
-    return { ...order, items: myItems };
+    const newTotal = myItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+    return { ...order, items: myItems, totalAmount: newTotal, shippingFee: 0 };
   }).filter(order => {
     // Hide soft-deleted orders from admin view
     if (order.deleted) return false;

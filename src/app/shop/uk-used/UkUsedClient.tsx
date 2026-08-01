@@ -331,7 +331,7 @@ function UkUsedPageContent() {
                     placeholder="Search UkUsed..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-full py-2.5 md:py-3 px-4 pl-10 md:pl-12 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-sm transition-all"
+                    className="w-full py-2.5 pr-4 pl-8 md:pl-10 rounded-md md:rounded-xl border border-gray-200 bg-slate-50 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20 transition-all text-xs md:text-sm"
                   />
                   <FaSearch
                     size={16}

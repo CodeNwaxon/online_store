@@ -156,6 +156,7 @@ export default function Navbar() {
             '/ADMIN/WEARS': 'wears',
             '/ADMIN/COSMETICS': 'cosmetics',
             '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+            '/ADMIN/UK-USED': 'uk_used',
           };
           const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
           isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
@@ -186,6 +187,7 @@ export default function Navbar() {
             '/ADMIN/WEARS': 'wears',
             '/ADMIN/COSMETICS': 'cosmetics',
             '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
+            '/ADMIN/UK-USED': 'uk_used',
           };
           const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
           isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
@@ -196,28 +198,29 @@ export default function Navbar() {
         const shouldNotify = hasOrderAccess || isVendorOrder;
         if (!shouldNotify) return;
 
-        addNotification({
-          id: `order-${change.doc.id}`,
-          type: isVendorOrder ? 'vendor_order' : 'order',
-          title: isVendorOrder ? 'New Vendor Order' : 'New Order',
-          message: isVendorOrder
-            ? `A new purchase was made for one of your products.`
-            : `A new purchase was made in the store.`,
-          createdAt: orderData.createdAt || new Date().toISOString(),
-          read: false,
-          link: '/admin/orders',
-          adminRoute: '/ADMIN/ORDERS',
-          vendorEmail: isVendorOrder ? adminData?.email : undefined,
-          orderItems: (orderData.items || []).map((item: any) => ({
-            name: item.name || 'Product',
-            image: item.image || '',
-            quantity: item.quantity || 1,
-            price: item.price || 0,
-            selectedSize: item.selectedSize,
-            selectedColor: item.selectedColor,
-          })),
-          orderId: change.doc.id,
-        });
+        // addNotification is now handled by the 'notifications' collection listener below to avoid duplicates.
+        // addNotification({
+        //   id: `order-${change.doc.id}`,
+        //   type: isVendorOrder ? 'vendor_order' : 'order',
+        //   title: isVendorOrder ? 'New Vendor Order' : 'New Order',
+        //   message: isVendorOrder
+        //     ? `A new purchase was made for one of your products.`
+        //     : `A new purchase was made in the store.`,
+        //   createdAt: orderData.createdAt || new Date().toISOString(),
+        //   read: false,
+        //   link: '/admin/orders',
+        //   adminRoute: '/ADMIN/ORDERS',
+        //   vendorEmail: isVendorOrder ? adminData?.email : undefined,
+        //   orderItems: (orderData.items || []).map((item: any) => ({
+        //     name: item.name || 'Product',
+        //     image: item.image || '',
+        //     quantity: item.quantity || 1,
+        //     price: item.price || 0,
+        //     selectedSize: item.selectedSize,
+        //     selectedColor: item.selectedColor,
+        //   })),
+        //   orderId: change.doc.id,
+        // });
       });
 
       isInitialOrdersLoad = false;
@@ -236,15 +239,16 @@ export default function Navbar() {
             const templateMsg = instTemplate
               ? instTemplate.replace(/\{user\}/gi, userName)
               : `A new installment plan was started by ${userName}.`;
-            addNotification({
-              id: `inst-${change.doc.id}`,
-              type: 'installment',
-              title: 'New Installment',
-              message: templateMsg,
-              createdAt: new Date().toISOString(),
-              read: false,
-              link: '/admin/installments'
-            });
+            // addNotification is now handled by the 'notifications' collection listener.
+            // addNotification({
+            //   id: `inst-${change.doc.id}`,
+            //   type: 'installment',
+            //   title: 'New Installment',
+            //   message: templateMsg,
+            //   createdAt: new Date().toISOString(),
+            //   read: false,
+            //   link: '/admin/installments'
+            // });
           }
         }
       });
@@ -343,10 +347,45 @@ export default function Navbar() {
       });
     }, (err) => console.warn("Broadcasts listener error:", err));
 
+    // Listen for System Notifications (New Orders, Installments, etc)
+    const unsubNotifications = onSnapshot(query(collection(db, 'notifications'), where('createdAt', '>', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())), (snap) => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          // Access control:
+          // - Global order notifications (/ADMIN/ORDERS without vendorEmail): ONLY CEO and VIPs should see them.
+          // - Other global admin notifications (e.g., /ADMIN/PARTNERSHIP): Anyone with the route can see it.
+          const isGlobalOrderNotif = !data.vendorEmail && data.adminRoute === '/ADMIN/ORDERS';
+          const hasGlobalOrderAccess = isCEO || adminData?.vip;
+          const isOtherGlobalNotif = !data.vendorEmail && data.adminRoute !== '/ADMIN/ORDERS' && (isCEO || adminData?.assignedRoutes?.includes(data.adminRoute));
+          
+          const isGlobalAdminNotif = (isGlobalOrderNotif && hasGlobalOrderAccess) || isOtherGlobalNotif;
+          const isVendorNotif = data.vendorEmail && data.vendorEmail === user.email;
+          
+          if (isGlobalAdminNotif || isVendorNotif) {
+            addNotification({
+              id: change.doc.id,
+              type: data.type || 'notification',
+              title: data.title,
+              message: data.message,
+              image: data.image,
+              createdAt: data.createdAt || new Date().toISOString(),
+              read: false,
+              vendorEmail: data.vendorEmail,
+              adminRoute: data.adminRoute,
+              link: data.adminRoute?.toLowerCase() || '',
+              orderId: data.orderId,
+            });
+          }
+        }
+      });
+    }, (err) => console.warn("Notifications listener error:", err));
+
     return () => {
       unsubBroadcasts();
+      unsubNotifications();
     };
-  }, [user]);
+  }, [user, isCEO, adminData]);
 
   // Partner Sales Listener
   useEffect(() => {

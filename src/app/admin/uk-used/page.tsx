@@ -494,7 +494,7 @@ export default function AdminUkUsed() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold">Product Name</label>
-                <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Nivea Body Lotion" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Open Box Samsung Galaxy S22 Ultra" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
               </div>
 
               <div className="space-y-2">
@@ -700,13 +700,13 @@ export default function AdminUkUsed() {
                 <label className="text-sm font-bold flex items-center gap-1.5">
                   Issues <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] font-black flex items-center justify-center cursor-help" title="Select if this used product has any issues/defects or not.">!</span>
                 </label>
-                <select 
+                <select
                   required
-                  value={hasIssues} 
+                  value={hasIssues}
                   onChange={e => {
                     setHasIssues(e.target.value);
                     if (e.target.value === 'no') setIssuesDescription('');
-                  }} 
+                  }}
                   className="w-full p-3 rounded-md border border-border bg-background text-sm"
                 >
                   <option value="">Select Option</option>

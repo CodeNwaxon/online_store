@@ -410,6 +410,19 @@ export default function Checkout() {
     );
   }
 
+  const getContinueShoppingUrl = () => {
+    if (!finalOrderData?.items || finalOrderData.items.length === 0) return '/shop';
+    const lastItem = finalOrderData.items[finalOrderData.items.length - 1];
+    
+    const storeHint = lastItem.collectionName || lastItem.category;
+    if (!storeHint) return '/shop';
+    
+    const categoryStr = storeHint.toLowerCase().replace(/_/g, '-');
+    if (categoryStr === 'foods') return '/foods';
+    if (categoryStr === 'products' || categoryStr === 'electronics') return '/shop';
+    return `/shop/${categoryStr}`;
+  };
+
   if (isSuccess) {
     return (
       <div className="py-16 min-h-[70vh] flex items-center justify-center">
@@ -441,7 +454,7 @@ export default function Checkout() {
               <FaPrint /> View Receipt
             </button>
             <Link href="/" className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-md font-semibold transition-colors text-center">Back to Home</Link>
-            <Link href="/shop" className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center">Continue Shopping</Link>
+            <Link href={getContinueShoppingUrl()} className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center">Continue Shopping</Link>
           </div>
         </div>
       </div>

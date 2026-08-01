@@ -1,6 +1,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebaseAdmin';
+import { sendEmail } from '@/lib/sendEmail';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // ─── PAYSTACK VERIFICATION ──────────────────────────────────────────────
@@ -182,7 +183,7 @@ export async function verifyAndFulfillOrder(
 
   // Step 4: Everything checks out — create the order from the SERVER using a transaction to prevent race conditions
   try {
-    return await adminDb.runTransaction(async (transaction) => {
+    const txResult = await adminDb.runTransaction(async (transaction) => {
       // Re-read the pending transaction to ensure it hasn't been completed by a concurrent request
       const txDoc = await transaction.get(pendingTxRef);
       if (!txDoc.exists) {
@@ -340,7 +341,7 @@ export async function verifyAndFulfillOrder(
 
       // First accumulate raw counts
       let totalQty = 0;
-      const categoryCounts: Record<string, number> = { furniture: 0, food: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0 };
+      const categoryCounts: Record<string, number> = { furniture: 0, food: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0, uk_used: 0 };
       const vendorCounts: Record<string, number> = {};
 
       for (const item of orderData.items) {
@@ -384,6 +385,8 @@ export async function verifyAndFulfillOrder(
           categoryCounts.wears += qty;
         } else if (coll === 'cosmetics' || group.includes('cosmetics') || category.includes('cosmetics')) {
           categoryCounts.cosmetics += qty;
+        } else if (coll === 'uk_used' || coll === 'uk-used' || group.includes('used') || category.includes('used')) {
+          categoryCounts.uk_used += qty;
         }
 
         if (item.vendor) {
@@ -412,8 +415,87 @@ export async function verifyAndFulfillOrder(
         completedAt: FieldValue.serverTimestamp(),
       });
 
+      // Create Admin/Vendor Notifications with templates and images
+      // Fetch notification templates for customizable messages
+      const templatesDoc = await adminDb.collection('settings').doc('notification_templates').get();
+      const templates = templatesDoc.exists ? templatesDoc.data() || {} : {};
+
+      // Get the first product image for the notification
+      const firstImage = orderData.items?.[0]?.image || '';
+
+      // Collect all unique vendor emails from the order
+      const vendorEmails = new Set<string>();
+      for (const item of orderData.items) {
+        if (item.vendor) vendorEmails.add(item.vendor);
+      }
+
+      // 1. Create the global admin notification (seen by CEO and VIP admins)
+      const orderNotifRef = adminDb.collection('notifications').doc();
+      transaction.set(orderNotifRef, {
+        type: 'order',
+        title: 'New Order',
+        message: templates.vendorOrder || 'A new order containing your products has been placed.',
+        image: firstImage,
+        orderId: orderRef.id,
+        createdAt: new Date().toISOString(),
+        read: false,
+        adminRoute: '/ADMIN/ORDERS',
+      });
+
+      // 2. Create vendor-specific notifications
+      //    (We handle hiding duplicate notifications in the frontend for VIP/CEO admins)
+      for (const vendorEmail of vendorEmails) {
+        const vendorNotifRef = adminDb.collection('notifications').doc();
+        transaction.set(vendorNotifRef, {
+          type: 'vendor_order',
+          title: 'New Order',
+          message: templates.vendorOrder || 'A new order containing your products has been placed.',
+          image: firstImage,
+          orderId: orderRef.id,
+          vendorEmail: vendorEmail,
+          createdAt: new Date().toISOString(),
+          read: false,
+          adminRoute: '/ADMIN/ORDERS',
+        });
+      }
+
+      // 3. Create customer notification for placing the order
+      if (orderData.userId && orderData.userId !== 'guest') {
+        const customerNotifRef = adminDb.collection('broadcasts').doc();
+        transaction.set(customerNotifRef, {
+          type: 'order_placed',
+          title: 'Order Placed Successfully',
+          message: `Your order containing ${orderData.items?.[0]?.name || 'an item'}${orderData.items.length > 1 ? ` and ${orderData.items.length - 1} other item(s)` : ''} has been placed. We are preparing it for delivery.`,
+          image: firstImage,
+          customerUid: orderData.userId,
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      }
+
       return { success: true, orderId: orderRef.id, orderData };
     });
+
+    if (txResult.success && txResult.orderData) {
+       sendEmail({
+         to: txResult.orderData.email,
+         subject: 'Order Confirmation - Nomo Store',
+         html: `<p>Hi ${txResult.orderData.customerName},</p><p>Your order has been placed successfully.</p><p>Thank you for shopping with us!</p>`
+       }).catch(console.error);
+
+       const vendorsToEmail = new Set<string>();
+       for (const item of txResult.orderData.items) {
+         if (item.vendor) vendorsToEmail.add(item.vendor);
+       }
+       for (const vendorEmail of vendorsToEmail) {
+         sendEmail({
+           to: vendorEmail,
+           subject: 'New Order for your Products!',
+           html: `<p>Hello Vendor,</p><p>A new order has been placed that includes your products. Please log in to your dashboard to view the details.</p>`
+         }).catch(console.error);
+       }
+    }
+    return txResult;
   } catch (error) {
     console.error('Error creating order:', error);
     return { success: false, error: 'Failed to create order.' };
@@ -520,7 +602,7 @@ export async function verifyAndCreateInstallment(
     const remainingBalance = serverCalculatedTotalAmount - actualPaidNaira;
     const monthlyAmount = remainingBalance / data.planMonths;
 
-    return await adminDb.runTransaction(async (transaction) => {
+    const txResult = await adminDb.runTransaction(async (transaction) => {
       // Re-read pending transaction to ensure it hasn't been completed concurrently
       const txDoc = await transaction.get(pendingTxRef);
       if (!txDoc.exists) {
@@ -676,8 +758,36 @@ export async function verifyAndCreateInstallment(
         completedAt: FieldValue.serverTimestamp(),
       });
 
-      return { success: true };
+      // Create Admin Notification with template and product image
+      const instTemplatesDoc = await adminDb.collection('settings').doc('notification_templates').get();
+      const instTemplates = instTemplatesDoc.exists ? instTemplatesDoc.data() || {} : {};
+      const userName = data.customerName || data.userEmail || 'a user';
+      const instMessage = instTemplates.installmentNotification
+        ? instTemplates.installmentNotification.replace(/\{user\}/gi, userName)
+        : `A new installment plan was started by ${userName}.`;
+
+      const instNotifRef = adminDb.collection('notifications').doc();
+      transaction.set(instNotifRef, {
+        type: 'installment',
+        title: 'New Installment',
+        message: instMessage,
+        image: data.productImage || '',
+        createdAt: new Date().toISOString(),
+        read: false,
+        adminRoute: '/ADMIN/INSTALLMENTS',
+      });
+
+      return { success: true, data };
     });
+
+    if (txResult.success && txResult.data) {
+      sendEmail({
+        to: txResult.data.userEmail,
+        subject: 'Installment Plan Started - Nomo Store',
+        html: `<p>Hi ${txResult.data.customerName},</p><p>Your installment plan for ${txResult.data.productName} has been started successfully.</p><p>Thank you!</p>`
+      }).catch(console.error);
+    }
+    return txResult;
   } catch (error) {
     console.error('Error creating installment:', error);
     return { success: false, error: 'Failed to create installment plan.' };
