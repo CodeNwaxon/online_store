@@ -149,8 +149,6 @@ export default function PartnershipPage() {
       const q = query(collection(db, 'orders'), where('referralCode', '==', referralCode));
       const snap = await getDocs(q);
       const items: any[] = [];
-      let totalPurchase = 0;
-      let totalPartner = 0;
 
       snap.forEach(doc => {
         const order = doc.data();
@@ -171,9 +169,6 @@ export default function PartnershipPage() {
               cutPct,
               partnerPaid: order.partnerPaid || false
             });
-
-            totalPurchase += sellPrice;
-            totalPartner += partnerCut;
           });
         }
       });
@@ -186,11 +181,14 @@ export default function PartnershipPage() {
         return orderTime > partnerHiddenAt;
       });
 
+      const visibleTotalPurchase = visibleItems.reduce((sum, item) => sum + (item.price || 0), 0);
+      const visiblePartnerProfit = visibleItems.reduce((sum, item) => sum + (item.partnerCut || 0), 0);
+
       setPurchasedItems(visibleItems);
       setStats({
         totalItems: visibleItems.length,
-        totalPurchase: totalPurchase, // Or calculate only visible? Wait, user wants total as is, let's keep total for stats
-        partnerProfit: totalPartner
+        totalPurchase: visibleTotalPurchase,
+        partnerProfit: visiblePartnerProfit
       });
     } catch (error) {
       console.error("Error loading referral sales", error);
@@ -356,7 +354,7 @@ export default function PartnershipPage() {
           className={`w-full py-4 px-6 rounded-xl font-bold flex items-center justify-between transition-colors shadow-md ${isDarkMode ? 'bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800' : 'bg-white text-slate-800 border border-slate-200 hover:bg-slate-50'}`}
         >
           <span className="flex items-center gap-3">
-            <FaCheckCircle className="text-primary" /> Top Earning Partners
+            <FaCheckCircle className="text-primary" /> Top Partners by Total Earnings
           </span>
           <span className="text-xl">{showTopPartners ? '-' : '+'}</span>
         </button>
@@ -369,7 +367,7 @@ export default function PartnershipPage() {
                   <tr>
                     <th className="px-6 py-4">Rank</th>
                     <th className="px-6 py-4">Partner Email</th>
-                    <th className="px-6 py-4 text-center">Referrals</th>
+                    <th className="px-6 py-4 text-center">Referral Orders</th>
                     <th className="px-6 py-4 text-right">Total Earnings</th>
                   </tr>
                 </thead>
@@ -659,12 +657,12 @@ export default function PartnershipPage() {
           <div className={`p-6 rounded-2xl shadow-sm border flex flex-col justify-center items-center text-center relative overflow-hidden ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'}`}>
             <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 ${isDarkMode ? 'bg-primary/20' : 'bg-green-500/10'}`} />
             
-            <p className={`text-xs font-bold uppercase mb-1 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Your Total Earnings</p>
-            <p className={`text-lg font-bold relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{stats.partnerProfit.toLocaleString()}</p>
+            <p className={`text-xs font-bold uppercase mb-1 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Total Earnings</p>
+            <p className={`text-lg font-bold relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(partnerData.totalEarnings || 0).toLocaleString()}</p>
             
             <div className="w-full h-px bg-border my-3 relative z-10"></div>
             
-            <p className={`text-sm font-bold uppercase mb-2 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Outstanding</p>
+            <p className={`text-sm font-bold uppercase mb-2 relative z-10 ${isDarkMode ? 'text-zinc-500' : 'text-slate-400'}`}>Outstanding Payout</p>
             <p className={`text-4xl font-black relative z-10 ${isDarkMode ? 'text-primary' : 'text-green-600'}`}>₦{(partnerData.outstandingEarnings || 0).toLocaleString()}</p>
           </div>
         </div>
