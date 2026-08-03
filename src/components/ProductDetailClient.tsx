@@ -186,7 +186,7 @@ export default function ProductDetailClient() {
 
   const handleShareProduct = () => {
     if (!partnerData?.referralCode) return;
-    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}/product/${product.id}?ref=${partnerData.referralCode}` : '';
+    const currentReferralLink = `https://nomo-stores.com/product/${product.id}?ref=${partnerData.referralCode}`;
     const shareText = `Looking for ${product.name}? 🛍️\n\nGet it today at Nomo Storez! ✨\n`;
 
     if (navigator.share) {

@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         }
       }
       
-      const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomo-store.vercel.app${imageUrl}`;
+      const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomo-stores.com${imageUrl}`;
       
       return {
         title: `${title} | Food Market | Nomo Storez`,

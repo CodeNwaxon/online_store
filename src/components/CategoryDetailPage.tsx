@@ -187,7 +187,7 @@ export default function CategoryDetailPage({
 
   const handleShareProduct = () => {
     if (!partnerData?.referralCode) return;
-    const currentReferralLink = typeof window !== 'undefined' ? `${window.location.origin}${backPath}/${product.id}?ref=${partnerData.referralCode}` : '';
+    const currentReferralLink = `https://nomo-stores.com${backPath}/${product.id}?ref=${partnerData.referralCode}`;
     const shareText = `Looking for ${product.name}? 🛍️\n\nGet it today at Nomo Storez! ✨\n`;
 
     if (navigator.share) {
