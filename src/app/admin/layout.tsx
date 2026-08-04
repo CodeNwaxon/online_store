@@ -19,6 +19,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [unreadPartners, setUnreadPartners] = useState(0);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [pathname]);
+
+  useEffect(() => {
     // Check auth state and only set up listeners if authenticated
     const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {

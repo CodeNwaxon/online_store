@@ -35,6 +35,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
+import { sendDeliveryEmailAction } from '@/actions/sendDeliveryEmail';
 
 export default function AdminOrders() {
   const shippingMaxDays = useShippingMaxDays();
@@ -185,6 +186,21 @@ export default function AdminOrders() {
         const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
 
         window.open(waUrl, '_blank');
+      }
+
+      // Send email to the customer
+      if (orderToNotify?.email) {
+        try {
+          await sendDeliveryEmailAction(
+            orderToNotify.email,
+            orderToNotify.customerName || 'Customer',
+            orderToNotify.id,
+            orderToNotify.deliveryMethod === 'ship',
+            shippingMaxDays
+          );
+        } catch (emailErr) {
+          console.error("Failed to send delivery email", emailErr);
+        }
       }
     } catch (err) {
       console.error("Failed to send delivery notification", err);

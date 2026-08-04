@@ -15,7 +15,7 @@ export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
       // you must use 'onboarding@resend.dev' as the from address, and you can
       // ONLY send emails to the email address associated with your Resend account.
       // Once verified, add RESEND_FROM_EMAIL to your Vercel Environment Variables.
-      from: process.env.RESEND_FROM_EMAIL || 'Nomo Store <onboarding@resend.dev>', 
+      from: process.env.RESEND_FROM_EMAIL || 'Nomo Store <hello@nomo-stores.com>', 
       to,
       subject,
       html,
