@@ -1,6 +1,6 @@
-# Quick Choice - Premium Online Store & Admin Dashboard
+# Nomo Storez - Premium Online Store & Admin Dashboard
 
-Quick Choice is a state-of-the-art E-commerce platform built with Next.js 15, Firebase, and Tailwind CSS. It features a robust storefront for customers and a secure, comprehensive Admin Dashboard for store owners and staff.
+NOMO STOREZ is a state-of-the-art E-commerce platform built with Next.js 15, Firebase, and Tailwind CSS. It features a robust storefront for customers and a secure, comprehensive Admin Dashboard for store owners and staff.
 
 ## 🚀 Key Features
 
@@ -83,4 +83,4 @@ Ensure your Firestore rules allow:
 Admin access is restricted based on the `ADMIN_KEY` which should match the UID of the primary CEO account. Additional staff can be added via the **Admin Management** panel.
 
 ---
-*Built with ❤️ for Quick Choice Online Store.*
+*Built exclusively for Nomo Storez Online Store.*
