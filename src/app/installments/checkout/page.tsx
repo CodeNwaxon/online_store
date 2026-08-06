@@ -106,7 +106,8 @@ function LoanCheckoutContent() {
   useEffect(() => {
     if (!loan?.productId) return;
 
-    const productRef = doc(db, 'products', loan.productId);
+    const collectionName = loan.productCollection || 'products';
+    const productRef = doc(db, collectionName, loan.productId);
     const unsub = onSnapshot(productRef, (docSnap) => {
       if (docSnap.exists()) {
         setProduct({ id: docSnap.id, ...docSnap.data() });
@@ -116,7 +117,7 @@ function LoanCheckoutContent() {
     });
 
     return () => unsub();
-  }, [loan?.productId, loan?.productName]);
+  }, [loan?.productId, loan?.productName, loan?.productCollection]);
 
   const fetchLoan = async (currentUser: User) => {
     const docRef = doc(db, 'installments', loanId!);

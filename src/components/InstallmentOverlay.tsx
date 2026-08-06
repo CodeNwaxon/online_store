@@ -235,6 +235,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
       productId: product.id,
       productName: product.name,
       productCategory: product.category,
+      productCollection: (product as any).collectionName || 'products',
       productImage: product.images?.[0] || product.image || '',
       basePrice: product.price,
       totalAmount: totalAmount,

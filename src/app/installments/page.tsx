@@ -39,17 +39,19 @@ function InstallmentsContent() {
         const settingsDoc = await getDoc(doc(db, 'settings', 'installments'));
         const minAmount = settingsDoc.exists() ? (settingsDoc.data().minAmount !== undefined ? settingsDoc.data().minAmount : 20000) : 20000;
 
-        const [prodSnap, cosSnap, wearsSnap, tkSnap] = await Promise.all([
+        const [prodSnap, cosSnap, wearsSnap, tkSnap, ukUsedSnap] = await Promise.all([
           getDocs(collection(db, 'products')),
           getDocs(collection(db, 'cosmetics')),
           getDocs(collection(db, 'wears')),
-          getDocs(collection(db, 'toilet_kitchen'))
+          getDocs(collection(db, 'toilet_kitchen')),
+          getDocs(collection(db, 'uk_used'))
         ]);
         const dynamicProducts = [
-          ...prodSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          ...cosSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          ...wearsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-          ...tkSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+          ...prodSnap.docs.map(d => ({ id: d.id, collectionName: 'products', ...d.data() })),
+          ...cosSnap.docs.map(d => ({ id: d.id, collectionName: 'cosmetics', ...d.data() })),
+          ...wearsSnap.docs.map(d => ({ id: d.id, collectionName: 'wears', ...d.data() })),
+          ...tkSnap.docs.map(d => ({ id: d.id, collectionName: 'toilet_kitchen', ...d.data() })),
+          ...ukUsedSnap.docs.map(d => ({ id: d.id, collectionName: 'uk_used', ...d.data() }))
         ].filter((p: any) => p.price >= minAmount && p.group?.toLowerCase() !== 'foods' && p.category?.toLowerCase() !== 'foods') as any[];
 
         const parseDate = (dateVal: any) => {
