@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp, deleteDoc, getDoc, onSnapshot, addDoc } from 'firebase/firestore';
 import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint, FaTimes } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -88,7 +88,7 @@ export default function PayLoanPage() {
 
         const qHistory = query(
           collection(db, 'installments'),
-          where('userId', '==', currentUser.uid),
+          where('userEmail', '==', currentUser.email),
           where('status', 'in', ['completed', 'cancelled', 'refunded', 'cleared'])
         );
         unsubHistory = onSnapshot(qHistory, (querySnapshot) => {
@@ -369,6 +369,21 @@ export default function PayLoanPage() {
         }
       });
 
+      await addDoc(collection(db, 'notifications'), {
+        type: 'cancellation',
+        title: 'Installment Cancellation',
+        message: `A customer (${loan.customerName || loan.userEmail}) has requested a refund and cancelled their installment plan for ${loan.productName}.`,
+        adminRoute: '/ADMIN/INSTALLMENTS',
+        read: false,
+        createdAt: new Date().toISOString(),
+        orderItems: [{
+          name: loan.productName || 'Product',
+          image: loan.productImage || '',
+          price: loan.totalAmount || 0,
+          quantity: 1,
+        }]
+      });
+
       toast.success('Refund request submitted! Our admin will process it shortly.');
       setShowRefundForm(false);
     } catch (error) {
@@ -576,7 +591,6 @@ export default function PayLoanPage() {
           ) : loan.status === 'completed' && !loan.dismissedCompletion ? (
             <div className="bg-card border border-green-200 p-8 rounded-[var(--radius)] text-center max-w-[600px] mx-auto mt-10 shadow-lg">
               {/* Confetti icon row */}
-              <div className="flex justify-center gap-2 text-2xl mb-4">?? ?? ??</div>
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <FaCheckCircle size={40} />
               </div>

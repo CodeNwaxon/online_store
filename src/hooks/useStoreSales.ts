@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export interface StoreTypeSales {
   shop: number;
@@ -30,7 +30,6 @@ export function useStoreSales() {
   useEffect(() => {
     // 1. Try reading pre-aggregated settings/salesCounts first
     let unsubSalesCounts: (() => void) | null = null;
-    let unsubOrders: (() => void) | null = null;
 
     unsubSalesCounts = onSnapshot(
       doc(db, 'settings', 'salesCounts'),
@@ -76,88 +75,18 @@ export function useStoreSales() {
           }
         }
 
-        // If settings/salesCounts does not exist or has 0, compute directly from orders collection
-        listenToOrders();
+        // If settings/salesCounts does not exist or has 0, just use zeroes.
+        // We cannot fall back to the orders collection because it requires admin permissions.
+        setLoading(false);
       },
-      () => {
-        listenToOrders();
+      (err) => {
+        console.warn('salesCounts listener error:', err);
+        setLoading(false);
       }
     );
 
-    const listenToOrders = () => {
-      if (unsubSalesCounts) {
-        unsubSalesCounts();
-        unsubSalesCounts = null;
-      }
-
-      unsubOrders = onSnapshot(
-        collection(db, 'orders'),
-        (snap) => {
-          const vSales: Record<string, number> = {};
-          const sSales: StoreTypeSales = { shop: 0, food: 0, furniture: 0, toilet_kitchen: 0, wears: 0, cosmetics: 0, uk_used: 0 };
-
-          snap.docs.forEach((d) => {
-            const order = d.data() as any;
-            if (order.status === 'cancelled' || order.status === 'canceled') return;
-
-            if (Array.isArray(order.items)) {
-              order.items.forEach((item: any) => {
-                const qty = Number(item.quantity) || 1;
-                sSales.shop += qty;
-
-                if (item.vendor) {
-                  const emailKey = String(item.vendor).toLowerCase().trim();
-                  vSales[emailKey] = (vSales[emailKey] || 0) + qty;
-                  vSales[emailKey.replace(/\./g, '_')] = (vSales[emailKey.replace(/\./g, '_')] || 0) + qty;
-                }
-
-                const coll = String(item.collectionName || '').toLowerCase();
-                const group = String(item.group || '').toLowerCase();
-                const category = String(item.category || '').toLowerCase();
-                const name = String(item.name || '').toLowerCase();
-
-                const isFurniture =
-                  coll.includes('furniture') ||
-                  group.includes('furniture') ||
-                  category.includes('furniture') ||
-                  name.includes('furniture') ||
-                  name.includes('chair') ||
-                  name.includes('table') ||
-                  name.includes('sofa') ||
-                  name.includes('desk') ||
-                  name.includes('bed');
-
-                if (isFurniture) {
-                  sSales.furniture += qty;
-                } else if (coll === 'foods' || group === 'foods' || category === 'food market' || group.includes('food')) {
-                  sSales.food += qty;
-                } else if (coll === 'toilet_kitchen' || group.includes('toilet') || group.includes('kitchen') || category.includes('toilet') || category.includes('kitchen')) {
-                  sSales.toilet_kitchen += qty;
-                } else if (coll === 'wears' || group.includes('wears') || group.includes('clothing') || category.includes('wears')) {
-                  sSales.wears += qty;
-                } else if (coll === 'cosmetics' || group.includes('cosmetics') || category.includes('cosmetics')) {
-                  sSales.cosmetics += qty;
-                } else if (coll === 'uk_used' || group.includes('used') || category.includes('used')) {
-                  sSales.uk_used += qty;
-                }
-              });
-            }
-          });
-
-          setVendorSales(vSales);
-          setStoreTypeSales(sSales);
-          setLoading(false);
-        },
-        (err) => {
-          console.warn('Orders listener error:', err);
-          setLoading(false);
-        }
-      );
-    };
-
     return () => {
       if (unsubSalesCounts) unsubSalesCounts();
-      if (unsubOrders) unsubOrders();
     };
   }, []);
 

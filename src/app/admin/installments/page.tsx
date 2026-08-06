@@ -613,6 +613,11 @@ export default function AdminInstallments() {
                     ${inst.isNew ? 'border-green-500 animate-[pulse_2.5s_infinite]' : ''}
                   `}
                   >
+                    {inst.isNew && (
+                      <span className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-bold z-10 shadow-sm animate-pulse">
+                        NEW
+                      </span>
+                    )}
                     {(inst.status === 'completed' || inst.status === 'cleared') && (
                       <button
                         onClick={(e) => {

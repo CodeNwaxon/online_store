@@ -679,6 +679,7 @@ export async function verifyAndCreateInstallment(
       let finalReferralCode = data.referralCode;
       let partnerCutPercentage = 50;
       let rdpPrice = 0;
+      let partnerEarnings = 0;
 
       if (isReturningCustomer && previousReferralCode) {
         finalReferralCode = previousReferralCode;
@@ -707,14 +708,11 @@ export async function verifyAndCreateInstallment(
             // Get rdpPrice or costPrice
             rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
             const totalProfit = Math.max(0, realProductPrice - rdpPrice);
-            const partnerEarnings = totalProfit * (partnerCutPercentage / 100);
+            partnerEarnings = totalProfit * (partnerCutPercentage / 100);
 
-            transaction.update(partnerDoc.ref, {
-              totalEarnings: FieldValue.increment(partnerEarnings),
-              outstandingEarnings: FieldValue.increment(partnerEarnings),
-              referralCount: FieldValue.increment(1),
-              lastEarningAt: new Date().toISOString()
-            });
+            // DO NOT update the partner doc here.
+            // We just calculate the expected earnings and save it to the installment.
+            // The partner will be paid when the final payment is completed.
           }
         }
       }
@@ -779,6 +777,7 @@ export async function verifyAndCreateInstallment(
         verifiedByServer: true,
         referralCode: finalReferralCode || null,
         partnerCutPercentage: finalReferralCode ? partnerCutPercentage : null,
+        partnerExpectedEarnings: finalReferralCode ? partnerEarnings : null,
         partnerPaid: finalReferralCode ? false : null,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -926,6 +925,17 @@ export async function verifyAndProcessInstallmentPayment(
         return { success: true };
       }
 
+      // Check partner earnings if this is the final payment
+      let partnerDoc: any = null;
+      if (data.isLastPayment && loan.referralCode && loan.partnerPaid === false) {
+        const partnersQuery = await transaction.get(
+          adminDb.collection('partners').where('referralCode', '==', loan.referralCode).limit(1)
+        );
+        if (!partnersQuery.empty) {
+          partnerDoc = partnersQuery.docs[0];
+        }
+      }
+
       const updatedPayments = [...loan.payments];
 
       for (const idx of data.monthsToPay) {
@@ -952,6 +962,7 @@ export async function verifyAndProcessInstallmentPayment(
         payments: updatedPayments,
         monthsPaid: loan.monthsPaid + data.monthsToPay.length,
         totalAmountPaid: newTotalPaid,
+        isNew: true,
       };
 
       if (data.isLastPayment) {
@@ -999,6 +1010,56 @@ export async function verifyAndProcessInstallmentPayment(
         transaction.update(productRef, {
           quantity: FieldValue.increment(-1),
         });
+
+        // 1. Create the global admin notification (seen by CEO and VIP admins)
+        const orderNotifRef = adminDb.collection('notifications').doc();
+        transaction.set(orderNotifRef, {
+          type: 'order',
+          title: 'New Order (Installment Completed)',
+          message: 'A completed installment has generated a new order.',
+          orderId: orderRef.id,
+          createdAt: new Date().toISOString(),
+          read: false,
+          adminRoute: '/ADMIN/ORDERS',
+          orderItems: [{
+            name: loan.productName || 'Product',
+            image: loan.productImage || '',
+            quantity: 1,
+            price: loan.totalAmount || 0,
+          }],
+        });
+
+        // 2. Create vendor-specific notification if applicable
+        if (loan.vendor) {
+          const vendorNotifRef = adminDb.collection('notifications').doc();
+          transaction.set(vendorNotifRef, {
+            type: 'vendor_order',
+            title: 'New Order (Installment Completed)',
+            message: 'A completed installment has generated a new order containing your product.',
+            orderId: orderRef.id,
+            vendorEmail: loan.vendor,
+            createdAt: new Date().toISOString(),
+            read: false,
+            adminRoute: '/ADMIN/ORDERS',
+            orderItems: [{
+              name: loan.productName || 'Product',
+              image: loan.productImage || '',
+              quantity: 1,
+              price: loan.totalAmount || 0,
+            }],
+          });
+        }
+
+        // Pay the partner if applicable
+        if (partnerDoc && loan.partnerExpectedEarnings) {
+          transaction.update(partnerDoc.ref, {
+            totalEarnings: FieldValue.increment(loan.partnerExpectedEarnings),
+            outstandingEarnings: FieldValue.increment(loan.partnerExpectedEarnings),
+            referralCount: FieldValue.increment(1),
+            lastEarningAt: new Date().toISOString()
+          });
+          updateData.partnerPaid = true;
+        }
       }
 
       const loanRef = adminDb.collection('installments').doc(data.loanId);
