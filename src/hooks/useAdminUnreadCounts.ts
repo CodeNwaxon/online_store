@@ -8,7 +8,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useAdminUnreadStore } from '@/store/useAdminUnreadStore';
 
 export function useAdminUnreadCounts() {
-  const { adminData, isCEO } = useAdmin();
+  const { adminData, isCEO, isAdmin } = useAdmin();
   const {
     unreadCount,
     unreadOrders,
@@ -23,7 +23,7 @@ export function useAdminUnreadCounts() {
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
+      if (!currentUser || (!isAdmin && !isCEO && !adminData?.assignedRoutes?.length && !adminData?.specialStore)) {
         resetUnreadCounts();
         return;
       }
@@ -153,7 +153,7 @@ export function useAdminUnreadCounts() {
     });
 
     return () => unsubAuth();
-  }, [adminData, isCEO, resetUnreadCounts, setUnreadCount, setUnreadOrders, setUnreadPartners, setUnreadComplaints]);
+  }, [adminData, isCEO, isAdmin, resetUnreadCounts, setUnreadCount, setUnreadOrders, setUnreadPartners, setUnreadComplaints]);
 
   return {
     unreadCount,
