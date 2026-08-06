@@ -22,6 +22,7 @@ import { toast } from 'react-hot-toast';
 import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import NotificationWrapper from './NotificationWrapper';
+import { useAdminUnreadCounts } from '@/hooks/useAdminUnreadCounts';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
@@ -88,10 +89,7 @@ export default function Navbar() {
   const totalItems = useCartStore((state) => state.getTotalItems());
   useHydrateTheme();
   const { isPartnershipDarkMode } = useThemeStore();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadOrders, setUnreadOrders] = useState(0);
-  const [unreadPartners, setUnreadPartners] = useState(0);
-  const [unreadComplaints, setUnreadComplaints] = useState(0);
+  const { unreadCount, unreadOrders, unreadPartners, unreadComplaints } = useAdminUnreadCounts();
   const { partnerData, isApprovedPartner } = usePartner();
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
@@ -121,16 +119,8 @@ export default function Navbar() {
 
     // Setup listeners only if authenticated and is admin
     if (!isAdmin && !isCEO) {
-      setUnreadCount(0);
-      setUnreadOrders(0);
-      setUnreadPartners(0);
-      setUnreadComplaints(0);
       return;
     }
-
-    let instCount = 0;
-    let compCount = 0;
-    let partCount = 0;
 
     // Fetch notification templates for installment messages
     let instTemplate = '';
@@ -148,84 +138,9 @@ export default function Navbar() {
 
     let isInitialOrdersLoad = true;
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-      let count = 0;
-      snap.forEach(docSnap => {
-        const orderData = docSnap.data();
-        if (orderData.deleted) return; // Skip deleted orders
-        
-        let isVIPForOrder = false;
-        if (adminData?.vip) {
-          const ROUTE_TO_COLLECTION: Record<string, string> = {
-            '/ADMIN/PRODUCTS': 'products',
-            '/ADMIN/FOODS': 'foods',
-            '/ADMIN/WEARS': 'wears',
-            '/ADMIN/COSMETICS': 'cosmetics',
-            '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
-            '/ADMIN/UK-USED': 'uk_used',
-          };
-          const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
-          isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
-        }
-
-        const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
-        
-        if (hasOrderAccess) {
-          count++;
-        } else if (orderData.items?.some((item: any) => item.vendor?.toLowerCase().trim() === adminData?.email?.toLowerCase().trim())) {
-          count++;
-        }
-      });
-      setUnreadOrders(count);
-
       snap.docChanges().forEach(change => {
         if (isInitialOrdersLoad) return;
         if (change.type !== 'added') return;
-
-        const orderData = change.doc.data();
-        const isVendorOrder = Boolean(orderData.items?.some((item: any) => item.vendor === adminData?.email));
-        
-        let isVIPForOrder = false;
-        if (adminData?.vip) {
-          const ROUTE_TO_COLLECTION: Record<string, string> = {
-            '/ADMIN/PRODUCTS': 'products',
-            '/ADMIN/FOODS': 'foods',
-            '/ADMIN/WEARS': 'wears',
-            '/ADMIN/COSMETICS': 'cosmetics',
-            '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
-            '/ADMIN/UK-USED': 'uk_used',
-          };
-          const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
-          isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
-        }
-
-        const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
-        
-        const shouldNotify = hasOrderAccess || isVendorOrder;
-        if (!shouldNotify) return;
-
-        // addNotification is now handled by the 'notifications' collection listener below to avoid duplicates.
-        // addNotification({
-        //   id: `order-${change.doc.id}`,
-        //   type: isVendorOrder ? 'vendor_order' : 'order',
-        //   title: isVendorOrder ? 'New Vendor Order' : 'New Order',
-        //   message: isVendorOrder
-        //     ? `A new purchase was made for one of your products.`
-        //     : `A new purchase was made in the store.`,
-        //   createdAt: orderData.createdAt || new Date().toISOString(),
-        //   read: false,
-        //   link: '/admin/orders',
-        //   adminRoute: '/ADMIN/ORDERS',
-        //   vendorEmail: isVendorOrder ? adminData?.email : undefined,
-        //   orderItems: (orderData.items || []).map((item: any) => ({
-        //     name: item.name || 'Product',
-        //     image: item.image || '',
-        //     quantity: item.quantity || 1,
-        //     price: item.price || 0,
-        //     selectedSize: item.selectedSize,
-        //     selectedColor: item.selectedColor,
-        //   })),
-        //   orderId: change.doc.id,
-        // });
       });
 
       isInitialOrdersLoad = false;
@@ -234,26 +149,10 @@ export default function Navbar() {
     });
 
     const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
-      instCount = snap.size;
-      setUnreadCount(instCount);
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           const data = change.doc.data();
           if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
-            const userName = data.userName || data.userEmail || 'a user';
-            const templateMsg = instTemplate
-              ? instTemplate.replace(/\{user\}/gi, userName)
-              : `A new installment plan was started by ${userName}.`;
-            // addNotification is now handled by the 'notifications' collection listener.
-            // addNotification({
-            //   id: `inst-${change.doc.id}`,
-            //   type: 'installment',
-            //   title: 'New Installment',
-            //   message: templateMsg,
-            //   createdAt: new Date().toISOString(),
-            //   read: false,
-            //   link: '/admin/installments'
-            // });
           }
         }
       });
@@ -262,8 +161,6 @@ export default function Navbar() {
     });
 
     const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
-      compCount = snap.size;
-      setUnreadComplaints(compCount);
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
@@ -285,9 +182,6 @@ export default function Navbar() {
 
     let isInitialPartnersLoad = true;
     const unsubPart = onSnapshot(query(collection(db, 'partners'), where('status', '==', 'pending')), (snap) => {
-      partCount = snap.size;
-      setUnreadPartners(partCount);
-
       snap.docChanges().forEach(change => {
         if (isInitialPartnersLoad) return;
         if (change.type !== 'added') return;
