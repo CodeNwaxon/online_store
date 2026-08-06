@@ -6,7 +6,7 @@ import {
   FaShoppingCart, FaBars, FaTimes, FaWhatsapp, FaHome, FaStore,
   FaInfoCircle, FaPhone, FaSignOutAlt, FaSignInAlt, FaUserShield,
   FaChartBar, FaBoxes, FaCog, FaCreditCard, FaArrowLeft, FaUserTie,
-  FaUtensils, FaHandshake, FaChevronDown, FaBell, FaBullhorn
+  FaUtensils, FaHandshake, FaChevronDown, FaBell, FaBullhorn, FaCommentDots
 } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -41,6 +41,7 @@ const adminLinks = [
   { href: '/admin/toilet-kitchen', label: 'Toilet & Kitchen', icon: <FaBoxes />, id: '/ADMIN/TOILET-KITCHEN' },
   { href: '/admin/uk-used', label: 'UK Used', icon: <FaHandshake />, id: '/ADMIN/UK-USED' },
   { href: '/admin/installments', label: 'Installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
+  { href: '/admin/complaints', label: 'Complaints', icon: <FaCommentDots />, id: '/ADMIN/COMPLAINTS' },
   { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
   { href: '/admin/partnership', label: 'Partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
@@ -90,6 +91,7 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOrders, setUnreadOrders] = useState(0);
   const [unreadPartners, setUnreadPartners] = useState(0);
+  const [unreadComplaints, setUnreadComplaints] = useState(0);
   const { partnerData, isApprovedPartner } = usePartner();
   const { unreadSales, setUnreadSales, setLastSalesCount, clearUnreadSales, hasUnseenApproval, setHasUnseenApproval, setLastSeenPartnerStatus } = usePartnerNotificationStore();
   const partnerNotifCount = unreadSales + (hasUnseenApproval ? 1 : 0);
@@ -122,6 +124,7 @@ export default function Navbar() {
       setUnreadCount(0);
       setUnreadOrders(0);
       setUnreadPartners(0);
+      setUnreadComplaints(0);
       return;
     }
 
@@ -232,7 +235,7 @@ export default function Navbar() {
 
     const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
       instCount = snap.size;
-      setUnreadCount(instCount + compCount);
+      setUnreadCount(instCount);
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           const data = change.doc.data();
@@ -260,7 +263,7 @@ export default function Navbar() {
 
     const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
       compCount = snap.size;
-      setUnreadCount(instCount + compCount);
+      setUnreadComplaints(compCount);
       snap.docChanges().forEach(change => {
         if (change.type === 'added') {
           if (isCEO || adminData?.assignedRoutes?.includes('/ADMIN/INSTALLMENTS')) {
@@ -271,7 +274,7 @@ export default function Navbar() {
               message: `A new complain has been sent to your Admin`,
               createdAt: new Date().toISOString(),
               read: false,
-              link: '/admin/installments'
+              link: '/admin/complaints'
             });
           }
         }
@@ -351,6 +354,37 @@ export default function Navbar() {
       });
     }, (err) => console.warn("Broadcasts listener error:", err));
 
+    // Listen for special-store customer messages and notify the matching vendor admin.
+    let unsubSpecialStoreMessages = () => {};
+    if (isAdmin) {
+      unsubSpecialStoreMessages = onSnapshot(collection(db, 'specialStoreMessages'), (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type !== 'added') return;
+          const data = change.doc.data();
+          if (data.vendorEmail !== user.email) return;
+
+          const senderFirstName = (data.senderDisplayName || data.senderEmail || 'A customer').toString().split(' ')[0];
+          const preview = `${senderFirstName}: ${String(data.message || '').slice(0, 80)}${String(data.message || '').length > 80 ? '…' : ''}`;
+
+          addNotification({
+            id: change.doc.id,
+            type: 'complaint',
+            title: 'New Store Message',
+            message: preview,
+            createdAt: data.createdAt || new Date().toISOString(),
+            read: false,
+            vendorEmail: data.vendorEmail,
+            adminRoute: '/ADMIN/COMPLAINTS',
+            link: '/admin/complaints',
+          });
+        });
+      }, (err) => console.warn('Special store messages listener error:', err));
+    }
+
+    // Listen for vendor replies and surface them back to the original customer through the notification bell.
+    // REMOVED: As requested, customers should not receive a global notification when a vendor replies to them.
+    // They will only see an increment bubble on the specific vendor's page.
+
     // Listen for System Notifications (New Orders, Installments, etc) — ONLY for admins
     let unsubNotifications = () => {};
     if (isAdmin) {
@@ -391,9 +425,10 @@ export default function Navbar() {
 
     return () => {
       unsubBroadcasts();
+      unsubSpecialStoreMessages();
       unsubNotifications();
     };
-  }, [user, isCEO, adminData]);
+  }, [user, isCEO, adminData, addNotification]);
 
   // Partner Sales Listener
   useEffect(() => {
@@ -505,6 +540,12 @@ export default function Navbar() {
     if (item.id === '/ADMIN/ORDERS') {
       const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN', '/ADMIN/UK-USED'].includes(r));
       if (hasProductRoute || adminData?.specialStore) return true;
+    }
+
+    if (item.id === '/ADMIN/COMPLAINTS') {
+      const hasComplaintsRoute = adminData?.assignedRoutes?.includes('/ADMIN/COMPLAINTS');
+      const isSpecialStoreVendor = !!adminData?.specialStore;
+      if (hasComplaintsRoute || isSpecialStoreVendor || isCEO) return true;
     }
 
     return adminData?.assignedRoutes?.includes(item.id);
@@ -706,6 +747,11 @@ export default function Navbar() {
                 {l.label === 'Partnership' && unreadPartners > 0 && (
                   <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                     {unreadPartners}
+                  </span>
+                )}
+                {l.label === 'Complaints' && unreadComplaints > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    {unreadComplaints}
                   </span>
                 )}
               </Link>

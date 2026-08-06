@@ -58,6 +58,7 @@ export function useAdmin() {
                     '/ADMIN/MANAGEMENT',
                     '/ADMIN/PRODUCTS',
                     '/ADMIN/INSTALLMENTS',
+                    '/ADMIN/COMPLAINTS',
                     '/ADMIN/ORDERS',
                     '/ADMIN/SETTINGS',
                     '/ADMIN/STATS',

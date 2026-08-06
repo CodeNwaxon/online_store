@@ -15,6 +15,7 @@ export interface SpecialStore {
   accountNameEditDates?: string[];
   bankNameEditDates?: string[];
   phoneNumberEditDates?: string[];
+  doesSwapping?: 'yes' | 'no';
   ownerEmail: string;
   ownerUid: string;
 }

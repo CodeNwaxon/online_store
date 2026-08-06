@@ -3,101 +3,22 @@
 import AdminGuard from '@/components/AdminGuard';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes, FaUtensils, FaHandshake, FaBullhorn } from 'react-icons/fa';
+import { FaChartBar, FaBoxes, FaCog, FaUserShield, FaCreditCard, FaHome, FaSignOutAlt, FaUserTie, FaShoppingCart, FaBars, FaTimes, FaUtensils, FaHandshake, FaBullhorn, FaCommentDots } from 'react-icons/fa';
 import { useAdmin } from '@/hooks/useAdmin';
-import { auth, db } from '@/lib/firebase';
-import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { useAdminUnreadCounts } from '@/hooks/useAdminUnreadCounts';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useEffect } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { adminData, isCEO } = useAdmin();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadOrders, setUnreadOrders] = useState(0);
-  const [unreadPartners, setUnreadPartners] = useState(0);
+  const { unreadCount, unreadOrders, unreadPartners, unreadComplaints } = useAdminUnreadCounts();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [pathname]);
-
-  useEffect(() => {
-    // Check auth state and only set up listeners if authenticated
-    const unsubAuth = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        setUnreadCount(0);
-        setUnreadOrders(0);
-        setUnreadPartners(0);
-        return;
-      }
-
-      let instCount = 0;
-      let compCount = 0;
-
-      const unsubOrders = onSnapshot(query(collection(db, 'orders'), where('isNew', '==', true)), (snap) => {
-        let count = 0;
-        snap.forEach(docSnap => {
-          const orderData = docSnap.data();
-          if (orderData.deleted) return; // Skip deleted orders
-          
-          let isVIPForOrder = false;
-          if (adminData?.vip) {
-            const ROUTE_TO_COLLECTION: Record<string, string> = {
-              '/ADMIN/PRODUCTS': 'products',
-              '/ADMIN/FOODS': 'foods',
-              '/ADMIN/WEARS': 'wears',
-              '/ADMIN/COSMETICS': 'cosmetics',
-              '/ADMIN/TOILET-KITCHEN': 'toilet_kitchen',
-              '/ADMIN/UK-USED': 'uk_used',
-            };
-            const allowedCols = (adminData.assignedRoutes || []).flatMap((r: string) => ROUTE_TO_COLLECTION[r] ? [ROUTE_TO_COLLECTION[r]] : []);
-            isVIPForOrder = allowedCols.length > 0 && orderData.items?.some((item: any) => item.collectionName && allowedCols.includes(item.collectionName));
-          }
-
-          const hasOrderAccess = isCEO || adminData?.assignedRoutes?.includes('/ADMIN/ORDERS') || isVIPForOrder;
-
-          if (hasOrderAccess) {
-            count++;
-          } else if (orderData.items?.some((item: any) => item.vendor?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim())) {
-            count++;
-          }
-        });
-        setUnreadOrders(count);
-      }, (error) => {
-        console.warn("Admin layout orders listener error:", error);
-      });
-
-      const unsubInst = onSnapshot(query(collection(db, 'installments'), where('isNew', '==', true)), (snap) => {
-        instCount = snap.size;
-        setUnreadCount(instCount + compCount);
-      }, (error) => {
-        console.warn("Admin layout installments listener error:", error);
-      });
-
-      const unsubComp = onSnapshot(query(collection(db, 'complaints'), where('isNew', '==', true)), (snap) => {
-        compCount = snap.size;
-        setUnreadCount(instCount + compCount);
-      }, (error) => {
-        console.warn("Admin layout complaints listener error:", error);
-      });
-
-      const unsubPartners = onSnapshot(query(collection(db, 'partners'), where('status', '==', 'pending')), (snap) => {
-        setUnreadPartners(snap.size);
-      }, (error) => {
-        console.warn("Admin layout partners listener error:", error);
-      });
-
-      return () => {
-        unsubOrders();
-        unsubInst();
-        unsubComp();
-        unsubPartners();
-      };
-    });
-
-    return () => unsubAuth();
-  }, [adminData, isCEO]);
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -114,6 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Wears', href: '/admin/wears', icon: <FaUserTie />, id: '/ADMIN/WEARS' },
     { label: 'UK Used', href: '/admin/uk-used', icon: <FaHandshake />, id: '/ADMIN/UK-USED' },
     { label: 'Installments', href: '/admin/installments', icon: <FaCreditCard />, id: '/ADMIN/INSTALLMENTS' },
+    { label: 'Complaints', href: '/admin/complaints', icon: <FaCommentDots />, id: '/ADMIN/COMPLAINTS' },
     { label: 'Orders', href: '/admin/orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
     { label: 'Broadcast', href: '/admin/broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
@@ -130,6 +52,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (item.id === '/ADMIN/ORDERS') {
       const hasProductRoute = adminData?.assignedRoutes?.some((r: string) => ['/ADMIN/PRODUCTS', '/ADMIN/FOODS', '/ADMIN/WEARS', '/ADMIN/COSMETICS', '/ADMIN/TOILET-KITCHEN', '/ADMIN/UK-USED'].includes(r));
       if (hasProductRoute || adminData?.specialStore) return true;
+    }
+
+    if (item.id === '/ADMIN/COMPLAINTS') {
+      const hasComplaintsRoute = adminData?.assignedRoutes?.includes('/ADMIN/COMPLAINTS');
+      const isSpecialStoreVendor = !!adminData?.specialStore;
+      if (hasComplaintsRoute || isSpecialStoreVendor || isCEO) return true;
     }
 
     return adminData?.assignedRoutes?.includes(item.id);
@@ -191,6 +119,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {item.label === 'Partnership' && unreadPartners > 0 && (
                   <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm">
                     {unreadPartners}
+                  </span>
+                )}
+                {item.label === 'Complaints' && unreadComplaints > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+                    {unreadComplaints}
                   </span>
                 )}
               </Link>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
-import { FaSearch, FaHandshake, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
+import { FaSearch, FaHandshake, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt, FaCommentDots } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
@@ -14,6 +14,8 @@ import { toast } from 'react-hot-toast';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
+import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
+import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
 
 function UkUsedPageContent() {
   const searchParams = useSearchParams();
@@ -28,6 +30,7 @@ function UkUsedPageContent() {
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const [navigatingStoreSlug, setNavigatingStoreSlug] = useState<string | null>(null);
+  const [showMessageOverlay, setShowMessageOverlay] = useState(false);
   const navigationResetTimerRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
@@ -39,6 +42,8 @@ function UkUsedPageContent() {
   const { likedProductIds } = useLikeStore();
   const { getVendorSales, storeTypeSales } = useStoreSales();
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.uk_used;
+  const unreadMessageCount = useSpecialStoreUnreadCount(storeSlug || undefined);
+  const showSwapCard = storeData?.doesSwapping === 'yes';
 
   const { fetchCollection } = useProductCache();
 
@@ -252,33 +257,63 @@ function UkUsedPageContent() {
             <p className="text-xs md:text-xl text-gray-200 max-w-2xl">
               {storeData ? (storeData.slogan || 'Welcome to our premium storefront') : 'Discover our range of standard UK Used products.'}
             </p>
+            {showSwapCard && (
+              <div className="mt-1 inline-flex flex-wrap items-center gap-3 rounded bg-white p-1 text-xs md:text-sm font-bold text-orange-600 shadow-sm">
+                <span>Yes, we do swapping</span>
+                <button
+                  type="button"
+                  onClick={() => setShowMessageOverlay(true)}
+                  className="rounded border border-orange-200 bg-orange-50 px-2 py-1 text-[10px] md:text-xs font-black text-orange-600 transition-colors hover:bg-orange-100"
+                >
+                  Contact Us
+                </button>
+              </div>
+            )}
             <StoreRatingStars salesCount={currentSalesCount} textColor="text-gray-200" className="mt-2" />
           </div>
-          <button
-            onClick={() => {
-              const urlObj = new URL(window.location.origin + window.location.pathname);
-              if (storeSlug) urlObj.searchParams.set('store', storeSlug);
-              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
-              if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
-              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
-              if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
-              const url = urlObj.toString();
-              const title = storeData ? `${storeData.name} | Nomo Storez` : 'UkUsed & Beauty | Nomo Storez';
-              const text = storeData ? (storeData.slogan || `Shop premium beauty from ${storeData.name}`) : 'Discover our range of premium skincare, makeup, and beauty products.';
-              if (navigator.share) {
-                navigator.share({ title, text, url }).catch(() => { });
-              } else {
-                navigator.clipboard.writeText(url);
-                toast.success('Page link copied!');
-              }
-            }}
-            className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
-            title="Share this page"
-          >
-            <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {storeData && (
+              <button
+                onClick={() => setShowMessageOverlay(true)}
+                className="relative p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+                title="Message this special store"
+              >
+                <FaCommentDots className="w-4 h-4 md:w-5 md:h-5" />
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-sm">
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                const urlObj = new URL(window.location.origin + window.location.pathname);
+                if (storeSlug) urlObj.searchParams.set('store', storeSlug);
+                if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+                if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+                if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+                if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
+                const url = urlObj.toString();
+                const title = storeData ? `${storeData.name} | Nomo Storez` : 'UkUsed & Beauty | Nomo Storez';
+                const text = storeData ? (storeData.slogan || `Shop premium beauty from ${storeData.name}`) : 'Discover our range of premium skincare, makeup, and beauty products.';
+                if (navigator.share) {
+                  navigator.share({ title, text, url }).catch(() => { });
+                } else {
+                  navigator.clipboard.writeText(url);
+                  toast.success('Page link copied!');
+                }
+              }}
+              className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+              title="Share this page"
+            >
+              <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          </div>
         </div>
       </div>
+
+      <SpecialStoreMessageOverlay isOpen={showMessageOverlay} onClose={() => setShowMessageOverlay(false)} storeData={storeData} />
 
       {products.length === 0 ? (
         <div className="py-20 md:py-32 text-center flex flex-col items-center justify-center">

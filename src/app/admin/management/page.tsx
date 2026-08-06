@@ -33,6 +33,7 @@ const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/TOILET-KITCHEN',
   '/ADMIN/UK-USED',
   '/ADMIN/INSTALLMENTS',
+  '/ADMIN/COMPLAINTS',
   '/ADMIN/ORDERS',
   '/ADMIN/PARTNERSHIP',
   '/ADMIN/BROADCAST',
@@ -114,6 +115,7 @@ export default function AdminManagement() {
   const [editableThresholds, setEditableThresholds] = useState<{[star: number]: number}>({ 1: 20, 2: 50, 3: 100, 4: 250, 5: 500 });
   const [shippingMaxDaysInput, setShippingMaxDaysInput] = useState<number>(3);
   const [newTagDurationDaysInput, setNewTagDurationDaysInput] = useState<number>(5);
+  const [specialStoreMessageDurationDaysInput, setSpecialStoreMessageDurationDaysInput] = useState<number>(30);
   const [showThresholdConfirm, setShowThresholdConfirm] = useState(false);
   const [thresholdSaveLoading, setThresholdSaveLoading] = useState(false);
 
@@ -136,6 +138,20 @@ export default function AdminManagement() {
     }
   }, [liveNewTagDurationDays]);
 
+  useEffect(() => {
+    const settingsDoc = doc(db, 'settings', 'general');
+    const unsub = onSnapshot(settingsDoc, (snap) => {
+      const data = snap.data();
+      if (data?.specialStoreMessageDurationDays !== undefined && data?.specialStoreMessageDurationDays !== null) {
+        setSpecialStoreMessageDurationDaysInput(Number(data.specialStoreMessageDurationDays) || 30);
+      }
+    }, (error) => {
+      console.warn('Special store chat duration listener error:', error);
+    });
+
+    return () => unsub();
+  }, []);
+
   // Save settings handler
   const handleSaveThresholds = async () => {
     setThresholdSaveLoading(true);
@@ -143,7 +159,8 @@ export default function AdminManagement() {
       await updateDoc(doc(db, 'settings', 'general'), { 
         starThresholds: editableThresholds,
         shippingMaxDays: Number(shippingMaxDaysInput) || 3,
-        newTagDurationDays: Number(newTagDurationDaysInput) || 5
+        newTagDurationDays: Number(newTagDurationDaysInput) || 5,
+        specialStoreMessageDurationDays: Number(specialStoreMessageDurationDaysInput) || 30
       });
       toast.success('Settings updated successfully!');
       setShowThresholdConfirm(false);
@@ -1248,6 +1265,33 @@ export default function AdminManagement() {
                 <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">Days</span>
               </div>
             </div>
+
+            {/* SPECIAL STORE MESSAGE WIPE DURATION FIELD */}
+            <div className="max-w-xs w-full">
+              <label className="text-xs md:text-sm font-bold mb-1.5 flex items-center gap-1.5">
+                <span>Message Wipe Duration (Days)</span>
+                <span className="relative group">
+                  <FaInfoCircle className="text-muted-foreground cursor-help" size={12} />
+                  <span className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 w-56 bg-foreground text-background p-2 rounded shadow-lg text-[10px] text-center z-50 pointer-events-none">
+                    How long a special-store customer message thread should stay visible before it is wiped.
+                  </span>
+                </span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className="w-full p-2.5 rounded-md border border-border bg-background text-sm font-bold focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
+                  value={specialStoreMessageDurationDaysInput}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setSpecialStoreMessageDurationDaysInput(isNaN(val) || val < 1 ? 1 : val);
+                  }}
+                />
+                <span className="text-sm font-bold text-muted-foreground whitespace-nowrap">Days</span>
+              </div>
+            </div>
           </div>
 
           <button
@@ -1298,6 +1342,14 @@ export default function AdminManagement() {
                   </span>
                   <span className="font-bold tabular-nums text-primary">
                     {newTagDurationDaysInput || 5} days
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm pt-2">
+                  <span className="font-medium flex items-center gap-1.5">
+                    💬 Message Wipe Duration
+                  </span>
+                  <span className="font-bold tabular-nums text-primary">
+                    {specialStoreMessageDurationDaysInput || 30} days
                   </span>
                 </div>
               </div>

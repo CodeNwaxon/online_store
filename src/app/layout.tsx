@@ -73,6 +73,7 @@ import Footer from "@/components/Footer";
 import VisitorTracker from "@/components/VisitorTracker";
 import BadgeManager from "@/components/BadgeManager";
 import ToasterProvider from "@/components/ToasterProvider";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -82,10 +83,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
+      <body suppressHydrationWarning className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <ToasterProvider />
         <Suspense><VisitorTracker /></Suspense>
         <Suspense><BadgeManager /></Suspense>
+        <Suspense><AnalyticsProvider /></Suspense>
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

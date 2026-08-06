@@ -108,9 +108,8 @@ const getPastDueStatus = (inst: any, gracePeriodDaysSetting: number = 5): PastDu
 };
 
 export default function AdminInstallments() {
-  const [activeTab, setActiveTab] = useState<'installments' | 'complaints' | 'settings'>('installments');
+  const [activeTab, setActiveTab] = useState<'installments' | 'settings'>('installments');
   const [installments, setInstallments] = useState<any[]>([]);
-  const [complaints, setComplaints] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [showReceipt, setShowReceipt] = useState<string | null>(null);
@@ -159,12 +158,6 @@ export default function AdminInstallments() {
     }, (error) => {
       console.warn("Installments listener error:", error);
     });
-    const unsubComp = onSnapshot(query(collection(db, 'complaints'), orderBy('createdAt', 'desc')), (snap) => {
-      setComplaints(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.warn("Complaints listener error:", error);
-    });
-
     const loadSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'installments'));
       if (docSnap.exists()) {
@@ -180,7 +173,7 @@ export default function AdminInstallments() {
     };
     loadSettings();
 
-    return () => { unsubInst(); unsubComp(); };
+    return () => { unsubInst(); };
   }, []);
 
   const handleAction = (type: 'call' | 'whatsapp' | 'email', contact: string) => {
@@ -216,10 +209,7 @@ export default function AdminInstallments() {
       const correctPasskey = settingsDoc.data()?.passkey || 'admin1234';
 
       if (passkeyInput === correctPasskey) {
-        if (actionType === 'deleteComplaint') {
-          await deleteDoc(doc(db, 'complaints', id));
-          toast.success('Complaint deleted.');
-        } else if (actionType === 'clearPayment') {
+        if (actionType === 'clearPayment') {
           let receiptUrl = null;
           if (receiptFile) {
             const toastId = toast.loading('Uploading receipt...');
@@ -472,7 +462,7 @@ export default function AdminInstallments() {
 
   const markAsRead = async (item: any) => {
     if (item.isNew) {
-      const collectionName = activeTab === 'installments' ? 'installments' : 'complaints';
+      const collectionName = 'installments';
       await updateDoc(doc(db, collectionName, item.id), { isNew: false });
     }
     setSelectedItem(item);
@@ -555,7 +545,7 @@ export default function AdminInstallments() {
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 px- md:px-0">
         <div className="text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-bold">Financials & Feedback</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Manage installments and complaints.</p>
+          <p className="text-xs md:text-sm text-muted-foreground">Manage installment payments and settlement records.</p>
         </div>
         <div className="bg-muted p-1 rounded-lg flex gap-1 border border-border w-full md:w-auto">
           <button
@@ -563,12 +553,6 @@ export default function AdminInstallments() {
             className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'installments' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
             Installments {installments.filter(i => i.isNew).length > 0 && <span className="bg-secondary text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">New</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('complaints')}
-            className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'complaints' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Complaints {complaints.filter(c => c.isNew).length > 0 && <span className="bg-secondary text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">New</span>}
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -754,56 +738,6 @@ export default function AdminInstallments() {
         </div>
       )}
 
-      {activeTab === 'complaints' && (
-        /* COMPLAINTS LIST */
-        <div className="space-y-4 px-0">
-          {complaints.length > 0 ? (
-            complaints.map(comp => (
-              <div
-                key={comp.id}
-                onClick={() => markAsRead(comp)}
-                className={`bg-card p-4 md:p-6 rounded md:rounded-[var(--radius)] border-2 transition-all hover:border-primary cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4
-                  ${comp.isNew ? 'border-secondary animate-pulse' : 'border-border'}
-                `}
-              >
-                <div className="flex items-center gap-4 md:gap-6">
-                  <div className="text-primary shrink-0"><FaExclamationCircle size={20} /></div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm md:text-base">{comp.name}</h3>
-                    <p className="text-[0.8rem] md:text-sm text-muted-foreground line-clamp-1">{comp.message}</p>
-                  </div>
-                </div>
-                <div className="flex gap-4 w-full sm:w-auto justify-end items-center">
-                  {comp.isNew && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); markAsRead(comp); }}
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-md font-bold text-xs transition-colors shrink-0"
-                    >
-                      Mark as Read
-                    </button>
-                  )}
-                  <div className="flex gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); handleAction('whatsapp', comp.phone); }} className="text-[#25D366] p-2 hover:bg-[#25D366]/10 rounded-full"><FaWhatsapp size={20} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleAction('call', comp.phone); }} className="text-primary p-2 hover:bg-primary/10 rounded-full"><FaPhoneAlt size={18} /></button>
-                    <button onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmDelete({ type: 'deleteComplaint', id: comp.id });
-                    }} className="text-secondary p-2 hover:bg-secondary/10 rounded-full"><FaTrash size={18} /></button>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card rounded md:rounded-xl border border-dashed border-border">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground">
-                <FaExclamationCircle size={30} />
-              </div>
-              <h3 className="text-lg font-bold">No complaints from customers</h3>
-              <p className="text-sm text-muted-foreground">Everything seems to be running smoothly. No complaints reported yet.</p>
-            </div>
-          )}
-        </div>
-      )}
       {activeTab === 'settings' && (
         /* INSTALLMENT SETTINGS SECTION */
         <div className="bg-card border border-border rounded md:rounded-xl overflow-hidden shadow-sm mt-0 mx-0">

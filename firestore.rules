@@ -112,6 +112,30 @@ service cloud.firestore {
       allow delete: if isCEO();
     }
 
+    // Special Store Customer Messages
+    match /specialStoreMessages/{id} {
+      allow read: if isAdmin() || (
+        request.auth != null && (
+          request.auth.uid == resource.data.senderUid ||
+          request.auth.uid == resource.data.vendorUid
+        )
+      );
+      allow create: if request.auth != null && request.resource.data.senderUid == request.auth.uid;
+      allow update: if isAdmin() || (
+        request.auth != null && request.auth.uid == resource.data.vendorUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reply', 'replyAt', 'updatedAt', 'isDeleted', 'isNew', 'isCustomerReplyRead'])
+      ) || (
+        request.auth != null && request.auth.uid == resource.data.senderUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isCustomerReplyRead', 'readByCustomerAt'])
+      );
+      allow delete: if (
+        request.auth != null && (
+          request.auth.uid == resource.data.senderUid ||
+          request.auth.uid == resource.data.vendorUid
+        )
+      ) || isCEO();
+    }
+
     // Reviews & Product Interactions
     match /reviews/{id} {
       allow read: if true;

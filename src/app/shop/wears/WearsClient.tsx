@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
-import { FaSearch, FaUserTie, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt } from 'react-icons/fa';
+import { FaSearch, FaUserTie, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt, FaCommentDots } from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
@@ -14,6 +14,8 @@ import { toast } from 'react-hot-toast';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
+import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
+import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
 
 function WearsPageContent() {
   const searchParams = useSearchParams();
@@ -28,6 +30,7 @@ function WearsPageContent() {
   const [activeStores, setActiveStores] = useState<any[]>([]);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const [navigatingStoreSlug, setNavigatingStoreSlug] = useState<string | null>(null);
+  const [showMessageOverlay, setShowMessageOverlay] = useState(false);
   const navigationResetTimerRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '');
   const [selectedGroup, setSelectedGroup] = useState(searchParams?.get('group') || 'All');
@@ -39,6 +42,7 @@ function WearsPageContent() {
   const { likedProductIds } = useLikeStore();
   const { getVendorSales, storeTypeSales } = useStoreSales();
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.wears;
+  const unreadMessageCount = useSpecialStoreUnreadCount(storeSlug || undefined);
 
   const { fetchCollection } = useProductCache();
 
@@ -281,31 +285,49 @@ function WearsPageContent() {
             </p>
             <StoreRatingStars salesCount={currentSalesCount} textColor="text-purple-100" className="mt-2" />
           </div>
-          <button 
-            onClick={() => {
-              const urlObj = new URL(window.location.origin + window.location.pathname);
-              if (storeSlug) urlObj.searchParams.set('store', storeSlug);
-              if (searchQuery) urlObj.searchParams.set('search', searchQuery);
-              if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
-              if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
-              if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
-              const url = urlObj.toString();
-              const title = storeData ? `${storeData.name} | Nomo Storez` : 'Fashion & Wears | Nomo Storez';
-              const text = storeData ? (storeData.slogan || `Shop premium fashion from ${storeData.name}`) : 'Explore our collection of trendy clothing, shoes, and stylish accessories.';
-              if (navigator.share) {
-                navigator.share({ title, text, url }).catch(()=>{});
-              } else {
-                navigator.clipboard.writeText(url);
-                toast.success('Page link copied!');
-              }
-            }}
-            className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
-            title="Share this page"
-          >
-            <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {storeData && (
+              <button
+                onClick={() => setShowMessageOverlay(true)}
+                className="relative p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+                title="Message this special store"
+              >
+                <FaCommentDots className="w-4 h-4 md:w-5 md:h-5" />
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-sm">
+                    {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                const urlObj = new URL(window.location.origin + window.location.pathname);
+                if (storeSlug) urlObj.searchParams.set('store', storeSlug);
+                if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+                if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+                if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+                if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
+                const url = urlObj.toString();
+                const title = storeData ? `${storeData.name} | Nomo Storez` : 'Fashion & Wears | Nomo Storez';
+                const text = storeData ? (storeData.slogan || `Shop premium fashion from ${storeData.name}`) : 'Explore our collection of trendy clothing, shoes, and stylish accessories.';
+                if (navigator.share) {
+                  navigator.share({ title, text, url }).catch(()=>{});
+                } else {
+                  navigator.clipboard.writeText(url);
+                  toast.success('Page link copied!');
+                }
+              }}
+              className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0"
+              title="Share this page"
+            >
+              <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          </div>
         </div>
       </div>
+
+      <SpecialStoreMessageOverlay isOpen={showMessageOverlay} onClose={() => setShowMessageOverlay(false)} storeData={storeData} />
 
       <div className="mx-auto mt-0">
         <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-10">

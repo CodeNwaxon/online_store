@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export interface AppNotification {
   id: string;
-  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered' | 'order_placed';
+  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered' | 'order_placed' | 'message_reply';
   title: string;
   message: string;
   image?: string;
@@ -88,11 +88,21 @@ function filterNotifications(
       return notif.customerUid === filters.userUid;
     }
 
+    // Message reply notifications: only for the customer who originally sent the message
+    if (notif.type === 'message_reply') {
+      return notif.customerUid === filters.userUid;
+    }
+
     // Vendor order notifications: only for the specific vendor
     if (notif.type === 'vendor_order') {
       // CEO and VIP admins already receive the global 'order' notification,
       // so we hide the duplicate 'vendor_order' from them.
       if (filters.isCEO || filters.isVip) return false;
+      return notif.vendorEmail === filters.userEmail;
+    }
+
+    // Vendor complaint/message notifications should only reach the matching vendor.
+    if (notif.type === 'complaint' && notif.vendorEmail) {
       return notif.vendorEmail === filters.userEmail;
     }
 

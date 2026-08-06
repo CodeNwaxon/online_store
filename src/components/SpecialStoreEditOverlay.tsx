@@ -35,6 +35,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
   const [accountName, setAccountName] = useState('');
   const [bankName, setBankName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [doesSwapping, setDoesSwapping] = useState<'yes' | 'no'>('no');
   const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             setAccountName(data.specialStore.accountName || '');
             setBankName(data.specialStore.bankName || '');
             setPhoneNumber(data.specialStore.phoneNumber || '');
+            setDoesSwapping(data.specialStore.doesSwapping === 'yes' ? 'yes' : 'no');
             setIsEnabled(true);
           } else {
             setStoreData({});
@@ -66,6 +68,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
             setAccountName('');
             setBankName('');
             setPhoneNumber('');
+            setDoesSwapping('no');
             setIsEnabled(false);
           }
         }
@@ -253,6 +256,7 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
         accountName: accountName.trim(),
         bankName: bankName.trim(),
         phoneNumber: phoneNumber.trim(),
+        doesSwapping,
         ownerEmail: adminEmail,
         ownerUid: adminId,
         lastNameEdit: nameEdited ? new Date().toISOString() : (storeData.lastNameEdit || new Date().toISOString()),
@@ -321,6 +325,34 @@ export default function SpecialStoreEditOverlay({ adminId, adminEmail, isOpen, o
                   placeholder="e.g. Zara Boutique"
                 />
                 {!isCEO && <p className="text-[10px] text-muted-foreground mt-1">Note: You can only change the store name twice per month  or contact CEO.</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-1">Do you do Swapping?</label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="doesSwapping"
+                      value="yes"
+                      checked={doesSwapping === 'yes'}
+                      onChange={() => setDoesSwapping('yes')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm font-semibold">Yes</span>
+                  </label>
+                  <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="doesSwapping"
+                      value="no"
+                      checked={doesSwapping === 'no'}
+                      onChange={() => setDoesSwapping('no')}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm font-semibold">No</span>
+                  </label>
+                </div>
               </div>
 
               <div>
