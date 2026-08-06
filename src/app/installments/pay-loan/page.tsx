@@ -8,6 +8,7 @@ import { FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaTrash, FaPrint, 
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { submitInstallmentRefund } from '@/actions/submitRefund';
 
 export default function PayLoanPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -340,7 +341,6 @@ export default function PayLoanPage() {
     }
 
     try {
-      setLoading(true);
       // Sum all payments the customer has physically made so far
       const totalPaid = loan.payments
         .filter((p: any) => p.status === 'paid')
@@ -351,45 +351,30 @@ export default function PayLoanPage() {
         ? loan.withdrawalFeePercent
         : (instSettings.withdrawalFeePercent || 15);
 
-      const withdrawalFee = withdrawalPercent / 100;
-      const charge = totalPaid * withdrawalFee;
-      const refundAmount = totalPaid - charge;
-
-      const loanRef = doc(db, 'installments', loan.id);
-      await updateDoc(loanRef, {
-        status: 'cancelling',
-        totalAmountPaid: totalPaid,       // track how much was paid in total
-        refundDetails: {
-          ...refundDetails,
-          requestedAt: new Date(),
-          totalPaid: totalPaid,                            // e.g. ?50
-          cancellationFee: charge,                         // e.g. ?15 (15% of loan total)
-          refundAmount: Math.max(0, refundAmount),         // e.g. ?35 (never negative)
-          status: 'pending'
-        }
+      // Use server action — runs with admin privileges so the notification
+      // to the admin navbar will always be created successfully
+      const result = await submitInstallmentRefund({
+        loanId: loan.id,
+        customerName: loan.customerName || '',
+        userEmail: loan.userEmail || '',
+        productName: loan.productName || '',
+        productImage: loan.productImage || '',
+        totalAmount: loan.totalAmount || 0,
+        totalPaid,
+        withdrawalPercent,
+        refundDetails,
       });
 
-      await addDoc(collection(db, 'notifications'), {
-        type: 'cancellation',
-        title: 'Installment Cancellation',
-        message: `A customer (${loan.customerName || loan.userEmail}) has requested a refund and cancelled their installment plan for ${loan.productName}.`,
-        adminRoute: '/ADMIN/INSTALLMENTS',
-        read: false,
-        createdAt: new Date().toISOString(),
-        orderItems: [{
-          name: loan.productName || 'Product',
-          image: loan.productImage || '',
-          price: loan.totalAmount || 0,
-          quantity: 1,
-        }]
-      });
+      if (!result.success) {
+        toast.error(result.error || 'Failed to submit refund request.');
+        return;
+      }
 
       toast.success('Refund request submitted! Our admin will process it shortly.');
       setShowRefundForm(false);
     } catch (error) {
+      console.error('Refund submission error:', error);
       toast.error('Failed to submit refund request.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -410,7 +395,9 @@ export default function PayLoanPage() {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
-    }).format(amount);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(Number((amount || 0).toFixed(2))).replace('NGN', '₦');
   };
 
   const parseDate = (dateVal: any) => {
@@ -594,7 +581,7 @@ export default function PayLoanPage() {
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <FaCheckCircle size={40} />
               </div>
-              <h2 className="text-2xl font-bold mb-2 text-foreground">Installment Fully Paid! ??</h2>
+              <h2 className="text-2xl font-bold mb-2 text-foreground">Installment Fully Paid !!!</h2>
               <p className="text-muted-foreground mb-6 text-sm">
                 Congratulations! You have successfully completed all payments for <strong>{loan.productName}</strong>.
                 Your product will be delivered to you as per our policy. Contact us at{' '}
@@ -972,7 +959,7 @@ export default function PayLoanPage() {
 
                     <div className="mt-6 pt-4 border-t-2 border-slate-800 dark:border-slate-700 flex justify-between items-center">
                       <div className="text-slate-400 text-[9px] font-black uppercase tracking-wider">Paid:</div>
-                      <div className="text-2xl font-black text-primary">₦{receiptData.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      <div className="text-2xl font-black text-primary">{formatCurrency(receiptData.amount)}</div>
                     </div>
 
                     <div className="flex items-center justify-center gap-2 py-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-100 dark:border-green-900/50 mt-2">
@@ -1039,15 +1026,15 @@ export default function PayLoanPage() {
                     <div className="pt-2 space-y-3">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
-                        <span className="font-bold text-slate-600 dark:text-slate-300">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                        <span className="font-bold text-slate-600 dark:text-slate-300">{formatCurrency(showFinalReceipt.basePrice || 0)}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
-                        <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                        <span className="font-bold text-secondary text-[11px]">+{formatCurrency((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0))}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800 dark:border-slate-700">
                         <span className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px]">Total Paid:</span>
-                        <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                        <span className="font-black text-[#D48806] text-xl">{formatCurrency(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0)}</span>
                       </div>
                     </div>
                   </div>

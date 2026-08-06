@@ -21,6 +21,7 @@ function AdminStatsContent() {
   const [cosmetics, setCosmetics] = useState<any[]>([]);
   const [wears, setWears] = useState<any[]>([]);
   const [toiletKitchen, setToiletKitchen] = useState<any[]>([]);
+  const [ukUsed, setUkUsed] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [cartOrders, setCartOrders] = useState<any[]>([]);
   const [historyList, setHistoryList] = useState<any[]>([]);
@@ -125,7 +126,13 @@ function AdminStatsContent() {
       console.warn("Stats toilet_kitchen listener error:", error);
     });
 
-    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); unsubFoods(); unsubCosmetics(); unsubWears(); unsubToiletKitchen(); };
+    const unsubUkUsed = onSnapshot(collection(db, 'uk_used'), (snap) => {
+      setUkUsed(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("Stats uk_used listener error:", error);
+    });
+
+    return () => { unsubProds(); unsubSales(); unsubOrders(); unsubHistory(); unsubVisitors(); unsubFoods(); unsubCosmetics(); unsubWears(); unsubToiletKitchen(); unsubUkUsed(); };
   }, [isAuthenticated]);
 
   // Helper to check if a date is within the current calendar month
@@ -145,6 +152,10 @@ function AdminStatsContent() {
   const completedInstallments = sales.filter(s => s.status === 'completed' && isCurrentMonth(s.updatedAt || s.createdAt));
   const cancelledInstallments = sales.filter(s => s.status === 'cleared' && s.refundDetails && isCurrentMonth(s.refundDetails.clearedAt || s.updatedAt || s.createdAt));
   const cartOrdersCurrentMonth = cartOrders.filter(o => isCurrentMonth(o.createdAt || o.updatedAt));
+  const allProducts = [...products, ...foods, ...cosmetics, ...wears, ...toiletKitchen, ...ukUsed];
+
+  // Format money to 2 decimal places
+  const fmtMoney = (val: number) => Number(val.toFixed(2)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
   const normalizeGroupValue = (value?: string | null) => (value || '').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 
@@ -166,6 +177,9 @@ function AdminStatsContent() {
     const foundToiletKitchen = toiletKitchen.find(t => t.id === item.id);
     if (foundToiletKitchen) return foundToiletKitchen;
 
+    const foundUkUsed = ukUsed.find(u => u.id === item.id);
+    if (foundUkUsed) return foundUkUsed;
+
     return null;
   };
 
@@ -177,10 +191,12 @@ function AdminStatsContent() {
     if (normalized === 'cosmetics' || normalized === 'cosmetic') return 'COSMETICS';
     if (normalized === 'wears' || normalized === 'wear') return 'WEARS';
     if (normalized === 'toiletkitchen' || normalized === 'toilet' || normalized === 'kitchen') return 'TOILET & KITCHEN';
+    if (normalized === 'ukused' || normalized === 'uk' || normalized === 'used') return 'UK USED';
     if (item?.id && (foods.some(f => f.id === item.id) || normalizeGroupValue(item?.category) === 'food')) return 'FOODS';
     if (item?.id && (cosmetics.some(c => c.id === item.id) || normalizeGroupValue(item?.category) === 'cosmetic')) return 'COSMETICS';
     if (item?.id && (wears.some(w => w.id === item.id) || normalizeGroupValue(item?.category) === 'wear')) return 'WEARS';
     if (item?.id && (toiletKitchen.some(t => t.id === item.id) || normalizeGroupValue(item?.category) === 'toiletkitchen')) return 'TOILET & KITCHEN';
+    if (item?.id && (ukUsed.some(u => u.id === item.id) || normalizeGroupValue(item?.category) === 'ukused')) return 'UK USED';
 
     return (groupCandidate || 'OTHER').toString().toUpperCase();
   };
@@ -255,14 +271,49 @@ function AdminStatsContent() {
   }, 0);
 
   const installmentRevenue = completedInstallments.reduce((acc, s) => {
-    const product = products.find(p => p.id === (s.productId || s.product?.id));
+    const product = allProducts.find(p => p.id === (s.productId || s.product?.id));
     const sellPrice = Number(s.totalAmountPaid || s.totalAmount || s.product?.price || product?.price || 0);
     return acc + sellPrice;
   }, 0);
 
   const cancelledRevenue = cancelledInstallments.reduce((acc, s) => acc + (s.refundDetails?.cancellationFee || 0), 0);
 
-  const totalRevenue = cartRevenue + installmentRevenue;
+  const totalRevenue = cartRevenue + installmentRevenue + cancelledRevenue;
+
+  // Helper to resolve group name for installment records
+  const getInstallmentGroupName = (s: any, liveProduct: any) => {
+    // First try to resolve from the live product in the inventory
+    if (liveProduct) {
+      const fakeItem = { id: liveProduct.id, category: liveProduct.category, group: liveProduct.group, collectionName: liveProduct.collectionName };
+      return getGroupName(liveProduct, fakeItem);
+    }
+    // Fallback: use the installment record's own fields
+    const collection = normalizeGroupValue(s.productCollection);
+    if (collection === 'uk_used' || collection === 'ukused') return 'UK USED';
+    if (collection === 'foods' || collection === 'food') return 'FOODS';
+    if (collection === 'cosmetics') return 'COSMETICS';
+    if (collection === 'wears') return 'WEARS';
+    if (collection === 'toilet_kitchen' || collection === 'toiletkitchen') return 'TOILET & KITCHEN';
+
+    const cat = normalizeGroupValue(s.productCategory);
+    if (cat === 'ukused' || cat === 'uk_used') return 'UK USED';
+    if (cat === 'foods' || cat === 'food') return 'FOODS';
+    if (cat === 'cosmetics' || cat === 'cosmetic') return 'COSMETICS';
+    if (cat === 'wears' || cat === 'wear') return 'WEARS';
+    if (cat === 'toiletkitchen') return 'TOILET & KITCHEN';
+
+    const groupName = liveProduct?.group || s.product?.group || s.productGroup || 'OTHER';
+    return (groupName || 'OTHER').toString().toUpperCase();
+  };
+
+  // Helper to resolve cost price for installment records
+  const getInstallmentCost = (s: any, liveProduct: any) => {
+    // Priority: live product cost > installment record's stored rdpPrice > fallback to 0
+    const liveCost = Number(liveProduct?.rdpPrice || liveProduct?.costPrice || 0);
+    if (liveCost > 0) return liveCost;
+    const storedCost = Number(s.rdpPrice || s.product?.rdpPrice || s.product?.costPrice || s.costPrice || 0);
+    return storedCost;
+  };
 
   const revenueByGroup = [...completedInstallments, ...cartOrdersCurrentMonth].reduce((acc: any, s) => {
     let group = 'OTHER';
@@ -271,9 +322,8 @@ function AdminStatsContent() {
     const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
 
     if (isInstallment) {
-      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
-      const groupName = liveProduct?.group || s.product?.group || s.productGroup || 'OTHER';
-      group = groupName.toUpperCase();
+      const liveProduct = allProducts.find(p => p.id === (s.productId || s.product?.id));
+      group = getInstallmentGroupName(s, liveProduct);
       amount = s.totalAmountPaid || s.totalAmount || s.product?.price || 0;
       acc[group] = (acc[group] || 0) + amount;
     } else if (s.items && Array.isArray(s.items)) {
@@ -297,10 +347,9 @@ function AdminStatsContent() {
     const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
 
     if (isInstallment) {
-      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
-      const groupName = liveProduct?.group || s.product?.group || s.productGroup || 'OTHER';
-      group = groupName.toUpperCase();
-      cost = liveProduct?.rdpPrice || s.product?.rdpPrice || 0;
+      const liveProduct = allProducts.find(p => p.id === (s.productId || s.product?.id));
+      group = getInstallmentGroupName(s, liveProduct);
+      cost = getInstallmentCost(s, liveProduct);
       acc[group] = (acc[group] || 0) + cost;
     } else if (s.items && Array.isArray(s.items)) {
       s.items.forEach((item: any) => {
@@ -320,8 +369,8 @@ function AdminStatsContent() {
     const isInstallment = s.productId || s.planMonths || s.payments || s.downPaymentPaid;
 
     if (isInstallment) {
-      const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
-      const cost = Number(liveProduct?.rdpPrice || s.product?.rdpPrice || liveProduct?.costPrice || s.product?.costPrice || 0);
+      const liveProduct = allProducts.find(p => p.id === (s.productId || s.product?.id));
+      const cost = getInstallmentCost(s, liveProduct);
       return acc + cost;
     }
 
@@ -339,8 +388,8 @@ function AdminStatsContent() {
   const activeAndCompletedInstallments = sales.filter(s => s.status !== 'cleared');
   const totalInstallmentDealsAmount = activeAndCompletedInstallments.reduce((acc, s) => acc + (s.totalAmount || s.product?.price || 0), 0);
   const totalInstallmentDealsRdpCost = activeAndCompletedInstallments.reduce((acc, s) => {
-    const liveProduct = products.find(p => p.id === (s.productId || s.product?.id));
-    const cost = liveProduct?.rdpPrice || s.product?.rdpPrice || 0;
+    const liveProduct = allProducts.find(p => p.id === (s.productId || s.product?.id));
+    const cost = getInstallmentCost(s, liveProduct);
     return acc + cost;
   }, 0);
   const totalInstallmentDealsProfit = Math.max(0, totalInstallmentDealsAmount - totalInstallmentDealsRdpCost);
@@ -366,13 +415,23 @@ function AdminStatsContent() {
     }
   });
 
-  const allProducts = [...products, ...foods, ...cosmetics, ...wears, ...toiletKitchen];
-
   const topProducts = Object.entries(salesCountByProduct)
     .map(([id, count]) => {
       const matchedProduct = allProducts.find(p => p.id === id);
+      const relatedInst = completedInstallments.find(s => (s.productId || s.product?.id) === id);
+      
+      const fallbackItem = {
+        id,
+        name: relatedInst?.productName || relatedInst?.product?.name || id,
+        category: relatedInst?.productCategory || relatedInst?.product?.category || '',
+        group: relatedInst?.productGroup || relatedInst?.product?.group || '',
+        price: relatedInst?.totalAmount || relatedInst?.product?.price || 0,
+        rdpPrice: relatedInst?.product?.rdpPrice || relatedInst?.rdpPrice || 0,
+        image: relatedInst?.productImage || relatedInst?.product?.images?.[0] || relatedInst?.product?.image || ''
+      };
+
       return {
-        product: matchedProduct || createFallbackProduct({ id, name: id, category: '', group: '' }),
+        product: matchedProduct || createFallbackProduct(fallbackItem),
         count: count as number
       };
     })
@@ -388,6 +447,10 @@ function AdminStatsContent() {
     if (target === 'cosmetics' && cosmetics.some(c => c.id === product.id)) return true;
     if (target === 'wears' && wears.some(w => w.id === product.id)) return true;
     if (target === 'toiletkitchen' && toiletKitchen.some(t => t.id === product.id)) return true;
+    if (target === 'ukused' && ukUsed.some(u => u.id === product.id)) return true;
+
+    // Prevent UK Used items from bleeding into other categories (like Electronics) based on keywords like 'phone'
+    if (target !== 'ukused' && ukUsed.some(u => u.id === product.id)) return false;
 
     const productGroup = normalizeGroupValue(product?.group || product?.category || '');
     const productCategory = normalizeGroupValue(product?.category || '');
@@ -399,6 +462,7 @@ function AdminStatsContent() {
       cosmetics: ['cosmetic', 'cosmetics', 'beauty', 'bodylotion', 'lotion', 'cream', 'skincare'],
       wears: ['wear', 'wears', 'fashion', 'apparel', 'clothing', 'shoes'],
       toiletkitchen: ['toiletkitchen', 'toilet', 'kitchen', 'bathroom', 'home', 'utensil', 'utensils'],
+      ukused: ['ukused', 'uk', 'used', 'secondhand'],
       electronics: ['electronics', 'electronic', 'gadgets', 'tech', 'phone', 'phones', 'laptop', 'laptops'],
       furniture: ['furniture', 'furnitures', 'homefurniture', 'chair', 'table', 'bed'],
     } as Record<string, string[]>;
@@ -418,10 +482,12 @@ function AdminStatsContent() {
              cosmetics.find(c => c.id === id) ||
              wears.find(w => w.id === id) ||
              toiletKitchen.find(t => t.id === id) ||
+             ukUsed.find(u => u.id === id) ||
              matchesGroup(item.product, 'FOODS') ||
              matchesGroup(item.product, 'COSMETICS') ||
              matchesGroup(item.product, 'WEARS') ||
-             matchesGroup(item.product, 'TOILET & KITCHEN');
+             matchesGroup(item.product, 'TOILET & KITCHEN') ||
+             matchesGroup(item.product, 'UK USED');
     });
     return items.slice(0, limit);
   };
@@ -481,7 +547,7 @@ function AdminStatsContent() {
     }, {});
 
     // Groups revenue/profit array
-    const groupsSnapshot = ['ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', 'FOODS', ...otherGroups].map(group => {
+    const groupsSnapshot = ['ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', 'FOODS', 'UK USED', ...otherGroups].map(group => {
       const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const profit = rev - cost;
@@ -653,7 +719,7 @@ function AdminStatsContent() {
   const otherGroups = Array.from(new Set(
     products
       .map(p => (p.group || '').trim().toUpperCase())
-      .filter(g => g !== '' && g !== 'ELECTRONICS' && g !== 'FURNITURE' && g !== 'COSMETICS' && g !== 'WEARS' && g !== 'TOILET & KITCHEN' && g !== 'FOODS')
+      .filter(g => g !== '' && g !== 'ELECTRONICS' && g !== 'FURNITURE' && g !== 'COSMETICS' && g !== 'WEARS' && g !== 'TOILET & KITCHEN' && g !== 'FOODS' && g !== 'UK USED')
   ));
 
   // Dynamic top cards list
@@ -661,13 +727,13 @@ function AdminStatsContent() {
     {
       id: 'revenue',
       title: 'Revenue',
-      value: `₦${totalRevenue.toLocaleString()}`,
-      sub: `Profit: ₦${totalProfit.toLocaleString()}`,
+      value: `₦${fmtMoney(totalRevenue)}`,
+      sub: `Profit: ₦${fmtMoney(totalProfit)}`,
       iconBg: 'bg-green-100 text-green-600',
       icon: <FaChartLine size={18} className="md:size-[24px]" />
     },
     // Dynamic Group Cards
-    ...['FOODS', 'ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', ...otherGroups].map(group => {
+    ...['FOODS', 'ELECTRONICS', 'FURNITURE', 'COSMETICS', 'WEARS', 'TOILET & KITCHEN', 'UK USED', ...otherGroups].map(group => {
       const rev = (revenueByGroup[group] || 0) + (revenueByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const cost = (rdpCostByGroup[group] || 0) + (rdpCostByGroup[group.charAt(0).toUpperCase() + group.slice(1).toLowerCase()] || 0);
       const profit = rev - cost;
@@ -681,6 +747,9 @@ function AdminStatsContent() {
       } else if (group === 'FOODS') {
         icon = <FaUtensils size={18} className="md:size-[24px]" />;
         iconBg = 'bg-emerald-100 text-emerald-600';
+      } else if (group === 'UK USED') {
+        icon = <FaHistory size={18} className="md:size-[24px]" />;
+        iconBg = 'bg-yellow-100 text-yellow-600';
       } else if (group !== 'ELECTRONICS') {
         icon = <FaBoxOpen size={18} className="md:size-[24px]" />;
         iconBg = 'bg-teal-100 text-teal-600';
@@ -689,8 +758,8 @@ function AdminStatsContent() {
       return {
         id: `group-${group}`,
         title: displayName,
-        value: `₦${rev.toLocaleString()}`,
-        sub: `Profit: ₦${profit.toLocaleString()}`,
+        value: `₦${fmtMoney(rev)}`,
+        sub: `Profit: ₦${fmtMoney(profit)}`,
         iconBg,
         icon
       };
@@ -698,8 +767,8 @@ function AdminStatsContent() {
     {
       id: 'cancelled',
       title: 'Cancelled Inst.',
-      value: `₦${cancelledRevenue.toLocaleString()}`,
-      sub: `Profit: ₦${cancelledRevenue.toLocaleString()}`,
+      value: `₦${fmtMoney(cancelledRevenue)}`,
+      sub: `Profit: ₦${fmtMoney(cancelledRevenue)}`,
       iconBg: 'bg-red-100 text-red-600',
       icon: <FaTimes size={18} className="md:size-[24px]" />
     },
@@ -785,8 +854,8 @@ function AdminStatsContent() {
               <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
               <div>
                 <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block mb-1">Installment Deals Total Volume</span>
-                <h4 className="text-2xl font-black text-foreground">₦{totalInstallmentDealsAmount.toLocaleString()}</h4>
-                <p className="text-xs font-bold text-green-700 mt-1">Profit: ₦{totalInstallmentDealsProfit.toLocaleString()}</p>
+                <h4 className="text-2xl font-black text-foreground">₦{fmtMoney(totalInstallmentDealsAmount)}</h4>
+                <p className="text-xs font-bold text-green-700 mt-1">Profit: ₦{fmtMoney(totalInstallmentDealsProfit)}</p>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -808,8 +877,8 @@ function AdminStatsContent() {
               <div className="absolute top-0 left-0 w-2 h-full bg-red-500" />
               <div>
                 <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block mb-1">Cancelled Installment Deals Volume</span>
-                <h4 className="text-2xl font-black text-foreground">₦{totalCancelledDealsAmount.toLocaleString()}</h4>
-                <p className="text-xs font-bold text-green-700 mt-1">Cancellation Profit: ₦{totalCancelledDealsProfit.toLocaleString()}</p>
+                <h4 className="text-2xl font-black text-foreground">₦{fmtMoney(totalCancelledDealsAmount)}</h4>
+                <p className="text-xs font-bold text-green-700 mt-1">Cancellation Profit: ₦{fmtMoney(totalCancelledDealsProfit)}</p>
               </div>
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -862,7 +931,7 @@ function AdminStatsContent() {
             </section>
 
             <div className="space-y-6 md:space-y-10">
-              {['Electronics', 'Furniture', 'Cosmetics', 'Wears', 'Foods', 'Toilet & Kitchen'].map(group => {
+              {['Electronics', 'Furniture', 'Cosmetics', 'Wears', 'Foods', 'Toilet & Kitchen', 'UK Used'].map(group => {
                 const topItems = getTopByGroup(group, 5);
                 const allZero = topItems.length === 0 || topItems.every(item => item.count === 0);
                 return (
@@ -1109,15 +1178,15 @@ function AdminStatsContent() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-bold uppercase tracking-wider">
                       <div className="bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/50 p-4 rounded-md md:rounded-lg">
                         <span className="block text-[8px] md:text-[9px] text-green-700/80 mb-1">Total Revenue</span>
-                        <strong className="text-xs md:text-base text-green-600 font-black">₦{(item.revenue || 0).toLocaleString()}</strong>
+                        <strong className="text-xs md:text-base text-green-600 font-black">₦{fmtMoney(item.revenue || 0)}</strong>
                       </div>
                       <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-md md:rounded-lg">
                         <span className="block text-[8px] md:text-[9px] text-blue-700/80 mb-1">Total Profit</span>
-                        <strong className="text-xs md:text-base text-blue-600 font-black">₦{(item.profit || 0).toLocaleString()}</strong>
+                        <strong className="text-xs md:text-base text-blue-600 font-black">₦{fmtMoney(item.profit || 0)}</strong>
                       </div>
                       <div className="bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 p-4 rounded-md md:rounded-lg">
                         <span className="block text-[8px] md:text-[9px] text-red-700/80 mb-1">Cancelled Installments</span>
-                        <strong className="text-xs md:text-base text-red-600 font-black">₦{(item.cancelledInstallment || 0).toLocaleString()}</strong>
+                        <strong className="text-xs md:text-base text-red-600 font-black">₦{fmtMoney(item.cancelledInstallment || 0)}</strong>
                       </div>
                       <div className="bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/50 p-4 rounded-md md:rounded-lg">
                         <span className="block text-[8px] md:text-[9px] text-purple-700/80 mb-1">Completed Sales</span>
@@ -1132,8 +1201,8 @@ function AdminStatsContent() {
                           {item.groups.map((g: any, i: number) => (
                             <div key={i} className="bg-muted/40 p-3 rounded-md md:rounded-lg border border-border/40">
                               <span className="block text-[8px] font-bold text-muted-foreground mb-0.5">{g.name}</span>
-                              <div className="font-bold text-foreground">Rev: <span className="font-black">₦{(g.revenue || 0).toLocaleString()}</span></div>
-                              <div className="text-green-700 font-bold">Profit: <span className="font-black">₦{(g.profit || 0).toLocaleString()}</span></div>
+                              <div className="font-bold text-foreground">Rev: <span className="font-black">₦{fmtMoney(g.revenue || 0)}</span></div>
+                              <div className="text-green-700 font-bold">Profit: <span className="font-black">₦{fmtMoney(g.profit || 0)}</span></div>
                             </div>
                           ))}
                         </div>

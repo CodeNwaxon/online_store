@@ -678,7 +678,8 @@ export async function verifyAndCreateInstallment(
 
       let finalReferralCode = data.referralCode;
       let partnerCutPercentage = 50;
-      let rdpPrice = 0;
+      // Always get rdpPrice/costPrice from the product document for accurate stats
+      let rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
       let partnerEarnings = 0;
 
       if (isReturningCustomer && previousReferralCode) {
@@ -705,8 +706,7 @@ export async function verifyAndCreateInstallment(
               partnerCutPercentage = settings.globalPercentage !== undefined ? settings.globalPercentage : 50;
             }
 
-            // Get rdpPrice or costPrice
-            rdpPrice = productDoc.exists ? (productDoc.data()?.rdpPrice || productDoc.data()?.costPrice || 0) : 0;
+            // rdpPrice already populated above from the product document
             const totalProfit = Math.max(0, realProductPrice - rdpPrice);
             partnerEarnings = totalProfit * (partnerCutPercentage / 100);
 
@@ -986,7 +986,8 @@ export async function verifyAndProcessInstallmentPayment(
             {
               id: loan.productId,
               name: loan.productName,
-              price: loan.totalAmount,
+              price: loan.basePrice || loan.totalAmount, // Use basePrice for partner profit calculation
+              rdpPrice: loan.rdpPrice || 0, // Include rdpPrice for admin/partnership/page.tsx
               quantity: 1,
               image: loan.productImage,
               vendor: loan.vendor || null,
@@ -1002,6 +1003,10 @@ export async function verifyAndProcessInstallmentPayment(
           paystackReference: reference,
           verifiedByServer: true,
           createdAt: new Date().toISOString(),
+          // Partnership tracking fields for the generated order
+          referralCode: loan.referralCode || null,
+          partnerCutPercentage: loan.partnerCutPercentage || null,
+          partnerPaid: loan.referralCode ? false : null,
         });
 
         // Deduct product quantity

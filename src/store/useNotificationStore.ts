@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export interface AppNotification {
   id: string;
-  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered' | 'order_placed' | 'message_reply';
+  type: 'order' | 'partnership' | 'complaint' | 'installment' | 'delivery' | 'broadcast' | 'vendor_order' | 'order_delivered' | 'order_placed' | 'message_reply' | 'cancellation';
   title: string;
   message: string;
   image?: string;
@@ -57,6 +57,7 @@ const notifTypeToRoute: Record<string, string> = {
   partnership: '/ADMIN/PARTNERSHIP',
   complaint: '/ADMIN/ORDERS', // complaints show under orders
   installment: '/ADMIN/INSTALLMENTS',
+  cancellation: '/ADMIN/INSTALLMENTS',
 };
 
 function filterNotifications(

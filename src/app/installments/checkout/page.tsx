@@ -351,7 +351,7 @@ function LoanCheckoutContent() {
       pay({
         reference: res.reference,
         email: formData.email || loan?.userEmail || 'customer@example.com',
-        amount: totalAmount * 100,
+        amount: Math.round(totalAmount * 100),
         publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
         onSuccess: processFinalPayment,
         onClose: () => {

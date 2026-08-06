@@ -126,7 +126,7 @@ export default function InstallmentOverlay({ product, plan, onClose }: Installme
     ? (instSettings.downpaymentOverThreshold || 50)
     : (instSettings.downpaymentUnderThreshold || 30);
 
-  const minRequiredDownPayment = totalAmount * (applicableRate / 100);
+  const minRequiredDownPayment = Math.ceil(totalAmount * (applicableRate / 100));
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {

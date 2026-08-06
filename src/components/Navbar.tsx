@@ -291,7 +291,7 @@ export default function Navbar() {
             // - Other global admin notifications (e.g., /ADMIN/PARTNERSHIP): Anyone with the route can see it.
             const isGlobalOrderNotif = !data.vendorEmail && data.adminRoute === '/ADMIN/ORDERS';
             const hasGlobalOrderAccess = isCEO || adminData?.vip;
-            const isOtherGlobalNotif = !data.vendorEmail && data.adminRoute !== '/ADMIN/ORDERS' && (isCEO || adminData?.assignedRoutes?.includes(data.adminRoute));
+            const isOtherGlobalNotif = !data.vendorEmail && data.adminRoute !== '/ADMIN/ORDERS' && (isCEO || adminData?.vip || adminData?.assignedRoutes?.includes(data.adminRoute));
             
             const isGlobalAdminNotif = (isGlobalOrderNotif && hasGlobalOrderAccess) || isOtherGlobalNotif;
             const isVendorNotif = data.vendorEmail && data.vendorEmail === user.email;

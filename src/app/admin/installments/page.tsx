@@ -108,6 +108,11 @@ const getPastDueStatus = (inst: any, gracePeriodDaysSetting: number = 5): PastDu
 };
 
 export default function AdminInstallments() {
+  const { adminData, isCEO } = useAdmin();
+  const isAuthorized = isCEO || adminData?.vip;
+
+  // Format money to 2 decimal places
+  const fmtMoney = (val: number) => Number(val.toFixed(2)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const [activeTab, setActiveTab] = useState<'installments' | 'settings'>('installments');
   const [installments, setInstallments] = useState<any[]>([]);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -554,12 +559,14 @@ export default function AdminInstallments() {
           >
             Installments {installments.filter(i => i.isNew).length > 0 && <span className="bg-secondary text-white text-[9px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">New</span>}
           </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'settings' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Settings
-          </button>
+          {isAuthorized && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md font-bold text-sm transition-all ${activeTab === 'settings' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Settings
+            </button>
+          )}
         </div>
       </div>
 
@@ -652,7 +659,7 @@ export default function AdminInstallments() {
                         <p className="text-[0.65rem] md:text-xs text-muted-foreground truncate flex items-center flex-wrap">
                           {inst.productName || inst.product?.name || 'Product deleted'}
                           <span className="bg-muted rounded p-0.5 ml-2 font-bold text-[0.7rem] md:text-xs">
-                            ₦{(inst.totalAmount || inst.product?.price || 0).toLocaleString()}
+                            ₦{fmtMoney(inst.totalAmount || inst.product?.price || 0)}
                           </span>
                         </p>
                       </div>
@@ -661,7 +668,7 @@ export default function AdminInstallments() {
                     <div className="space-y-2 text-[0.8rem] md:text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Down Payment:</span>
-                        <span className="font-bold">₦{(inst.downPaymentPaid || inst.downPayment || 0).toLocaleString()}</span>
+                        <span className="font-bold">₦{fmtMoney(inst.downPaymentPaid || inst.downPayment || 0)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Duration/Months:</span>
@@ -669,7 +676,7 @@ export default function AdminInstallments() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Monthly Payment:</span>
-                        <span className="font-bold">₦{(inst.monthlyAmount || Math.round(((inst.product?.price || inst.totalAmount || 0) - (inst.downPaymentPaid || inst.downPayment || 0)) / (inst.planMonths || inst.months || 1))).toLocaleString()}</span>
+                        <span className="font-bold">₦{fmtMoney(inst.monthlyAmount || Math.round(((inst.product?.price || inst.totalAmount || 0) - (inst.downPaymentPaid || inst.downPayment || 0)) / (inst.planMonths || inst.months || 1)))}</span>
                       </div>
                       {inst.isNew && (
                         <button
@@ -743,7 +750,7 @@ export default function AdminInstallments() {
         </div>
       )}
 
-      {activeTab === 'settings' && (
+      {activeTab === 'settings' && isAuthorized && (
         /* INSTALLMENT SETTINGS SECTION */
         <div className="bg-card border border-border rounded md:rounded-xl overflow-hidden shadow-sm mt-0 mx-0">
           <div className="bg-muted px-3 md:px-6 py-4 border-b border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -984,7 +991,7 @@ export default function AdminInstallments() {
                         return (
                           <div className="space-y-1">
                             <p className="font-bold text-sm md:text-base leading-tight">{selectedItem.productName || selectedItem.product?.name || 'Product deleted'}</p>
-                            <p className="text-sm md:text-base text-primary font-bold">₦{(selectedItem.product?.price || selectedItem.totalAmount || 0).toLocaleString()}</p>
+                            <p className="text-sm md:text-base text-primary font-bold">₦{fmtMoney(selectedItem.product?.price || selectedItem.totalAmount || 0)}</p>
                           </div>
                         );
                       })()}
@@ -996,11 +1003,11 @@ export default function AdminInstallments() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
                         <span className="text-muted-foreground shrink-0">Down Payment:</span>
-                        <span className="font-bold">₦{(selectedItem.downPaymentPaid || selectedItem.downPayment || 0).toLocaleString()}</span>
+                        <span className="font-bold">₦{fmtMoney(selectedItem.downPaymentPaid || selectedItem.downPayment || 0)}</span>
                       </div>
                       <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
                         <span className="text-muted-foreground shrink-0">Monthly:</span>
-                        <span className="font-bold">₦{(selectedItem.monthlyAmount || Math.round(((selectedItem.product?.price || selectedItem.totalAmount || 0) - (selectedItem.downPaymentPaid || selectedItem.downPayment || 0)) / (selectedItem.planMonths || selectedItem.months || 1))).toLocaleString()}</span>
+                        <span className="font-bold">₦{fmtMoney(selectedItem.monthlyAmount || Math.round(((selectedItem.product?.price || selectedItem.totalAmount || 0) - (selectedItem.downPaymentPaid || selectedItem.downPayment || 0)) / (selectedItem.planMonths || selectedItem.months || 1)))}</span>
                       </div>
                       <div className="flex flex-row items-center border-b border-border pb-2 gap-2">
                         <span className="text-muted-foreground shrink-0">Duration:</span>
@@ -1020,7 +1027,7 @@ export default function AdminInstallments() {
                         <p><strong>Account Name:</strong> {selectedItem.refundDetails.accountName || 'N/A'}</p>
                         <p><strong>Account Number:</strong> {selectedItem.refundDetails.accountNumber || 'N/A'}</p>
                         <p><strong>Bank Name:</strong> {selectedItem.refundDetails.bankName || 'N/A'}</p>
-                        <p className="text-lg font-bold text-secondary mt-4">Payback Amount: ₦{selectedItem.refundDetails.refundAmount?.toLocaleString()}</p>
+                        <p className="text-lg font-bold text-secondary mt-4">Payback Amount: ₦{fmtMoney(selectedItem.refundDetails.refundAmount || 0)}</p>
 
                         {!selectedItem.isRefunded && selectedItem.status !== 'cleared' && (
                           showReceiptInput === selectedItem.id ? (
@@ -1132,15 +1139,15 @@ export default function AdminInstallments() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-sm">
                           <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 border-b md:border-0 border-border pb-2 md:pb-0">
                             <span className="text-muted-foreground shrink-0">Original Price:</span>
-                            <span className="font-bold text-base md:text-lg">₦{basePrice.toLocaleString()}</span>
+                            <span className="font-bold text-base md:text-lg">₦{fmtMoney(basePrice)}</span>
                           </div>
                           <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1 border-b md:border-0 border-border pb-2 md:pb-0">
                             <span className="text-muted-foreground shrink-0">Interest ({interestPercent}%):</span>
-                            <span className="font-bold text-base md:text-lg text-secondary">+ ₦{interestAmount.toLocaleString()}</span>
+                            <span className="font-bold text-base md:text-lg text-secondary">+ ₦{fmtMoney(interestAmount)}</span>
                           </div>
                           <div className="flex flex-row md:flex-col items-center md:items-start gap-2 md:gap-1">
                             <span className="text-muted-foreground shrink-0">Total Plan Cost:</span>
-                            <span className="font-bold text-base md:text-lg text-primary">₦{totalAmount.toLocaleString()}</span>
+                            <span className="font-bold text-base md:text-lg text-primary">₦{fmtMoney(totalAmount)}</span>
                           </div>
                         </div>
                       );
@@ -1341,15 +1348,15 @@ export default function AdminInstallments() {
                   <div className="pt-2 space-y-3">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-400 font-bold uppercase text-[9px]">Base Price:</span>
-                      <span className="font-bold text-slate-600">₦{(showFinalReceipt.basePrice || 0).toLocaleString()}</span>
+                      <span className="font-bold text-slate-600">₦{fmtMoney(showFinalReceipt.basePrice || 0)}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-400 font-bold uppercase text-[9px]">Interest/Fees:</span>
-                      <span className="font-bold text-secondary text-[11px]">+₦{((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0)).toLocaleString()}</span>
+                      <span className="font-bold text-secondary text-[11px]">+₦{fmtMoney((showFinalReceipt.totalAmount || 0) - (showFinalReceipt.basePrice || 0))}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs pt-3 border-t border-slate-800">
                       <span className="text-slate-800 font-black uppercase text-[10px]">Total Paid:</span>
-                      <span className="font-black text-[#D48806] text-xl">₦{(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0).toLocaleString()}</span>
+                      <span className="font-black text-[#D48806] text-xl">₦{fmtMoney(showFinalReceipt.totalAmountPaid || showFinalReceipt.totalAmount || 0)}</span>
                     </div>
                   </div>
                 </div>

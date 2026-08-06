@@ -29,7 +29,8 @@ import {
   FaPrint,
   FaChevronDown,
   FaTruck,
-  FaBuilding
+  FaBuilding,
+  FaWhatsapp
 } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -53,6 +54,7 @@ export default function AdminOrders() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [visibleCards, setVisibleCards] = useState(40);
   const [ukUsedIds, setUkUsedIds] = useState<Set<string>>(new Set());
+  const [selectedVendorInfo, setSelectedVendorInfo] = useState<any>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -79,10 +81,10 @@ export default function AdminOrders() {
   }, []);
 
   const isUkUsedItem = (item: any) => {
-    return item.collectionName === 'uk_used' || 
-           item.category === 'uk_used' || 
-           (item.category && item.category.toLowerCase().replace(/[^a-z0-9]/g, '') === 'ukused') ||
-           ukUsedIds.has(item.id);
+    return item.collectionName === 'uk_used' ||
+      item.category === 'uk_used' ||
+      (item.category && item.category.toLowerCase().replace(/[^a-z0-9]/g, '') === 'ukused') ||
+      ukUsedIds.has(item.id);
   };
 
   const markAsRead = async (order: any) => {
@@ -143,10 +145,10 @@ export default function AdminOrders() {
       if (orderToNotify?.userId && orderToNotify.userId !== 'guest') {
         const tSnap = await getDoc(doc(db, 'settings', 'notification_templates'));
         const isShip = orderToNotify.deliveryMethod === 'ship';
-        
+
         const defaultTemplate = 'Your order has been delivered. You will get it shortly. Thank you for your patronage.';
         let template = tSnap.exists() && tSnap.data().orderDelivered ? tSnap.data().orderDelivered : defaultTemplate;
-        
+
         if (!isShip) {
           template = 'Your order has been delivered, You can come pick it up!';
         }
@@ -178,7 +180,7 @@ export default function AdminOrders() {
           ? `\n\n📌 *Delivery Note:* Estimated delivery time is max *${shippingMaxDays} business ${shippingMaxDays === 1 ? 'day' : 'days'}* (items often arrive earlier!). If your order is not delivered within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you are guaranteed a full refund.`
           : '';
 
-        const deliveredMessage = isShip 
+        const deliveredMessage = isShip
           ? "Your order has been *delivered* and should arrive shortly!"
           : "Your order has been *delivered*, You can come pick it up!";
 
@@ -439,6 +441,41 @@ export default function AdminOrders() {
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate">
                         {order.type === 'installment' ? 'Installment Completed' : 'Online Payment'}
                       </p>
+                      {(isCEO || adminData?.vip) && (() => {
+                        const uniqueVendors = Array.from(new Set(order.items.map((i: any) => i.vendor).filter(Boolean)));
+                        if (uniqueVendors.length === 0) return null;
+
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {uniqueVendors.map((vendorEmail: any, idx) => {
+                              const vendorAdmin = admins.find(a => a.email === vendorEmail);
+                              const storeName = vendorAdmin?.specialStore?.name || vendorEmail;
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (vendorAdmin?.specialStore) {
+                                      const vendorItems = order.items.filter((i: any) => i.vendor === vendorEmail);
+                                      const vendorAmount = vendorItems.reduce((sum: number, item: any) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
+                                      setSelectedVendorInfo({
+                                        ...vendorAdmin.specialStore,
+                                        payoutAmount: vendorAmount
+                                      });
+                                    } else {
+                                      toast.error("No store info for this vendor");
+                                    }
+                                  }}
+                                  className="text-[9px] bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0.5 rounded font-bold truncate max-w-[120px] z-10 relative transition-colors shadow-sm"
+                                  title="View Vendor Details"
+                                >
+                                  {storeName}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
                   <div className="text-right shrink-0 ml-auto">
@@ -560,7 +597,7 @@ export default function AdminOrders() {
                       {selectedOrder.deliveredBy && (
                         <div className="text-[10px] text-muted-foreground text-center md:text-right">
                           <span className="font-bold">{selectedOrder.deliveredBy.name}</span>{' '}
-                          <span className="font-black text-[#FFD700]">{selectedOrder.deliveredBy.role || 'VIP Admin'}</span><br/>
+                          <span className="font-black text-[#FFD700]">{selectedOrder.deliveredBy.role || 'VIP Admin'}</span><br />
                           <span className="font-bold">{selectedOrder.deliveredBy.email}</span>
                         </div>
                       )}
@@ -668,7 +705,7 @@ export default function AdminOrders() {
                 </div>
               </div>
 
-              {selectedOrder.type === 'installment' && (
+              {selectedOrder.type === 'installment' && (isCEO || adminData?.vip) && (
                 <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 flex items-center gap-4">
                   <div className="w-10 h-10 bg-primary/20 text-primary rounded-full flex items-center justify-center"><FaCheckCircle /></div>
                   <div className="text-xs font-bold text-primary">
@@ -771,6 +808,53 @@ export default function AdminOrders() {
                 {isVerifying ? 'Verifying...' : 'Authorize'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vendor Info Modal */}
+      {selectedVendorInfo && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="bg-card w-full max-w-sm rounded-2xl shadow-xl border border-border p-4 relative">
+            <button
+              onClick={() => setSelectedVendorInfo(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <FaTimes />
+            </button>
+            <h3 className="font-black text-lg mb-4 text-primary">Vendor Details</h3>
+            <div className="space-y-3 text-sm">
+              {selectedVendorInfo.payoutAmount !== undefined && (
+                <div className="bg-muted/50 p-3 rounded-lg mb-4 text-center border border-border">
+                  <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Amount Owed (This Order)</p>
+                  <p className="text-xl md:text-2xl font-black text-green-600">₦{selectedVendorInfo.payoutAmount.toLocaleString()}</p>
+                </div>
+              )}
+              <p><span className="text-muted-foreground">Store Name:</span> <span className="font-bold">{selectedVendorInfo.name || 'N/A'}</span></p>
+              <p><span className="text-muted-foreground">Account Name:</span> <span className="font-bold">{selectedVendorInfo.accountName || 'N/A'}</span></p>
+              <p><span className="text-muted-foreground">Bank Name:</span> <span className="font-bold">{selectedVendorInfo.bankName || 'N/A'}</span></p>
+              <p><span className="text-muted-foreground">Account Number:</span> <span className="font-bold">{selectedVendorInfo.accountNumber || 'N/A'}</span></p>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Phone Number:</span>
+                <span className="font-bold">{selectedVendorInfo.phoneNumber || 'N/A'}</span>
+                {selectedVendorInfo.phoneNumber && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <a href={`tel:${selectedVendorInfo.phoneNumber}`} className="w-7 h-7 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors shadow-sm" title="Call Vendor">
+                      <FaPhoneAlt size={10} />
+                    </a>
+                    <a href={`https://wa.me/${selectedVendorInfo.phoneNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors shadow-sm" title="WhatsApp Vendor">
+                      <FaWhatsapp size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedVendorInfo(null)}
+              className="w-full mt-6 py-2 bg-primary text-primary-foreground font-bold rounded-lg"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
