@@ -659,18 +659,6 @@ export async function verifyAndCreateInstallment(
       const receiptRef = adminDb.collection('receipts').doc();
       const installmentRef = adminDb.collection('installments').doc();
 
-      transaction.set(receiptRef, {
-        userId: data.userId,
-        userEmail: data.userEmail,
-        productName: data.productName,
-        paymentName: 'Initial Deposit',
-        amount: actualPaidNaira,
-        paystackReference: reference,
-        verifiedByServer: true,
-        createdAt: FieldValue.serverTimestamp(),
-        installmentId: installmentRef.id,
-      });
-
       // Handle Referral Logic if applicable
       let isReturningCustomer = false;
       let previousReferralCode: string | null = null;
@@ -730,6 +718,18 @@ export async function verifyAndCreateInstallment(
           }
         }
       }
+
+      transaction.set(receiptRef, {
+        userId: data.userId,
+        userEmail: data.userEmail,
+        productName: data.productName,
+        paymentName: 'Initial Deposit',
+        amount: actualPaidNaira,
+        paystackReference: reference,
+        verifiedByServer: true,
+        createdAt: FieldValue.serverTimestamp(),
+        installmentId: installmentRef.id,
+      });
 
       transaction.set(installmentRef, {
         userId: data.userId,
