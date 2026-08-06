@@ -44,8 +44,8 @@ export default function AdminComplaintsPage() {
   }, [adminData, isCEO]);
 
   useEffect(() => {
-    let unsubGeneral = () => {};
-    let unsubSpecial = () => {};
+    let unsubGeneral = () => { };
+    let unsubSpecial = () => { };
 
     if (!user) return;
 
@@ -158,11 +158,11 @@ export default function AdminComplaintsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex gap-3 justify-center md:justify-start">
           {canModerate && (
             <button
               onClick={() => setActiveStream('general')}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${activeStream === 'general' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+              className={`inline-flex items-center md:gap-2 gap-1 px-4 py-2 rounded-full font-bold md:text-sm text-xs transition-all ${activeStream === 'general' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
             >
               <FaCommentDots /> General Contact
               {generalUnread > 0 && <span className="bg-secondary text-white rounded-full px-1.5 text-[10px]">{generalUnread}</span>}
@@ -170,7 +170,7 @@ export default function AdminComplaintsPage() {
           )}
           <button
             onClick={() => setActiveStream('special')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${activeStream === 'special' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+            className={`inline-flex items-center md:gap-2 gap-1 px-4 py-2 rounded-full font-bold md:text-sm text-xs transition-all ${activeStream === 'special' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
           >
             <FaStore /> Special Store
             {specialUnread > 0 && <span className="bg-secondary text-white rounded-full px-1.5 text-[10px]">{specialUnread}</span>}
