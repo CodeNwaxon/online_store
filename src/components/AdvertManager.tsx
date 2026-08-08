@@ -170,7 +170,7 @@ export default function AdvertManager({ collectionName, isCEO, adminData, produc
       newSelections = currentSelections.filter(id => id !== productId);
     } else {
       if (currentSelections.length >= targetAllocatedSlots) {
-        toast.error(`Limit of ${targetAllocatedSlots} advert slots reached.`);
+        toast.error(`Limit of ${targetAllocatedSlots} advert slots reached.`, { id: 'advert-limit' });
         return;
       }
       newSelections = [...currentSelections, productId];
