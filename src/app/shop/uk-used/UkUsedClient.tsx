@@ -240,7 +240,7 @@ function UkUsedPageContent() {
       )}
 
       {/* Store Billboard (Global Advert) */}
-      <StoreBillboard categoryName="uk-used" />
+      <StoreBillboard categoryName="uk-used" isSpecialStoreView={!!storeData} />
 
       {/* Header */}
       <div className={`bg-gradient-to-r ${storeData ? 'from-slate-900 via-gray-800 to-slate-900' : 'from-slate-800 via-gray-600 to-slate-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>

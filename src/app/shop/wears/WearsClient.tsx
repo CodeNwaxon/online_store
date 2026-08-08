@@ -268,7 +268,7 @@ function WearsPageContent() {
       )}
 
       {/* Store Billboard (Global Advert) */}
-      <StoreBillboard categoryName="wears" />
+      <StoreBillboard categoryName="wears" isSpecialStoreView={!!storeData} />
 
       <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
         {storeData?.banner && (

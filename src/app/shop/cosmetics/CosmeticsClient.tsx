@@ -239,7 +239,7 @@ function CosmeticsPageContent() {
       )}
 
       {/* Store Billboard (Global Advert) */}
-      <StoreBillboard categoryName="cosmetics" />
+      <StoreBillboard categoryName="cosmetics" isSpecialStoreView={!!storeData} />
 
       {/* Header */}
       <div className={`bg-gradient-to-r ${storeData ? 'from-pink-900 via-rose-800 to-pink-900' : 'from-pink-800 via-rose-600 to-pink-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>

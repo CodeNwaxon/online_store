@@ -10,9 +10,10 @@ import { useProductCache } from '@/store/useProductCache';
 
 interface StoreBillboardProps {
   categoryName: string; // e.g., 'uk-used', 'wears', 'cosmetics'
+  isSpecialStoreView?: boolean; // true when viewing a specific vendor's store
 }
 
-export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
+export default function StoreBillboard({ categoryName, isSpecialStoreView }: StoreBillboardProps) {
   const { fetchCollection } = useProductCache();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [isVisible, setIsVisible] = useState(true);
@@ -55,16 +56,20 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
       try {
         const snap = await getDoc(doc(db, 'settings', `advert_${categoryName.replace('-', '_')}`));
         if (snap.exists()) {
-          const selections = snap.data().selections || {};
+          const data = snap.data();
+          const selections = data.selections || {};
+          const minSlots = data.minSlots || 1;
           const productIds = new Set<string>();
-          Object.values(selections).forEach((ids: any) => {
-            if (Array.isArray(ids)) {
+
+          // Only include selections from vendors who meet the minSlots requirement
+          Object.entries(selections).forEach(([vendorEmail, ids]: [string, any]) => {
+            if (Array.isArray(ids) && ids.length >= minSlots) {
               ids.forEach(id => productIds.add(id));
             }
           });
-          
+
           const filtered = allProducts.filter(p => productIds.has(p.id));
-          
+
           // Group by vendor to interleave
           const vendorGroups: { [vendorEmail: string]: any[] } = {};
           filtered.forEach(p => {
@@ -78,13 +83,13 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
           const queues = Object.values(vendorGroups);
           let hasMore = true;
           let index = 0;
-          
-          while(hasMore) {
+
+          while (hasMore) {
             hasMore = false;
             for (const queue of queues) {
               if (index < queue.length) {
                 interleaved.push(queue[index]);
-                hasMore = true; // as long as we pushed something, we might have more in other queues
+                hasMore = true;
               }
             }
             index++;
@@ -104,8 +109,7 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
   useEffect(() => {
     if (advertProducts.length <= 1 || !isVisible) return;
 
-    // Use a deterministic rotation based on time so all users see the same image (roughly)
-    // We rotate every 5 seconds (5000ms).
+    // Deterministic rotation based on time so all users see the same image
     const updateIndex = () => {
       const now = Date.now();
       const interval = 5000;
@@ -113,49 +117,52 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
       setCurrentIndex(index);
     };
 
-    updateIndex(); // initial call
-    const timer = setInterval(updateIndex, 1000); // Check every second to keep synced
+    updateIndex();
+    const timer = setInterval(updateIndex, 1000);
 
     return () => clearInterval(timer);
   }, [advertProducts.length, isVisible]);
 
-  if (!isVisible || advertProducts.length === 0) return null;
+  // Don't render if on a special store page, or hidden, or no adverts
+  if (isSpecialStoreView || !isVisible || advertProducts.length === 0) return null;
 
   const product = advertProducts[currentIndex];
   if (!product) return null;
 
   const storeSlug = storeSlugs[product.vendor];
   const isSpecialStore = !!storeSlug;
+  const imageUrl = product.images?.[0] || product.image || '/images/placeholder.png';
 
   const handleVisitStoreClick = (e: React.MouseEvent) => {
     if (!isSpecialStore) {
       e.preventDefault();
-      // Scroll to the product on the page
       const el = document.getElementById(`product-${product.id}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Optional: highlight it briefly
         el.classList.add('ring-4', 'ring-primary', 'transition-all', 'duration-500');
         setTimeout(() => el.classList.remove('ring-4', 'ring-primary'), 2000);
       } else {
-        // Fallback if not rendered (e.g. pagination) - go to detail page
         window.location.href = `/product/${product.id}`;
       }
     }
   };
 
-  const themeColors = {
-    'uk-used': 'from-slate-900 to-slate-800 text-slate-100 button-bg-slate',
-    'wears': 'from-purple-900 to-fuchsia-900 text-purple-100 button-bg-purple',
-    'cosmetics': 'from-pink-900 to-rose-900 text-pink-100 button-bg-pink'
-  };
-
-  const currentTheme = themeColors[categoryName as keyof typeof themeColors] || themeColors['uk-used'];
-  const gradientClass = currentTheme.split(' ').slice(0, 2).join(' ');
-
   return (
-    <div className={`relative w-full bg-gradient-to-r ${gradientClass} overflow-hidden shadow-xl mb-4 transition-all duration-500 ease-in-out`}>
-      <button 
+    <div className="relative w-full overflow-hidden transition-all duration-500 ease-in-out">
+      {/* Blurred Background Image */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          className="object-cover blur-lg scale-110 opacity-60"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/50" />
+      </div>
+
+      {/* Close Button */}
+      <button
         onClick={() => setIsVisible(false)}
         className="absolute top-2 right-2 md:top-4 md:right-4 z-20 w-8 h-8 flex items-center justify-center bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors backdrop-blur-sm"
         title="Close Billboard"
@@ -163,87 +170,84 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
         <FaTimes />
       </button>
 
-      <div className="flex flex-col md:flex-row h-full">
-        {/* Left: Image (Top on mobile, left on desktop) */}
-        <div className="w-full md:w-2/5 lg:w-1/3 h-48 md:h-72 relative bg-white/5 flex-shrink-0 group">
-          <Image 
-            src={product.images?.[0] || product.image || '/images/placeholder.png'} 
-            alt={product.name}
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/50 via-transparent to-transparent pointer-events-none" />
-          <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-md">
-            Featured Advert
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col md:flex-row items-stretch justify-between max-w-[1200px] mx-auto p-4 md:p-6 gap-4 md:gap-6 min-h-[220px] md:min-h-[280px]">
+        {/* Left: Image Card */}
+        <div className="w-full md:w-2/5 lg:w-1/3 flex-shrink-0">
+          <div className="relative w-full h-44 md:h-full rounded-xl overflow-hidden bg-white/10 backdrop-blur-sm border border-white/15 shadow-lg">
+            <Image
+              src={imageUrl}
+              alt={product.name}
+              fill
+              className="object-contain p-2"
+              priority
+            />
+            <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-md">
+              Featured
+            </div>
           </div>
         </div>
 
-        {/* Right: Content (Bottom on mobile, right on desktop) */}
-        <div className="flex-1 p-5 md:p-8 flex flex-col justify-center">
-          <div className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
-            {product.group} {product.category && `> ${product.category}`}
-          </div>
-          <h2 className="text-xl md:text-3xl font-black text-white mb-2 md:mb-4 line-clamp-2 leading-tight">
-            {product.name}
-          </h2>
-          
-          <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
-            <div className="text-2xl md:text-4xl font-black text-white">
-              ₦{product.price?.toLocaleString()}
+        {/* Right: Write-up Card */}
+        <div className="flex-1 flex flex-col justify-between">
+          <div className="bg-black/40 backdrop-blur-md rounded-xl p-4 md:p-6 border border-white/10">
+            <div className="text-white/60 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+              {product.group} {product.category && `› ${product.category}`}
             </div>
-            {product.oldPrice > product.price && (
-              <div className="text-sm md:text-lg text-white/50 line-through font-bold">
-                ₦{product.oldPrice.toLocaleString()}
+            <h2 className="text-lg md:text-2xl font-black text-white mb-2 line-clamp-2 leading-tight">
+              {product.name}
+            </h2>
+
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <div className="text-xl md:text-3xl font-black text-white">
+                ₦{product.price?.toLocaleString()}
               </div>
-            )}
+              {product.oldPrice > product.price && (
+                <div className="text-xs md:text-base text-white/40 line-through font-bold">
+                  ₦{product.oldPrice.toLocaleString()}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {isSpecialStore ? (
+                <Link
+                  href={`/shop/${categoryName}?store=${storeSlug}`}
+                  className="flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-4 py-2 md:px-5 md:py-2.5 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg hover:-translate-y-0.5"
+                >
+                  <FaStore /> Visit Store
+                </Link>
+              ) : (
+                <button
+                  onClick={handleVisitStoreClick}
+                  className="flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-4 py-2 md:px-5 md:py-2.5 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg hover:-translate-y-0.5"
+                >
+                  <FaArrowRight /> View Here
+                </button>
+              )}
+              <Link
+                href={`/shop/${categoryName}/${product.id}`}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2 md:px-5 md:py-2.5 rounded-lg font-bold text-xs md:text-sm transition-all backdrop-blur-sm"
+              >
+                <FaInfoCircle /> Learn More
+              </Link>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-auto">
-            {isSpecialStore ? (
-              <Link 
-                href={`/shop/${categoryName}?store=${storeSlug}`}
-                className="flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-4 py-2.5 md:px-6 md:py-3 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg hover:-translate-y-0.5"
-              >
-                <FaStore /> Visit Store
-              </Link>
-            ) : (
-              <button 
-                onClick={handleVisitStoreClick}
-                className="flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 px-4 py-2.5 md:px-6 md:py-3 rounded-lg font-bold text-xs md:text-sm transition-all shadow-lg hover:-translate-y-0.5"
-              >
-                <FaArrowRight /> View Here
-              </button>
-            )}
-            <Link 
-              href={`/product/${product.id}`}
-              className="flex items-center gap-2 bg-black/30 hover:bg-black/50 text-white border border-white/20 px-4 py-2.5 md:px-6 md:py-3 rounded-lg font-bold text-xs md:text-sm transition-all backdrop-blur-sm"
-            >
-              <FaInfoCircle /> Learn More
-            </Link>
-          </div>
+          {/* Dots Navigation */}
+          {advertProducts.length > 1 && (
+            <div className="flex gap-1.5 mt-3 justify-center md:justify-start">
+              {advertProducts.map((_, dotIndex) => (
+                <button
+                  key={dotIndex}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${currentIndex === dotIndex ? 'bg-white w-5' : 'bg-white/30 w-1.5 hover:bg-white/50'}`}
+                  aria-label={`Go to slide ${dotIndex + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Progress Bar */}
-      {advertProducts.length > 1 && (
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-black/20">
-          <div 
-            key={currentIndex} // Reset animation on slide change
-            className="h-full bg-white/50 transition-all ease-linear"
-            style={{ 
-              width: '100%',
-              animation: 'progress 5s linear forwards'
-            }}
-          />
-        </div>
-      )}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes progress {
-          0% { width: 0%; }
-          100% { width: 100%; }
-        }
-      `}} />
     </div>
   );
 }
