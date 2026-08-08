@@ -64,7 +64,33 @@ export default function StoreBillboard({ categoryName }: StoreBillboardProps) {
           });
           
           const filtered = allProducts.filter(p => productIds.has(p.id));
-          setAdvertProducts(filtered);
+          
+          // Group by vendor to interleave
+          const vendorGroups: { [vendorEmail: string]: any[] } = {};
+          filtered.forEach(p => {
+            const vendorEmail = p.vendor || 'unknown';
+            if (!vendorGroups[vendorEmail]) vendorGroups[vendorEmail] = [];
+            vendorGroups[vendorEmail].push(p);
+          });
+
+          // Interleave products round-robin
+          const interleaved: any[] = [];
+          const queues = Object.values(vendorGroups);
+          let hasMore = true;
+          let index = 0;
+          
+          while(hasMore) {
+            hasMore = false;
+            for (const queue of queues) {
+              if (index < queue.length) {
+                interleaved.push(queue[index]);
+                hasMore = true; // as long as we pushed something, we might have more in other queues
+              }
+            }
+            index++;
+          }
+
+          setAdvertProducts(interleaved);
         }
       } catch (err) {
         console.error("Failed to fetch advert settings", err);

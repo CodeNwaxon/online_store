@@ -95,9 +95,9 @@ export default function AdvertManager({ collectionName, isCEO, adminData, produc
   const saveSettings = async (newSettings: Partial<AdvertSettings>) => {
     try {
       await setDoc(doc(db, 'settings', `advert_${collectionName}`), newSettings, { merge: true });
-      toast.success('Advert settings saved');
+      toast.success('Advert settings saved', { id: 'advert-settings-saved' });
     } catch (error) {
-      toast.error('Failed to save settings');
+      toast.error('Failed to save settings', { id: 'advert-settings-error' });
     }
   };
 
@@ -413,7 +413,7 @@ export default function AdvertManager({ collectionName, isCEO, adminData, produc
       {/* CEO Passkey Modal */}
       {showPasskeyModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-md animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 text-slate-800 mb-4">
               <FaLock className="text-slate-400" size={24} />
               <h3 className="font-bold text-xl">CEO Authorization</h3>
@@ -424,7 +424,7 @@ export default function AdvertManager({ collectionName, isCEO, adminData, produc
             <input
               type="password"
               placeholder="Enter CEO Passkey"
-              className="w-full p-3 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-500 outline-none transition-colors"
+              className="text-sm w-full p-3 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-500 outline-none transition-colors"
               value={passkeyInput}
               onChange={(e) => setPasskeyInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && verifyPasskeyAndSaveMaxSlots()}
@@ -437,10 +437,10 @@ export default function AdvertManager({ collectionName, isCEO, adminData, produc
                 setPendingMaxSlots(null);
                 setPasskeyError('');
                 setPasskeyInput('');
-              }} className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+              }} className="text-xs md:text-sm flex-1 px-2 md:px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={verifyPasskeyAndSaveMaxSlots} className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors flex items-center justify-center gap-2">
+              <button onClick={verifyPasskeyAndSaveMaxSlots} className="text-xs md:text-sm flex-1 px-2 md:px-4 py-2.5 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors flex items-center justify-center gap-2">
                 <FaCheck /> Verify & Save
               </button>
             </div>
