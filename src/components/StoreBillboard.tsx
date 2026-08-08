@@ -171,15 +171,15 @@ export default function StoreBillboard({ categoryName, isSpecialStoreView }: Sto
       </button>
 
       {/* Main Content */}
-      <div className="relative z-10 flex flex-col md:flex-row items-stretch justify-between max-w-[1200px] mx-auto p-4 md:p-6 gap-4 md:gap-6 min-h-[220px] md:min-h-[280px]">
+      <div className="relative z-10 flex flex-col md:flex-row items-stretch justify-between max-w-[1200px] mx-auto p-4 md:p-6 gap-4 md:gap-6 min-h-[350px] md:min-h-[280px]">
         {/* Left: Image Card */}
         <div className="w-full md:w-2/5 lg:w-1/3 flex-shrink-0">
-          <div className="relative w-full h-44 md:h-full rounded-xl overflow-hidden bg-white/10 backdrop-blur-sm border border-white/15 shadow-lg">
+          <div className="relative w-full h-74 md:h-full rounded md:rounded-xl overflow-hidden bg-white/10 backdrop-blur-sm border border-white/15 shadow-lg">
             <Image
               src={imageUrl}
               alt={product.name}
               fill
-              className="object-contain p-2"
+              className="rounded md:rounded-xl object-cover object-top p-1"
               priority
             />
             <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-md">
@@ -194,7 +194,7 @@ export default function StoreBillboard({ categoryName, isSpecialStoreView }: Sto
             <div className="text-white/60 text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
               {product.group} {product.category && `› ${product.category}`}
             </div>
-            <h2 className="text-lg md:text-2xl font-black text-white mb-2 line-clamp-2 leading-tight">
+            <h2 className="md:text-2xl font-black text-white mb-2 line-clamp-2 leading-tight">
               {product.name}
             </h2>
 
