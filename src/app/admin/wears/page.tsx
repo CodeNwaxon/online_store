@@ -22,6 +22,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
 import { useAdmin } from '@/hooks/useAdmin';
+import AdvertManager from '@/components/AdvertManager';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -543,6 +544,13 @@ export default function AdminWears() {
           <div className="flex gap-3 items-center w-full md:w-auto">
           </div>
         </header>
+
+        <AdvertManager 
+          collectionName="wears" 
+          isCEO={isCEO} 
+          adminData={adminData} 
+          products={products} 
+        />
 
         {/* Form Section */}
         <section className="bg-card py-4 px-2 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">

@@ -16,6 +16,7 @@ import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
 import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
 import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
+import StoreBillboard from '@/components/StoreBillboard';
 
 function UkUsedPageContent() {
   const searchParams = useSearchParams();
@@ -237,6 +238,9 @@ function UkUsedPageContent() {
           </div>
         </div>
       )}
+
+      {/* Store Billboard (Global Advert) */}
+      <StoreBillboard categoryName="uk-used" />
 
       {/* Header */}
       <div className={`bg-gradient-to-r ${storeData ? 'from-slate-900 via-gray-800 to-slate-900' : 'from-slate-800 via-gray-600 to-slate-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>

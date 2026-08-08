@@ -16,6 +16,7 @@ import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
 import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
 import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
+import StoreBillboard from '@/components/StoreBillboard';
 
 function WearsPageContent() {
   const searchParams = useSearchParams();
@@ -265,6 +266,9 @@ function WearsPageContent() {
           </div>
         </div>
       )}
+
+      {/* Store Billboard (Global Advert) */}
+      <StoreBillboard categoryName="wears" />
 
       <div className={`bg-gradient-to-r ${storeData ? 'from-purple-900 via-fuchsia-800 to-purple-900' : 'from-purple-800 via-violet-700 to-purple-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>
         {storeData?.banner && (

@@ -16,6 +16,7 @@ import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
 import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
 import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
+import StoreBillboard from '@/components/StoreBillboard';
 
 function CosmeticsPageContent() {
   const searchParams = useSearchParams();
@@ -236,6 +237,9 @@ function CosmeticsPageContent() {
           </div>
         </div>
       )}
+
+      {/* Store Billboard (Global Advert) */}
+      <StoreBillboard categoryName="cosmetics" />
 
       {/* Header */}
       <div className={`bg-gradient-to-r ${storeData ? 'from-pink-900 via-rose-800 to-pink-900' : 'from-pink-800 via-rose-600 to-pink-900'} text-white py-4 md:py-8 px-4 relative overflow-hidden`}>

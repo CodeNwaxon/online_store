@@ -22,6 +22,7 @@ import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import { useAdmin } from '@/hooks/useAdmin';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
 import Fuse from 'fuse.js';
+import AdvertManager from '@/components/AdvertManager';
 
 const formatPriceInput = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -397,6 +398,13 @@ export default function AdminUkUsed() {
           <div className="flex gap-3 items-center w-full md:w-auto">
           </div>
         </header>
+
+        <AdvertManager 
+          collectionName="uk_used" 
+          isCEO={isCEO} 
+          adminData={adminData} 
+          products={products} 
+        />
 
         {/* Form Section */}
         <section className="bg-card py-4 px-2 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
