@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { FaTimes } from 'react-icons/fa';
 
 export default function InstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
 
@@ -60,6 +62,7 @@ export default function InstallPrompt() {
     setShowPrompt(false);
   };
 
+  if (pathname?.startsWith('/admin')) return null;
   if (!showPrompt) return null;
 
   return (

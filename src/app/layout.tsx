@@ -74,6 +74,7 @@ import VisitorTracker from "@/components/VisitorTracker";
 import BadgeManager from "@/components/BadgeManager";
 import ToasterProvider from "@/components/ToasterProvider";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
+import InstallPrompt from "@/components/InstallPrompt";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -88,6 +89,7 @@ export default function RootLayout({
         <Suspense><VisitorTracker /></Suspense>
         <Suspense><BadgeManager /></Suspense>
         <Suspense><AnalyticsProvider /></Suspense>
+        <InstallPrompt />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

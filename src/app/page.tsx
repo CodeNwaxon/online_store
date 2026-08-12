@@ -8,7 +8,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PromoCarousel from '@/components/PromoCarousel';
 import ReviewSection from '@/components/ReviewSection';
-import InstallPrompt from '@/components/InstallPrompt';
 import GlobalSearch from '@/components/GlobalSearch';
 import { products as staticProducts } from '@/data/products';
 import { db } from '@/lib/firebase';
@@ -206,8 +205,6 @@ export default function Home() {
 
   return (
     <div className="relative">
-      <InstallPrompt />
-
       <GlobalSearch containerBg={heroSlides.length > 0 ? heroThemes[currentSlide % heroThemes.length].bg : 'bg-slate-50'} />
 
       {/* Hero Section */}
