@@ -252,16 +252,19 @@ export default function Home() {
                         <p className={`text-base mb-8 ${theme.subtext} leading-relaxed max-md:text-xs max-md:mb-4 line-clamp-3`}>
                           {slide.description}
                         </p>
-                        <div className="flex gap-4 flex-wrap max-md:justify-center">
-                          <Link href={`/product/${slide.id}`} className={`${theme.viewBtn} flex items-center justify-center gap-2 rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs`}>
-                            View Product <FaArrowRight size={18} />
+                        <div className="flex gap-4 flex-wrap max-md:flex-nowrap max-md:gap-2 max-md:justify-center w-full">
+                          <Link href={`/product/${slide.id}`} className={`${theme.viewBtn} flex items-center justify-center gap-1 md:gap-2 rounded-md font-semibold transition-colors px-6 py-3 max-md:px-2 max-md:py-1.5 max-md:text-[10px] whitespace-nowrap flex-1 md:flex-none`}>
+                            View <span className="hidden md:inline">Product</span> <FaArrowRight size={14} className="md:w-[18px] md:h-[18px] hidden md:inline" />
                           </Link>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleBuyNow(slide); }}
-                            className={`border-2 ${theme.button} rounded-md font-semibold transition-colors px-6 py-3 max-md:px-4 max-md:py-2 max-md:text-xs`}
+                            className={`border-2 ${theme.button} rounded-md font-semibold transition-colors px-6 py-3 max-md:px-2 max-md:py-1.5 max-md:text-[10px] whitespace-nowrap flex-1 md:flex-none`}
                           >
                             Buy Now
                           </button>
+                          <Link href="/shop" onClick={(e) => e.stopPropagation()} className={`bg-white text-black border-2 border-black rounded-md font-semibold transition-colors hover:bg-gray-100 px-6 py-3 max-md:px-2 max-md:py-1.5 max-md:text-[10px] whitespace-nowrap flex-1 md:flex-none text-center flex items-center justify-center`}>
+                            More
+                          </Link>
                         </div>
 
                         {/* Hero Dots - Anchored to content */}

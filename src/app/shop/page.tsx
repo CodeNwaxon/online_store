@@ -23,6 +23,7 @@ function ShopContent() {
   const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<string>(searchParams.get('group') || 'All');
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || initialCategory || 'All');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [visibleCount, setVisibleCount] = useState(84);
   const [showLikedOnly, setShowLikedOnly] = useState(false);
@@ -119,28 +120,68 @@ function ShopContent() {
     return ['All', ...uniqueGroups];
   })();
 
-  // Get unique categories for the selected group
-  const availableCategories = Array.from(new Set(
-    products
-      .filter(p => p.group === selectedGroup)
-      .map(p => p.category)
-      .filter((c): c is string => !!c)
-  )).sort();
+  // Derived state
+  // Extract and deduplicate categories case-insensitively
+  const categoryMap = new Map();
+  products
+    .filter(p => selectedGroup === 'All' || (typeof p.group === 'string' && p.group.trim().toLowerCase() === selectedGroup.trim().toLowerCase()))
+    .forEach(p => {
+      if (p.category && typeof p.category === 'string' && p.category.trim()) {
+        const key = p.category.trim().toLowerCase();
+        if (!categoryMap.has(key)) {
+          categoryMap.set(key, p.category.trim());
+        }
+      }
+    });
+  const availableCategories = Array.from(categoryMap.values()).sort();
+
+  const manufacturers = Array.from(new Set(products.map(p => {
+    const m = p.manufacturer;
+    return typeof m === 'string' ? m.trim().toLowerCase() : null;
+  }).filter(Boolean))).sort();
 
   const baseFilteredProducts = products.filter(product => {
-    const matchesGroup = selectedGroup === 'All' || product.group === selectedGroup;
-    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+    const matchesGroup = selectedGroup === 'All' || 
+      (typeof product.group === 'string' && product.group.trim().toLowerCase() === selectedGroup.trim().toLowerCase());
+      
+    const matchesCategory = selectedCategory === 'All' || 
+      (typeof product.category === 'string' && product.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
+    
+    let matchesBrand = selectedBrand === 'All';
+    if (!matchesBrand && selectedBrand) {
+      const brandQ = selectedBrand.trim().toLowerCase();
+      const mfg = typeof product.manufacturer === 'string' ? product.manufacturer.toLowerCase().trim() : '';
+      const name = typeof product.name === 'string' ? product.name.toLowerCase() : '';
+      
+      matchesBrand = mfg.includes(brandQ) || name.includes(brandQ);
+    }
+
     const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
     const isVisible = (product.quantity ?? 0) > 0;
-    return matchesGroup && matchesCategory && matchesLiked && matchesPromo && isVisible;
+    return matchesGroup && matchesCategory && matchesBrand && matchesLiked && matchesPromo && isVisible;
   });
 
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
+    
+    // First try a simple case-insensitive substring search (more predictable for users)
+    const q = searchQuery.toLowerCase().trim();
+    const simpleMatches = baseFilteredProducts.filter(p => 
+      p.name?.toLowerCase().includes(q) ||
+      p.manufacturer?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
+      p.group?.toLowerCase().includes(q) ||
+      p.productCode?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q)
+    );
+
+    if (simpleMatches.length > 0) return simpleMatches;
+
+    // Fallback to fuzzy search if no exact substrings found
     const fuse = new Fuse(baseFilteredProducts, {
       keys: ['name', 'group', 'category', 'manufacturer', 'productCode'],
-      threshold: 0.3,
+      threshold: 0.4,
       ignoreLocation: true
     });
     return fuse.search(searchQuery.trim()).map(r => r.item);
@@ -214,15 +255,47 @@ function ShopContent() {
           {/* Main Filters Bar */}
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between p-2 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
             <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}>
-              {groups.map(group => (
-                <button
-                  key={group}
-                  onClick={() => setSelectedGroup(group)}
-                  className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
+              
+              {/* ALL Group Button (Always First) */}
+              <button
+                onClick={() => setSelectedGroup('All')}
+                className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap font-semibold shrink-0 ${selectedGroup === 'All' ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
+              >
+                ALL
+              </button>
+
+              {/* Brand Dropdown - Independent Filter */}
+              <div className="relative inline-flex items-center shrink-0">
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  className="appearance-none w-[80px] md:w-[100px] pl-2 pr-5 py-1.5 md:pl-3 md:pr-7 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap outline-none font-bold cursor-pointer uppercase text-ellipsis overflow-hidden bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted"
                 >
-                  {group === 'All' ? 'ALL' : group.toUpperCase()}
-                </button>
-              ))}
+                  <option value="All" className="text-slate-900 bg-white font-bold normal-case">Brands</option>
+                  {manufacturers.map(m => {
+                    const brandStr = m as string;
+                    const displayBrand = brandStr.charAt(0).toUpperCase() + brandStr.slice(1).toLowerCase();
+                    return (
+                      <option key={brandStr} value={brandStr} className="text-slate-900 bg-white font-semibold normal-case">{displayBrand}</option>
+                    );
+                  })}
+                </select>
+                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 md:w-3 md:h-3 pointer-events-none text-slate-500" />
+              </div>
+
+              {/* Rest of the Group Buttons */}
+              {groups.map(group => {
+                if (group === 'All') return null;
+                return (
+                  <button
+                    key={group}
+                    onClick={() => setSelectedGroup(group)}
+                    className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap font-semibold shrink-0 ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
+                  >
+                    {group.toUpperCase()}
+                  </button>
+                );
+              })}
 
               <button
                 onClick={() => setShowPromoOnly(!showPromoOnly)}
