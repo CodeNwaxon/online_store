@@ -269,7 +269,7 @@ function ShopContent() {
                 <select
                   value={selectedBrand}
                   onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="appearance-none w-[90px] md:w-[130px] pl-2 pr-5 py-1.5 md:pl-3 md:pr-7 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap outline-none font-bold cursor-pointer uppercase text-ellipsis overflow-hidden bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted"
+                  className="appearance-none w-[98px] md:w-[130px] pl-2 pr-5 py-1.5 md:pl-3 md:pr-7 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap outline-none font-bold cursor-pointer uppercase text-ellipsis overflow-hidden bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted"
                 >
                   <option value="All" className="text-slate-900 bg-white font-bold normal-case">All Brands</option>
                   {manufacturers.map(m => {
