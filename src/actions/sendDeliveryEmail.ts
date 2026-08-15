@@ -25,7 +25,7 @@ export async function sendDeliveryEmailAction(
       <p>Warm greetings from <b>NOMO STOREZ</b> !!! 🌟</p>
       <p>${deliveredMessage}${deliveryNote}</p>
       <p>You can view and download your <b>Customer's Copy Receipt</b> here:<br>
-      <a href="https://nomo-stores.com/receipt/${orderId}">https://nomo-stores.com/receipt/${orderId}</a></p>
+      <a href="https://nomostores.com/receipt/${orderId}">https://nomostores.com/receipt/${orderId}</a></p>
       <p>Thank you for shopping with us!</p>
     </div>
   `;

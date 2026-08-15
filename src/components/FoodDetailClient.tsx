@@ -158,7 +158,7 @@ export default function FoodDetailClient() {
 
   const handleShareFood = () => {
     if (!partnerData?.referralCode) return;
-    const currentReferralLink = `https://nomo-stores.com/foods/${food.id}?ref=${partnerData.referralCode}`;
+    const currentReferralLink = `https://nomostores.com/foods/${food.id}?ref=${partnerData.referralCode}`;
     const shareText = `Craving ${food.name}? 🍲\n\nOrder it fresh at Nomo Storez! ✨\n`;
 
     if (navigator.share) {

@@ -82,7 +82,7 @@ export default function AdminPartnership() {
     setActionLoading(true);
     try {
       const code = generateReferralCode();
-      const referralLink = `https://nomo-stores.com/?ref=${code}`;
+      const referralLink = `https://nomostores.com/?ref=${code}`;
 
       await updateDoc(doc(db, 'partners', partner.id), {
         status: 'approved',

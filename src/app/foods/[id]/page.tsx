@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         }
       }
       
-      const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomo-stores.com${imageUrl}`;
+      const absoluteImageUrl = imageUrl.startsWith('http') ? imageUrl : `https://nomostores.com${imageUrl}`;
       
       return {
         title: `${title} | Food Market | Nomo Storez`,

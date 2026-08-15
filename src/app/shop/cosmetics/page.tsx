@@ -30,7 +30,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
           }
         }
 
-        const absoluteImageUrl = bannerUrl.startsWith('http') ? bannerUrl : `https://nomo-stores.com${bannerUrl}`;
+        const absoluteImageUrl = bannerUrl.startsWith('http') ? bannerUrl : `https://nomostores.com${bannerUrl}`;
 
         return {
           title: `${storeName} | Nomo Storez`,

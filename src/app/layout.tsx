@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    metadataBase: new URL("https://nomo-stores.com"),
+    metadataBase: new URL("https://nomostores.com"),
     title: `${siteName} | Premium African Inspired Goods`,
     description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
     manifest: "/manifest.json",
@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      url: "https://nomo-stores.com",
+      url: "https://nomostores.com",
       siteName: siteName,
       images: [
         {

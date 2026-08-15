@@ -280,7 +280,7 @@ export default function PartnershipPage() {
   const handleShare = () => {
     if (!partnerData?.referralCode) return;
 
-    const currentReferralLink = `https://nomo-stores.com/?ref=${partnerData.referralCode}`;
+    const currentReferralLink = `https://nomostores.com/?ref=${partnerData.referralCode}`;
     const shareText = PROMO_MESSAGE;
 
     if (navigator.share) {
@@ -626,7 +626,7 @@ export default function PartnershipPage() {
                 <p className="text-[10px] font-bold text-primary uppercase mb-1">Referral Link</p>
                 <div className="w-full overflow-hidden">
                   <p className={`text-sm font-medium truncate w-full block ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`}>
-                    {`https://nomo-stores.com/?ref=${partnerData.referralCode}`}
+                    {`https://nomostores.com/?ref=${partnerData.referralCode}`}
                   </p>
                 </div>
               </div>

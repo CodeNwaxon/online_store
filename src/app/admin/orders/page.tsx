@@ -174,7 +174,7 @@ export default function AdminOrders() {
         let phone = orderToNotify.phone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '234' + phone.slice(1);
 
-        const receiptUrl = `https://nomo-stores.com/receipt/${orderToNotify.id}`;
+        const receiptUrl = `https://nomostores.com/receipt/${orderToNotify.id}`;
         const isShip = orderToNotify.deliveryMethod === 'ship';
         const deliveryNote = isShip
           ? `\n\n📌 *Delivery Note:* Estimated delivery time is max *${shippingMaxDays} business ${shippingMaxDays === 1 ? 'day' : 'days'}* (items often arrive earlier!). If your order is not delivered within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you are guaranteed a full refund.`

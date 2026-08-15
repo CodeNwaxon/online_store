@@ -41,7 +41,7 @@ interface StoreMessageItem {
 }
 
 const ALLOWED_HOSTS = [
-  'nomo-stores.com',
+  'nomostores.com',
   'nomo-store.vercel.app',
   'localhost:3000'
 ];
