@@ -13,7 +13,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaBoxes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaBoxes, FaChevronDown } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
@@ -127,13 +127,13 @@ export default function AdminToiletKitchen() {
     const q = query(collection(db, 'toilet_kitchen'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
-      
+
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setProducts(sortedProds);
 
       // Extract unique groups and categories
@@ -279,11 +279,11 @@ export default function AdminToiletKitchen() {
   };
 
   const handleEdit = (product: ShopProduct) => {
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
-        if (!hasFullAccess && (product as any).vendor && (product as any).vendor !== user?.email) {
-          toast.error('You can only edit your own items.');
-          return;
-        }
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+    if (!hasFullAccess && (product as any).vendor && (product as any).vendor !== user?.email) {
+      toast.error('You can only edit your own items.');
+      return;
+    }
     setEditingId(product.id);
     setName(product.name);
     setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
@@ -303,13 +303,13 @@ export default function AdminToiletKitchen() {
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
-        const existingProduct = products.find(p => p.id === productToDelete);
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
-        if (!hasFullAccess && existingProduct && (existingProduct as any).vendor && (existingProduct as any).vendor !== user?.email) {
-          toast.error('You can only delete your own items.');
-          setProductToDelete(null);
-          return;
-        }
+    const existingProduct = products.find(p => p.id === productToDelete);
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/TOILET-KITCHEN'));
+    if (!hasFullAccess && existingProduct && (existingProduct as any).vendor && (existingProduct as any).vendor !== user?.email) {
+      toast.error('You can only delete your own items.');
+      setProductToDelete(null);
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'toilet_kitchen', productToDelete));
@@ -328,14 +328,14 @@ export default function AdminToiletKitchen() {
   const baseFilteredProducts = visibleProducts.filter(p => {
     if (filterGroup === 'Low Stock') return (p.quantity ?? 0) <= 5;
     if (filterGroup === 'All') return true;
-    return p.group === filterGroup;
+    return p.group?.toLowerCase() === filterGroup.toLowerCase();
   });
 
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
     const fuse = new Fuse(baseFilteredProducts, {
       keys: ['name', 'group', 'category', 'productCode'],
-      threshold: 0.3,
+      threshold: 0.1,
       ignoreLocation: true
     });
     return fuse.search(searchQuery.trim()).map(r => r.item);
@@ -506,17 +506,17 @@ export default function AdminToiletKitchen() {
                   <option value="custom" className="text-teal-700 font-bold">Customise Shipping Amount</option>
                 </select>
                 {isCustomShipping && (
-                   <div className="mt-2 animate-[slideIn_0.2s_ease]">
-                      <label className="text-[0.65rem] font-bold text-teal-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
-                      <input
-                        type="text"
-                        required={isCustomShipping}
-                        value={customShippingAmount}
-                        onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
-                        placeholder="e.g. 5,000"
-                        className="w-full p-2 rounded-md border border-teal-500/50 bg-background text-sm focus:border-teal-600 outline-none transition-all font-bold"
-                      />
-                   </div>
+                  <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                    <label className="text-[0.65rem] font-bold text-teal-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                    <input
+                      type="text"
+                      required={isCustomShipping}
+                      value={customShippingAmount}
+                      onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                      placeholder="e.g. 5,000"
+                      className="w-full p-2 rounded-md border border-teal-500/50 bg-background text-sm focus:border-teal-600 outline-none transition-all font-bold"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -653,8 +653,8 @@ export default function AdminToiletKitchen() {
               <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
               <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="toilet_kitchen" allowAll />
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-              <div className="relative w-full sm:w-64">
+            <div className="flex flex-row gap-2 w-full md:w-auto items-center">
+              <div className="relative flex-[2] w-full">
                 <input
                   type="text"
                   placeholder="Search..."
@@ -664,15 +664,18 @@ export default function AdminToiletKitchen() {
                 />
                 <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
               </div>
-              <select
-                className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
-                value={filterGroup}
-                onChange={e => setFilterGroup(e.target.value)}
-              >
-                <option value="All">All Groups</option>
-                <option value="Low Stock">Low Stock (≤ 5)</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <div className="relative flex-[1]">
+                <select
+                  className="w-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
+                  value={filterGroup}
+                  onChange={e => setFilterGroup(e.target.value)}
+                >
+                  <option value="All">Brands</option>
+                  <option value="Low Stock">Low Stock (≤ 5)</option>
+                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </div>
 

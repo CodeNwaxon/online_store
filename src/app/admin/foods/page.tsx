@@ -13,7 +13,7 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils, FaChevronDown } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
@@ -164,13 +164,13 @@ export default function AdminFoods() {
     const q = query(collection(db, 'foods'), orderBy('updatedAt', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
-      
+
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
         const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setFoods(sortedProds);
 
       // Extract unique groups and categories
@@ -306,17 +306,17 @@ export default function AdminFoods() {
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         measurements: includeMeasurements && Object.keys(selectedMeasurements).length > 0
           ? JSON.stringify(
-              Object.fromEntries(
-                Object.entries(selectedMeasurements).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
-              )
+            Object.fromEntries(
+              Object.entries(selectedMeasurements).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
             )
+          )
           : '',
         measurementCostPrices: includeMeasurements && Object.keys(selectedMeasurementCosts).length > 0
           ? JSON.stringify(
-              Object.fromEntries(
-                Object.entries(selectedMeasurementCosts).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
-              )
+            Object.fromEntries(
+              Object.entries(selectedMeasurementCosts).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
             )
+          )
           : '',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
@@ -352,11 +352,11 @@ export default function AdminFoods() {
   };
 
   const handleEdit = (food: ShopProduct) => {
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
-        if (!hasFullAccess && (food as any).vendor && (food as any).vendor !== user?.email) {
-          toast.error('You can only edit your own items.');
-          return;
-        }
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+    if (!hasFullAccess && (food as any).vendor && (food as any).vendor !== user?.email) {
+      toast.error('You can only edit your own items.');
+      return;
+    }
     setEditingId(food.id);
     setName(food.name);
     setCostPrice(formatPriceInput((food.costPrice || 0).toString()));
@@ -370,7 +370,7 @@ export default function AdminFoods() {
     setCustomShippingAmount((food as any).customShippingAmount ? formatPriceInput((food as any).customShippingAmount.toString()) : '');
     setRequiresMinShipping(food.requiresMinShipping || false);
     setMinShippingQty(food.minShippingQty?.toString() || '0');
-    
+
     // Load measurements if they exist
     const foodMeasurements = (food as any).measurements;
     if (foodMeasurements) {
@@ -419,13 +419,13 @@ export default function AdminFoods() {
 
   const confirmDelete = async () => {
     if (!foodToDelete) return;
-        const existingFood = foods.find(f => f.id === foodToDelete);
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
-        if (!hasFullAccess && existingFood && (existingFood as any).vendor && (existingFood as any).vendor !== user?.email) {
-          toast.error('You can only delete your own items.');
-          setFoodToDelete(null);
-          return;
-        }
+    const existingFood = foods.find(f => f.id === foodToDelete);
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
+    if (!hasFullAccess && existingFood && (existingFood as any).vendor && (existingFood as any).vendor !== user?.email) {
+      toast.error('You can only delete your own items.');
+      setFoodToDelete(null);
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'foods', foodToDelete));
@@ -441,17 +441,17 @@ export default function AdminFoods() {
   const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/FOODS'));
   const visibleFoods = hasFullAccess ? foods : foods.filter(f => (f as any).vendor === user?.email);
 
-  const baseFilteredFoods = visibleFoods.filter(f => {
-    if (filterGroup === 'Low Stock') return (f.quantity ?? 0) <= 5;
+  const baseFilteredFoods = visibleFoods.filter(food => {
+    if (filterGroup === 'Low Stock') return (food.quantity ?? 0) <= 5;
     if (filterGroup === 'All') return true;
-    return f.group === filterGroup;
+    return food.group?.toLowerCase() === filterGroup.toLowerCase();
   });
 
   const filteredFoods = (() => {
     if (!searchQuery.trim()) return baseFilteredFoods;
     const fuse = new Fuse(baseFilteredFoods, {
       keys: ['name', 'group', 'category', 'productCode'],
-      threshold: 0.3,
+      threshold: 0.1,
       ignoreLocation: true
     });
     return fuse.search(searchQuery.trim()).map(r => r.item);
@@ -622,17 +622,17 @@ export default function AdminFoods() {
                   <option value="custom" className="text-green-700 font-bold">Customise Shipping Amount</option>
                 </select>
                 {isCustomShipping && (
-                   <div className="mt-2 animate-[slideIn_0.2s_ease]">
-                      <label className="text-[0.65rem] font-bold text-green-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
-                      <input
-                        type="text"
-                        required={isCustomShipping}
-                        value={customShippingAmount}
-                        onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
-                        placeholder="e.g. 5,000"
-                        className="w-full p-2 rounded-md border border-green-500/50 bg-background text-sm focus:border-green-600 outline-none transition-all font-bold"
-                      />
-                   </div>
+                  <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                    <label className="text-[0.65rem] font-bold text-green-700 mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                    <input
+                      type="text"
+                      required={isCustomShipping}
+                      value={customShippingAmount}
+                      onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                      placeholder="e.g. 5,000"
+                      className="w-full p-2 rounded-md border border-green-500/50 bg-background text-sm focus:border-green-600 outline-none transition-all font-bold"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -640,19 +640,19 @@ export default function AdminFoods() {
             {/* Measurements Section */}
             <div className="space-y-2 mb-6">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={includeMeasurements} 
-                  onChange={(e) => setIncludeMeasurements(e.target.checked)} 
+                <input
+                  type="checkbox"
+                  checked={includeMeasurements}
+                  onChange={(e) => setIncludeMeasurements(e.target.checked)}
                   className="size-4 accent-green-600"
                 />
                 Add Market Measurements (Grains, Kilos, etc.)
               </label>
-              
+
               {includeMeasurements && (
                 <div className="space-y-4 py-4 px-2 border border-green-200 rounded-lg bg-green-50/50 animate-in fade-in slide-in-from-top-2">
                   <label className="text-sm font-bold block">Available Measurements (tick to add)</label>
-                  
+
                   {/* Grain Measurements */}
                   <div>
                     <p className="text-xs font-black text-green-800 mb-1.5">Grains & General Measurements</p>
@@ -877,8 +877,8 @@ export default function AdminFoods() {
               <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
               <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="foods" allowAll />
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-              <div className="relative w-full sm:w-64">
+            <div className="flex flex-row gap-2 w-full md:w-auto items-center">
+              <div className="relative flex-[2] w-full">
                 <input
                   type="text"
                   placeholder="Search foods..."
@@ -888,15 +888,18 @@ export default function AdminFoods() {
                 />
                 <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
               </div>
-              <select
-                className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
-                value={filterGroup}
-                onChange={e => setFilterGroup(e.target.value)}
-              >
-                <option value="All">All Groups</option>
-                <option value="Low Stock">Low Stock (≤ 5)</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <div className="relative flex-[1]">
+                <select
+                  className="w-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
+                  value={filterGroup}
+                  onChange={e => setFilterGroup(e.target.value)}
+                >
+                  <option value="All">Brands</option>
+                  <option value="Low Stock">Low Stock (≤ 5)</option>
+                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
           </div>
 
