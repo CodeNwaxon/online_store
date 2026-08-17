@@ -213,7 +213,7 @@ export default function AdminToiletKitchen() {
     if (!name.trim()) return toast.error('Product name is required.');
     if (!costPrice.trim()) return toast.error('Cost price is required.');
     if (!price.trim()) return toast.error('Selling price is required.');
-    if (!group) return toast.error('Please select a brand/group.');
+    if (!group) return toast.error('Please select a group.');
     if (!category) return toast.error('Please select a category.');
     if (!size && !isCustomShipping) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
@@ -385,7 +385,7 @@ export default function AdminToiletKitchen() {
               {/* Group/Brand */}
               <div className="space-y-2">
                 <label className="text-sm font-bold flex justify-between items-center">
-                  Brand / Material / Group
+                  Group
                   <button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-primary text-[0.7rem] flex items-center gap-1 hover:underline">
                     <FaPlus size={10} /> {isAddingGroup ? 'Cancel' : 'Add New'}
                   </button>
@@ -670,7 +670,7 @@ export default function AdminToiletKitchen() {
                   value={filterGroup}
                   onChange={e => setFilterGroup(e.target.value)}
                 >
-                  <option value="All">Brands</option>
+                  <option value="All">Groups</option>
                   <option value="Low Stock">Low Stock (≤ 5)</option>
                   {groups.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>

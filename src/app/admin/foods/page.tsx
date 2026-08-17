@@ -894,7 +894,7 @@ export default function AdminFoods() {
                   value={filterGroup}
                   onChange={e => setFilterGroup(e.target.value)}
                 >
-                  <option value="All">Brands</option>
+                  <option value="All">Groups</option>
                   <option value="Low Stock">Low Stock (≤ 5)</option>
                   {groups.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>

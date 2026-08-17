@@ -476,11 +476,11 @@ function AdminProductsContent() {
   };
 
   const handleEdit = (product: any) => {
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
-        if (!hasFullAccess && product.vendor && product.vendor !== user?.email) {
-          toast.error('You can only edit your own items.');
-          return;
-        }
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+    if (!hasFullAccess && product.vendor && product.vendor !== user?.email) {
+      toast.error('You can only edit your own items.');
+      return;
+    }
     setEditingId(product.id);
     setName(product.name);
     setDescription(product.description);
@@ -513,13 +513,13 @@ function AdminProductsContent() {
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
-        const existingProduct = products.find(p => p.id === productToDelete);
-        const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
-        if (!hasFullAccess && existingProduct && existingProduct.vendor && existingProduct.vendor !== user?.email) {
-          toast.error('You can only delete your own items.');
-          setProductToDelete(null);
-          return;
-        }
+    const existingProduct = products.find(p => p.id === productToDelete);
+    const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/PRODUCTS'));
+    if (!hasFullAccess && existingProduct && existingProduct.vendor && existingProduct.vendor !== user?.email) {
+      toast.error('You can only delete your own items.');
+      setProductToDelete(null);
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'products', productToDelete));
@@ -830,17 +830,17 @@ function AdminProductsContent() {
                 <option value="custom" className="text-primary font-bold">Customise Shipping Amount</option>
               </select>
               {isCustomShipping && (
-                 <div className="mt-2 animate-[slideIn_0.2s_ease]">
-                    <label className="text-[0.65rem] font-bold text-secondary mb-1 block uppercase">Custom Shipping Amount (₦)</label>
-                    <input
-                      type="text"
-                      required={isCustomShipping}
-                      value={customShippingAmount}
-                      onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
-                      placeholder="e.g. 5,000"
-                      className="w-full p-2 rounded-md border border-secondary/50 bg-background text-sm focus:border-secondary outline-none transition-all font-bold"
-                    />
-                 </div>
+                <div className="mt-2 animate-[slideIn_0.2s_ease]">
+                  <label className="text-[0.65rem] font-bold text-secondary mb-1 block uppercase">Custom Shipping Amount (₦)</label>
+                  <input
+                    type="text"
+                    required={isCustomShipping}
+                    value={customShippingAmount}
+                    onChange={(e) => setCustomShippingAmount(formatPriceInput(e.target.value))}
+                    placeholder="e.g. 5,000"
+                    className="w-full p-2 rounded-md border border-secondary/50 bg-background text-sm focus:border-secondary outline-none transition-all font-bold"
+                  />
+                </div>
               )}
             </div>
 
@@ -866,7 +866,7 @@ function AdminProductsContent() {
                         {oldPrice.trim() !== '' && (() => {
                           const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
                           const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
-                          const parsedCost  = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+                          const parsedCost = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
                           if (parsedPromo >= parsedSales) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be lower than Sales Price</span>;
                           if (parsedCost > 0 && parsedPromo <= parsedCost) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be higher than Cost Price</span>;
                           return null;
@@ -878,16 +878,15 @@ function AdminProductsContent() {
                         onChange={e => setOldPrice(formatPriceInput(e.target.value))}
                         type="text"
                         placeholder="e.g. 45,000"
-                        className={`w-full p-2 rounded-md border bg-background text-sm font-bold focus:ring-2 outline-none transition-all ${
-                          oldPrice.trim() !== '' && (() => {
-                            const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
-                            const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
-                            const parsedCost  = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
-                            return parsedPromo >= parsedSales || (parsedCost > 0 && parsedPromo <= parsedCost);
-                          })()
-                            ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
-                            : 'border-primary focus:ring-primary/20'
-                        }`}
+                        className={`w-full p-2 rounded-md border bg-background text-sm font-bold focus:ring-2 outline-none transition-all ${oldPrice.trim() !== '' && (() => {
+                          const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+                          const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
+                          const parsedCost = parseFloat(rdpPrice.replace(/,/g, '')) || 0;
+                          return parsedPromo >= parsedSales || (parsedCost > 0 && parsedPromo <= parsedCost);
+                        })()
+                          ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                          : 'border-primary focus:ring-primary/20'
+                          }`}
                       />
                     </div>
                   </div>
@@ -1113,49 +1112,49 @@ function AdminProductsContent() {
       </section>
 
       {/* PRODUCT LIST & FILTERS */}
-      <section className="space-y-6 md:space-y-8 px-4 md:px-0 pt-16 border-t border-border/50">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-            <div className="flex flex-col gap-1 w-full md:w-auto">
-              <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
-              <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="products" allowAll />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-              <div className="flex flex-row gap-2 w-full sm:w-auto">
-                <div className="relative flex-[2] w-full">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
-                  <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
-                </div>
-                <div className="relative flex-[1]">
-                  <select
-                    className="w-full h-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
-                    value={filterBrand}
-                    onChange={e => setFilterBrand(e.target.value)}
-                  >
-                    <option value="All">Brands</option>
-                    {availableBrands.map((b: any) => <option key={b as string} value={b as string}>{b as string}</option>)}
-                  </select>
-                  <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
-                </div>
+      <section className="space-y-6 md:space-y-8 px-0 pt-16 border-t border-border/50">
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
+            <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="products" allowAll />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+            <div className="flex flex-row gap-2 w-full sm:w-auto">
+              <div className="relative flex-[2] w-full">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+                <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
               </div>
-              <select
-                className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
-                value={filterGroup}
-                onChange={e => setFilterGroup(e.target.value)}
-              >
-                <option value="All">All Groups</option>
-                <option value="Low Stock">Low Stock (≤ 5)</option>
-                {groups.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <div className="relative flex-[1]">
+                <select
+                  className="w-full h-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
+                  value={filterBrand}
+                  onChange={e => setFilterBrand(e.target.value)}
+                >
+                  <option value="All">All Brands</option>
+                  {availableBrands.map((b: any) => <option key={b as string} value={b as string}>{b as string}</option>)}
+                </select>
+                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
+            <select
+              className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
+              value={filterGroup}
+              onChange={e => setFilterGroup(e.target.value)}
+            >
+              <option value="All">All Groups</option>
+              <option value="Low Stock">Low Stock (≤ 5)</option>
+              {groups.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        <div className="px-8 md:px-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {displayedProducts.map(product => (
             <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
               <div className="relative flex-1 flex flex-col">

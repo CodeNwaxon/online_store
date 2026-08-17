@@ -228,7 +228,7 @@ export default function AdminCosmetics() {
     if (!name.trim()) return toast.error('Product name is required.');
     if (!costPrice.trim()) return toast.error('Cost price is required.');
     if (!price.trim()) return toast.error('Selling price is required.');
-    if (!group) return toast.error('Please select a brand/group.');
+    if (!group) return toast.error('Please select a group.');
     if (!category) return toast.error('Please select a category.');
     if (!size && !isCustomShipping) return toast.error('Please select a product size.');
     if (images.length === 0) return toast.error('Please add at least one image');
@@ -500,10 +500,10 @@ export default function AdminCosmetics() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Group/Brand */}
+              {/* Group */}
               <div className="space-y-2">
                 <label className="text-sm font-bold flex justify-between items-center">
-                  Brand / Group
+                  Group
                   <button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-primary text-[0.7rem] flex items-center gap-1 hover:underline">
                     <FaPlus size={10} /> {isAddingGroup ? 'Cancel' : 'Add New'}
                   </button>
@@ -512,7 +512,7 @@ export default function AdminCosmetics() {
                   <div className="flex gap-2">
                     <input
                       autoFocus
-                      placeholder="Type new brand..."
+                      placeholder="Type new group..."
                       value={newGroupName}
                       onChange={e => setNewGroupName(e.target.value)}
                       className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm"
@@ -541,7 +541,7 @@ export default function AdminCosmetics() {
                     value={group}
                     onChange={(val) => { setGroup(val); setCategory(''); }}
                     options={groups}
-                    placeholder="Select Brand"
+                    placeholder="Select Group"
                   />
                 )}
               </div>
@@ -591,7 +591,7 @@ export default function AdminCosmetics() {
                     value={category}
                     onChange={(val) => setCategory(val)}
                     options={group ? (categoriesByGroup[group.toUpperCase()] || []) : []}
-                    placeholder={group ? 'Select Category' : 'Choose Brand First'}
+                    placeholder={group ? 'Select Category' : 'Choose Group First'}
                   />
                 )}
               </div>
@@ -788,7 +788,7 @@ export default function AdminCosmetics() {
                   value={filterGroup}
                   onChange={e => setFilterGroup(e.target.value)}
                 >
-                  <option value="All">Brands</option>
+                  <option value="All">Groups</option>
                   <option value="Low Stock">Low Stock (≤ 5)</option>
                   {groups.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>

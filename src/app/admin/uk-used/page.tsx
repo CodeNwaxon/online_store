@@ -62,6 +62,7 @@ export default function AdminUkUsed() {
   const [minShippingQty, setMinShippingQty] = useState('0');
   const [hasIssues, setHasIssues] = useState('');
   const [issuesDescription, setIssuesDescription] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
 
   // Dynamic Groups & Categories State
   const [groups, setGroups] = useState<string[]>([]);
@@ -100,6 +101,7 @@ export default function AdminUkUsed() {
   // Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState('All');
+  const [filterBrand, setFilterBrand] = useState('All');
 
   // Size shipping prices
   const [sizePrices, setSizePrices] = useState<Record<string, string>>({});
@@ -230,6 +232,7 @@ export default function AdminUkUsed() {
     setImageUrlInput('');
     setHasIssues('');
     setIssuesDescription('');
+    setManufacturer('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -282,6 +285,7 @@ export default function AdminUkUsed() {
         vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
         hasIssues: hasIssues === 'yes',
         issuesDescription: hasIssues === 'yes' ? issuesDescription.trim() : '',
+        manufacturer: manufacturer.trim() || 'Unknown',
       };
 
       if (editingId) {
@@ -336,6 +340,7 @@ export default function AdminUkUsed() {
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
     setHasIssues((product as any).hasIssues ? 'yes' : 'no');
     setIssuesDescription((product as any).issuesDescription || '');
+    setManufacturer((product as any).manufacturer || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -363,10 +368,18 @@ export default function AdminUkUsed() {
   const hasFullAccess = isCEO || (adminData?.vip && adminData?.assignedRoutes?.includes('/ADMIN/UK-USED'));
   const visibleProducts = hasFullAccess ? products : products.filter(p => (p as any).vendor === user?.email);
 
+  const availableBrands = Array.from(new Set(products.map(p => ((p as any).manufacturer || 'Unknown').trim().toUpperCase()))).filter(Boolean).sort();
+
   const baseFilteredProducts = visibleProducts.filter(p => {
-    if (filterGroup === 'Low Stock') return (p.quantity ?? 0) <= 5;
-    if (filterGroup === 'All') return true;
-    return p.group?.toLowerCase() === filterGroup.toLowerCase();
+    let matchGroup = true;
+    let matchBrand = true;
+
+    if (filterGroup === 'Low Stock') matchGroup = (p.quantity ?? 0) <= 5;
+    else if (filterGroup !== 'All') matchGroup = p.group?.toLowerCase() === filterGroup.toLowerCase();
+
+    if (filterBrand !== 'All') matchBrand = ((p as any).manufacturer || 'Unknown').trim().toLowerCase() === filterBrand.toLowerCase();
+
+    return matchGroup && matchBrand;
   });
 
   const filteredProducts = (() => {
@@ -499,12 +512,26 @@ export default function AdminUkUsed() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold">Product Name</label>
                 <input required value={name} onChange={e => setName(e.target.value)} type="text" placeholder="e.g. Open Box Samsung Galaxy S22 Ultra" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
               </div>
 
+              {/* Manufacturer */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold">Brand / Manufacturer</label>
+                <input
+                  value={manufacturer}
+                  onChange={e => setManufacturer(e.target.value)}
+                  type="text"
+                  placeholder="e.g. Samsung, Apple, Vivo..."
+                  className="w-full p-3 rounded-md border border-border bg-background text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-red-700">Cost Price (₦)</label>
                 <input required value={costPrice} onChange={e => setCostPrice(formatPriceInput(e.target.value))} type="text" placeholder="e.g. 2,000" className="w-full p-3 rounded-md border border-red-200 bg-background text-sm font-bold" />
@@ -522,10 +549,10 @@ export default function AdminUkUsed() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Group/Brand */}
+              {/* Group */}
               <div className="space-y-2">
                 <label className="text-sm font-bold flex justify-between items-center">
-                  Brand / Group
+                  Group
                   <button type="button" onClick={() => setIsAddingGroup(!isAddingGroup)} className="text-primary text-[0.7rem] flex items-center gap-1 hover:underline">
                     <FaPlus size={10} /> {isAddingGroup ? 'Cancel' : 'Add New'}
                   </button>
@@ -534,7 +561,7 @@ export default function AdminUkUsed() {
                   <div className="flex gap-2">
                     <input
                       autoFocus
-                      placeholder="Type new brand..."
+                      placeholder="Type new group..."
                       value={newGroupName}
                       onChange={e => setNewGroupName(e.target.value)}
                       className="flex-1 p-3 rounded-md border border-primary bg-primary/5 text-sm"
@@ -563,7 +590,7 @@ export default function AdminUkUsed() {
                     value={group}
                     onChange={(val) => { setGroup(val); setCategory(''); }}
                     options={groups}
-                    placeholder="Select Brand"
+                    placeholder="Select Group"
                   />
                 )}
               </div>
@@ -613,7 +640,7 @@ export default function AdminUkUsed() {
                     value={category}
                     onChange={(val) => setCategory(val)}
                     options={group ? (categoriesByGroup[group.toUpperCase()] || []) : []}
-                    placeholder={group ? 'Select Category' : 'Choose Brand First'}
+                    placeholder={group ? 'Select Category' : 'Choose Group First'}
                   />
                 )}
               </div>
@@ -870,29 +897,39 @@ export default function AdminUkUsed() {
               <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
               <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="uk_used" allowAll />
             </div>
-            <div className="flex flex-row gap-2 w-full md:w-auto items-center">
-              <div className="relative flex-[2] w-full">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-                <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+              <div className="flex flex-row gap-2 w-full sm:w-auto">
+                <div className="relative flex-[2] w-full">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="w-full pl-10 pr-4 py-2 rounded-md border border-border bg-background text-sm"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                  <FaSearch className="absolute left-3 top-3 text-muted-foreground size-3" />
+                </div>
+                <div className="relative flex-[1]">
+                  <select
+                    className="w-full h-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
+                    value={filterBrand}
+                    onChange={e => setFilterBrand(e.target.value)}
+                  >
+                    <option value="All">All Brands</option>
+                    {availableBrands.map((b: any) => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                  <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
+                </div>
               </div>
-              <div className="relative flex-[1]">
-                <select
-                  className="w-full appearance-none pl-2 pr-6 py-2 rounded-md border border-border bg-background text-[10px] md:text-sm font-bold uppercase cursor-pointer"
-                  value={filterGroup}
-                  onChange={e => setFilterGroup(e.target.value)}
-                >
-                  <option value="All">Brands</option>
-                  <option value="Low Stock">Low Stock (≤ 5)</option>
-                  {groups.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
-              </div>
+              <select
+                className="w-full sm:w-auto p-2 rounded-md border border-border bg-background text-sm"
+                value={filterGroup}
+                onChange={e => setFilterGroup(e.target.value)}
+              >
+                <option value="All">Groups</option>
+                <option value="Low Stock">Low Stock (≤ 5)</option>
+                {groups.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
             </div>
           </div>
 
