@@ -531,7 +531,7 @@ export default function Navbar() {
           {/* Desktop right actions */}
           <div className="hidden md:flex items-center gap-3">
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-[0.4rem] text-[0.85rem] font-bold border-2 border-current px-[0.9rem] py-[0.45rem] rounded-md">
-              <FaWhatsapp size={16} /> Contact Us
+              <FaWhatsapp size={16} /> WhatsApp Us
             </a>
             {user ? (
               <div className="flex items-center gap-[0.6rem]">
