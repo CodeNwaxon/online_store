@@ -15,6 +15,8 @@ import WarrantyModal from '@/components/WarrantyModal';
 import { toast } from 'react-hot-toast';
 import { usePartner } from '@/hooks/usePartner';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
+import { getValidColor } from './ShopCard';
+import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 
 const cardThemes = [
   { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
@@ -332,21 +334,34 @@ export default function ProductDetailClient() {
             </div>
 
             {/* Color Cards Section */}
-            {product.color && product.color.trim() && (() => {
-              const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
+            {(() => {
+              let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+              if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+                colors = Object.keys(product.uniqueImageVariants);
+              }
               return colors.length > 0 ? (
                 <div className="mb-6">
                   <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Colors</h3>
                   <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
-                    {colors.map((c: string, i: number) => (
-                      <span
-                        key={i}
-                        className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
-                        style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
-                      >
-                        {c}
-                      </span>
-                    ))}
+                    {colors.map((c: string, i: number) => {
+                      const isImage = c.startsWith('http') || c.startsWith('data:');
+                      return isImage ? (
+                        <img
+                          key={i}
+                          src={c}
+                          alt="Color variant"
+                          className="shrink-0 w-6 h-8 object-cover rounded shadow-sm border border-gray-200 transition-transform hover:scale-105"
+                        />
+                      ) : (
+                        <span
+                          key={i}
+                          className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
+                          style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
+                        >
+                          {c}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null;
@@ -380,13 +395,14 @@ export default function ProductDetailClient() {
                 <button
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${theme.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
-                    if (product.color && product.color.trim()) {
-                      const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
-                      if (colors.length > 0) {
-                        setShowColorModal(true);
-                        setSelectedColor('Any Color');
-                        return;
-                      }
+                    let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+                    if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+                      colors = Object.keys(product.uniqueImageVariants);
+                    }
+                    if (colors.length > 0) {
+                      setShowColorModal(true);
+                      setSelectedColor('Any Color');
+                      return;
                     }
 
                     const toastId = toast.loading(`Adding ${product.name}...`);
@@ -394,14 +410,15 @@ export default function ProductDetailClient() {
                     const currentInCart = existing ? existing.quantity : 0;
                     try {
                       const docSnap = await getDoc(doc(db, 'products', product.id));
-                      const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                      const liveQty = docSnap.exists() ? getAvailableVariantQuantity(docSnap.data()) : getAvailableVariantQuantity(product);
                       if (currentInCart + 1 > liveQty) {
                         toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     } catch (err) {
-                      if (currentInCart + 1 > (product.quantity ?? 0)) {
-                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                      const fallbackQty = getAvailableVariantQuantity(product);
+                      if (currentInCart + 1 > fallbackQty) {
+                        toast.error(`Only ${fallbackQty} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     }
@@ -466,7 +483,10 @@ export default function ProductDetailClient() {
 
       {/* Color Selection Overlay — matches ProductCard overlay */}
       {showColorModal && (() => {
-        const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+        let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+        if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+          colors = Object.keys(product.uniqueImageVariants);
+        }
         const getContrastTextColor = (colorName: string) => {
           const lightColors = ['white', 'yellow', 'lime', 'cyan', 'gold', 'silver', 'pink', 'beige', 'ivory', 'light', 'cream', 'peach', 'wheat', 'lemon'];
           if (lightColors.some(lc => colorName.toLowerCase().includes(lc))) return 'text-black';
@@ -496,21 +516,37 @@ export default function ProductDetailClient() {
                 >
                   Any Color
                 </button>
-                {colors.map((c: string) => (
-                  <button
-                    key={c}
-                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${selectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                    style={selectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor(c); }}
-                  >
-                    {c}
-                  </button>
-                ))}
+                {colors.map((c: string) => {
+                  const isImage = c.startsWith('http') || c.startsWith('data:');
+                  return (
+                    <button
+                      key={c}
+                      className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImage ? 'w-8 h-12 p-0 shrink-0' : 'px-3 py-1.5 text-[11px] font-bold shrink-0'} ${selectedColor === c
+                        ? `${!isImage ? getContrastTextColor(c) : ''} ${isImage ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                        : `${isImage ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}`}
+                      style={!isImage ? (selectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor(c); }}
+                    >
+                      {isImage ? (
+                        <>
+                          <img src={c} alt={(c.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT")} className="w-full h-full object-cover" />
+                          {selectedColor === c && (
+                            <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
+                              <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        c
+                      )}
+                    </button>
+                  );
+                })}
               </div>
               <div className="mt-2 pt-2 border-t border-border">
                 <button
                   className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!selectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (selectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(selectedColor)} hover:opacity-90`)}`}
-                  style={selectedColor && selectedColor !== 'Any Color' ? { backgroundColor: selectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                  style={selectedColor && selectedColor !== 'Any Color' ? { backgroundColor: getValidColor(selectedColor) } : undefined}
                   disabled={!selectedColor}
                   onClick={async (e) => {
                     e.preventDefault();
@@ -528,14 +564,15 @@ export default function ProductDetailClient() {
                     const currentInCart = existing ? existing.quantity : 0;
                     try {
                       const docSnap = await getDoc(doc(db, 'products', product.id));
-                      const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                      const liveQty = docSnap.exists() ? getAvailableVariantQuantity(docSnap.data(), undefined, finalColor) : getAvailableVariantQuantity(product, undefined, finalColor);
                       if (currentInCart + 1 > liveQty) {
                         toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     } catch (err) {
-                      if (currentInCart + 1 > (product.quantity ?? 0)) {
-                        toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                      const fallbackQty = getAvailableVariantQuantity(product, undefined, finalColor);
+                      if (currentInCart + 1 > fallbackQty) {
+                        toast.error(`Only ${fallbackQty} available in stock`, { id: toastId, duration: 3000 });
                         return;
                       }
                     }

@@ -90,7 +90,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-black truncate">{adminData?.name || 'Admin'}</p>
+                <p className="text-sm font-black truncate">
+                  {isCEO ? 'CEO' : adminData?.specialStore ? 'Vendor' : adminData?.vip ? 'VIP Admin' : (adminData?.name || 'Admin')}
+                </p>
                 <p className="text-[10px] text-muted-foreground truncate">{auth.currentUser?.email}</p>
               </div>
             </div>

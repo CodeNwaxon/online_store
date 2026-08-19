@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 
 interface CartSliderProps {
   isOpen: boolean;
@@ -21,19 +22,31 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [siteName, setSiteName] = useState('Quick Choice');
-  const [exceededStockItem, setExceededStockItem] = useState<{ id: string; name: string; available: number } | null>(null);
+  const [exceededStockItem, setExceededStockItem] = useState<{ id: string; name: string; available: number; color?: string; size?: string } | null>(null);
 
   const handleIncreaseQuantity = async (item: any) => {
     try {
+      // Determine which collection(s) to check
       const collectionName = item.category === 'Food' ? 'foods' : 'products';
-      const docSnap = await getDoc(doc(db, collectionName, item.id));
+      let docSnap = await getDoc(doc(db, collectionName, item.id));
+      
+      // If not found in 'products', try other collections
+      if (!docSnap.exists() && collectionName === 'products') {
+        docSnap = await getDoc(doc(db, 'wears', item.id));
+        if (!docSnap.exists()) {
+          docSnap = await getDoc(doc(db, 'cosmetics', item.id));
+        }
+      }
+      
       if (docSnap.exists()) {
-        const liveQty = Number(docSnap.data().quantity) || 0;
+        const liveQty = getAvailableVariantQuantity(docSnap.data(), item.selectedSize, item.selectedColor);
         if (item.quantity + 1 > liveQty) {
           setExceededStockItem({
             id: item.id,
             name: item.name,
-            available: liveQty
+            available: liveQty,
+            color: item.selectedColor,
+            size: item.selectedSize
           });
           return;
         }
@@ -41,6 +54,17 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
       updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor, item.selectedMeasurement);
     } catch (error) {
       console.error("Error verifying quantity:", error);
+      const fallbackQty = getAvailableVariantQuantity(item, item.selectedSize, item.selectedColor);
+      if (item.quantity + 1 > fallbackQty) {
+          setExceededStockItem({
+            id: item.id,
+            name: item.name,
+            available: fallbackQty,
+            color: item.selectedColor,
+            size: item.selectedSize
+          });
+          return;
+      }
       updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor, item.selectedMeasurement);
     }
   };
@@ -152,12 +176,16 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               </div>
 
               <div class="section-title" style="margin-top: 20px;">Items Ordered</div>
-              ${order.items.map((item: any) => `
+              ${order.items.map((item: any) => {
+                const colorLabel = item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) 
+                  ? item.id.slice(-6).toUpperCase() 
+                  : item.selectedColor;
+                return `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
+                  <span class="item-name">${item.name} ${item.selectedSize || colorLabel || item.selectedMeasurement ? `(${[item.selectedSize, colorLabel, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} (x${item.quantity})</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
-              `).join('')}
+              `}).join('')}
 
               <div class="total-row">
                 <div class="total-label">Total Amount:</div>
@@ -201,7 +229,10 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               </div>
               <h3 className="text-base font-black uppercase text-foreground mb-2">Quantity Limit</h3>
               <p className="text-xs text-muted-foreground mb-6 font-medium leading-relaxed">
-                We only have <span className="font-bold text-amber-600 text-sm">{exceededStockItem.available}</span> quantity left of <span className="font-bold text-foreground">{exceededStockItem.name}</span> in stock.
+                We only have <span className="font-bold text-amber-600 text-sm">{exceededStockItem.available}</span> quantity{' '}
+                {exceededStockItem.color && <span>of this color [{(exceededStockItem.color.startsWith('http') || exceededStockItem.color.startsWith('data:')) ? (exceededStockItem.color.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT") : exceededStockItem.color}] </span>}
+                {exceededStockItem.size && <span>of this size [{exceededStockItem.size}] </span>}
+                left of <span className="font-bold text-foreground">{exceededStockItem.name}</span> in stock.
               </p>
               <button
                 onClick={() => setExceededStockItem(null)}
@@ -262,11 +293,16 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                         </button>
                       </div>
                       <div className="space-y-2 mb-4">
-                        {order.items.slice(0, 2).map((item: any, i: number) => (
-                          <div key={i} className="text-[10px] font-bold text-foreground truncate">
-                            • {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-muted-foreground">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground ">(x{item.quantity})</span>
-                          </div>
-                        ))}
+                        {order.items.slice(0, 2).map((item: any, i: number) => {
+                          const colorLabel = item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) 
+                            ? item.id.slice(-6).toUpperCase() 
+                            : item.selectedColor;
+                          return (
+                            <div key={i} className="text-[10px] font-bold text-foreground truncate">
+                              • {item.name} {(item.selectedSize || colorLabel || item.selectedMeasurement) && <span className="text-muted-foreground">({[item.selectedSize, colorLabel, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground ">(x{item.quantity})</span>
+                            </div>
+                          );
+                        })}
                         {order.items.length > 2 && <div className="text-[9px] font-bold text-muted-foreground">+{order.items.length - 2} more...</div>}
                       </div>
                       <button
@@ -308,10 +344,13 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {items.map((item, idx) => (
+                {items.map((item, idx) => {
+                  const isImageColor = item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:'));
+                  const colorLabel = isImageColor ? item.id.slice(-6).toUpperCase() : item.selectedColor;
+                  return (
                   <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${item.selectedMeasurement || ''}-${idx}`} className="flex gap-4">
                     <div className="relative w-[80px] h-[80px] rounded shrink-0 overflow-hidden">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="80px" />
+                      <Image src={isImageColor ? (item.selectedColor as string) : item.image} alt={item.name} fill className="object-cover" sizes="80px" />
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between mb-1">
@@ -320,7 +359,13 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                           <div className="flex gap-2 items-center flex-wrap mt-0.5">
                             {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedSize}</span>}
                             {item.selectedMeasurement && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedMeasurement}</span>}
-                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span><span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span></span>}
+                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span>
+                              {isImageColor ? (
+                                <span className="bg-purple-100 text-purple-700 px-1 py-0.5 rounded border border-purple-200">[{colorLabel}]</span>
+                              ) : (
+                                <span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span>
+                              )}
+                            </span>}
                           </div>
                         </div>
                         <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor, item.selectedMeasurement)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>
@@ -345,7 +390,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                       </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )
           )}

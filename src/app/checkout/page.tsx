@@ -15,11 +15,13 @@ import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndFulfillOrder } from '@/actions/verifyPayment';
 import { createPendingTransaction } from '@/actions/pendingTransactions';
 import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
+import PaymentReviewOverlay from '@/components/PaymentReviewOverlay';
 
 export default function Checkout() {
   const shippingMaxDays = useShippingMaxDays();
   const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showReviewOverlay, setShowReviewOverlay] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [finalOrderData, setFinalOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -277,6 +279,7 @@ export default function Checkout() {
       setFinalOrderData(fullOrderData);
       setIsProcessingPayment(false);
       setIsSuccess(true);
+      setShowReviewOverlay(true);
       clearCart();
     } catch (error) {
       console.error("Checkout error:", error);
@@ -446,7 +449,7 @@ export default function Checkout() {
             </div>
           )}
 
-          <div className="flex flex-col gap-3 justify-center max-w-[280px] mx-auto">
+          <div className="flex flex-col gap-3 justify-center max-w-[280px] mx-auto relative">
             <button
               onClick={handlePrintReceipt}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-md font-semibold transition-colors flex items-center justify-center gap-2"
@@ -455,6 +458,7 @@ export default function Checkout() {
             </button>
             <Link href="/" className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-md font-semibold transition-colors text-center">Back to Home</Link>
             <Link href={getContinueShoppingUrl()} className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center">Continue Shopping</Link>
+            {showReviewOverlay && <PaymentReviewOverlay onClose={() => setShowReviewOverlay(false)} />}
           </div>
         </div>
       </div>

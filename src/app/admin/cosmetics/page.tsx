@@ -91,6 +91,8 @@ export default function AdminCosmetics() {
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
+  const [hasUniqueImageVariants, setHasUniqueImageVariants] = useState(false);
+  const [uniqueImageQuantities, setUniqueImageQuantities] = useState<Record<string, number>>({});
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -219,7 +221,10 @@ export default function AdminCosmetics() {
     setMinShippingQty('0');
     setIsCustomShipping(false);
     setCustomShippingAmount('');
+    setCustomShippingAmount('');
     setImageUrlInput('');
+    setHasUniqueImageVariants(false);
+    setUniqueImageQuantities({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,6 +255,16 @@ export default function AdminCosmetics() {
         return data.secure_url;
       }));
 
+      let totalUniqueQty = 0;
+      let uniqueImageVariantsRecord: Record<string, number> = {};
+      if (hasUniqueImageVariants) {
+        uploadedUrls.forEach((url) => {
+          const q = uniqueImageQuantities[url] || 0;
+          uniqueImageVariantsRecord[url] = q;
+          totalUniqueQty += q;
+        });
+      }
+
       const productData: any = {
         name: name.trim(),
         costPrice: parsedCost,
@@ -257,7 +272,7 @@ export default function AdminCosmetics() {
         description: description.trim(),
         group: formatStructure(group),
         category: formatStructure(category),
-        quantity: Number(quantity),
+        quantity: hasUniqueImageVariants ? totalUniqueQty : Number(quantity),
         size: size || 'medium',
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
@@ -265,6 +280,8 @@ export default function AdminCosmetics() {
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
         vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
+        hasUniqueImageVariants,
+        uniqueImageVariants: hasUniqueImageVariants ? uniqueImageVariantsRecord : {},
       };
 
       if (editingId) {
@@ -314,6 +331,12 @@ export default function AdminCosmetics() {
     setIsCustomShipping(!!(product as any).customShippingAmount);
     setCustomShippingAmount((product as any).customShippingAmount ? formatPriceInput((product as any).customShippingAmount.toString()) : '');
     setImages((product.images || []).map(url => ({ type: 'url', value: url })));
+    setHasUniqueImageVariants(product.hasUniqueImageVariants || false);
+    if (product.hasUniqueImageVariants && product.uniqueImageVariants && product.images) {
+      setUniqueImageQuantities(product.uniqueImageVariants);
+    } else {
+      setUniqueImageQuantities({});
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -680,7 +703,8 @@ export default function AdminCosmetics() {
 
               <div className="flex flex-wrap gap-4 mt-4">
                 {images.map((img, i) => (
-                  <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border bg-muted">
+                  <div key={i} className={`relative flex flex-col gap-2 p-2 rounded-md border border-border bg-muted ${hasUniqueImageVariants ? 'w-32' : 'w-24 group'}`}>
+                    <div className={`relative w-full ${hasUniqueImageVariants ? 'h-24' : 'h-20'} rounded-md overflow-hidden border border-border bg-background`}>
                     <img
                       src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
                       alt="preview"
@@ -689,13 +713,56 @@ export default function AdminCosmetics() {
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full z-10"
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <FaTimes size={12} />
                     </button>
+                    </div>
+                    {hasUniqueImageVariants && (
+                      <div className="flex flex-col gap-1 mt-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase">Specific Qty</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Qty"
+                          className="w-full p-1.5 text-xs rounded border border-border bg-background text-center font-bold"
+                          value={
+                            img.type === 'url'
+                              ? (uniqueImageQuantities[img.value as string] || 0)
+                              : 0
+                          }
+                          onChange={(e) => {
+                            if (img.type === 'url') {
+                              setUniqueImageQuantities(prev => ({
+                                ...prev,
+                                [img.value as string]: parseInt(e.target.value) || 0
+                              }));
+                            } else {
+                              import('react-hot-toast').then(({ toast }) => toast.error('Please upload this image first (save product) before setting specific quantities for local files.'));
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {images.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border flex flex-col items-start gap-1">
+                  <label className="text-xs md:text-sm font-bold text-pink-700 flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={hasUniqueImageVariants} onChange={e => {
+                      if (images.some(img => img.type === 'file')) {
+                        import('react-hot-toast').then(({ toast }) => toast.error('Please save the product first to upload files before using them as variants.'));
+                        return;
+                      }
+                      setHasUniqueImageVariants(e.target.checked);
+                    }} className="size-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500" />
+                    Use Product Images as Colors
+                  </label>
+                  <p className="text-[9px] text-gray-500 leading-tight">Check to set specific stock quantities per image.</p>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-border mt-4">
@@ -704,23 +771,26 @@ export default function AdminCosmetics() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    disabled={hasUniqueImageVariants}
                     onClick={() => setQuantity(Math.max(1, Number(quantity) - 1).toString())}
-                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     -
                   </button>
                   <input
                     required
-                    value={quantity}
+                    readOnly={hasUniqueImageVariants}
+                    value={hasUniqueImageVariants ? Object.values(uniqueImageQuantities).reduce((a, b) => a + b, 0).toString() : quantity}
                     onChange={e => setQuantity(e.target.value)}
                     type="number"
                     min="1"
-                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"
+                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
+                    disabled={hasUniqueImageVariants}
                     onClick={() => setQuantity((Number(quantity) + 1).toString())}
-                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     +
                   </button>

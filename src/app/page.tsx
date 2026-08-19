@@ -38,6 +38,9 @@ const heroThemes = [
   { bg: 'bg-[#ECFEFF]', text: 'text-cyan-900', subtext: 'text-cyan-700', accent: 'text-cyan-600', button: 'border-cyan-900 text-cyan-900 hover:bg-cyan-900/5', viewBtn: 'bg-cyan-900 text-white hover:bg-cyan-800' },
 ];
 
+const PROMO_SLIDE_DURATION = 5000;
+const HERO_SLIDE_DURATION = 8000;
+
 export default function Home() {
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
@@ -47,6 +50,7 @@ export default function Home() {
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
   const [siteName, setSiteName] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
+  const [activePromo, setActivePromo] = useState<any>(null);
 
   // Food Market Section
   const [foodSection, setFoodSection] = useState<{ image: string; title: string; description: string }>({
@@ -116,6 +120,19 @@ export default function Home() {
           loadData();
           return;
         }
+
+        // Fetch promo materials
+        const promoMatsSnap = await getDocs(collection(db, 'promo_materials'));
+        let activePromoMaterial = null;
+        if (!promoMatsSnap.empty) {
+          const promos = promoMatsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const validPromos = promos.filter((p: any) => p.endDate && new Date(p.endDate) >= now);
+          if (validPromos.length > 0) {
+             validPromos.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+             activePromoMaterial = validPromos[0];
+          }
+        }
+        setActivePromo(activePromoMaterial);
 
         // Fetch hero config
         const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
@@ -194,19 +211,23 @@ export default function Home() {
     router.push('/checkout');
   };
 
-  useEffect(() => {
-    if (heroSlides.length <= 1) return;
+  const slidesWithPromo = activePromo ? [{ isPromoSpecial: true, ...activePromo }, ...heroSlides] : heroSlides;
 
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
+  useEffect(() => {
+    if (slidesWithPromo.length <= 1) return;
+
+    const currentSlideData = slidesWithPromo[currentSlide];
+    const duration = currentSlideData?.isPromoSpecial ? PROMO_SLIDE_DURATION : HERO_SLIDE_DURATION;
+
+    const timer = setTimeout(() => {
+      setCurrentSlide((prev) => (prev + 1) % slidesWithPromo.length);
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [slidesWithPromo.length, currentSlide, slidesWithPromo]);
 
   return (
     <div className="relative">
       <GlobalSearch containerBg={heroSlides.length > 0 ? heroThemes[currentSlide % heroThemes.length].bg : 'bg-slate-50'} />
-
       {/* Hero Section */}
       <section className="relative h-[620px] max-md:h-[670px] overflow-hidden bg-slate-50">
         {dataLoading ? (
@@ -214,12 +235,45 @@ export default function Home() {
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-slate-500 font-medium animate-pulse">Loading amazing deals...</p>
           </div>
-        ) : heroSlides.length === 0 ? (
+        ) : slidesWithPromo.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-white/40">
             <p className="p-3 md:text-xl font-bold">No hero slides configured. Set them in Admin → Products.</p>
           </div>
         ) : (
-          heroSlides.map((slide, index) => {
+          slidesWithPromo.map((slide, index) => {
+            if (slide.isPromoSpecial) {
+              return (
+                <div
+                  key="special-promo"
+                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out bg-black ${currentSlide === index ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'}`}
+                >
+                  <div className="absolute inset-0 z-0">
+                    <Image src={slide.image} alt="background" fill className="object-cover blur-2xl opacity-40 scale-110" priority />
+                  </div>
+                  <div className="absolute inset-0 z-10 py-2 md:py-5 px-2 md:px-5">
+                    <div className="relative w-full h-full max-w-[1200px] mx-auto">
+                      <Image src={slide.image} alt={slide.description || "Promo Material"} fill className="object-contain rounded-sm md:rounded-lg drop-shadow-2xl" priority />
+                    </div>
+                  </div>
+                  {/* Hero Navigation */}
+                  {slidesWithPromo.length > 1 && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-3 max-md:gap-2 justify-center">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCurrentSlide((prev) => (prev - 1 + slidesWithPromo.length) % slidesWithPromo.length); }}
+                        className="rounded-full transition-all duration-300 bg-white/40 hover:bg-white/80 w-3 h-3 max-md:w-2.5 max-md:h-2.5 shadow-sm"
+                        aria-label="Previous"
+                      />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCurrentSlide((prev) => (prev + 1) % slidesWithPromo.length); }}
+                        className="rounded-full transition-all duration-300 bg-white/40 hover:bg-white/80 w-3 h-3 max-md:w-2.5 max-md:h-2.5 shadow-sm"
+                        aria-label="Next"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             const theme = heroThemes[index % heroThemes.length];
             return (
               <div
@@ -267,24 +321,26 @@ export default function Home() {
                           </Link>
                         </div>
 
-                        {/* Hero Dots - Anchored to content */}
-                        {heroSlides.length > 1 && (
-                          <div className="mt-6 max-md:mt-4 flex gap-2 max-md:gap-1.5 max-md:justify-center">
-                            {heroSlides.map((_, dotIndex) => (
-                              <button
-                                key={dotIndex}
-                                onClick={(e) => { e.stopPropagation(); setCurrentSlide(dotIndex); }}
-                                className={`h-1 rounded-full transition-all duration-300 ${currentSlide === dotIndex ? 'bg-primary w-6' : 'bg-slate-300 w-2 hover:bg-slate-400'}`}
-                                aria-label={`Go to slide ${dotIndex + 1}`}
-                              />
-                            ))}
+                        {/* Hero Navigation */}
+                        {slidesWithPromo.length > 1 && (
+                          <div className="mt-6 max-md:mt-4 flex gap-3 max-md:gap-2 max-md:justify-center">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setCurrentSlide((prev) => (prev - 1 + slidesWithPromo.length) % slidesWithPromo.length); }}
+                              className="rounded-full transition-all duration-300 bg-black/10 hover:bg-black/30 w-3 h-3 max-md:w-2.5 max-md:h-2.5 shadow-sm"
+                              aria-label="Previous"
+                            />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setCurrentSlide((prev) => (prev + 1) % slidesWithPromo.length); }}
+                              className="rounded-full transition-all duration-300 bg-black/10 hover:bg-black/30 w-3 h-3 max-md:w-2.5 max-md:h-2.5 shadow-sm"
+                              aria-label="Next"
+                            />
                           </div>
                         )}
                       </div>
 
                       {/* Product Image Container */}
                       <div className="flex-1 flex justify-center items-center h-full max-md:h-auto w-full max-md:px-3 max-md:mt-4">
-                        <div className="relative w-full aspect-square md:h-[500px] md:rounded-[var(--radius)] overflow-hidden md:bg-muted/50 group/hero max-md:rounded-sm">
+                        <div className="relative w-full aspect-square md:h-[500px] md:bg-muted/50 group/hero overflow-hidden">
                           {slide.isPromo && (
                             <span className={`absolute top-4 left-4 ${theme.viewBtn.split(' ')[0]} text-white px-2 py-1 rounded text-[10px] md:text-xs font-bold z-20 shadow-sm flex flex-col items-center`}>
                               <span>SPECIAL PROMO</span>

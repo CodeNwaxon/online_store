@@ -105,6 +105,14 @@ function AdminProductsContent() {
   const [color, setColor] = useState('');
   const [includeColor, setIncludeColor] = useState(false);
 
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variantColors, setVariantColors] = useState('');
+  const [variantSizes, setVariantSizes] = useState('');
+  const [variants, setVariants] = useState<{color: string, size: string, quantity: number}[]>([]);
+
+  const [hasUniqueImageVariants, setHasUniqueImageVariants] = useState(false);
+  const [uniqueImageQuantities, setUniqueImageQuantities] = useState<Record<number, number>>({});
+
   // Image State
   const [images, setImages] = useState<{ type: 'file' | 'url', value: string | File }[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
@@ -263,6 +271,34 @@ function AdminProductsContent() {
     }
   };
 
+  // Variant Matrix generation
+  useEffect(() => {
+    if (!hasVariants) return;
+    const colors = variantColors.split(',').map(c => c.trim()).filter(Boolean);
+    
+    let newVariants: {color: string, size: string, quantity: number}[] = [];
+    if (colors.length === 0) {
+      newVariants = [];
+    } else {
+      newVariants = colors.map(c => ({ color: c, size: '', quantity: 0 }));
+    }
+
+    setVariants(prev => {
+      return newVariants.map(nv => {
+        const existing = prev.find(v => v.color === nv.color);
+        return { ...nv, quantity: existing ? existing.quantity : 0 };
+      });
+    });
+  }, [variantColors, hasVariants]);
+
+  // Compute total quantity
+  useEffect(() => {
+    if (hasVariants) {
+      const total = variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0);
+      setQuantity(total.toString());
+    }
+  }, [variants, hasVariants]);
+
   const handleAddImageUrl = () => {
     if (!imageUrlInput) return;
 
@@ -324,6 +360,12 @@ function AdminProductsContent() {
     setCustomShippingAmount('');
     setColor('');
     setIncludeColor(false);
+    setHasVariants(false);
+    setVariantColors('');
+    setVariantSizes('');
+    setVariants([]);
+    setHasUniqueImageVariants(false);
+    setUniqueImageQuantities({});
   };
 
   const handleCancel = () => {
@@ -418,6 +460,18 @@ function AdminProductsContent() {
         return data.secure_url;
       }));
 
+      const uniqueImageVariantsRecord: Record<string, number> = {};
+      let totalUniqueQty = 0;
+      if (hasUniqueImageVariants) {
+        images.forEach((img, index) => {
+          const qty = uniqueImageQuantities[index] || 0;
+          if (qty > 0) {
+            uniqueImageVariantsRecord[uploadedUrls[index]] = qty;
+            totalUniqueQty += qty;
+          }
+        });
+      }
+
       const productData = {
         name: formatName(name),
         price: isPromo ? Number(parsePriceInput(oldPrice)) : Number(parsePriceInput(price)),
@@ -426,20 +480,23 @@ function AdminProductsContent() {
         description,
         group: formatStructure(group),
         category: formatStructure(category),
-        quantity: Number(quantity),
+        quantity: hasUniqueImageVariants ? totalUniqueQty : Number(quantity),
         isPromo,
         oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
         promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
         size: size || 'medium',
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
         ramRom: ramRom.trim() || '',
-        color: includeColor ? color.trim() : '',
+        color: (includeColor ? color.trim() : '') || (hasVariants ? variantColors.trim() : ''),
+        variants: hasVariants ? variants : [],
         images: uploadedUrls,
         image: uploadedUrls[0], // Main image
         manufacturer: manufacturer.trim() || 'Unknown',
         warranty: warranty.trim() || '',
         updatedAt: new Date().toISOString(),
         vendor: user?.email || '',
+        hasUniqueImageVariants,
+        uniqueImageVariants: hasUniqueImageVariants ? uniqueImageVariantsRecord : {},
       };
 
 
@@ -502,8 +559,32 @@ function AdminProductsContent() {
     setCustomShippingAmount(product.customShippingAmount ? formatPriceInput(product.customShippingAmount.toString()) : '');
     setRamRom(product.ramRom || '');
     setColor(product.color || '');
-    setIncludeColor(!!product.color);
+    setIncludeColor(!!product.color && !product.variants?.length);
+    setHasVariants(!!product.variants?.length);
+    if (product.variants?.length) {
+      const uniqueColors = Array.from(new Set(product.variants.map((v:any) => v.color).filter(Boolean)));
+      const uniqueSizes = Array.from(new Set(product.variants.map((v:any) => v.size).filter(Boolean)));
+      setVariantColors(uniqueColors.join(', '));
+      setVariantSizes(uniqueSizes.join(', '));
+      setVariants(product.variants);
+    } else {
+      setVariantColors('');
+      setVariantSizes('');
+      setVariants([]);
+    }
     setImages(product.images.map((url: string) => ({ type: 'url', value: url })));
+
+    const uniqueMap: Record<number, number> = {};
+    if (product.hasUniqueImageVariants && product.uniqueImageVariants && product.images) {
+      product.images.forEach((url: string, idx: number) => {
+         if (product.uniqueImageVariants[url] !== undefined) {
+           uniqueMap[idx] = product.uniqueImageVariants[url];
+         }
+      });
+    }
+    setHasUniqueImageVariants(product.hasUniqueImageVariants || false);
+    setUniqueImageQuantities(uniqueMap);
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -782,26 +863,73 @@ function AdminProductsContent() {
               </div>
             )}
 
-            {/* Color section */}
-            <div className="space-y-2 mb-6">
-              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+            {/* Variants Matrix */}
+            <div className="space-y-2 mb-6 md:col-span-2 border border-border p-4 rounded-md bg-muted/20">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-primary">
                 <input
                   type="checkbox"
-                  checked={includeColor}
-                  onChange={(e) => setIncludeColor(e.target.checked)}
+                  checked={hasVariants}
+                  onChange={(e) => {
+                    setHasVariants(e.target.checked);
+                    if (e.target.checked) {
+                      setIncludeColor(false);
+                      setHasUniqueImageVariants(false);
+                    }
+                  }}
                   className="size-4 accent-primary"
                 />
-                Include Color Input
+                Enable Product Variants (Colors)
               </label>
-              {includeColor && (
-                <div className="py-4 px-2 border border-primary/30 rounded-lg bg-primary/5 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-sm font-bold">Colors (comma separated)</label>
-                  <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
-                  {color && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {color.split(',').map((c, i) => c.trim() && (
-                        <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
-                      ))}
+              {hasVariants && (
+                <div className="pt-4 animate-in fade-in slide-in-from-top-2 space-y-4">
+                  <div>
+                    <label className="text-sm font-bold block mb-1">Variant Colors (comma separated)</label>
+                    <input value={variantColors} onChange={e => setVariantColors(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                  </div>
+                  
+                  {variants.length > 0 && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm text-left border-collapse border border-border">
+                        <thead className="bg-muted text-muted-foreground">
+                          <tr>
+                            {variantColors.trim() && <th className="p-2 border border-border">Color</th>}
+                            <th className="p-2 border border-border">Quantity</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {variants.map((v, i) => (
+                            <tr key={i} className="bg-background">
+                              {variantColors.trim() && (
+                                <td className="p-2 border border-border font-medium capitalize">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-2 rounded-sm border border-black/20" style={{ backgroundColor: v.color || 'transparent' }} />
+                                    {v.color || '-'}
+                                  </div>
+                                </td>
+                              )}
+                              <td className="p-2 border border-border">
+                                <input 
+                                  type="number" 
+                                  min="0"
+                                  value={v.quantity} 
+                                  onChange={e => {
+                                    const newV = [...variants];
+                                    newV[i].quantity = parseInt(e.target.value) || 0;
+                                    setVariants(newV);
+                                  }}
+                                  className="w-24 p-1 rounded border border-border text-center"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-muted font-bold">
+                          <tr>
+                            <td colSpan={variantColors.trim() ? 1 : 0} className="p-2 border border-border text-right">Total Quantity:</td>
+                            <td className="p-2 border border-border text-center text-primary">{variants.reduce((sum, v) => sum + (Number(v.quantity) || 0), 0)}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -954,56 +1082,96 @@ function AdminProductsContent() {
             {/* PREVIEW */}
             <div className="flex flex-wrap gap-4 mt-4">
               {images.map((img, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border group bg-muted">
-                  {/* Use standard img for preview to avoid Next.js Image component hostname restriction crashes in admin */}
-                  <img
-                    src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
-                    alt="preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Invalid+Image';
-                      toast.error('One of your images failed to load.');
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10"
-                  >
-                    <FaTimes size={12} />
-                  </button>
+                <div key={i} className={`relative flex flex-col gap-2 p-2 rounded-md border border-border bg-muted ${hasUniqueImageVariants ? 'w-32' : 'w-24 group'}`}>
+                  <div className={`relative w-full ${hasUniqueImageVariants ? 'h-24' : 'h-20'} rounded-md overflow-hidden border border-border bg-background`}>
+                    {/* Use standard img for preview to avoid Next.js Image component hostname restriction crashes in admin */}
+                    <img
+                      src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
+                      alt="preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/400x400?text=Invalid+Image';
+                        toast.error('One of your images failed to load.');
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeImage(i);
+                        setUniqueImageQuantities(prev => {
+                          const newQ = { ...prev };
+                          delete newQ[i];
+                          Object.keys(newQ).forEach(k => {
+                            const numK = Number(k);
+                            if (numK > i) {
+                              newQ[numK - 1] = newQ[numK];
+                              delete newQ[numK];
+                            }
+                          });
+                          return newQ;
+                        });
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
+                  {hasUniqueImageVariants && (
+                    <div className="mt-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">Qty</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={uniqueImageQuantities[i] || ''}
+                        onChange={e => setUniqueImageQuantities(prev => ({ ...prev, [i]: parseInt(e.target.value) || 0 }))}
+                        className="w-full p-1.5 rounded border border-primary/30 text-xs font-bold text-center"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* QUANTITY MOVED HERE */}
             <div className="pt-4 border-t border-border mt-4">
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-4 bg-primary/10 p-2 rounded w-fit">
+                <input type="checkbox" checked={hasUniqueImageVariants} onChange={e => {
+                  setHasUniqueImageVariants(e.target.checked);
+                  if (e.target.checked) { setHasVariants(false); setIncludeColor(false); }
+                }} className="size-4 accent-primary" />
+                Has Unique Image Variants?
+              </label>
+
               <div className="max-w-[200px] space-y-2">
                 <label className="text-xs md:text-sm font-bold text-primary">Quantity In Stock</label>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    disabled={hasVariants || hasUniqueImageVariants}
                     onClick={() => setQuantity(Math.max(1, Number(quantity) - 1).toString())}
-                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold disabled:opacity-50"
                   >
                     -
                   </button>
                   <input
                     required
-                    value={quantity}
+                    readOnly={hasVariants || hasUniqueImageVariants}
+                    value={hasUniqueImageVariants ? Object.values(uniqueImageQuantities).reduce((a, b) => a + b, 0).toString() : quantity}
                     onChange={e => setQuantity(e.target.value)}
                     type="number"
                     min="1"
-                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold"
+                    className="w-20 p-2 rounded-md border border-border bg-background text-sm text-center font-bold disabled:opacity-50"
                   />
                   <button
                     type="button"
+                    disabled={hasVariants || hasUniqueImageVariants}
                     onClick={() => setQuantity((Number(quantity) + 1).toString())}
-                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold"
+                    className="size-10 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors font-bold disabled:opacity-50"
                   >
                     +
                   </button>
                 </div>
+                {hasVariants && <p className="text-[10px] text-muted-foreground">Quantity is computed from variants.</p>}
               </div>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, collection, onSnapshot } from 'firebase/firestore';
-import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft, FaMapMarkerAlt, FaShieldAlt } from 'react-icons/fa';
+import { FaCreditCard, FaTruck, FaStore, FaLock, FaChevronLeft, FaMapMarkerAlt, FaShieldAlt, FaCheckCircle } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ import { calculateCartShipping, calculateCartShippingForArea, CartItem } from '@
 import { usePaystack } from '@/hooks/usePaystack';
 import { verifyAndProcessInstallmentPayment } from '@/actions/verifyPayment';
 import { createPendingTransaction } from '@/actions/pendingTransactions';
+import PaymentReviewOverlay from '@/components/PaymentReviewOverlay';
 
 function LoanCheckoutContent() {
   const searchParams = useSearchParams();
@@ -26,6 +27,8 @@ function LoanCheckoutContent() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [showReviewOverlay, setShowReviewOverlay] = useState(false);
   const [siteName, setSiteName] = useState('');
 
   // Form State
@@ -286,7 +289,12 @@ function LoanCheckoutContent() {
       }
 
       toast.success('Payment successful!');
-      router.push('/installments/pay-loan');
+      if (isLastPayment) {
+        setIsSuccess(true);
+        setShowReviewOverlay(true);
+      } else {
+        router.push('/installments/pay-loan');
+      }
     } catch (error) {
       toast.error('Payment failed.');
       setIsProcessing(false);
@@ -386,6 +394,27 @@ function LoanCheckoutContent() {
       </Link>
     </div>
   );
+
+  if (isSuccess) {
+    return (
+      <div className="py-16 min-h-[70vh] flex items-center justify-center bg-muted">
+        <div className="text-center max-w-[500px] p-8 md:p-12 bg-card rounded-[var(--radius)] border border-border shadow-sm mx-4">
+          <div className="w-20 h-20 rounded-full bg-[#DEF7EC] text-[#03543F] flex items-center justify-center mx-auto mb-6">
+            <FaCheckCircle size={30} />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">Payment Successful!</h1>
+          <p className="text-muted-foreground mb-6 md:text-lg">
+            Your final installment payment is complete. Your order is being processed and will be shipped shortly.
+          </p>
+          <div className="flex flex-col gap-3 justify-center max-w-[280px] mx-auto relative">
+            <Link href="/installments/pay-loan" className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-md font-semibold transition-colors text-center">Back to Loans</Link>
+            <Link href="/shop" className="border border-border text-foreground hover:bg-muted px-6 py-2 rounded-md font-semibold transition-colors text-center">Continue Shopping</Link>
+            {showReviewOverlay && <PaymentReviewOverlay onClose={() => setShowReviewOverlay(false)} />}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-16 bg-muted min-h-screen">

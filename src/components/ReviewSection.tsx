@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
-import { FaStar, FaTrash, FaPaperPlane } from 'react-icons/fa';
+import { FaStar, FaTrash, FaPaperPlane, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
@@ -17,6 +17,14 @@ export default function ReviewSection() {
   const [loading, setLoading] = useState(false);
   const [fetchingReviews, setFetchingReviews] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -332 : 332;
+      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -109,7 +117,7 @@ export default function ReviewSection() {
 
   return (
     <section className="py-16">
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-16">
         <div className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-bold mb-2">What Our Customers Say</h2>
           {!hasReviewed && (
@@ -160,7 +168,19 @@ export default function ReviewSection() {
           </div>
         )}
 
-        <div className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[600px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full">
+        <div className="relative group">
+          <button 
+            onClick={() => scroll('left')}
+            className="hidden md:flex absolute -left-12 top-1/2 -translate-y-1/2 z-10 bg-background border border-border shadow-md rounded-full w-10 h-10 items-center justify-center text-primary hover:bg-muted transition-colors opacity-100 disabled:opacity-50"
+            aria-label="Scroll left"
+          >
+            <FaChevronLeft size={14} className="-ml-0.5" />
+          </button>
+
+          <div 
+            ref={scrollContainerRef}
+            className="flex gap-8 overflow-x-auto pt-2 pb-4 md:py-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] max-md:flex-col max-md:overflow-x-hidden max-md:overflow-y-auto max-md:max-h-[600px] max-md:pr-2 max-md:[&::-webkit-scrollbar]:block max-md:[&::-webkit-scrollbar]:w-1 max-md:[&::-webkit-scrollbar-thumb]:bg-border max-md:[&::-webkit-scrollbar-thumb]:rounded-full"
+          >
           {fetchingReviews ? (
             // Skeleton Loaders
             [...Array(3)].map((_, i) => (
@@ -211,7 +231,17 @@ export default function ReviewSection() {
           ) : (
             <p className="text-center w-full text-muted-foreground">No reviews yet. Be the first to share your experience!</p>
           )}
+          </div>
+
+          <button 
+            onClick={() => scroll('right')}
+            className="hidden md:flex absolute -right-12 top-1/2 -translate-y-1/2 z-10 bg-background border border-border shadow-md rounded-full w-10 h-10 items-center justify-center text-primary hover:bg-muted transition-colors opacity-100 disabled:opacity-50"
+            aria-label="Scroll right"
+          >
+            <FaChevronRight size={14} className="-mr-0.5" />
+          </button>
         </div>
+
 
         {/* Delete Confirmation Overlay */}
         {deletingId && (

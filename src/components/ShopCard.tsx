@@ -11,6 +11,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { createPortal } from 'react-dom';
 import LikeButton from './LikeButton';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
+import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 
 export interface ShopProduct {
   id: string;
@@ -28,11 +29,58 @@ export interface ShopProduct {
   itemSize?: string;
   color?: string;
   sizeQuantities?: Record<string, number>;
+  sizeColorQuantities?: Record<string, Record<string, number>>;
+  variants?: { color: string; quantity: number }[];
+  hasUniqueImageVariants?: boolean;
+  uniqueImageVariants?: Record<string, number>;
   selectedSize?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
   measurements?: string;
 }
+
+const colorMap: Record<string, string> = {
+  'lightbrown': '#C4A484',
+  'darkbrown': '#654321',
+  'lightred': '#FF7F7F',
+  'darkred': '#8B0000',
+  'lightyellow': '#FFFFE0',
+  'darkyellow': '#FFCC00',
+  'navyblue': '#000080',
+  'skyblue': '#87CEEB',
+  'lightgrey': '#D3D3D3',
+  'darkgrey': '#A9A9A9',
+  'lightgreen': '#90EE90',
+  'darkgreen': '#006400',
+  'gold': '#FFD700',
+  'silver': '#C0C0C0',
+  'bronze': '#CD7F32',
+  'rose': '#FF007F',
+  'burgundy': '#800020',
+  'peach': '#FFE5B4',
+  'cream': '#FFFDD0',
+  'mustard': '#FFDB58',
+  'rust': '#b7410e',
+  'coral': '#FF7F50',
+  'teal': '#008080',
+  'olive': '#808000',
+  'maroon': '#800000',
+  'wine': '#722F37',
+  'mauve': '#E0B0FF',
+  'lilac': '#C8A2C8',
+  'lavender': '#E6E6FA',
+  'magenta': '#FF00FF',
+  'cyan': '#00FFFF',
+  'indigo': '#4B0082',
+  'violet': '#EE82EE',
+  'plum': '#DDA0DD',
+  'fuchsia': '#FF00FF',
+};
+
+export const getValidColor = (c: string) => {
+  const norm = c.toLowerCase().replace(/[\s-]/g, '');
+  return colorMap[norm] || norm;
+};
 
 interface ShopCardProps {
   food: ShopProduct;
@@ -155,7 +203,10 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
   };
 
   // Parse colors
-  const colors = food.color ? food.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+  let colors = food.color ? food.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+  if (food.hasUniqueImageVariants && food.uniqueImageVariants) {
+    colors = Object.keys(food.uniqueImageVariants);
+  }
 
   // Scrollbar color matching the top border theme
   const scrollbarColorMap: Record<string, string> = {
@@ -320,9 +371,14 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
       {/* Color bar below image */}
       {colors.length > 0 && (
         <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
-          {colors.map((c, i) => (
-            <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white border border-gray-100 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
-          ))}
+          {colors.map((c, i) => {
+            const isImage = c.startsWith('http') || c.startsWith('data:');
+            return isImage ? (
+              <img key={i} src={c} alt={(c.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT")} title="Image Color" className="shrink-0 w-5 h-5 rounded-md border border-gray-200 dark:border-zinc-700 object-cover" />
+            ) : (
+              <span key={i} title={c} className={`shrink-0 w-3 h-3 rounded-full border shadow-sm ${c.toLowerCase().includes('white') ? 'border-gray-200' : 'border-transparent'}`} style={{ backgroundColor: getValidColor(c) }} />
+            );
+          })}
         </div>
       )}
 
@@ -529,23 +585,27 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               
               {colors.length > 0 && (
                 <>
-                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight mt-2">Select Color</h3>
+                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight mt-2">Select {food.hasUniqueImageVariants ? 'Variant' : 'Color'}</h3>
                   <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
-                    <button
-                      className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setTempSelectedColor('Any Color');
-                      }}
-                    >
-                      Any Color
-                    </button>
-                    {colors.map(c => (
+                    {!food.hasUniqueImageVariants && (
+                      <button
+                        className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTempSelectedColor('Any Color');
+                        }}
+                      >
+                        Any Color
+                      </button>
+                    )}
+                    {colors.map(c => {
+                        const isImageUrl = c.startsWith('http') || c.startsWith('data:');
+                        return (
                         <button
                           key={c}
-                          className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                          style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                          className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImageUrl ? 'w-8 h-12 shrink-0' : 'px-3 py-1.5 text-[11px] font-bold'} ${tempSelectedColor === c ? `${!isImageUrl ? getContrastTextColor(c) : ''} ${isImageUrl ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : `${isImageUrl ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}`}
+                          style={!isImageUrl ? (tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
                           onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -557,15 +617,27 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                             }
                           }}
                         >
-                          {c}
+                          {isImageUrl ? (
+                            <>
+                              <img src={c} alt="variant" className="w-full h-full object-cover" />
+                              {tempSelectedColor === c && (
+                                <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                  <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            c
+                          )}
                         </button>
-                    ))}
+                        );
+                    })}
                   </div>
                   {sizeKeys.length === 0 && measurementKeys.length === 0 && (
                     <div className="mt-2 pt-2 border-t border-border">
                       <button
                         className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.bgPrimary} ${theme.hoverBgPrimary} text-white` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
-                        style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                        style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
                         disabled={!tempSelectedColor}
                         onClick={async (e) => {
                           e.preventDefault();
@@ -583,14 +655,15 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                           const currentInCart = existing ? existing.quantity : 0;
                           try {
                             const docSnap = await getDoc(doc(db, 'foods', food.id));
-                            const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (food.quantity ?? 0);
+                            const liveQty = docSnap.exists() ? getAvailableVariantQuantity(docSnap.data(), undefined, finalColor) : getAvailableVariantQuantity(food, undefined, finalColor);
                             if (currentInCart + 1 > liveQty) {
                               toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                               return;
                             }
                           } catch (err) {
-                            if (currentInCart + 1 > (food.quantity ?? 0)) {
-                              toast.error(`Only ${food.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                            const fallbackQty = getAvailableVariantQuantity(food, undefined, finalColor);
+                            if (currentInCart + 1 > fallbackQty) {
+                              toast.error(`Only ${fallbackQty} available in stock`, { id: toastId, duration: 3000 });
                               return;
                             }
                           }
@@ -626,7 +699,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                   <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Size</h3>
                   <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
                     {sizeKeys.map(sz => {
-                      const qty = (food.sizeQuantities as Record<string, number>)[sz];
+                      const finalColorForRender = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                      const qty = finalColorForRender ? getAvailableVariantQuantity(food, sz, finalColorForRender) : (food.sizeQuantities as Record<string, number>)?.[sz] || 0;
                       return (
                         <button
                           key={sz}
@@ -644,8 +718,9 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                             const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
                             const existing = cartItems.find(item => item.id === food.id && item.selectedSize === sz && item.selectedColor === finalColor);
                             const currentInCart = existing ? existing.quantity : 0;
-                            if (currentInCart + 1 > qty) {
-                              toast.error(`Only ${qty} available for size ${sz}`);
+                            const liveQty = getAvailableVariantQuantity(food, sz, finalColor);
+                            if (currentInCart + 1 > liveQty) {
+                              toast.error(`Only ${liveQty} available for size ${sz}${finalColor ? ` - ${finalColor}` : ''}`);
                               return;
                             }
                             const cartProduct: any = {

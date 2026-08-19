@@ -17,7 +17,7 @@ import { FaPlus, FaTrash, FaImage, FaTimes, FaSearch, FaChevronDown, FaBoxes, Fa
 import AdminGuard from '@/components/AdminGuard';
 import Fuse from 'fuse.js';
 import { uploadImageToCloudinary } from '@/actions/upload';
-import ShopCard, { ShopProduct } from '@/components/ShopCard';
+import ShopCard, { ShopProduct, getValidColor } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
@@ -54,6 +54,9 @@ export default function AdminWears() {
   const [quantity, setQuantity] = useState('1');
   const [size, setSize] = useState('');
   const [sizeQuantities, setSizeQuantities] = useState<Record<string, number>>({});
+  const [sizeColorQuantities, setSizeColorQuantities] = useState<Record<string, Record<string, number>>>({});
+  const [activeSizeForColors, setActiveSizeForColors] = useState<string | null>(null);
+  const [tempColorsForSize, setTempColorsForSize] = useState('');
   const [color, setColor] = useState('');
 
   // Measurements State (for Materials)
@@ -92,6 +95,7 @@ export default function AdminWears() {
   const womenShoeSizes = ['42', '41', '40', '39', '38', '37', '36', '35', '34', '33'];
   const childrenShoeSizes = ['34', '33', '32', '31', '30', '29', '28', '27', '26', '25', '24', '23', '22'];
   const clothLetterSizes = ['XXL', 'XL', 'L', 'M', 'S', 'XS', 'XXS'];
+  const clothNumberSizes = ['24', '22', '20', '18', '16', '14', '12', '10', '8', '6', '4', '2'];
   const clothWaistSizes = ['44', '42', '40', '38', '36', '34', '32', '30', '28', '26'];
 
   const isShoeGroup = group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe';
@@ -153,6 +157,7 @@ export default function AdminWears() {
   const [newGroupName, setNewGroupName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [useImagesAsColors, setUseImagesAsColors] = useState(false);
 
   const formatStructure = (str: string) => {
     if (!str) return '';
@@ -301,7 +306,12 @@ export default function AdminWears() {
     setQuantity('1');
     setSize('');
     setSizeQuantities({});
+    setSizeColorQuantities({});
     setColor('');
+    setIncludeColor(false);
+    setUseImagesAsColors(false);
+    setActiveSizeForColors(null);
+    setTempColorsForSize('');
     setIsAddingGroup(false);
     setIsAddingCategory(false);
     setNewGroupName('');
@@ -376,8 +386,28 @@ export default function AdminWears() {
         quantity: Number(quantity),
         size: size || 'medium',
         sizeQuantities: (isShoeGroup || isClothGroup) ? Object.fromEntries(Object.entries(sizeQuantities).map(([k, v]) => [k, parseInt(v as any) || 1])) : {},
+        sizeColorQuantities: (isShoeGroup || isClothGroup) ? (() => {
+          if (useImagesAsColors) {
+            const mappedSq: Record<string, Record<string, number>> = {};
+            for (const [sz, colorMap] of Object.entries(sizeColorQuantities)) {
+              mappedSq[sz] = {};
+              for (const [colorKey, qty] of Object.entries(colorMap)) {
+                if (colorKey.startsWith('local_image_')) {
+                  const idx = parseInt(colorKey.replace('local_image_', ''));
+                  if (uploadedUrls[idx]) mappedSq[sz][uploadedUrls[idx]] = qty;
+                } else {
+                  mappedSq[sz][colorKey] = qty;
+                }
+              }
+            }
+            return mappedSq;
+          }
+          return sizeColorQuantities;
+        })() : {},
         itemSize: Object.keys(sizeQuantities).join(', '),
-        color: (includeColor || isShoeGroup || isClothGroup) ? color.trim() : '',
+        color: (isShoeGroup || isClothGroup)
+          ? Array.from(new Set(Object.values(sizeColorQuantities).flatMap(colorMap => Object.keys(colorMap).filter(c => (colorMap[c] || 0) > 0)))).join(', ')
+          : (includeColor ? color.trim() : ''),
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
@@ -390,6 +420,7 @@ export default function AdminWears() {
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
         vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
+        useImagesAsColors: useImagesAsColors
       };
 
       if (editingId) {
@@ -435,8 +466,10 @@ export default function AdminWears() {
     setQuantity(product.quantity?.toString() || '1');
     setSize(product.size || '');
     setSizeQuantities((product as any).sizeQuantities || {});
+    setSizeColorQuantities((product as any).sizeColorQuantities || {});
     setColor(product.color || '');
     setIncludeColor(!!product.color);
+    setUseImagesAsColors((product as any).useImagesAsColors || false);
     setRequiresMinShipping(product.requiresMinShipping || false);
     setMinShippingQty(product.minShippingQty?.toString() || '0');
     setIsCustomShipping(!!(product as any).customShippingAmount);
@@ -478,7 +511,9 @@ export default function AdminWears() {
       setSelectedMeasurementCosts({});
     }
 
-    setImages((product.images || []).map(url => ({ type: 'url', value: url })));
+    const loadedImages = (product.images || []).map(url => ({ type: 'url' as const, value: url }));
+    setImages(loadedImages);
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -527,6 +562,95 @@ export default function AdminWears() {
 
   return (
     <AdminGuard>
+      {activeSizeForColors && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] flex flex-col">
+            <h3 className="font-bold text-lg mb-4">Add Colors for Size: {activeSizeForColors}</h3>
+            <div className="space-y-4 overflow-y-auto pr-2">
+              {!useImagesAsColors && (
+                <div>
+                   <label className="text-sm font-bold block mb-1">Variant Colors (comma separated)</label>
+                   <input value={tempColorsForSize} onChange={e => {
+                     const newVal = e.target.value;
+                     setTempColorsForSize(newVal);
+                     const activeColors = newVal.split(',').map(c => c.trim()).filter(Boolean);
+                     
+                     const currentSizeColors = sizeColorQuantities[activeSizeForColors] || {};
+                     const newSizeColors: Record<string, number> = {};
+                     activeColors.forEach(c => {
+                       newSizeColors[c] = currentSizeColors[c] || 0;
+                     });
+                     
+                     setSizeColorQuantities(prev => ({
+                       ...prev,
+                       [activeSizeForColors]: newSizeColors
+                     }));
+                     
+                     const sizeTotal = Object.values(newSizeColors).reduce((sum, q) => sum + q, 0);
+                     setSizeQuantities(prev => ({ ...prev, [activeSizeForColors]: sizeTotal }));
+                   }} type="text" placeholder="e.g. Red, Blue, Black" className="w-full p-2 rounded-md border border-border bg-background text-sm" />
+                </div>
+              )}
+              {(useImagesAsColors ? images.length > 0 : tempColorsForSize.trim()) && (
+                 <table className="w-full text-sm text-left border-collapse border border-border">
+                   <thead className="bg-muted text-muted-foreground">
+                     <tr>
+                       <th className="p-2 border border-border">{useImagesAsColors ? 'Image' : 'Color'}</th>
+                       <th className="p-2 border border-border">Quantity</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {(useImagesAsColors ? images.map((img, i) => img.type === 'url' ? img.value as string : `local_image_${i}`) : tempColorsForSize.split(',').filter(c => c.trim()).map(c => c.trim())).map((colorKey, i) => {
+                       const isUrl = colorKey.startsWith('http') || colorKey.startsWith('data:') || colorKey.startsWith('local_image_');
+                       const imageSrc = isUrl && colorKey.startsWith('local_image_') ? URL.createObjectURL(images[parseInt(colorKey.replace('local_image_', ''))].value as File) : colorKey;
+                       
+                       return (
+                         <tr key={i} className="bg-background">
+                           <td className="p-2 border border-border font-medium capitalize">
+                              {useImagesAsColors ? (
+                                <img src={imageSrc} alt="Variant" className="w-12 h-12 object-cover rounded" />
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                   <div className="w-4 h-2 rounded-sm border border-black/20" style={{ backgroundColor: getValidColor(colorKey) }} />
+                                   {colorKey}
+                                </div>
+                              )}
+                           </td>
+                           <td className="p-2 border border-border">
+                              <input 
+                                type="number" 
+                                min="0"
+                                value={sizeColorQuantities[activeSizeForColors]?.[colorKey] || 0} 
+                                onChange={e => {
+                                   const newQty = parseInt(e.target.value) || 0;
+                                   setSizeColorQuantities(prev => ({
+                                     ...prev,
+                                     [activeSizeForColors]: {
+                                       ...(prev[activeSizeForColors] || {}),
+                                       [colorKey]: newQty
+                                     }
+                                   }));
+                                   
+                                   // auto-update the overall size quantity
+                                   const sizeTotal = Object.values({ ...(sizeColorQuantities[activeSizeForColors] || {}), [colorKey]: newQty }).reduce((sum, q) => sum + q, 0);
+                                   setSizeQuantities(prev => ({ ...prev, [activeSizeForColors]: sizeTotal }));
+                                }}
+                                className="w-24 p-1 rounded border border-border text-center"
+                              />
+                           </td>
+                         </tr>
+                       );
+                     })}
+                   </tbody>
+                 </table>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button type="button" onClick={() => setActiveSizeForColors(null)} className="bg-primary text-white px-4 py-2 rounded-md font-bold text-sm">Done</button>
+            </div>
+          </div>
+        </div>
+      )}
       <SpecialStoreEditOverlay
         isOpen={isStoreOverlayOpen}
         onClose={() => setIsStoreOverlayOpen(false)}
@@ -765,48 +889,124 @@ export default function AdminWears() {
               </div>
             </div>
 
-            <div className="space-y-2 mb-6">
-              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
-                <input
-                  type="checkbox"
-                  checked={includeColor || isShoeGroup || isClothGroup}
-                  onChange={(e) => setIncludeColor(e.target.checked)}
-                  className="size-4 accent-purple-600"
-                  disabled={isShoeGroup || isClothGroup} // always true for these
-                />
-                Include Color Input
-              </label>
-              {(includeColor || isShoeGroup || isClothGroup) && (
-                <div className="py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-sm font-bold">Colors (comma separated)</label>
-                  <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
-                  {color && (
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {color.split(',').map((c, i) => c.trim() && (
-                        <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.trim().toLowerCase().replace(/\s/g, '') }}>{c.trim()}</span>
-                      ))}
+            <div className="space-y-4">
+              <label className="text-sm font-bold">Product Images (Max 5)</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Paste Image URL..."
+                      className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
+                      value={imageUrlInput}
+                      onChange={e => setImageUrlInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddImageUrl();
+                        }
+                      }}
+                    />
+                    <button type="button" onClick={handleAddImageUrl} className="bg-primary text-white p-3 rounded-md hover:bg-primary-hover shadow-sm transition-colors">
+                      <FaPlus />
+                    </button>
+                  </div>
+                  {imageUrlInput && (
+                    <div className="mt-1 h-12 w-20 rounded border border-border overflow-hidden bg-muted animate-in fade-in slide-in-from-top-1">
+                      <img
+                        src={imageUrlInput}
+                        alt="Live Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
+                      />
                     </div>
                   )}
                 </div>
-              )}
+                <label className="flex items-center justify-center gap-2 p-3 rounded-md border border-dashed border-primary bg-primary/5 text-primary font-bold cursor-pointer hover:bg-primary/10 text-sm">
+                  <FaImage /> Upload Files
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-4 mt-4">
+                {images.map((img, i) => (
+                  <div key={i} className="relative flex flex-col gap-2 p-2 rounded-md border border-border bg-muted w-32">
+                    <div className="relative w-full h-24 rounded-md overflow-hidden bg-background">
+                      <img
+                        src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeImage(i);
+                        }}
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full z-10"
+                      >
+                        <FaTimes size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {!(isShoeGroup || isClothGroup) && (
+              <div className="space-y-2 mb-6">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                  <input
+                    type="checkbox"
+                    checked={includeColor}
+                    onChange={(e) => setIncludeColor(e.target.checked)}
+                    className="size-4 accent-purple-600"
+                  />
+                  Include Color Input
+                </label>
+                {includeColor && (
+                  <div className="py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-sm font-bold">Colors (comma separated)</label>
+                    <input value={color} onChange={e => setColor(e.target.value)} type="text" placeholder="e.g. Red, Blue, Black, White" className="w-full p-3 rounded-md border border-border bg-background text-sm" />
+                    {color && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {color.split(',').map((c, i) => c.trim() && (
+                          <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-200 bg-white capitalize ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : getValidColor(c.trim()) }}>{c.trim()}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {(isShoeGroup || isClothGroup) && (
               <div className="space-y-4 mb-6 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50">
                 <label className="text-sm font-bold block">Available Sizes (tick to add, enter qty)</label>
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-4 bg-purple-100 p-2 rounded w-fit">
+                  <input
+                    type="checkbox"
+                    checked={useImagesAsColors}
+                    onChange={(e) => setUseImagesAsColors(e.target.checked)}
+                    className="size-4 accent-purple-600"
+                  />
+                  Use Product Images as Colors
+                </label>
 
                 {isShoeGroup && (
                   <>
                     {/* Men's Shoe Sizes */}
                     <div>
                       <p className="text-xs font-black text-purple-800 mb-1.5">Men&apos;s Sizes</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {menShoeSizes.map(sz => (
                           <div key={`m-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -815,13 +1015,16 @@ export default function AdminWears() {
                     {/* Women's Shoe Sizes */}
                     <div>
                       <p className="text-xs font-black text-purple-800 mb-1.5">Women&apos;s Sizes</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {womenShoeSizes.map(sz => (
                           <div key={`w-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`W${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`W${sz}`)}>
                             <input type="checkbox" checked={sizeQuantities[`W${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`W${sz}`] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`W${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`W${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(`W${sz}`); setTempColorsForSize(Object.keys(sizeColorQuantities[`W${sz}`] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -830,13 +1033,16 @@ export default function AdminWears() {
                     {/* Children's Shoe Sizes */}
                     <div>
                       <p className="text-xs font-black text-purple-800 mb-1.5">Children&apos;s Sizes</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {childrenShoeSizes.map(sz => (
                           <div key={`c-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`C${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`C${sz}`)}>
                             <input type="checkbox" checked={sizeQuantities[`C${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[`C${sz}`] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`C${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`C${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(`C${sz}`); setTempColorsForSize(Object.keys(sizeColorQuantities[`C${sz}`] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -850,13 +1056,34 @@ export default function AdminWears() {
                     {/* Letter Sizes */}
                     <div>
                       <p className="text-xs font-black text-purple-800 mb-1.5">Letter Sizes</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {clothLetterSizes.map(sz => (
                           <div key={`l-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Number Sizes */}
+                    <div>
+                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Number Sizes (UK/US)</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {clothNumberSizes.map(sz => (
+                          <div key={`n-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
+                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[sz] !== undefined && (
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -864,14 +1091,17 @@ export default function AdminWears() {
                     </div>
                     {/* Waist Sizes */}
                     <div>
-                      <p className="text-xs font-black text-purple-800 mb-1.5">Waist Sizes</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Waist Sizes</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {clothWaistSizes.map(sz => (
                           <div key={`ws-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (
-                              <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-12 ml-auto text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -1048,64 +1278,6 @@ export default function AdminWears() {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <label className="text-sm font-bold">Product Images (Max 5)</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Paste Image URL..."
-                      className="flex-1 p-3 rounded-md border border-border bg-background text-xs"
-                      value={imageUrlInput}
-                      onChange={e => setImageUrlInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddImageUrl();
-                        }
-                      }}
-                    />
-                    <button type="button" onClick={handleAddImageUrl} className="bg-primary text-white p-3 rounded-md hover:bg-primary-hover shadow-sm transition-colors">
-                      <FaPlus />
-                    </button>
-                  </div>
-                  {imageUrlInput && (
-                    <div className="mt-1 h-12 w-20 rounded border border-border overflow-hidden bg-muted animate-in fade-in slide-in-from-top-1">
-                      <img
-                        src={imageUrlInput}
-                        alt="Live Preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
-                      />
-                    </div>
-                  )}
-                </div>
-                <label className="flex items-center justify-center gap-2 p-3 rounded-md border border-dashed border-primary bg-primary/5 text-primary font-bold cursor-pointer hover:bg-primary/10 text-sm">
-                  <FaImage /> Upload Files
-                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-4 mt-4">
-                {images.map((img, i) => (
-                  <div key={i} className="relative w-24 h-24 rounded-md overflow-hidden border border-border bg-muted">
-                    <img
-                      src={img.type === 'url' ? (img.value as string) : URL.createObjectURL(img.value as File)}
-                      alt="preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full z-10"
-                    >
-                      <FaTimes size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             <div className="pt-4 border-t border-border mt-4">
               <div className="max-w-[200px] space-y-2">

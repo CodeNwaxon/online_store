@@ -13,6 +13,8 @@ import WarrantyModal from './WarrantyModal';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getValidColor } from './ShopCard';
+import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 
 
 const getOrdinal = (d: number) => {
@@ -230,7 +232,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
       {colors.length > 0 && (
         <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
           {colors.map((c: string, i: number) => (
-            <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white border border-gray-100 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
+            <span key={i} title={c} className={`shrink-0 w-3 h-3 rounded-full border shadow-sm ${c.toLowerCase().includes('white') ? 'border-gray-200' : 'border-transparent'}`} style={{ backgroundColor: getValidColor(c) }} />
           ))}
         </div>
       )}
@@ -403,14 +405,15 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                 const currentInCart = existing ? existing.quantity : 0;
                 try {
                   const docSnap = await getDoc(doc(db, 'products', product.id));
-                  const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                  const liveQty = docSnap.exists() ? getAvailableVariantQuantity(docSnap.data()) : getAvailableVariantQuantity(product);
                   if (currentInCart + 1 > liveQty) {
                     toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                     return;
                   }
                 } catch (err) {
-                  if (currentInCart + 1 > (product.quantity ?? 0)) {
-                    toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                  const fallbackQty = getAvailableVariantQuantity(product);
+                  if (currentInCart + 1 > fallbackQty) {
+                    toast.error(`Only ${fallbackQty} available in stock`, { id: toastId, duration: 3000 });
                     return;
                   }
                 }
@@ -469,7 +472,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                   <button
                     key={c}
                     className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                    style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
+                    style={tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -484,7 +487,7 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
             <div className="mt-2 pt-2 border-t border-border">
               <button
                 className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
-                style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: tempSelectedColor.toLowerCase().replace(/\s/g, '') } : undefined}
+                style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
                 disabled={!tempSelectedColor}
                 onClick={async (e) => {
                   e.preventDefault();
@@ -502,14 +505,15 @@ export default function ProductCard({ product, isAdmin, priority = false, index 
                   const currentInCart = existing ? existing.quantity : 0;
                   try {
                     const docSnap = await getDoc(doc(db, 'products', product.id));
-                    const liveQty = docSnap.exists() ? (Number(docSnap.data().quantity) || 0) : (product.quantity ?? 0);
+                    const liveQty = docSnap.exists() ? getAvailableVariantQuantity(docSnap.data(), undefined, finalColor) : getAvailableVariantQuantity(product, undefined, finalColor);
                     if (currentInCart + 1 > liveQty) {
                       toast.error(`Only ${liveQty} available in stock`, { id: toastId, duration: 3000 });
                       return;
                     }
                   } catch (err) {
-                    if (currentInCart + 1 > (product.quantity ?? 0)) {
-                      toast.error(`Only ${product.quantity ?? 0} available in stock`, { id: toastId, duration: 3000 });
+                    const fallbackQty = getAvailableVariantQuantity(product, undefined, finalColor);
+                    if (currentInCart + 1 > fallbackQty) {
+                      toast.error(`Only ${fallbackQty} available in stock`, { id: toastId, duration: 3000 });
                       return;
                     }
                   }

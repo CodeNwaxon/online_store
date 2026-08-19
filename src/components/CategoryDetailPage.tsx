@@ -330,21 +330,34 @@ export default function CategoryDetailPage({
             </div>
 
             {/* Color Cards Section (display only) */}
-            {product.color && product.color.trim() && (() => {
-              const colors = product.color.split(',').map((c: string) => c.trim()).filter(Boolean);
+            {(() => {
+              let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+              if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+                colors = Object.keys(product.uniqueImageVariants);
+              }
               return colors.length > 0 ? (
                 <div className="mb-6">
                   <h3 className="text-sm font-bold mb-2 text-muted-foreground uppercase tracking-wider">Available Colors</h3>
                   <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
-                    {colors.map((c: string, i: number) => (
-                      <span
-                        key={i}
-                        className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
-                        style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
-                      >
-                        {c}
-                      </span>
-                    ))}
+                    {colors.map((c: string, i: number) => {
+                      const isImage = c.startsWith('http') || c.startsWith('data:');
+                      return isImage ? (
+                        <img 
+                          key={i} 
+                          src={c} 
+                          alt={(c.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT")} 
+                          className="shrink-0 w-6 h-8 object-cover rounded shadow-sm border border-gray-200 transition-transform hover:scale-105" 
+                        />
+                      ) : (
+                        <span
+                          key={i}
+                          className={`shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md ${c.toLowerCase().includes('white') ? 'text-gray-400' : ''}`}
+                          style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}
+                        >
+                          {c}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               ) : null;
@@ -423,7 +436,10 @@ export default function CategoryDetailPage({
                 <button
                   className={`text-sm md:text-base ${product.price >= installmentMinAmount ? 'col-span-1' : 'col-span-2'} md:flex-[2] order-1 ${themeConfig.btn} text-white flex items-center justify-center gap-2 p-3 rounded-md font-semibold transition-colors`}
                   onClick={async () => {
-                    const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+                    let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+                    if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+                      colors = Object.keys(product.uniqueImageVariants);
+                    }
                     // Show overlay if there are sizes, colors, or measurements to select
                     if (sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0) {
                       setShowSizeOverlay(true);
@@ -484,7 +500,10 @@ export default function CategoryDetailPage({
 
             {/* Size & Color Selection Overlay */}
             {(() => {
-              const colors = product.color ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+              let colors = product.color && typeof product.color === 'string' ? product.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+              if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+                colors = Object.keys(product.uniqueImageVariants);
+              }
               const hasSelections = sizeKeys.length > 0 || colors.length > 0 || measurementKeys.length > 0;
               if (!showSizeOverlay || !hasSelections) return null;
 
@@ -559,23 +578,37 @@ export default function CategoryDetailPage({
                             >
                               Any Color
                             </button>
-                            {colors.map((c: string, i: number) => (
-                              <button
-                                key={i}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedColor === c
-                                  ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
-                                  : 'bg-white border-gray-300 hover:bg-gray-50'
-                                  }`}
-                                style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, ''), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setTempSelectedColor(c);
-                                }}
-                              >
-                                {c}
-                              </button>
-                            ))}
+                            {colors.map((c: string, i: number) => {
+                              const isImage = c.startsWith('http') || c.startsWith('data:');
+                              return (
+                                <button
+                                  key={i}
+                                  className={`relative rounded-lg overflow-hidden transition-all duration-200 border-2 ${isImage ? 'w-8 h-12 p-0 shrink-0' : 'px-4 py-2 text-sm font-bold capitalize shrink-0'} ${tempSelectedColor === c
+                                    ? `${!isImage ? getContrastTextColor(c) : ''} ${isImage ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                                    : `${isImage ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white border-gray-300 hover:bg-gray-50'}`
+                                    }`}
+                                  style={!isImage ? (tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, ''), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }) : undefined}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setTempSelectedColor(c);
+                                  }}
+                                >
+                                  {isImage ? (
+                                    <>
+                                      <img src={c} alt="Color Variant" className="w-full h-full object-cover" />
+                                      {tempSelectedColor === c && (
+                                        <div className="absolute top-1 right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                          <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    c
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

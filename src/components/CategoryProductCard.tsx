@@ -7,8 +7,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
+import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 import LikeButton from './LikeButton';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
+import { getValidColor } from './ShopCard';
 
 export interface CategoryProduct {
   id: string;
@@ -30,6 +32,9 @@ export interface CategoryProduct {
   minShippingQty?: number;
   measurements?: string;
   vendor?: string;
+  uniqueDesigns?: Record<string, number>;
+  hasUniqueImageVariants?: boolean;
+  uniqueImageVariants?: Record<string, number>;
 }
 
 interface CategoryProductCardProps {
@@ -74,6 +79,7 @@ export default function CategoryProductCard({
   const [tempSelectedSize, setTempSelectedSize] = useState<string>('');
   const [tempSelectedColor, setTempSelectedColor] = useState<string>('');
   const [tempSelectedMeasurement, setTempSelectedMeasurement] = useState<string>('');
+  const [tempSelectedUnique, setTempSelectedUnique] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -99,7 +105,10 @@ export default function CategoryProductCard({
   const safeImgUrl = sanitizeImageUrl(rawImgUrl);
 
   // Parse colors
-  const colors = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+  let colors = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : [];
+  if (product.hasUniqueImageVariants && product.uniqueImageVariants) {
+    colors = Object.keys(product.uniqueImageVariants);
+  }
 
   // Scrollbar color matching the top border theme
   const scrollbarColor = (() => {
@@ -266,9 +275,14 @@ export default function CategoryProductCard({
       {/* Color bar below image */}
       {colors.length > 0 && (
         <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 dark:bg-zinc-800/50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
-          {colors.map((c, i) => (
-            <span key={i} className={`shrink-0 text-[10px] font-bold capitalize px-1.5 py-1 rounded bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm ${c.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: c.toLowerCase().includes('white') ? undefined : c.toLowerCase().replace(/\s/g, '') }}>{c}</span>
-          ))}
+          {colors.map((c, i) => {
+            const isImage = c.startsWith('http') || c.startsWith('data:');
+            return isImage ? (
+              <img key={i} src={c} alt={(c.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT")} title="Image Color" className="shrink-0 w-5 h-5 rounded-md border border-gray-200 dark:border-zinc-700 object-cover" />
+            ) : (
+              <span key={i} title={c} className={`shrink-0 w-3 h-3 rounded-full border shadow-sm ${c.toLowerCase().includes('white') ? 'border-gray-200 dark:border-zinc-700' : 'border-transparent'}`} style={{ backgroundColor: getValidColor(c) }} />
+            );
+          })}
         </div>
       )}
 
@@ -433,9 +447,10 @@ export default function CategoryProductCard({
 
                 const existing = cartItems.find(item => item.id === product.id);
                 const currentInCart = existing ? existing.quantity : 0;
+                const liveQty = getAvailableVariantQuantity(product);
 
-                if (currentInCart + 1 > (product.quantity ?? 0)) {
-                  toast.error(`Only ${product.quantity ?? 0} available in stock`);
+                if (currentInCart + 1 > liveQty) {
+                  toast.error(`Only ${liveQty} available in stock`);
                   return;
                 }
 
@@ -497,7 +512,8 @@ export default function CategoryProductCard({
                     <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Size</h3>
                     <div className="flex flex-wrap gap-2">
                       {sizeKeys.map(sz => {
-                        const qty = (product.sizeQuantities as Record<string, number>)[sz];
+                        const finalColorForRender = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                        const qty = finalColorForRender ? getAvailableVariantQuantity(product, sz, finalColorForRender) : (product.sizeQuantities as Record<string, number>)?.[sz] || 0;
                         return (
                           <button
                             key={sz}
@@ -507,6 +523,7 @@ export default function CategoryProductCard({
                               e.preventDefault();
                               e.stopPropagation();
                               setTempSelectedSize(sz);
+                              setTempSelectedColor('');
                             }}
                           >
                             {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
@@ -517,36 +534,100 @@ export default function CategoryProductCard({
                   </div>
                 )}
 
-                      {colors.length > 0 && (
-                        <div className="mb-2">
-                          <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
-                            >
-                              Any Color
-                            </button>
-                            {colors.map((c, i) => (
-                              <button
-                                key={i}
-                                className={`px-3 py-2 rounded-md text-xs font-bold border capitalize transition-colors ${tempSelectedColor === c
-                                  ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
-                                  : 'bg-white border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:border-gray-600 dark:hover:bg-zinc-700'
-                                  }`}
-                                style={tempSelectedColor === c ? { backgroundColor: c.toLowerCase().replace(/\s/g, '') } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : c.toLowerCase().replace(/\s/g, ''), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : c.toLowerCase().replace(/\s/g, ''), borderLeftWidth: '4px' }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setTempSelectedColor(c);
-                                }}
-                              >
-                                {c}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {(() => {
+                        const scq = (product as any).sizeColorQuantities as Record<string, Record<string, number>> | undefined;
+                        const hasSizeColors = scq && Object.keys(scq).length > 0;
+                        
+                        // If product has per-size colors, only show after size is selected
+                        if (hasSizeColors && sizeKeys.length > 0) {
+                          if (!tempSelectedSize) return null; // wait for size selection
+                          const sizeColors = scq[tempSelectedSize];
+                          if (!sizeColors || Object.keys(sizeColors).length === 0) return null;
+                          const availableColors = Object.entries(sizeColors).filter(([, qty]) => qty > 0).map(([c]) => c);
+                          if (availableColors.length === 0) return null;
+                          
+                          return (
+                            <div className="mb-2">
+                              <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
+                                >
+                                  Any Color
+                                </button>
+                                {availableColors.map((c, i) => {
+                                  const isImageUrl = c.startsWith('http') || c.startsWith('data:');
+                                  return (
+                                    <button
+                                      key={i}
+                                      className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImageUrl ? 'w-8 h-12 shrink-0' : 'px-3 py-2 text-xs font-bold capitalize'} ${tempSelectedColor === c
+                                        ? `${!isImageUrl ? getContrastTextColor(c) : ''} ${isImageUrl ? 'border-purple-600 scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                                        : `${isImageUrl ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:border-gray-600 dark:hover:bg-zinc-700'}`
+                                        }`}
+                                      style={!isImageUrl ? (tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : getValidColor(c), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setTempSelectedColor(c);
+                                      }}
+                                    >
+                                      {isImageUrl ? (
+                                        <img src={c} alt="Color Variant" className="w-full h-full object-cover" />
+                                      ) : (
+                                        c
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Fallback: global colors (non-size products)
+                        if (colors.length > 0) {
+                          return (
+                            <div className="mb-2">
+                              <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Color</h3>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTempSelectedColor('Any Color'); }}
+                                >
+                                  Any Color
+                                </button>
+                                {colors.map((c, i) => {
+                                  const isImageUrl = c.startsWith('http') || c.startsWith('data:');
+                                  return (
+                                    <button
+                                      key={i}
+                                      className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImageUrl ? 'w-8 h-12 shrink-0' : 'px-3 py-2 text-xs font-bold capitalize'} ${tempSelectedColor === c
+                                        ? `${!isImageUrl ? getContrastTextColor(c) : ''} ${isImageUrl ? 'border-purple-600 scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                                        : `${isImageUrl ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:border-gray-600 dark:hover:bg-zinc-700'}`
+                                        }`}
+                                      style={!isImageUrl ? (tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { color: c.toLowerCase().includes('white') ? '#9ca3af' : getValidColor(c), borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setTempSelectedColor(c);
+                                      }}
+                                    >
+                                      {isImageUrl ? (
+                                        <img src={c} alt="Color Variant" className="w-full h-full object-cover" />
+                                      ) : (
+                                        c
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return null;
+                      })()}
 
                 {measurementKeys.length > 0 && (
                   <div className="mb-2">
@@ -578,23 +659,43 @@ export default function CategoryProductCard({
 
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 shrink-0">
                 <button
-                  className={`w-full py-2.5 rounded-lg font-bold text-white transition-all ${((sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor) || (measurementKeys.length > 0 && !tempSelectedMeasurement)) ? 'bg-gray-300 cursor-not-allowed dark:bg-zinc-700 text-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
-                  disabled={(sizeKeys.length > 0 && !tempSelectedSize) || (colors.length > 0 && !tempSelectedColor) || (measurementKeys.length > 0 && !tempSelectedMeasurement)}
+                  className={`w-full py-2.5 rounded-lg font-bold text-white transition-all ${(() => {
+                    if (sizeKeys.length > 0 && !tempSelectedSize) return true;
+                    if (measurementKeys.length > 0 && !tempSelectedMeasurement) return true;
+                    const scq = (product as any).sizeColorQuantities as Record<string, Record<string, number>> | undefined;
+                    const hasSizeColors = scq && Object.keys(scq).length > 0 && tempSelectedSize && scq[tempSelectedSize] && Object.keys(scq[tempSelectedSize]).some(c => scq[tempSelectedSize][c] > 0);
+                    if (hasSizeColors && !tempSelectedColor) return true;
+                    if (!hasSizeColors && colors.length > 0 && !tempSelectedColor) return true;
+                    return false;
+                  })() ? 'bg-gray-300 cursor-not-allowed dark:bg-zinc-700 text-gray-500' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  disabled={(() => {
+                    if (sizeKeys.length > 0 && !tempSelectedSize) return true;
+                    if (measurementKeys.length > 0 && !tempSelectedMeasurement) return true;
+                    const scq = (product as any).sizeColorQuantities as Record<string, Record<string, number>> | undefined;
+                    const hasSizeColors = scq && Object.keys(scq).length > 0 && tempSelectedSize && scq[tempSelectedSize] && Object.keys(scq[tempSelectedSize]).some(c => scq[tempSelectedSize][c] > 0);
+                    if (hasSizeColors && !tempSelectedColor) return true;
+                    if (!hasSizeColors && colors.length > 0 && !tempSelectedColor) return true;
+                    return false;
+                  })()}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     
                     if (sizeKeys.length > 0 && !tempSelectedSize) return;
-                    if (colors.length > 0 && !tempSelectedColor) return;
                     if (measurementKeys.length > 0 && !tempSelectedMeasurement) return;
+                    const scq2 = (product as any).sizeColorQuantities as Record<string, Record<string, number>> | undefined;
+                    const hasSizeColors2 = scq2 && Object.keys(scq2).length > 0 && tempSelectedSize && scq2[tempSelectedSize] && Object.keys(scq2[tempSelectedSize]).some(c => scq2[tempSelectedSize][c] > 0);
+                    if (hasSizeColors2 && !tempSelectedColor) return;
+                    if (!hasSizeColors2 && colors.length > 0 && !tempSelectedColor) return;
 
-                    const qtyToCheck = tempSelectedSize ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize] : product.quantity;
+                    const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
+                    const qtyToCheck = getAvailableVariantQuantity(product, tempSelectedSize || undefined, finalColor);
                     
-                    const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === tempSelectedColor && (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined));
+                    const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === finalColor && (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined));
                     const currentInCart = existing ? existing.quantity : 0;
                     
-                    if (currentInCart + 1 > (qtyToCheck ?? 0)) {
-                      toast.error(`Only ${qtyToCheck ?? 0} available`);
+                    if (currentInCart + 1 > qtyToCheck) {
+                      toast.error(`Only ${qtyToCheck} available`);
                       return;
                     }
 
