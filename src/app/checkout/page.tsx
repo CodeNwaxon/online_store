@@ -723,7 +723,7 @@ export default function Checkout() {
                       <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
                     </div>
                     <span className="text-muted-foreground">
-                      {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} x {item.quantity}
+                      {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor?.startsWith('http') || item.selectedColor?.startsWith('data:') ? (item.selectedColor.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT") : item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} x {item.quantity}
                     </span>
                   </div>
                   <span className="font-semibold">₦{(item.price * item.quantity).toLocaleString()}</span>
