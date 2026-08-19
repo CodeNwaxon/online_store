@@ -92,24 +92,24 @@ export default function PaymentReviewOverlay({ onClose }: Props) {
   if (checkingReview || hasReviewed) return null;
 
   return (
-    <div className="absolute -inset-4 md:-inset-8 bg-background/90 backdrop-blur-md z-50 flex items-center justify-center p-4 rounded-xl">
-      <div className="bg-card border border-border p-6 rounded-xl shadow-2xl max-w-sm w-full relative animate-in zoom-in-95 duration-200">
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+    <div className="absolute -inset-4 md:-inset-8 bg-background/90 backdrop-blur-md z-50 flex items-center justify-center p-3 md:p-4 rounded-xl">
+      <div className="bg-card border border-border p-5 max-md:p-2 rounded-xl shadow-2xl max-w-xs md:max-w-sm w-full relative animate-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
           title="Close"
         >
-          <FaTimes size={18} />
+          <FaTimes size={16} />
         </button>
-        
-        <h3 className="text-xl font-bold mb-2 pr-6">Enjoying your purchase?</h3>
-        <p className="text-sm text-muted-foreground mb-6">Leave a quick review to let us know how we did!</p>
-        
-        <div className="flex justify-center gap-2 mb-6">
+
+        <h3 className="text-sm md:text-lg font-bold mb-1 pr-6">Enjoying your purchase Experience?</h3>
+        <p className="text-[10px] md:text-xs text-muted-foreground mb-4 max-md:mb-2">Leave a quick review to let us know how we did!</p>
+
+        <div className="flex justify-center gap-2 mb-4 max-md:mb-3">
           {[1, 2, 3, 4, 5].map((s) => (
             <FaStar
               key={s}
-              size={28}
+              size={18}
               color={s <= rating ? '#FFD700' : 'var(--border)'}
               className="cursor-pointer transition-transform hover:scale-110"
               onClick={() => setRating(s)}
@@ -121,15 +121,15 @@ export default function PaymentReviewOverlay({ onClose }: Props) {
           placeholder="Tell us what you think..."
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          className="w-full min-h-[100px] p-3 rounded-lg border border-border bg-background mb-6 font-sans outline-none focus:border-primary resize-y text-sm"
+          className="w-full min-h-[60px] md:min-h-[80px] p-3 rounded-lg border border-border bg-background mb-4 max-md:mb-3 font-sans outline-none focus:border-primary resize-y text-xs"
         />
 
         <button
-          className="w-full bg-primary hover:bg-primary-hover text-white font-bold flex items-center justify-center gap-2 rounded-lg p-3 transition-colors disabled:opacity-50 shadow-md"
+          className="w-full bg-primary hover:bg-primary-hover text-white font-bold flex items-center justify-center gap-2 rounded-lg p-2.5 transition-colors disabled:opacity-50 shadow-md text-sm"
           onClick={handlePostReview}
           disabled={loading}
         >
-          {loading ? 'Posting...' : <><FaPaperPlane /> Send us your feedback</>}
+          {loading ? 'Posting...' : <><FaPaperPlane size={14} /> Send us your feedback</>}
         </button>
       </div>
     </div>
