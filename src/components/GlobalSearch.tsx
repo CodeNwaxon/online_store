@@ -203,17 +203,17 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
 
   return (
     <div className={`w-full ${containerBg} transition-colors duration-700`} ref={dropdownRef}>
-      <div className="mx-auto max-w-3xl py-2 px-4 md:px-0 relative w-full">
-        <div className="relative flex items-center w-full h-10 rounded-full focus-within:shadow-md bg-white border border-slate-200 overflow-hidden transition-all duration-300 focus-within:border-primary/50 max-md:h-10 py-2">
+      <div className="mx-auto max-w-3xl py-1 px-4 md:px-0 relative w-full">
+        <div className="relative flex items-center w-full h-8 rounded-full focus-within:shadow-md bg-white border border-slate-200 overflow-hidden transition-all duration-300 focus-within:border-primary/50 max-md:h-8 py-1">
           <div className="grid place-items-center h-full w-12 text-slate-400">
             {isLoading ? (
               <FaSpinner className="animate-spin" />
             ) : (
-              <FaSearch />
+              <FaSearch size={14} />
             )}
           </div>
           <input
-            className="py-2 peer h-full w-full outline-none text-sm text-slate-700 pr-2 bg-transparent max-md:text-xs"
+            className="py-1 peer h-full w-full outline-none text-sm text-slate-700 pr-2 bg-transparent max-md:text-xs"
             type="text"
             id="search"
             placeholder="Search products..."

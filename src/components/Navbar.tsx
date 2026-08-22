@@ -455,9 +455,9 @@ export default function Navbar() {
           <Link href="/" className="flex items-end md:items-center gap-2">
             <div className={`${isDarkNav ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
               <Image src="/logo_nomo.png" alt="Logo" width={30} height={30} className="md:hidden object-contain" />
-              <Image src="/logo_nomo.png" alt="Logo" width={38} height={38} className="hidden md:block object-contain" />
+              <Image src="/logo_nomo.png" alt="Logo" width={32} height={32} className="hidden md:block object-contain" />
             </div>
-            <span className={`text-[0.8rem] md:text-[1.2rem] font-bold ${isDarkNav ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
+            <span className={`text-[0.8rem] md:text-[1rem] font-bold ${isDarkNav ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
           </Link>
 
           {/* Desktop centre links */}

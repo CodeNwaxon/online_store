@@ -71,9 +71,16 @@ export default function Home() {
     const loadData = async () => {
       setDataLoading(true);
       try {
-        // Fetch all products
-        const prodSnap = await getDocs(collection(db, 'products'));
-        let allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const now = new Date();
+        let allProducts: any[] = [];
+        
+        // 1. Fetch all products
+        try {
+          const prodSnap = await getDocs(collection(db, 'products'));
+          allProducts = prodSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        } catch (err) {
+          console.error("Error fetching products:", err);
+        }
 
         // Fallback to static products if dynamic collection is empty
         if (allProducts.length === 0) {
@@ -97,7 +104,6 @@ export default function Home() {
         });
 
         // Auto-remove expired promos
-        const now = new Date();
         const expiredPromos = allProducts.filter((p: any) =>
           p.isPromo &&
           p.promoEndDate &&
@@ -121,28 +127,37 @@ export default function Home() {
           return;
         }
 
-        // Fetch promo materials
-        const promoMatsSnap = await getDocs(collection(db, 'promo_materials'));
+        // 2. Fetch promo materials
         let activePromoMaterial = null;
-        if (!promoMatsSnap.empty) {
-          const promos = promoMatsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          const validPromos = promos.filter((p: any) => p.endDate && new Date(p.endDate) >= now);
-          if (validPromos.length > 0) {
-             validPromos.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-             activePromoMaterial = validPromos[0];
+        try {
+          const promoMatsSnap = await getDocs(collection(db, 'promo_materials'));
+          if (!promoMatsSnap.empty) {
+            const promos = promoMatsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const validPromos = promos.filter((p: any) => p.endDate && new Date(p.endDate) >= now);
+            if (validPromos.length > 0) {
+               validPromos.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+               activePromoMaterial = validPromos[0];
+            }
           }
+        } catch (err) {
+          console.warn("Could not fetch promo_materials (likely permissions):", err);
         }
         setActivePromo(activePromoMaterial);
 
-        // Fetch hero config
-        const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+        // 3. Fetch hero config
         let slidesToSet = [];
-        if (heroSnap.exists()) {
-          const ids: string[] = heroSnap.data().productIds || [];
-          const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
-          slidesToSet = slides.length > 0 ? slides : allProducts.filter(p => p.isPromo).slice(0, 5);
-        } else {
-          // Default hero slides if no config
+        try {
+          const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+          if (heroSnap.exists()) {
+            const ids: string[] = heroSnap.data().productIds || [];
+            const slides = ids.map(id => allProducts.find(p => p.id === id)).filter(Boolean);
+            slidesToSet = slides.length > 0 ? slides : allProducts.filter(p => p.isPromo).slice(0, 5);
+          } else {
+            // Default hero slides if no config
+            slidesToSet = allProducts.filter(p => p.isPromo).slice(0, 5);
+          }
+        } catch (err) {
+          console.error("Error fetching hero settings:", err);
           slidesToSet = allProducts.filter(p => p.isPromo).slice(0, 5);
         }
         setHeroSlides(slidesToSet);
@@ -150,42 +165,45 @@ export default function Home() {
           setCurrentSlide(Math.floor(Math.random() * slidesToSet.length));
         }
 
-        // Fetch general settings (installment bg, siteName, categoriesExplorer)
-        const generalSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (generalSnap.exists()) {
-          const gData = generalSnap.data();
-          if (gData.installmentBg) setInstallmentBg(gData.installmentBg);
-          if (gData.siteName) setSiteName(gData.siteName);
-          if (gData.categoriesExplorer) {
-            setCategoriesExplorer(prev => ({
-              toiletKitchen: gData.categoriesExplorer.toiletKitchen || prev.toiletKitchen,
-              cosmetics: gData.categoriesExplorer.cosmetics || prev.cosmetics,
-              wears: gData.categoriesExplorer.wears || prev.wears,
-            }));
-          }
-        }
-
         // Promo products for carousel
         setPromoProducts(allProducts.filter((p: any) => p.isPromo));
 
-        // Fetch food section settings
-        const foodSettingsSnap = await getDoc(doc(db, 'settings', 'food_market'));
-        if (foodSettingsSnap.exists()) {
-          const fData = foodSettingsSnap.data();
-          setFoodSection(prev => ({
-            image: fData.sectionImage || prev.image,
-            title: fData.sectionTitle || prev.title,
-            description: fData.sectionDescription || prev.description,
-          }));
+        // 4. Fetch general settings
+        try {
+          const generalSnap = await getDoc(doc(db, 'settings', 'general'));
+          if (generalSnap.exists()) {
+            const gData = generalSnap.data();
+            if (gData.installmentBg) setInstallmentBg(gData.installmentBg);
+            if (gData.siteName) setSiteName(gData.siteName);
+            if (gData.categoriesExplorer) {
+              setCategoriesExplorer(prev => ({
+                toiletKitchen: gData.categoriesExplorer.toiletKitchen || prev.toiletKitchen,
+                cosmetics: gData.categoriesExplorer.cosmetics || prev.cosmetics,
+                wears: gData.categoriesExplorer.wears || prev.wears,
+              }));
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching general settings:", err);
         }
+
+        // 5. Fetch food section settings
+        try {
+          const foodSettingsSnap = await getDoc(doc(db, 'settings', 'food_market'));
+          if (foodSettingsSnap.exists()) {
+            const fData = foodSettingsSnap.data();
+            setFoodSection(prev => ({
+              image: fData.sectionImage || prev.image,
+              title: fData.sectionTitle || prev.title,
+              description: fData.sectionDescription || prev.description,
+            }));
+          }
+        } catch (err) {
+          console.error("Error fetching food_market settings:", err);
+        }
+        
       } catch (error) {
-        console.error("Error loading home data:", error);
-        const fallbackSlides = staticProducts.filter(p => p.isPromo).slice(0, 5);
-        setPromoProducts(staticProducts.filter(p => p.isPromo));
-        setHeroSlides(fallbackSlides);
-        if (fallbackSlides.length > 0) {
-          setCurrentSlide(Math.floor(Math.random() * fallbackSlides.length));
-        }
+        console.error("Unexpected error loading home data:", error);
       } finally {
         setDataLoading(false);
       }

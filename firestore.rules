@@ -75,6 +75,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+    match /promo_materials/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /cosmetics/{id} {
       allow read: if true;
       allow write: if isAdmin();
