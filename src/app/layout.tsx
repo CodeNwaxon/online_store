@@ -75,6 +75,7 @@ import BadgeManager from "@/components/BadgeManager";
 import ToasterProvider from "@/components/ToasterProvider";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
 import InstallPrompt from "@/components/InstallPrompt";
+import MaintenanceGuard from "@/components/MaintenanceGuard";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -90,9 +91,11 @@ export default function RootLayout({
         <Suspense><BadgeManager /></Suspense>
         <Suspense><AnalyticsProvider /></Suspense>
         <InstallPrompt />
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <MaintenanceGuard>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </MaintenanceGuard>
         <Script src="https://js.paystack.co/v1/inline.js" strategy="lazyOnload" />
       </body>
     </html>

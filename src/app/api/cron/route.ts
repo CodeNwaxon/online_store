@@ -188,7 +188,8 @@ export async function GET(request: Request) {
             'lateFlags.lastPenaltyReminder': now,
             totalAmount: newTotalAmount,
             monthlyAmount: newMonthlyPayment,
-            payments: updatedPayments
+            payments: updatedPayments,
+            fixedPenaltyAmount: penaltyAmount
           };
 
           const msg = `Your grace period has expired. A ${lateFeePercent}% late fee has been applied. Your new monthly payment is ₦${newMonthlyPayment.toLocaleString()}.`;
@@ -217,25 +218,51 @@ export async function GET(request: Request) {
             );
           }
         } else {
-          // It's been applied. Check if we need to send a monthly reminder (every 30 days)
+          // It's been applied. Check if we need to apply it again (every 30 days for simple interest)
           const lastReminder = lateFlags.lastPenaltyReminder || 0;
           if (now - lastReminder >= THIRTY_DAYS) {
+            // Apply simple interest again using the fixed penalty amount
+            // Fallback calculation in case fixedPenaltyAmount wasn't saved previously
+            const baseRemainingBalance = loan.totalAmount - (loan.totalAmountPaid || loan.downPaymentPaid || 0);
+            const penaltyAmount = loan.fixedPenaltyAmount || (baseRemainingBalance * (lateFeePercent / 100));
+            const newTotalAmount = loan.totalAmount + penaltyAmount;
+            
+            const remainingBalance = newTotalAmount - (loan.totalAmountPaid || loan.downPaymentPaid || 0);
+            const remainingMonths = loan.planMonths - loan.monthsPaid;
+            const newMonthlyPayment = remainingBalance / remainingMonths;
+            
+            const updatedPayments = loan.payments.map((p: any) => {
+              if (p.status === 'pending') {
+                return { ...p, amount: newMonthlyPayment };
+              }
+              return p;
+            });
+
+            const updateObj = {
+              'lateFlags.lastPenaltyReminder': now,
+              totalAmount: newTotalAmount,
+              monthlyAmount: newMonthlyPayment,
+              payments: updatedPayments,
+              fixedPenaltyAmount: penaltyAmount
+            };
+
             emailsToSend.push(
               sendEmail({
                 to: customerEmail,
-                subject: `Reminder: Overdue Installment Payment for ${loan.productName}`,
+                subject: `Notice: Additional Late Fee Penalty Applied for ${loan.productName}`,
                 html: `<p>Hi ${loan.customerName || 'there'},</p>
-                <p>This is a monthly reminder that your installment payment is severely overdue.</p>
-                <p>Your current monthly payment is <strong>₦${loan.monthlyAmount.toLocaleString()}</strong> (includes late fees).</p>
-                <p>Please settle this immediately.</p>`
-              }).then(() => adminDb.collection('installments').doc(doc.id).update({ 'lateFlags.lastPenaltyReminder': now }))
+                <p>This is a monthly notice that your installment payment is still overdue.</p>
+                <p>An additional late fee of ₦${penaltyAmount.toLocaleString()} has been applied.</p>
+                <p>Your new monthly payment is now <strong>₦${newMonthlyPayment.toLocaleString()}</strong>.</p>
+                <p>Please log into your dashboard and make the payment immediately to avoid further charges.</p>`
+              }).then(() => adminDb.collection('installments').doc(doc.id).update(updateObj))
             );
 
             if (loan.userId) {
               emailsToSend.push(
                 adminDb.collection('broadcasts').add({
-                  title: 'Overdue Payment Reminder',
-                  message: `Your installment payment is severely overdue. Current monthly payment: ₦${loan.monthlyAmount.toLocaleString()}`,
+                  title: 'Additional Late Fee Applied',
+                  message: `Your installment payment is still overdue. An extra penalty has been added. New monthly payment: ₦${newMonthlyPayment.toLocaleString()}`,
                   type: 'delivery',
                   customerUid: loan.userId,
                   createdAt: new Date().toISOString()

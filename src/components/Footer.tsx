@@ -60,6 +60,7 @@ export default function Footer() {
   };
 
   const siteName = settings?.siteName || '';
+  const siteLogo = settings?.siteLogo || '/logo_nomo.png';
   const footerMessage = settings?.footerMessage || `Premium African-inspired store bringing you the best in electronics, furniture, and more with [${siteName}].`;
 
   // Function to highlight text in brackets [Like This]
@@ -80,12 +81,10 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <div className="flex gap-4 items-start">
-              <Image
-                src="/logo_nomo.png"
+              <img
+                src={siteLogo}
                 alt="Logo"
-                width={40}
-                height={40}
-                className="object-contain shrink-0 p-0.5"
+                className="w-[40px] h-[40px] object-contain shrink-0 p-0.5"
               />
               <p className="text-muted-foreground text-[0.9rem] m-0">
                 {renderMessage(footerMessage)}

@@ -85,6 +85,7 @@ export default function Navbar() {
   }, [pathname, router]);
   const { user, isAdmin, isCEO, adminData } = useAdmin();
   const [siteName, setSiteName] = useState('');
+  const [siteLogo, setSiteLogo] = useState('/logo_nomo.png');
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
   useHydrateTheme();
@@ -113,7 +114,10 @@ export default function Navbar() {
     setMounted(true);
     const fetchSettings = async () => {
       const docSnap = await getDoc(doc(db, 'settings', 'general'));
-      if (docSnap.exists()) setSiteName(docSnap.data().siteName || '');
+      if (docSnap.exists()) {
+        setSiteName(docSnap.data().siteName || '');
+        setSiteLogo(docSnap.data().siteLogo || '/logo_nomo.png');
+      }
     };
     fetchSettings();
 
@@ -454,8 +458,8 @@ export default function Navbar() {
           {/* Logo  always visible */}
           <Link href="/" className="flex items-end md:items-center gap-2">
             <div className={`${isDarkNav ? 'bg-white p-0.5 rounded-md shadow-sm' : ''} flex items-center justify-center`}>
-              <Image src="/logo_nomo.png" alt="Logo" width={30} height={30} className="md:hidden object-contain" />
-              <Image src="/logo_nomo.png" alt="Logo" width={32} height={32} className="hidden md:block object-contain" />
+              <img src={siteLogo} alt="Logo" className="w-[30px] h-[30px] md:hidden object-contain" />
+              <img src={siteLogo} alt="Logo" className="w-[32px] h-[32px] hidden md:block object-contain" />
             </div>
             <span className={`text-[0.8rem] md:text-[1rem] font-bold ${isDarkNav ? 'text-white' : 'text-primary'}`}>{siteName}&reg;</span>
           </Link>
@@ -590,7 +594,7 @@ export default function Navbar() {
         {/* Drawer header */}
         <div className="flex justify-between items-center px-[1.25rem] py-[1.1rem] border-b border-border">
           <div className="flex items-center gap-2">
-            <Image src="/logo_nomo.png" alt="logo" width={28} height={28} className="p-0.5" />
+            <img src={siteLogo} alt="logo" className="w-[28px] h-[28px] p-0.5 object-contain" />
             <span className="font-bold text-primary text-[0.95rem]">{isAdminRoute ? (isCEO ? 'CEO Dashboard' : 'Admin Staff') : siteName + ''}</span>
           </div>
           <button onClick={() => setIsMenuOpen(false)} className="text-foreground p-1"><FaTimes size={22} /></button>

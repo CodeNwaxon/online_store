@@ -16,13 +16,14 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown, FaInfoCircle, FaStar } from 'react-icons/fa';
+import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown, FaInfoCircle, FaStar, FaWrench } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
 import { useStarThresholds } from '@/hooks/useStarThresholds';
 import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
+import { getAdminRoutes } from '@/actions/getAdminRoutes';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/MANAGEMENT',
@@ -67,6 +68,10 @@ export default function AdminManagement() {
   // URL Manager State
   const [urlLink, setUrlLink] = useState('');
   const [savedUrls, setSavedUrls] = useState<string[]>([]);
+  
+  // Maintenance State
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
 
   // Passkey State
   const [oldPasskey, setOldPasskey] = useState('');
@@ -145,6 +150,9 @@ export default function AdminManagement() {
       if (data?.specialStoreMessageDurationDays !== undefined && data?.specialStoreMessageDurationDays !== null) {
         setSpecialStoreMessageDurationDaysInput(Number(data.specialStoreMessageDurationDays) || 30);
       }
+      if (data?.maintenanceMode !== undefined) {
+        setMaintenanceMode(!!data.maintenanceMode);
+      }
     }, (error) => {
       console.warn('Special store chat duration listener error:', error);
     });
@@ -187,9 +195,13 @@ export default function AdminManagement() {
         const data = settingsDoc.data();
         if (data.ceoInfo) setCeoInfo(data.ceoInfo);
 
+        // Fetch dynamic routes from file system
+        const autoRoutes = await getAdminRoutes();
+        const defaultRoutes = autoRoutes.length > 0 ? autoRoutes : DEFAULT_INTERNAL_ROUTES;
+
         // Ensure defaults are present and all are uppercase
         const existingUrls = (data.savedUrls || []).map((u: string) => u.toUpperCase());
-        const merged = Array.from(new Set([...DEFAULT_INTERNAL_ROUTES, ...existingUrls]));
+        const merged = Array.from(new Set([...defaultRoutes, ...existingUrls]));
         setSavedUrls(merged);
 
         setSecurityStats({
@@ -577,6 +589,18 @@ export default function AdminManagement() {
     }
   };
 
+  const handleToggleMaintenance = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const newVal = !maintenanceMode;
+      await updateDoc(doc(db, 'settings', 'general'), { maintenanceMode: newVal });
+      toast.success(newVal ? 'Maintenance Mode Enabled' : 'Maintenance Mode Disabled');
+    } catch (err) {
+      toast.error('Failed to toggle maintenance mode');
+    }
+    setMaintenanceLoading(false);
+  };
+
   return (
     <AdminGuard requireCEO={true}>
       {/* ── REMOVE ADMIN PASSKEY OVERLAY ── */}
@@ -711,35 +735,22 @@ export default function AdminManagement() {
           <p className="text-sm md:text-base text-muted-foreground mt-2">Manage your staff, URLs, and CEO profile.</p>
         </header>
 
-        {/* URL MANAGER SECTION */}
-        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm">
-          <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaLink /> URL Manager</h2>
-          <div className="flex flex-col md:flex-row gap-2 mb-6">
-            <div className="flex-1 flex items-center bg-background border border-border rounded-md overflow-hidden focus-within:border-primary transition-colors">
-              <span className="pl-3 py-3 text-muted-foreground text-sm font-bold bg-muted/30 border-r border-border">/admin/</span>
-              <input
-                type="text"
-                placeholder="management"
-                className="flex-1 p-3 bg-transparent text-sm focus:outline-none"
-                value={urlLink}
-                onChange={(e) => setUrlLink(e.target.value)}
-              />
+
+        {/* SYSTEM CONTROLS SECTION */}
+        <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm border-secondary/30">
+          <h2 className="text-lg md:text-xl font-bold mb-6 flex items-center gap-2"><FaWrench className="text-secondary" /> System Controls</h2>
+          <div className="flex items-center justify-between bg-muted/50 p-4 border border-border rounded-md">
+            <div>
+              <h3 className="font-bold text-sm">Maintenance Mode</h3>
+              <p className="text-xs text-muted-foreground mt-1">If enabled, the entire site will be inaccessible to users except the CEO.</p>
             </div>
-            <button onClick={handleAddUrl} className="bg-primary text-white px-6 py-3 rounded-md font-bold text-sm">Save Link</button>
-          </div>
-          <div className="flex flex-wrap gap-3 max-h-[180px] md:max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {savedUrls.map(url => (
-              <div key={url} className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-2 border border-border rounded-md bg-muted/50 text-[0.6rem] md:text-[0.7rem] font-bold shadow-sm animate-in fade-in zoom-in duration-300">
-                <span className="tracking-tight text-primary/80">🔗 {url.replace(/^\/ADMIN\//, '')}</span>
-                <button
-                  onClick={() => handleDeleteUrl(url)}
-                  className="ml-2 p-1.5 rounded-full hover:bg-red-50 text-secondary transition-all hover:text-red-700"
-                  title="Remove this route"
-                >
-                  <FaTrash size={12} />
-                </button>
-              </div>
-            ))}
+            <button
+              onClick={handleToggleMaintenance}
+              disabled={maintenanceLoading}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${maintenanceMode ? 'bg-secondary' : 'bg-muted-foreground/30'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
         </section>
 

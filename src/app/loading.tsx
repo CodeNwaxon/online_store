@@ -5,6 +5,7 @@ import Image from 'next/image';
 
 export default function Loading() {
   const [siteName, setSiteName] = useState('');
+  const [siteLogo, setSiteLogo] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -17,6 +18,8 @@ export default function Loading() {
           const data = await response.json();
           const name = data.fields?.siteName?.stringValue;
           if (name) setSiteName(name);
+          const logo = data.fields?.siteLogo?.stringValue;
+          if (logo) setSiteLogo(logo);
         }
       } catch (err) {
         // Silent fallback to default
@@ -33,12 +36,10 @@ export default function Loading() {
 
         {/* Small Logo in Center */}
         <div className="rounded-md absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55px] h-[55px] overflow-hidden p-1">
-          <Image
-            src="/logo_nomo.png"
+          <img
+            src={siteLogo || "/logo_nomo.png"}
             alt="Loading..."
-            width={47}
-            height={47}
-            className="object-contain"
+            className="w-full h-full object-contain"
           />
         </div>
       </div>

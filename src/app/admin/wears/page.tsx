@@ -97,6 +97,7 @@ export default function AdminWears() {
   const clothLetterSizes = ['XXL', 'XL', 'L', 'M', 'S', 'XS', 'XXS'];
   const clothNumberSizes = ['24', '22', '20', '18', '16', '14', '12', '10', '8', '6', '4', '2'];
   const clothWaistSizes = ['44', '42', '40', '38', '36', '34', '32', '30', '28', '26'];
+  const clothChildrenSizes = ['0-3 months', '3-6 months', '6-12 months', '1 year', '2 years', '3 years', '4 years', '5 years', '6 years', '7 years', '8 years', '9 years', '10 years', '11 years', '12 years'];
 
   const isShoeGroup = group?.toLowerCase() === 'shoes' || group?.toLowerCase() === 'shoe';
   const isClothGroup = group?.toLowerCase() === 'cloth' || group?.toLowerCase() === 'cloths' || group?.toLowerCase() === 'clothes';
@@ -1095,6 +1096,24 @@ export default function AdminWears() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                         {clothWaistSizes.map(sz => (
                           <div key={`ws-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
+                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
+                            <span className="font-bold">{sz}</span>
+                            {sizeQuantities[sz] !== undefined && (
+                              <div className="ml-auto flex items-center gap-1">
+                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Children Sizes */}
+                    <div>
+                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Children Sizes</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {clothChildrenSizes.map(sz => (
+                          <div key={`cs-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
                             <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
                             <span className="font-bold">{sz}</span>
                             {sizeQuantities[sz] !== undefined && (

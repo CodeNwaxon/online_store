@@ -38,7 +38,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
   const [editLoading, setEditLoading] = useState(false);
 
   // Password protection state
-  const [passwordPrompt, setPasswordPrompt] = useState<{ isOpen: boolean, action: 'create' | 'delete', targetId?: string }>({ isOpen: false, action: 'create' });
+  const [passwordPrompt, setPasswordPrompt] = useState<{ isOpen: boolean, action: 'create' | 'delete' | 'edit', targetId?: string, targetArea?: Area }>({ isOpen: false, action: 'create' });
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -75,6 +75,8 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
           setIsCreating(true);
         } else if (passwordPrompt.action === 'delete' && passwordPrompt.targetId) {
           handleDelete(passwordPrompt.targetId);
+        } else if (passwordPrompt.action === 'edit' && passwordPrompt.targetArea) {
+          openEditArea(passwordPrompt.targetArea);
         }
         setPasswordPrompt({ isOpen: false, action: 'create' });
         setPassword('');
@@ -90,6 +92,31 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    const pEES = Number(prices['extra-extra-small'].replace(/,/g, ''));
+    const pES = Number(prices['extra-small'].replace(/,/g, ''));
+    const pS = Number(prices['small'].replace(/,/g, ''));
+    const pM = Number(prices['medium'].replace(/,/g, ''));
+    const pL = Number(prices['large'].replace(/,/g, ''));
+    const pEL = Number(prices['extra-large'].replace(/,/g, ''));
+
+    const orderedPrices = [
+      { label: 'Extra Extra Small', val: pEES },
+      { label: 'Extra Small', val: pES },
+      { label: 'Small', val: pS },
+      { label: 'Medium', val: pM },
+      { label: 'Large', val: pL },
+      { label: 'Extra Large', val: pEL }
+    ].filter(p => p.val > 0);
+
+    for (let i = 0; i < orderedPrices.length - 1; i++) {
+      if (orderedPrices[i].val > orderedPrices[i + 1].val) {
+        toast.error(`${orderedPrices[i].label} amount cannot be higher than ${orderedPrices[i + 1].label} amount`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const newArea = {
@@ -98,12 +125,12 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
         address: formData.address.trim(),
         mapLocation: formData.mapLocation.trim(),
         prices: {
-          'extra-large': Number(prices['extra-large']),
-          'large': Number(prices['large']),
-          'medium': Number(prices['medium']),
-          'small': Number(prices['small']),
-          'extra-small': Number(prices['extra-small']),
-          'extra-extra-small': Number(prices['extra-extra-small'])
+          'extra-large': pEL,
+          'large': Number(prices['large'].replace(/,/g, '')),
+          'medium': pM,
+          'small': Number(prices['small'].replace(/,/g, '')),
+          'extra-small': Number(prices['extra-small'].replace(/,/g, '')),
+          'extra-extra-small': Number(prices['extra-extra-small'].replace(/,/g, ''))
         },
         isActive: formData.isActive
       };
@@ -134,18 +161,43 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
     setEditingArea(area);
     setEditFormData({ state: area.state, city: area.city, address: area.address, mapLocation: area.mapLocation, isActive: area.isActive ?? true });
     setEditPrices({
-      'extra-large': area.prices['extra-large'].toString(),
-      'large': area.prices['large'].toString(),
-      'medium': area.prices['medium'].toString(),
-      'small': area.prices['small'].toString(),
-      'extra-small': area.prices['extra-small'].toString(),
-      'extra-extra-small': (area.prices['extra-extra-small'] || 0).toString(),
+      'extra-large': area.prices['extra-large'] ? formatPriceInput(area.prices['extra-large'].toString()) : '',
+      'large': area.prices['large'] ? formatPriceInput(area.prices['large'].toString()) : '',
+      'medium': area.prices['medium'] ? formatPriceInput(area.prices['medium'].toString()) : '',
+      'small': area.prices['small'] ? formatPriceInput(area.prices['small'].toString()) : '',
+      'extra-small': area.prices['extra-small'] ? formatPriceInput(area.prices['extra-small'].toString()) : '',
+      'extra-extra-small': area.prices['extra-extra-small'] ? formatPriceInput(area.prices['extra-extra-small'].toString()) : '',
     });
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingArea) return;
+
+    // Validation
+    const pEES = Number(editPrices['extra-extra-small'].replace(/,/g, ''));
+    const pES = Number(editPrices['extra-small'].replace(/,/g, ''));
+    const pS = Number(editPrices['small'].replace(/,/g, ''));
+    const pM = Number(editPrices['medium'].replace(/,/g, ''));
+    const pL = Number(editPrices['large'].replace(/,/g, ''));
+    const pEL = Number(editPrices['extra-large'].replace(/,/g, ''));
+
+    const orderedPrices = [
+      { label: 'Extra Extra Small', val: pEES },
+      { label: 'Extra Small', val: pES },
+      { label: 'Small', val: pS },
+      { label: 'Medium', val: pM },
+      { label: 'Large', val: pL },
+      { label: 'Extra Large', val: pEL }
+    ].filter(p => p.val > 0);
+
+    for (let i = 0; i < orderedPrices.length - 1; i++) {
+      if (orderedPrices[i].val > orderedPrices[i + 1].val) {
+        toast.error(`${orderedPrices[i].label} amount cannot be higher than ${orderedPrices[i + 1].label} amount`);
+        return;
+      }
+    }
+
     setEditLoading(true);
     try {
       await updateDoc(doc(db, 'distribution_areas', editingArea.id), {
@@ -154,12 +206,12 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
         address: editFormData.address.trim(),
         mapLocation: editFormData.mapLocation.trim(),
         prices: {
-          'extra-large': Number(editPrices['extra-large']),
-          'large': Number(editPrices['large']),
-          'medium': Number(editPrices['medium']),
-          'small': Number(editPrices['small']),
-          'extra-small': Number(editPrices['extra-small']),
-          'extra-extra-small': Number(editPrices['extra-extra-small']),
+          'extra-large': pEL,
+          'large': Number(editPrices['large'].replace(/,/g, '')),
+          'medium': pM,
+          'small': Number(editPrices['small'].replace(/,/g, '')),
+          'extra-small': Number(editPrices['extra-small'].replace(/,/g, '')),
+          'extra-extra-small': Number(editPrices['extra-extra-small'].replace(/,/g, ''))
         },
         isActive: editFormData.isActive
       });
@@ -172,15 +224,76 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
     }
   };
 
+  const formatPriceInput = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return "";
+    return new Intl.NumberFormat().format(parseInt(digits));
+  };
+
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+  // Dynamic Validation for Create Form
+  const getCreateValidationError = () => {
+    const pEES = Number(prices['extra-extra-small'].replace(/,/g, ''));
+    const pES = Number(prices['extra-small'].replace(/,/g, ''));
+    const pS = Number(prices['small'].replace(/,/g, ''));
+    const pM = Number(prices['medium'].replace(/,/g, ''));
+    const pL = Number(prices['large'].replace(/,/g, ''));
+    const pEL = Number(prices['extra-large'].replace(/,/g, ''));
+
+    const ordered = [
+      { label: 'Extra Extra Small', val: pEES },
+      { label: 'Extra Small', val: pES },
+      { label: 'Small', val: pS },
+      { label: 'Medium', val: pM },
+      { label: 'Large', val: pL },
+      { label: 'Extra Large', val: pEL }
+    ].filter(p => p.val > 0);
+
+    for (let i = 0; i < ordered.length - 1; i++) {
+      if (ordered[i].val > ordered[i + 1].val) {
+        return `${ordered[i].label} cannot be higher than ${ordered[i + 1].label}`;
+      }
+    }
+    return null;
+  };
+
+  // Dynamic Validation for Edit Form
+  const getEditValidationError = () => {
+    const pEES = Number(editPrices['extra-extra-small'].replace(/,/g, ''));
+    const pES = Number(editPrices['extra-small'].replace(/,/g, ''));
+    const pS = Number(editPrices['small'].replace(/,/g, ''));
+    const pM = Number(editPrices['medium'].replace(/,/g, ''));
+    const pL = Number(editPrices['large'].replace(/,/g, ''));
+    const pEL = Number(editPrices['extra-large'].replace(/,/g, ''));
+
+    const ordered = [
+      { label: 'Extra Extra Small', val: pEES },
+      { label: 'Extra Small', val: pES },
+      { label: 'Small', val: pS },
+      { label: 'Medium', val: pM },
+      { label: 'Large', val: pL },
+      { label: 'Extra Large', val: pEL }
+    ].filter(p => p.val > 0);
+
+    for (let i = 0; i < ordered.length - 1; i++) {
+      if (ordered[i].val > ordered[i + 1].val) {
+        return `${ordered[i].label} cannot be higher than ${ordered[i + 1].label}`;
+      }
+    }
+    return null;
+  };
+
+  const createValidationError = getCreateValidationError();
+  const editValidationError = getEditValidationError();
+
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col md:flex-row p-1 md:p-8 items-center justify-center">
+    <div className="fixed inset-0 bg-black/80 z-[9999] flex flex-col md:flex-row p-1 md:p-8 items-center justify-center">
       <div className="bg-background rounded md:rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative shadow-2xl">
 
         {/* Header */}
-        <div className="relative flex flex-col md:flex-row gap-3 md:justify-between md:items-center px-2 py-4 md:p-6 border-b border-border bg-card">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+        <div className="relative flex flex-col md:flex-row gap-2 md:justify-between md:items-center px-2 py-2 md:px-4 md:py-3 border-b border-border bg-card">
+          <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
             <FaMapMarkerAlt className="text-primary" /> Distribution Areas & Fees
           </h2>
           <div className="flex  items-center gap-4">
@@ -207,22 +320,22 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                 <button onClick={() => setIsCreating(false)} className="text-muted-foreground text-sm hover:underline">Cancel</button>
               </div>
               <form onSubmit={handleCreate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-40 blur-[1px] pointer-events-none select-none">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold mb-1">State</label>
-                    <input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} type="text" placeholder="e.g. Lagos" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
+                    <input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} type="text" placeholder="e.g. Lagos" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold mb-1">City</label>
-                    <input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} type="text" placeholder="e.g. Ikeja" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
+                    <input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} type="text" placeholder="e.g. Ikeja" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold mb-1">Address</label>
-                    <input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} type="text" placeholder="Full address" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
+                    <input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} type="text" placeholder="Full address" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold mb-1">Google Map Location Link</label>
-                    <input value={formData.mapLocation} onChange={e => setFormData({ ...formData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" disabled />
+                    <input value={formData.mapLocation} onChange={e => setFormData({ ...formData, mapLocation: e.target.value })} type="url" placeholder="https://maps.google.com/..." className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary" />
                   </div>
                   <div className="md:col-span-2 flex items-center gap-2 mt-2">
                     <input 
@@ -242,13 +355,18 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                     {['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'].map((size) => (
                       <div key={size}>
                         <label className="block text-[10px] font-bold mb-1 uppercase text-muted-foreground">{size}</label>
-                        <input required value={prices[size as keyof typeof prices]} onChange={e => setPrices({ ...prices, [size]: e.target.value })} type="number" min="0" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary font-bold" />
+                        <input required value={prices[size as keyof typeof prices]} onChange={e => setPrices({ ...prices, [size]: formatPriceInput(e.target.value) })} type="text" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary font-bold" />
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <button type="submit" disabled={loading} className="w-full bg-primary text-white py-3 rounded-md font-bold disabled:opacity-50 mt-4">
+                {createValidationError && (
+                  <div className="text-red-500 text-xs font-bold mt-2 mb-2 p-2 bg-red-500/10 rounded-md">
+                    Warning: {createValidationError}
+                  </div>
+                )}
+                <button type="submit" disabled={loading || !!createValidationError} className="w-full bg-primary text-white py-3 rounded-md font-bold disabled:opacity-50 mt-4 transition-opacity">
                   {loading ? 'Creating...' : 'Create Area & Save Prices'}
                 </button>
               </form>
@@ -264,7 +382,7 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                   <div key={area.id} className="group bg-card border border-border rounded-lg p-4 shadow-sm relative overflow-hidden flex flex-col">
                     <div className="absolute top-2 right-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity">
                       <button
-                        onClick={() => openEditArea(area)}
+                        onClick={() => setPasswordPrompt({ isOpen: true, action: 'edit', targetArea: area })}
                         className="bg-primary/10 text-primary p-2 rounded-md hover:bg-primary hover:text-white transition-colors"
                         title="Edit Area"
                       >
@@ -349,14 +467,19 @@ export default function DistributionManager({ isOpen, onClose }: DistributionMan
                   {['extra-large', 'large', 'medium', 'small', 'extra-small', 'extra-extra-small'].map((size) => (
                     <div key={size}>
                       <label className="block text-[10px] font-bold mb-1 uppercase text-muted-foreground">{size}</label>
-                      <input required value={editPrices[size as keyof typeof editPrices]} onChange={e => setEditPrices({ ...editPrices, [size]: e.target.value })} type="number" min="0" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary font-bold" />
+                      <input required value={editPrices[size as keyof typeof editPrices]} onChange={e => setEditPrices({ ...editPrices, [size]: formatPriceInput(e.target.value) })} type="text" placeholder="0" className="w-full p-2 rounded border border-border text-sm outline-none focus:border-primary font-bold" />
                     </div>
                   ))}
                 </div>
               </div>
+              {editValidationError && (
+                <div className="text-red-500 text-xs font-bold mt-2 p-2 bg-red-500/10 rounded-md">
+                  Warning: {editValidationError}
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingArea(null)} className="flex-1 p-3 rounded-lg border border-border font-bold text-sm hover:bg-muted transition-colors">Cancel</button>
-                <button type="submit" disabled={editLoading} className="flex-1 p-3 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-hover transition-colors disabled:opacity-50">
+                <button type="submit" disabled={editLoading || !!editValidationError} className="flex-1 p-3 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary-hover transition-colors disabled:opacity-50">
                   {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>

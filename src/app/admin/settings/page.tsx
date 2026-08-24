@@ -20,6 +20,9 @@ const SOCIAL_PLATFORMS = [
 export default function AdminSettings() {
   const [siteName, setSiteName] = useState('');
   const [footerMessage, setFooterMessage] = useState('');
+  const [siteLogo, setSiteLogo] = useState('');
+  const [siteLogoUrlInput, setSiteLogoUrlInput] = useState('');
+  const [siteLogoUploading, setSiteLogoUploading] = useState(false);
   const [installmentBg, setInstallmentBg] = useState('');
   const [installmentBgUrlInput, setInstallmentBgUrlInput] = useState('');
   const [installmentBgUploading, setInstallmentBgUploading] = useState(false);
@@ -62,6 +65,7 @@ export default function AdminSettings() {
   const buildSnapshot = (data: {
     siteName: string;
     footerMessage: string;
+    siteLogo: string;
     installmentBg: string;
     phones: any[];
     emails: any[];
@@ -73,6 +77,7 @@ export default function AdminSettings() {
     return JSON.stringify({
       siteName: data.siteName || '',
       footerMessage: data.footerMessage || '',
+      siteLogo: data.siteLogo || '',
       installmentBg: data.installmentBg || '',
       phones: data.phones || [],
       emails: data.emails || [],
@@ -109,6 +114,7 @@ export default function AdminSettings() {
 
         const loadedSiteName = data.siteName || '';
         const loadedFooterMessage = data.footerMessage || '';
+        const loadedSiteLogo = data.siteLogo || '';
         const loadedInstallmentBg = data.installmentBg || '';
         const loadedPhones = data.phones || [];
         const loadedEmails = data.emails || [];
@@ -138,6 +144,7 @@ export default function AdminSettings() {
 
         setSiteName(loadedSiteName);
         setFooterMessage(loadedFooterMessage);
+        setSiteLogo(loadedSiteLogo);
         setInstallmentBg(loadedInstallmentBg);
         setPhones(loadedPhones);
         setEmails(loadedEmails);
@@ -150,6 +157,7 @@ export default function AdminSettings() {
         setOriginalData(buildSnapshot({
           siteName: loadedSiteName,
           footerMessage: loadedFooterMessage,
+          siteLogo: loadedSiteLogo,
           installmentBg: loadedInstallmentBg,
           phones: loadedPhones,
           emails: loadedEmails,
@@ -163,7 +171,7 @@ export default function AdminSettings() {
   }, []);
 
   // Dirty: compare live state JSON to the saved snapshot JSON
-  const currentSnapshot = buildSnapshot({ siteName, footerMessage, installmentBg, phones, emails, addresses, socialLinks, categoriesExplorer });
+  const currentSnapshot = buildSnapshot({ siteName, footerMessage, siteLogo, installmentBg, phones, emails, addresses, socialLinks, categoriesExplorer });
   const isDirty = originalData !== null && currentSnapshot !== originalData;
 
   const handleSave = async () => {
@@ -171,6 +179,7 @@ export default function AdminSettings() {
       const updatedData = {
         siteName,
         footerMessage,
+        siteLogo,
         installmentBg,
         phones,
         emails,
@@ -193,6 +202,7 @@ export default function AdminSettings() {
       const parsed = JSON.parse(originalData);
       setSiteName(parsed.siteName || '');
       setFooterMessage(parsed.footerMessage || '');
+      setSiteLogo(parsed.siteLogo || '');
       setInstallmentBg(parsed.installmentBg || '');
       setPhones(parsed.phones || []);
       setEmails(parsed.emails || []);
@@ -247,6 +257,98 @@ export default function AdminSettings() {
           <FaSave /> Save All Changes
         </button>
       </header>
+
+      {/* LOGO SECTION */}
+      <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-4">
+        <h2 className="text-lg md:text-xl font-bold border-b border-border pb-4 flex items-center gap-2">
+          <FaImage className="text-primary" /> Site Logo
+        </h2>
+        <p className="text-xs text-muted-foreground">This logo appears in the Navbar and Footer. Defaults to <code className="bg-muted px-1 rounded">/logo_nomo.png</code> if not set.</p>
+
+        <div className="flex flex-col md:flex-row gap-4 md:items-end">
+          {/* Preview & Reset */}
+          <div className="flex items-center gap-3">
+            <div className="relative w-14 h-14 rounded border border-border bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+              <img
+                src={siteLogo || '/logo_nomo.png'}
+                alt="Logo preview"
+                className="max-h-12 max-w-[90%] object-contain"
+              />
+            </div>
+            {siteLogo && (
+              <button
+                type="button"
+                onClick={() => setSiteLogo('')}
+                className="text-[10px] uppercase tracking-wider font-bold bg-secondary/10 text-secondary hover:bg-secondary hover:text-white px-2 py-1.5 rounded transition-colors flex items-center gap-1"
+                title="Reset to default"
+              >
+                <FaTimes size={10} /> Reset
+              </button>
+            )}
+          </div>
+
+          {/* URL Input */}
+          <div className="flex-1 w-full">
+            <label className="block text-xs font-bold mb-1">Image URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Paste URL..."
+                className="w-full flex-1 p-2 rounded-md border border-border bg-background text-sm"
+                value={siteLogoUrlInput}
+                onChange={(e) => setSiteLogoUrlInput(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (siteLogoUrlInput.trim()) {
+                    setSiteLogo(siteLogoUrlInput.trim());
+                    setSiteLogoUrlInput('');
+                    toast.success('Logo URL applied!');
+                  }
+                }}
+                className="bg-muted px-3 py-2 rounded-md border border-border text-sm font-bold hover:bg-muted/80 flex items-center gap-1 shrink-0"
+              >
+                <FaLink size={12} /> Apply
+              </button>
+            </div>
+          </div>
+
+          {/* File Upload */}
+          <div className="w-full md:w-auto">
+            <label className="block text-xs font-bold mb-1 text-transparent hidden md:block">Upload</label>
+            <label className={`flex items-center justify-center gap-2 px-4 py-2 h-[42px] rounded-md border cursor-pointer transition-colors ${siteLogoUploading ? 'border-primary/50 bg-primary/5 opacity-70' : 'border-border bg-background hover:bg-muted'}`}>
+              <FaImage className="text-primary text-sm" />
+              <span className="text-sm font-bold">
+                {siteLogoUploading ? 'Uploading...' : 'Upload File'}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={siteLogoUploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setSiteLogoUploading(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const data = await uploadImageToCloudinary(formData);
+                    setSiteLogo(data.secure_url);
+                    toast.success('Logo uploaded!');
+                  } catch {
+                    toast.error('Upload failed.');
+                  } finally {
+                    setSiteLogoUploading(false);
+                    e.target.value = '';
+                  }
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      </section>
 
       {/* GENERAL SECTION */}
       <section className="bg-card p-4 md:p-8 md:rounded-[var(--radius)] border border-border shadow-sm space-y-6">

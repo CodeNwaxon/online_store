@@ -42,38 +42,60 @@ export function useAdmin() {
 
         // Realtime listener for the admin document
         unsubAdmin = onSnapshot(doc(db, 'admins', authUser.uid), async (docSnap) => {
-          if (docSnap.exists()) {
-            setAdminData(docSnap.data() as AdminData);
-            setLoading(false);
-          } else {
-            try {
-              const isCEO = await verifyCEO(authUser.uid);
-              if (isCEO) {
-                // Hardcoded CEO fallback
-                setAdminData({
-                  uid: authUser.uid,
-                  email: authUser.email || '',
-                  role: 'CEO',
-                  assignedRoutes: [
-                    '/ADMIN/MANAGEMENT',
-                    '/ADMIN/PRODUCTS',
-                    '/ADMIN/INSTALLMENTS',
-                    '/ADMIN/COMPLAINTS',
-                    '/ADMIN/ORDERS',
-                    '/ADMIN/SETTINGS',
-                    '/ADMIN/STATS',
-                    '/ADMIN/ABOUT'
-                  ]
-                });
-              } else {
-                setAdminData(null);
+          let foundAdminData: AdminData | null = docSnap.exists() ? (docSnap.data() as AdminData) : null;
+
+          // Check if CEO by server verification (UID or email)
+          const isUidCEO = await verifyCEO(authUser.uid);
+          const isEmailCEO = authUser.email ? await verifyCEO(authUser.email) : false;
+
+          // Check general settings ceoInfo email
+          let isSettingsCEO = false;
+          try {
+            const genSettings = await getDoc(doc(db, 'settings', 'general'));
+            if (genSettings.exists()) {
+              const ceoEmail = genSettings.data()?.ceoInfo?.email;
+              if (ceoEmail && authUser.email && ceoEmail.trim().toLowerCase() === authUser.email.trim().toLowerCase()) {
+                isSettingsCEO = true;
               }
-            } catch (err) {
-              console.error("verifyCEO error:", err);
-              setAdminData(null);
             }
-            setLoading(false);
+          } catch (e) {
+            console.warn("Error fetching general settings for CEO check:", e);
           }
+
+          const isVerifiedCEO = isUidCEO || isEmailCEO || isSettingsCEO;
+
+          if (foundAdminData) {
+            if (isVerifiedCEO) {
+              foundAdminData.role = 'CEO';
+            }
+            setAdminData(foundAdminData);
+          } else if (isVerifiedCEO) {
+            setAdminData({
+              uid: authUser.uid,
+              email: authUser.email || '',
+              role: 'CEO',
+              assignedRoutes: [
+                '/ADMIN/MANAGEMENT',
+                '/ADMIN/PRODUCTS',
+                '/ADMIN/FOODS',
+                '/ADMIN/COSMETICS',
+                '/ADMIN/WEARS',
+                '/ADMIN/TOILET-KITCHEN',
+                '/ADMIN/UK-USED',
+                '/ADMIN/INSTALLMENTS',
+                '/ADMIN/COMPLAINTS',
+                '/ADMIN/ORDERS',
+                '/ADMIN/PARTNERSHIP',
+                '/ADMIN/BROADCAST',
+                '/ADMIN/SETTINGS',
+                '/ADMIN/STATS',
+                '/ADMIN/ABOUT'
+              ]
+            });
+          } else {
+            setAdminData(null);
+          }
+          setLoading(false);
         }, (error) => {
           console.warn("Admin record listener error:", error);
           setLoading(false);
