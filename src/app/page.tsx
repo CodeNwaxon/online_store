@@ -194,15 +194,17 @@ export default function Home() {
           console.error("Error fetching general settings:", err);
         }
 
-        // 5. Fetch food section settings
+        // 5. Fetch food section settings (Legacy/Title only)
         try {
           const foodSettingsSnap = await getDoc(doc(db, 'settings', 'food_market'));
           if (foodSettingsSnap.exists()) {
             const fData = foodSettingsSnap.data();
             setFoodSection(prev => ({
-              image: fData.sectionImage || prev.image,
+              // Only use legacy sectionImage if we didn't already get one from general categoriesExplorer settings
+              image: prev.image || fData.sectionImage,
               title: fData.sectionTitle || prev.title,
-              description: fData.sectionDescription || prev.description,
+              // Prioritize categoriesExplorer description if it exists
+              description: prev.description !== 'Discover our curated selection of premium grains, rice, beans, and fresh produce. Quality food at unbeatable prices — shop the Food Market today.' ? prev.description : (fData.sectionDescription || prev.description),
             }));
           }
         } catch (err) {
