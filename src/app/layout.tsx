@@ -46,7 +46,7 @@ export async function generateMetadata(): Promise<Metadata> {
           alt: `${siteName} Logo`,
         },
         {
-          url: "/nomoStore_building.jpeg",
+          url: "https://nomostores.com/nomoStore_building.jpeg",
           width: 800,
           height: 600,
           alt: `${siteName} Store Building`,
@@ -61,7 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
       images: [
         "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
-        "/nomoStore_building.jpeg"
+        "https://nomostores.com/nomoStore_building.jpeg"
       ],
     },
   };

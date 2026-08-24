@@ -11,6 +11,26 @@ type Props = {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { store: storeSlug } = await searchParams;
 
+  let defaultImageUrl = 'https://nomostores.com/nomoStore_building.jpeg';
+  try {
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/general`,
+      { next: { revalidate: 3600 } }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      const categoriesExplorer = data.fields?.categoriesExplorer?.mapValue?.fields;
+      if (categoriesExplorer?.cosmetics?.mapValue?.fields?.image?.stringValue) {
+        let url = categoriesExplorer.cosmetics.mapValue.fields.image.stringValue;
+        if (url.includes('res.cloudinary.com') && url.includes('/upload/') && !url.includes('/upload/c_')) {
+          url = url.replace('/upload/', '/upload/c_fill,w_1200,h_630,q_80/');
+        }
+        defaultImageUrl = url.startsWith('http') ? url : `https://nomostores.com${url}`;
+      }
+    }
+  } catch (err) {}
+
   if (storeSlug) {
     try {
       const snap = await adminDb.collection('admins')
@@ -22,7 +42,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
         
         const storeName = store.name || storeSlug;
         const storeSlogan = store.slogan || `Shop premium cosmetics and beauty products from ${storeName} on Nomo Storez.`;
-        let bannerUrl = store.banner || '/images/placeholder.png';
+        let bannerUrl = store.banner || defaultImageUrl;
 
         if (bannerUrl.includes('res.cloudinary.com') && bannerUrl.includes('/upload/')) {
           if (!bannerUrl.includes('/upload/c_')) {
@@ -56,6 +76,17 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   return {
     title: 'Cosmetics & Beauty | Nomo Storez',
     description: 'Discover our range of premium skincare, makeup, and beauty products on Nomo Storez.',
+    openGraph: {
+      title: 'Cosmetics & Beauty | Nomo Storez',
+      description: 'Discover our range of premium skincare, makeup, and beauty products on Nomo Storez.',
+      images: [defaultImageUrl],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Cosmetics & Beauty | Nomo Storez',
+      description: 'Discover our range of premium skincare, makeup, and beauty products on Nomo Storez.',
+      images: [defaultImageUrl],
+    }
   };
 }
 

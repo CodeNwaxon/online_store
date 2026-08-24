@@ -181,6 +181,13 @@ export default function Home() {
                 cosmetics: gData.categoriesExplorer.cosmetics || prev.cosmetics,
                 wears: gData.categoriesExplorer.wears || prev.wears,
               }));
+              if (gData.categoriesExplorer.foods) {
+                setFoodSection(prev => ({
+                  ...prev,
+                  image: gData.categoriesExplorer.foods.image || prev.image,
+                  description: gData.categoriesExplorer.foods.description || prev.description,
+                }));
+              }
             }
           }
         } catch (err) {

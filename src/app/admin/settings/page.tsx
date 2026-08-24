@@ -35,10 +35,11 @@ export default function AdminSettings() {
     toiletKitchen: { description: '', image: '' },
     cosmetics: { description: '', image: '' },
     wears: { description: '', image: '' },
+    foods: { description: '', image: '' },
   });
   
-  const [ceUrlInputs, setCeUrlInputs] = useState({ toiletKitchen: '', cosmetics: '', wears: '' });
-  const [ceUploading, setCeUploading] = useState({ toiletKitchen: false, cosmetics: false, wears: false });
+  const [ceUrlInputs, setCeUrlInputs] = useState({ toiletKitchen: '', cosmetics: '', wears: '', foods: '' });
+  const [ceUploading, setCeUploading] = useState({ toiletKitchen: false, cosmetics: false, wears: false, foods: false });
 
   // Track original data snapshot (JSON string) for dirty detection
   const [originalData, setOriginalData] = useState<string | null>(null);
@@ -91,6 +92,10 @@ export default function AdminSettings() {
           description: ce.wears?.description || '',
           image: ce.wears?.image || '',
         },
+        foods: {
+          description: ce.foods?.description || '',
+          image: ce.foods?.image || '',
+        },
       },
     });
   };
@@ -124,6 +129,10 @@ export default function AdminSettings() {
           wears: {
             description: rawCE.wears?.description || '',
             image: rawCE.wears?.image || '',
+          },
+          foods: {
+            description: rawCE.foods?.description || '',
+            image: rawCE.foods?.image || '',
           },
         };
 
@@ -277,7 +286,7 @@ export default function AdminSettings() {
 
         {Object.entries(categoriesExplorer).map(([key, data]) => {
           const categoryKey = key as keyof typeof categoriesExplorer;
-          const title = categoryKey === 'toiletKitchen' ? 'Toilet & Kitchen' : categoryKey === 'cosmetics' ? 'Cosmetics' : 'Wears';
+          const title = categoryKey === 'toiletKitchen' ? 'Toilet & Kitchen' : categoryKey === 'cosmetics' ? 'Cosmetics' : categoryKey === 'wears' ? 'Wears' : 'Food Market';
           
           return (
             <div key={categoryKey} className="border border-border rounded-md p-4 space-y-4 bg-muted/10">
