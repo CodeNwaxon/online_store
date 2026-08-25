@@ -627,9 +627,9 @@ export default function Navbar() {
           {isAdminRoute ? (
             // Admin Drawer Links
             filteredAdminLinks.map(l => (
-              <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                <div className="flex items-center gap-[0.85rem] text-[0.97rem]">
-                  <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+              <Link key={l.href} href={l.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                <div className="flex items-center gap-[0.8rem] text-[0.92rem]">
+                  <span className={`text-[0.8rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
                   {l.label}
                 </div>
                 {l.label === 'Installments' && unreadCount > 0 && (
@@ -661,46 +661,46 @@ export default function Navbar() {
                 if (l.label === 'Shop') {
                   return (
                     <div key="mobile-shop-group" className="flex flex-col">
-                      <Link href="/shop" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
+                      <Link href="/shop" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
                           Shop
                         </div>
                       </Link>
 
-                      <Link href="/foods" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/foods' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/foods' ? 'text-primary' : 'text-muted-foreground'}`}><FaUtensils /></span>
+                      <Link href="/foods" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/foods' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/foods' ? 'text-primary' : 'text-muted-foreground'}`}><FaUtensils /></span>
                           Food Market
                         </div>
                       </Link>
-                      <Link href="/shop/cosmetics" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/cosmetics' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop/cosmetics' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
+                      <Link href="/shop/cosmetics" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/cosmetics' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop/cosmetics' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
                           Cosmetics
                         </div>
                       </Link>
-                      <Link href="/shop/wears" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/wears' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop/wears' ? 'text-primary' : 'text-muted-foreground'}`}><FaUserTie /></span>
+                      <Link href="/shop/wears" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/wears' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop/wears' ? 'text-primary' : 'text-muted-foreground'}`}><FaUserTie /></span>
                           Wears
                         </div>
                       </Link>
-                      <Link href="/shop/furniture" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/furniture' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop/furniture' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
+                      <Link href="/shop/furniture" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/furniture' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop/furniture' ? 'text-primary' : 'text-muted-foreground'}`}><FaStore /></span>
                           Furniture
                         </div>
                       </Link>
-                      <Link href="/shop/toilet-kitchen" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/toilet-kitchen' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop/toilet-kitchen' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
+                      <Link href="/shop/toilet-kitchen" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/toilet-kitchen' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop/toilet-kitchen' ? 'text-primary' : 'text-muted-foreground'}`}><FaBoxes /></span>
                           Toilet & Kitchen
                         </div>
                       </Link>
-                      <Link href="/shop/uk-used" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/uk-used' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                        <div className="flex items-center gap-[0.85rem]">
-                          <span className={`text-[0.85rem] ${pathname === '/shop/uk-used' ? 'text-primary' : 'text-muted-foreground'}`}><FaHandshake /></span>
+                      <Link href="/shop/uk-used" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === '/shop/uk-used' ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                        <div className="flex items-center gap-[0.8rem]">
+                          <span className={`text-[0.8rem] ${pathname === '/shop/uk-used' ? 'text-primary' : 'text-muted-foreground'}`}><FaHandshake /></span>
                           UK Used
                         </div>
                       </Link>
@@ -708,9 +708,9 @@ export default function Navbar() {
                   );
                 }
                 return (
-                  <Link key={l.href} href={l.href} onClick={() => { setIsMenuOpen(false); if (l.label === 'Partnership') handlePartnershipClick(); }} className={`flex items-center justify-between px-[1.25rem] py-[0.85rem] text-[0.97rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
-                    <div className="flex items-center gap-[0.85rem]">
-                      <span className={`text-[0.85rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
+                  <Link key={l.href} href={l.href} onClick={() => { setIsMenuOpen(false); if (l.label === 'Partnership') handlePartnershipClick(); }} className={`flex items-center justify-between px-[1.25rem] py-[0.8rem] text-[0.92rem] no-underline transition-all duration-150 border-l-[3px] ${pathname === l.href ? 'font-bold text-primary bg-[rgba(212,136,6,0.08)] border-primary' : 'font-medium text-foreground bg-transparent border-transparent'}`}>
+                    <div className="flex items-center gap-[0.8rem]">
+                      <span className={`text-[0.8rem] ${pathname === l.href ? 'text-primary' : 'text-muted-foreground'}`}>{l.icon}</span>
                       {l.label}
                     </div>
                     {mounted && l.label === 'Partnership' && partnerNotifCount > 0 && (
