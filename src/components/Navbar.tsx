@@ -74,8 +74,10 @@ export default function Navbar() {
       }
     }
 
-    // Save the user's current page (except admin, checkout, about, or root)
-    if (!pathname.startsWith('/admin') && !pathname.startsWith('/checkout') && !pathname.startsWith('/about') && pathname !== '/') {
+    // Save the user's current page — only for shop, installments, and home
+    const allowedPrefixes = ['/shop', '/installments', '/foods'];
+    const isAllowedRoute = pathname === '/' || allowedPrefixes.some(prefix => pathname.startsWith(prefix));
+    if (isAllowedRoute) {
       try {
         localStorage.setItem('lastVisitedPage', pathname + window.location.search);
       } catch (e) {

@@ -165,8 +165,82 @@ export default function Home() {
           setCurrentSlide(Math.floor(Math.random() * slidesToSet.length));
         }
 
-        // Promo products for carousel
-        setPromoProducts(allProducts.filter((p: any) => p.isPromo));
+        // Promo products for carousel — shuffled by group distribution
+        const rawPromo = allProducts.filter((p: any) => p.isPromo);
+        // allProducts is already sorted by updatedAt desc, so rawPromo[0] is the latest
+        if (rawPromo.length > 1) {
+          // Keep the first item (latest updated) pinned at position 0
+          const [latest, ...rest] = rawPromo;
+
+          // Group the remaining products by their group name
+          const groupBuckets: Record<string, any[]> = {};
+          for (const p of rest) {
+            const g = p.group || p.name || p.id; // fallback if no group
+            if (!groupBuckets[g]) groupBuckets[g] = [];
+            groupBuckets[g].push(p);
+          }
+
+          // Sort groups by size descending (so larger groups get picked first in ties)
+          const sortedGroupNames = Object.keys(groupBuckets).sort(
+            (a, b) => groupBuckets[b].length - groupBuckets[a].length
+          );
+
+          // Calculate max allowed consecutive items per group based on proportional representation
+          const totalRest = rest.length;
+          const numGroups = sortedGroupNames.length;
+          const avgPerGroup = totalRest / Math.max(numGroups, 1);
+          const maxConsecutiveMap: Record<string, number> = {};
+          for (const g of sortedGroupNames) {
+            // A group can appear consecutively up to ceil(its_count / avg) times
+            // but at least 1 and at most its total count
+            const count = groupBuckets[g].length;
+            maxConsecutiveMap[g] = Math.max(1, Math.ceil(count / Math.max(avgPerGroup, 1)));
+          }
+
+          // Interleave: round-robin through groups, allowing proportional consecutive picks
+          const distributed: any[] = [];
+          let lastGroup = latest.group || latest.name || latest.id; // track the pinned item's group
+          let consecutiveCount = 0;
+
+          while (sortedGroupNames.some(g => groupBuckets[g].length > 0)) {
+            let picked = false;
+            // Try each group in order of remaining size (re-sort each pass)
+            const availableGroups = sortedGroupNames
+              .filter(g => groupBuckets[g].length > 0)
+              .sort((a, b) => groupBuckets[b].length - groupBuckets[a].length);
+
+            for (const g of availableGroups) {
+              if (g === lastGroup && consecutiveCount >= maxConsecutiveMap[g]) {
+                // Skip this group if we've hit its consecutive limit — try others first
+                continue;
+              }
+              const item = groupBuckets[g].shift()!;
+              distributed.push(item);
+              if (g === lastGroup) {
+                consecutiveCount++;
+              } else {
+                lastGroup = g;
+                consecutiveCount = 1;
+              }
+              picked = true;
+              break;
+            }
+
+            // If we couldn't pick anyone (all available groups are the same as lastGroup
+            // and at consecutive limit), force pick from the largest remaining
+            if (!picked) {
+              const forcedGroup = availableGroups[0];
+              const item = groupBuckets[forcedGroup].shift()!;
+              distributed.push(item);
+              lastGroup = forcedGroup;
+              consecutiveCount = 1;
+            }
+          }
+
+          setPromoProducts([latest, ...distributed]);
+        } else {
+          setPromoProducts(rawPromo);
+        }
 
         // 4. Fetch general settings
         try {
