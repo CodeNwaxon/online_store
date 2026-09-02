@@ -45,3 +45,50 @@ export async function uploadImageToCloudinary(formData: FormData): Promise<any> 
   const data = await res.json();
   return data;
 }
+
+export async function deleteImagesFromCloudinary(urls: string[]): Promise<void> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  
+  if (!cloudName || !apiKey || !apiSecret) {
+    console.error('Cloudinary environment variables missing for deletion.');
+    return;
+  }
+
+  for (const url of urls) {
+    if (!url || typeof url !== 'string') continue;
+    try {
+      // Example URL: https://res.cloudinary.com/demo/image/upload/v1312461204/folder/sample.jpg
+      // This regex captures everything after /upload/ (and optional /v1234/) up to the file extension.
+      const regex = /\/upload\/(?:v\d+\/)?([^\.]+)/;
+      const match = url.match(regex);
+      if (!match) continue;
+      
+      const publicId = match[1];
+      const timestamp = Math.round(new Date().getTime() / 1000).toString();
+      const signatureString = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+      const signature = crypto.createHash('sha1').update(signatureString).digest('hex');
+
+      const formData = new FormData();
+      formData.append('public_id', publicId);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+      
+      if (!res.ok) {
+        console.error(`Failed to delete image from Cloudinary: ${publicId}`);
+      }
+    } catch (err) {
+      console.error('Error during Cloudinary deletion:', err);
+    }
+  }
+}

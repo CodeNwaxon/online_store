@@ -15,7 +15,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaTimes, FaSearch, FaUtensils, FaChevronDown } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
-import { uploadImageToCloudinary } from '@/actions/upload';
+import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
@@ -428,7 +428,20 @@ export default function AdminFoods() {
     }
     setIsDeleting(true);
     try {
+      const imagesToDelete: string[] = [];
+      if (existingFood?.images && Array.isArray(existingFood.images)) {
+        imagesToDelete.push(...existingFood.images);
+      }
+      if ((existingFood as any)?.image && typeof (existingFood as any).image === 'string') {
+        imagesToDelete.push((existingFood as any).image);
+      }
+      
       await deleteDoc(doc(db, 'foods', foodToDelete));
+      
+      if (imagesToDelete.length > 0) {
+        deleteImagesFromCloudinary(imagesToDelete).catch(console.error);
+      }
+      
       toast.success('Food deleted.');
     } catch (error) {
       toast.error('Failed to delete.');

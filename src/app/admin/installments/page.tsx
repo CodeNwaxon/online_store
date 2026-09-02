@@ -44,7 +44,7 @@ import {
   FaPlus
 } from 'react-icons/fa';
 import Image from 'next/image';
-import { uploadImageToCloudinary } from '@/actions/upload';
+import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 
 interface PastDueStatus {
   isPastDue: boolean;
@@ -242,7 +242,22 @@ export default function AdminInstallments() {
           setShowReceiptInput(null);
           setSelectedItem(null);
         } else if (actionType === 'deleteSettled') {
+          const instData = installments.find(i => i.id === id);
+          const urls: string[] = [];
+          if (instData) {
+             if (instData.adminRefundReceiptUrl) urls.push(instData.adminRefundReceiptUrl);
+             if (instData.userIdCardUrl) urls.push(instData.userIdCardUrl);
+             if (instData.payments) {
+               instData.payments.forEach((p: any) => { if (p.receiptUrl) urls.push(p.receiptUrl); })
+             }
+          }
+          
           await deleteDoc(doc(db, 'installments', id));
+          
+          if (urls.length > 0) {
+            deleteImagesFromCloudinary(urls).catch(console.error);
+          }
+          
           toast.success('Record deleted.');
         } else if (actionType === 'addPlan') {
           setInstSettings(prev => ({

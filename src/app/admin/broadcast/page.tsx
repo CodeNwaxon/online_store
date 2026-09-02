@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminGuard from '@/components/AdminGuard';
 import { FaBroadcastTower, FaImage, FaLink, FaPaperPlane, FaSave, FaCheckCircle, FaHandshake, FaStore, FaHistory, FaTrash, FaRedo, FaTimes, FaCreditCard, FaStar } from 'react-icons/fa';
-import { uploadImageToCloudinary } from '@/actions/upload';
+import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 import { db } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp, doc, getDoc, setDoc, onSnapshot, query, orderBy, deleteDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -126,7 +126,15 @@ export default function BroadcastAdmin() {
 
   const handleDelete = async (id: string) => {
     try {
+      const broadcast = history.find((b: any) => b.id === id);
+      const imageUrl = broadcast?.image;
+      
       await deleteDoc(doc(db, 'broadcasts', id));
+      
+      if (imageUrl && typeof imageUrl === 'string') {
+        deleteImagesFromCloudinary([imageUrl]).catch(console.error);
+      }
+      
       toast.success('Broadcast deleted successfully!');
       setDeleteConfirmId(null);
     } catch (error) {
@@ -195,7 +203,15 @@ export default function BroadcastAdmin() {
 
   const handlePromoDelete = async (id: string) => {
     try {
+      const promo = promoMaterials.find((p: any) => p.id === id);
+      const imageUrl = promo?.image;
+      
       await deleteDoc(doc(db, 'promo_materials', id));
+      
+      if (imageUrl && typeof imageUrl === 'string') {
+        deleteImagesFromCloudinary([imageUrl]).catch(console.error);
+      }
+      
       toast.success('Promo Material deleted successfully!');
       setPromoDeleteConfirmId(null);
     } catch (error) {

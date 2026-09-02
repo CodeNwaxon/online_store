@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast';
 import { FaPlus, FaTrash, FaImage, FaTimes, FaSearch, FaChevronDown, FaBoxes, FaEdit } from 'react-icons/fa';
 import AdminGuard from '@/components/AdminGuard';
 import Fuse from 'fuse.js';
-import { uploadImageToCloudinary } from '@/actions/upload';
+import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 import ShopCard, { ShopProduct, getValidColor } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
@@ -529,7 +529,21 @@ export default function AdminWears() {
     }
     setIsDeleting(true);
     try {
+      const existingProduct = products.find(p => p.id === productToDelete);
+      const imagesToDelete: string[] = [];
+      if (existingProduct?.images && Array.isArray(existingProduct.images)) {
+        imagesToDelete.push(...existingProduct.images);
+      }
+      if ((existingProduct as any)?.image && typeof (existingProduct as any).image === 'string') {
+        imagesToDelete.push((existingProduct as any).image);
+      }
+      
       await deleteDoc(doc(db, 'wears', productToDelete));
+      
+      if (imagesToDelete.length > 0) {
+        deleteImagesFromCloudinary(imagesToDelete).catch(console.error);
+      }
+      
       toast.success('Product deleted.');
     } catch (error) {
       toast.error('Failed to delete.');

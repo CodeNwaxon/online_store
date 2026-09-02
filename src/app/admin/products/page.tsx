@@ -23,7 +23,7 @@ import ProductCard from '@/components/ProductCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useSearchParams, useRouter } from 'next/navigation';
 import DistributionManager from '@/components/DistributionManager';
-import { uploadImageToCloudinary } from '@/actions/upload';
+import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 import { useAdmin } from '@/hooks/useAdmin';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
 
@@ -603,7 +603,20 @@ function AdminProductsContent() {
     }
     setIsDeleting(true);
     try {
+      const imagesToDelete: string[] = [];
+      if (existingProduct.images && Array.isArray(existingProduct.images)) {
+        imagesToDelete.push(...existingProduct.images);
+      }
+      if (existingProduct.image && typeof existingProduct.image === 'string') {
+        imagesToDelete.push(existingProduct.image);
+      }
+      
       await deleteDoc(doc(db, 'products', productToDelete));
+      
+      if (imagesToDelete.length > 0) {
+        deleteImagesFromCloudinary(imagesToDelete).catch(console.error);
+      }
+      
       toast.success('Product deleted.');
     } catch (error) {
       toast.error('Failed to delete.');
