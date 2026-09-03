@@ -511,7 +511,7 @@ export async function verifyAndFulfillOrder(
        sendEmail({
          to: txResult.orderData.email,
          subject: 'Order Confirmation - Nomo Store',
-         html: `<p>Hi ${txResult.orderData.customerName},</p><p>Your order has been placed successfully.</p><p>Thank you for shopping with us!</p>`
+         html: `<p>Hi ${txResult.orderData.customerName},</p><p>Your order has been placed successfully.</p><p>Thank you for shopping with us at <a href="https://nomostores.com">nomostores.com</a>!</p>`
        }).catch(console.error);
 
        const vendorsToEmail = new Set<string>();
@@ -522,7 +522,7 @@ export async function verifyAndFulfillOrder(
          sendEmail({
            to: vendorEmail,
            subject: 'New Order for your Products!',
-           html: `<p>Hello Vendor,</p><p>A new order has been placed that includes your products. Please log in to your dashboard to view the details.</p>`
+           html: `<p>Hello Vendor,</p><p>A new order has been placed that includes your products. Please log in to your dashboard at <a href="https://nomostores.com">nomostores.com</a> to view the details.</p>`
          }).catch(console.error);
        }
     }
@@ -814,7 +814,7 @@ export async function verifyAndCreateInstallment(
       sendEmail({
         to: txResult.data.userEmail,
         subject: 'Installment Plan Started - Nomo Store',
-        html: `<p>Hi ${txResult.data.customerName},</p><p>Your installment plan for ${txResult.data.productName} has been started successfully.</p><p>Thank you!</p>`
+        html: `<p>Hi ${txResult.data.customerName},</p><p>Your installment plan for ${txResult.data.productName} has been started successfully.</p><p>Thank you for choosing <a href="https://nomostores.com">nomostores.com</a>!</p>`
       }).catch(console.error);
     }
     return txResult;

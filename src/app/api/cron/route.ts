@@ -49,7 +49,7 @@ export async function GET(request: Request) {
           sendEmail({
             to: customerEmail,
             subject: 'Your Cart is Waiting! 🛒 (1 Month Reminder)',
-            html: `<p>Hi ${txData.customerName || 'there'},</p><p>You left some items pending in your cart a month ago! Don't miss out on these great products.</p><p>Please log in to complete your checkout.</p>`
+            html: `<p>Hi ${txData.customerName || 'there'},</p><p>You left some items pending in your cart a month ago! Don't miss out on these great products.</p><p>Please log in to complete your checkout at <a href="https://nomostores.com">nomostores.com</a>.</p>`
           }).then(() => adminDb.collection('pending_transactions').doc(doc.id).update({ 'reminders.thirtyDay': true }))
         );
       } else if (timeDiff >= SEVEN_DAYS && !reminders.sevenDay && timeDiff < THIRTY_DAYS) {
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
           sendEmail({
             to: customerEmail,
             subject: 'Don\'t forget your pending items! (1 Week Reminder)',
-            html: `<p>Hi ${txData.customerName || 'there'},</p><p>It's been a week! Your cart is still pending.</p><p>Log in now to secure your items before they sell out.</p>`
+            html: `<p>Hi ${txData.customerName || 'there'},</p><p>It's been a week! Your cart is still pending.</p><p>Log in now at <a href="https://nomostores.com">nomostores.com</a> to secure your items before they sell out.</p>`
           }).then(() => adminDb.collection('pending_transactions').doc(doc.id).update({ 'reminders.sevenDay': true }))
         );
       } else if (timeDiff >= THREE_DAYS && !reminders.threeDay && timeDiff < SEVEN_DAYS) {
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
           sendEmail({
             to: customerEmail,
             subject: 'Action Required: Pending Items in Cart',
-            html: `<p>Hi ${txData.customerName || 'there'},</p><p>We noticed you have items pending in your cart for the past 3 days.</p><p>Visit our store to complete your purchase!</p>`
+            html: `<p>Hi ${txData.customerName || 'there'},</p><p>We noticed you have items pending in your cart for the past 3 days.</p><p>Visit our store at <a href="https://nomostores.com">nomostores.com</a> to complete your purchase!</p>`
           }).then(() => adminDb.collection('pending_transactions').doc(doc.id).update({ 'reminders.threeDay': true }))
         );
       }
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
              sendEmail({
                to: vendorEmail,
                subject: 'Monthly Stock Alert: Low Inventory',
-               html: `<p>Hello Vendor,</p><p>You currently have <strong>${lowStockCount}</strong> items with low stock (10 or fewer remaining).</p><p>Please log into your vendor dashboard to restock these items soon!</p>`
+               html: `<p>Hello Vendor,</p><p>You currently have <strong>${lowStockCount}</strong> items with low stock (10 or fewer remaining).</p><p>Please log into your vendor dashboard at <a href="https://nomostores.com">nomostores.com</a> to restock these items soon!</p>`
              }).then(() => {
                 lastStockReminders[vendorEmail] = now;
              })
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
               html: `<p>Hi ${loan.customerName || 'there'},</p>
               <p>Your installment payment of ₦${pendingPayment.amount.toLocaleString()} for <strong>${loan.productName}</strong> was due on ${new Date(deadline).toDateString()}.</p>
               <p>${msg}</p>
-              <p>Please log into your dashboard and make the payment immediately to avoid extra charges.</p>`
+              <p>Please log into your dashboard at <a href="https://nomostores.com">nomostores.com</a> and make the payment immediately to avoid extra charges.</p>`
             }).then(() => adminDb.collection('installments').doc(doc.id).update({ [`lateFlags.${flagKey}`]: true }))
           );
 
@@ -202,7 +202,7 @@ export async function GET(request: Request) {
               <p>Your grace period has expired for your overdue installment payment.</p>
               <p>As per our terms, a <strong>${lateFeePercent}% late fee</strong> has been applied to your remaining balance.</p>
               <p>Your new monthly payment has increased from ₦${loan.monthlyAmount.toLocaleString()} to <strong>₦${newMonthlyPayment.toLocaleString()}</strong>.</p>
-              <p>Please log into your dashboard and make the payment as soon as possible.</p>`
+              <p>Please log into your dashboard at <a href="https://nomostores.com">nomostores.com</a> and make the payment as soon as possible.</p>`
             }).then(() => adminDb.collection('installments').doc(doc.id).update(updateObj))
           );
 
@@ -254,7 +254,7 @@ export async function GET(request: Request) {
                 <p>This is a monthly notice that your installment payment is still overdue.</p>
                 <p>An additional late fee of ₦${penaltyAmount.toLocaleString()} has been applied.</p>
                 <p>Your new monthly payment is now <strong>₦${newMonthlyPayment.toLocaleString()}</strong>.</p>
-                <p>Please log into your dashboard and make the payment immediately to avoid further charges.</p>`
+                <p>Please log into your dashboard at <a href="https://nomostores.com">nomostores.com</a> and make the payment immediately to avoid further charges.</p>`
               }).then(() => adminDb.collection('installments').doc(doc.id).update(updateObj))
             );
 
