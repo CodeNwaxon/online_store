@@ -48,6 +48,11 @@ export default function AdminWears() {
   const [name, setName] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [price, setPrice] = useState('');
+
+  const [isPromo, setIsPromo] = useState(false);
+  const [oldPrice, setOldPrice] = useState('');
+  const [promoEndDate, setPromoEndDate] = useState('');
+
   const [description, setDescription] = useState('');
   const [group, setGroup] = useState('');
   const [category, setCategory] = useState('');
@@ -226,8 +231,38 @@ export default function AdminWears() {
 
   useEffect(() => {
     const q = query(collection(db, 'wears'), orderBy('updatedAt', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(q, async (snap) => {
       const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ShopProduct[];
+
+      
+      // Auto-remove expired promos
+      const now = new Date();
+      const expiredPromos = prods.filter((p: any) =>
+        p.isPromo &&
+        p.promoEndDate &&
+        new Date(p.promoEndDate) < now
+      );
+
+      if (expiredPromos.length > 0) {
+        for (const promo of expiredPromos) {
+          try {
+            const updateData: any = {
+              isPromo: false,
+              promoEndDate: null,
+              updatedAt: now.toISOString()
+            };
+            if ((promo as any).oldPrice) {
+              updateData.price = (promo as any).oldPrice;
+              updateData.oldPrice = null;
+            }
+            await updateDoc(doc(db, 'wears', promo.id), updateData);
+          } catch (err) {
+            console.error("Error auto-removing promo:", err);
+          }
+        }
+        // The snapshot listener will trigger again after updates
+        return;
+      }
 
       const sortedProds = [...prods].sort((a, b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -301,6 +336,11 @@ export default function AdminWears() {
     setName('');
     setCostPrice('');
     setPrice('');
+
+    setIsPromo(false);
+    setOldPrice('');
+    setPromoEndDate('');
+
     setDescription('');
     setGroup('');
     setCategory('');
@@ -380,7 +420,12 @@ export default function AdminWears() {
       const productData: any = {
         name: name.trim(),
         costPrice: parsedCost,
-        price: parsedPrice,
+        
+        price: isPromo ? Number(parsePriceInput(oldPrice)) : parsedPrice,
+        isPromo,
+        oldPrice: isPromo ? Number(parsePriceInput(price)) : null,
+        promoEndDate: isPromo && promoEndDate ? promoEndDate : null,
+
         description: description.trim(),
         group: formatStructure(group),
         category: formatStructure(category),
@@ -460,7 +505,12 @@ export default function AdminWears() {
     setSelectedVendorEmail((product as any).vendor || '');
     setName(product.name);
     setCostPrice(formatPriceInput((product.costPrice || 0).toString()));
-    setPrice(formatPriceInput((product.price || 0).toString()));
+    
+    setIsPromo((product as any).isPromo || false);
+    setPromoEndDate((product as any).promoEndDate || '');
+    setPrice((product as any).isPromo ? formatPriceInput(((product as any).oldPrice || 0).toString()) : formatPriceInput((product.price || 0).toString()));
+    setOldPrice((product as any).isPromo ? formatPriceInput((product.price || 0).toString()) : '');
+
     setDescription(product.description || '');
     setGroup(product.group || '');
     setCategory(product.category || '');
@@ -903,6 +953,67 @@ export default function AdminWears() {
                 )}
               </div>
             </div>
+
+            
+            {/* Promotion */}
+            <div className="space-y-2 mb-6">
+              <label className="text-xs md:text-sm font-bold">Promotion</label>
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm">
+                  <input type="checkbox" checked={isPromo} onChange={e => setIsPromo(e.target.checked)} className="size-4" />
+                  Is Promo?
+                </label>
+              </div>
+              {isPromo && (
+                <div className="flex flex-col gap-4 animate-[slideIn_0.2s_ease] mt-2">
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="text-[0.65rem] font-bold block mb-1 text-muted-foreground uppercase">Original Price</label>
+                      <input readOnly value={price} type="text" className="w-full p-2 rounded-md border border-border bg-muted text-sm opacity-70" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[0.65rem] font-bold block mb-1 text-primary uppercase flex justify-between items-center">
+                        <span>Promo Price (₦)</span>
+                        {oldPrice.trim() !== '' && (() => {
+                          const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+                          const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
+                          const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
+                          if (parsedPromo >= parsedSales) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be lower than Sales Price</span>;
+                          if (parsedCost > 0 && parsedPromo <= parsedCost) return <span className="text-[10px] text-red-500 font-bold animate-pulse">⚠️ Must be higher than Cost Price</span>;
+                          return null;
+                        })()}
+                      </label>
+                      <input
+                        required
+                        value={oldPrice}
+                        onChange={e => setOldPrice(formatPriceInput(e.target.value))}
+                        type="text"
+                        placeholder="e.g. 45,000"
+                        className={`w-full p-2 rounded-md border bg-background text-sm font-bold focus:ring-2 outline-none transition-all ${oldPrice.trim() !== '' && (() => {
+                          const parsedPromo = parseFloat(oldPrice.replace(/,/g, '')) || 0;
+                          const parsedSales = parseFloat(price.replace(/,/g, '')) || 0;
+                          const parsedCost = parseFloat(costPrice.replace(/,/g, '')) || 0;
+                          return parsedPromo >= parsedSales || (parsedCost > 0 && parsedPromo <= parsedCost);
+                        })()
+                          ? 'border-red-500 focus:border-red-600 ring-2 ring-red-100'
+                          : 'border-primary focus:ring-primary/20'
+                          }`}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[0.65rem] font-bold block mb-1 text-secondary uppercase">Promo End Date (Optional)</label>
+                    <input
+                      value={promoEndDate}
+                      onChange={e => setPromoEndDate(e.target.value)}
+                      type="datetime-local"
+                      className="w-full p-2 rounded-md border border-border bg-background text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
 
             <div className="space-y-4">
               <label className="text-sm font-bold">Product Images (Max 5)</label>

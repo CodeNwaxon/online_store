@@ -1,7 +1,7 @@
 'use client';
 
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight, FaShareAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -209,7 +209,17 @@ export default function CategoryDetailPage({
           <Link href={backPath} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit">
             <FaArrowLeft size={16} /> Back to {categoryName}
           </Link>
-          <button
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-muted hidden sm:flex justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt size={16} /> <span className="hidden sm:inline">Reload</span>
+              </button>
+              <button
             onClick={() => {
               const url = window.location.href;
               const title = `${product.name} | Nomo Storez`;
@@ -225,6 +235,7 @@ export default function CategoryDetailPage({
           >
             <FaShareAlt size={16} /> <span className="hidden sm:inline">Share</span>
           </button>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">

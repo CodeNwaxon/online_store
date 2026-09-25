@@ -2,9 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy , updateDoc, doc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
-import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt } from 'react-icons/fa';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
+import { FaSearch, FaBoxes, FaChevronDown, FaStore, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
 import Link from 'next/link';
 import Fuse from 'fuse.js';
@@ -34,7 +35,40 @@ function ToiletKitchenContent() {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const sortedProds = await fetchCollection('toilet_kitchen');
+        let sortedProds = normalizeExpiredPromos(await fetchCollection('toilet_kitchen'));
+        
+        const promoNow = new Date();
+        sortedProds = sortedProds.map((p: any) => {
+          const getPromoEndTime = (val: any) => {
+              if (!val) return 0;
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              return new Date(val).getTime() || 0;
+            };
+            const promoEndNum = getPromoEndTime(p.promoEndDate);
+            if (p.isPromo && promoEndNum > 0 && promoEndNum < promoNow.getTime()) {
+            try {
+              const updateData: any = {
+                isPromo: false,
+                promoEndDate: null,
+                updatedAt: promoNow.toISOString()
+              };
+              if ((p as any).oldPrice) {
+                updateData.price = (p as any).oldPrice;
+                updateData.oldPrice = null;
+              }
+              updateDoc(doc(db, 'toilet_kitchen', p.id), updateData).catch(() => {});
+            } catch (err) {}
+            
+            return {
+              ...p,
+              isPromo: false,
+              promoEndDate: null,
+              price: (p as any).oldPrice || p.price,
+              oldPrice: null
+            };
+          }
+          return p;
+        });
         setProducts(sortedProds);
         const uniqueGroups = Array.from(new Set(sortedProds.map(p => p.group).filter(Boolean)));
         setGroups(uniqueGroups);
@@ -143,7 +177,17 @@ function ToiletKitchenContent() {
             <p className="text-xs md:text-xl text-teal-100 max-w-2xl">Upgrade your home with premium kitchen and toilet fittings.</p>
             <StoreRatingStars salesCount={storeTypeSales.toilet_kitchen} textColor="text-teal-100" className="mt-2" />
           </div>
-          <button 
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0 hidden sm:flex items-center justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+              <button 
             onClick={() => {
               const urlObj = new URL(window.location.origin + window.location.pathname);
               if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -163,6 +207,7 @@ function ToiletKitchenContent() {
           >
             <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
           </button>
+            </div>
         </div>
       </div>
 

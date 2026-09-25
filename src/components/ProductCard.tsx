@@ -15,6 +15,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getValidColor } from './ShopCard';
 import { getAvailableVariantQuantity } from '@/lib/cartUtils';
+import { normalizeExpiredPromo } from '@/lib/promoUtils';
 
 
 const getOrdinal = (d: number) => {
@@ -53,7 +54,8 @@ const cardThemes = [
   { accent: 'text-cyan-600', borderTop: 'border-cyan-600', btn: 'bg-cyan-600 hover:bg-cyan-700', lightBg: 'bg-cyan-50', lightBorder: 'border-cyan-100' },
 ];
 
-export default function ProductCard({ product, isAdmin, priority = false, index = 0, onEdit, onDelete }: ProductCardProps) {
+export default function ProductCard({ product: rawProduct, isAdmin, priority = false, index = 0, onEdit, onDelete }: ProductCardProps) {
+  const product = normalizeExpiredPromo(rawProduct) as Product;
   const pathname = usePathname();
   const isFurniturePage = pathname?.includes('/shop/furniture');
   const addItem = useCartStore((state) => state.addItem);

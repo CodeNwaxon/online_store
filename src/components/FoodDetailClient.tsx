@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaLeaf, FaChevronLeft, FaChevronRight, FaShareAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaLeaf, FaChevronLeft, FaChevronRight, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -180,7 +180,17 @@ export default function FoodDetailClient() {
           <Link href="/foods" className="flex items-center gap-2 text-green-700 hover:text-green-900 transition-colors w-fit font-semibold">
             <FaArrowLeft size={16} /> Back to Food Market
           </Link>
-          <button 
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="flex items-center gap-2 text-green-700 hover:text-green-900 transition-colors p-2 rounded-md hover:bg-green-50 font-semibold hidden sm:flex justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt size={16} /> <span className="hidden sm:inline">Reload</span>
+              </button>
+              <button 
             onClick={() => {
               const url = window.location.href;
               const title = `${food.name} | Nomo Storez`;
@@ -196,6 +206,7 @@ export default function FoodDetailClient() {
           >
             <FaShareAlt size={16} /> <span className="hidden sm:inline">Share</span>
           </button>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-green-100">

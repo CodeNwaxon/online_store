@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
-import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown, FaStore } from 'react-icons/fa';
+import { FaLeaf, FaUtensils, FaSearch, FaFilter, FaShareAlt, FaChevronDown, FaStore , FaSyncAlt} from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
 import Fuse from 'fuse.js';
@@ -34,7 +35,7 @@ function FoodsContent() {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const sortedProds = await fetchCollection('foods');
+        const sortedProds = normalizeExpiredPromos(await fetchCollection('foods'));
         setFoods(sortedProds as unknown as ShopProduct[]);
       } catch (error) {
         console.error("Error fetching foods:", error);
@@ -153,7 +154,17 @@ function FoodsContent() {
             </p>
             <StoreRatingStars salesCount={storeTypeSales.food} textColor="text-green-100" className="mt-2" />
           </div>
-          <button
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0 hidden sm:flex items-center justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+              <button
             onClick={() => {
               const urlObj = new URL(window.location.origin + window.location.pathname);
               if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -174,6 +185,7 @@ function FoodsContent() {
           >
             <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
           </button>
+            </div>
         </div>
       </div>
 

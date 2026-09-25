@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs , updateDoc, doc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
-import { FaSearch, FaHandshake, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt, FaCommentDots } from 'react-icons/fa';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
+import { FaSearch, FaHandshake, FaChevronDown, FaStore, FaFilter, FaTimes, FaShareAlt, FaCommentDots , FaSyncAlt} from 'react-icons/fa';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import CategoryProductCard, { CategoryProduct } from '@/components/CategoryProductCard';
@@ -54,7 +55,40 @@ function UkUsedPageContent() {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const sortedProds = await fetchCollection('uk_used');
+        let sortedProds = normalizeExpiredPromos(await fetchCollection('uk_used'));
+        
+        const promoNow = new Date();
+        sortedProds = sortedProds.map((p: any) => {
+          const getPromoEndTime = (val: any) => {
+              if (!val) return 0;
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              return new Date(val).getTime() || 0;
+            };
+            const promoEndNum = getPromoEndTime(p.promoEndDate);
+            if (p.isPromo && promoEndNum > 0 && promoEndNum < promoNow.getTime()) {
+            try {
+              const updateData: any = {
+                isPromo: false,
+                promoEndDate: null,
+                updatedAt: promoNow.toISOString()
+              };
+              if ((p as any).oldPrice) {
+                updateData.price = (p as any).oldPrice;
+                updateData.oldPrice = null;
+              }
+              updateDoc(doc(db, 'uk_used', p.id), updateData).catch(() => {});
+            } catch (err) {}
+            
+            return {
+              ...p,
+              isPromo: false,
+              promoEndDate: null,
+              price: (p as any).oldPrice || p.price,
+              oldPrice: null
+            };
+          }
+          return p;
+        });
         setAllProductsCount(sortedProds.length);
 
         const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
@@ -290,6 +324,16 @@ function UkUsedPageContent() {
                 )}
               </button>
             )}
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="relative p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0 hidden sm:flex items-center justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
             <button
               onClick={() => {
                 const urlObj = new URL(window.location.origin + window.location.pathname);
@@ -313,6 +357,7 @@ function UkUsedPageContent() {
             >
               <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
             </button>
+            </div>
           </div>
         </div>
       </div>

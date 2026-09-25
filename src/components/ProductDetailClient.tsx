@@ -3,7 +3,7 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import { products as staticProducts } from '@/data/products';
 import { useCartStore } from '@/store/useCartStore';
-import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight, FaShareAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaWhatsapp, FaArrowLeft, FaCreditCard, FaChevronLeft, FaChevronRight, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -17,6 +17,7 @@ import { usePartner } from '@/hooks/usePartner';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 import { getValidColor } from './ShopCard';
 import { getAvailableVariantQuantity } from '@/lib/cartUtils';
+import { normalizeExpiredPromo } from '@/lib/promoUtils';
 
 const cardThemes = [
   { accent: 'text-primary', btn: 'bg-primary hover:bg-primary-hover', lightBg: 'bg-primary/10', lightBorder: 'border-primary/20' },
@@ -112,12 +113,12 @@ export default function ProductDetailClient() {
       try {
         const dynamicProducts = await fetchCollection('products') as any[];
 
-        const currentProduct = dynamicProducts.find(p => p.id === id);
-        if (currentProduct) {
-          setProduct(currentProduct);
+        const currentProductRaw = dynamicProducts.find(p => p.id === id);
+        if (currentProductRaw) {
+          setProduct(normalizeExpiredPromo(currentProductRaw));
         } else {
           const staticProd = staticProducts.find((p) => p.id === id);
-          if (staticProd) setProduct(staticProd);
+          if (staticProd) setProduct(normalizeExpiredPromo(staticProd));
         }
 
         const parseDate = (dateVal: any) => {
@@ -126,11 +127,12 @@ export default function ProductDetailClient() {
           return new Date(dateVal).getTime() || 0;
         };
 
-        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+        let sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
           const dateA = parseDate(a.updatedAt);
           const dateB = parseDate(b.updatedAt);
           return dateB - dateA;
         });
+        sortedProducts = sortedProducts.map((p: any) => normalizeExpiredPromo(p));
 
         setAllProducts(sortedProducts);
       } catch (error) {
@@ -210,7 +212,17 @@ export default function ProductDetailClient() {
           <Link href={product.group?.toLowerCase() === 'furniture' ? '/shop/furniture' : '/shop'} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-fit">
             <FaArrowLeft size={16} /> Back to {product.group?.toLowerCase() === 'furniture' ? 'Furniture' : 'Shop'}
           </Link>
-          <button
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md hover:bg-muted hidden sm:flex justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt size={16} /> <span className="hidden sm:inline">Reload</span>
+              </button>
+              <button
             onClick={() => {
               const url = window.location.href;
               const title = `${product.name} | Nomo Storez`;
@@ -226,6 +238,7 @@ export default function ProductDetailClient() {
           >
             <FaShareAlt size={16} /> <span className="hidden sm:inline">Share</span>
           </button>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-md:gap-8 items-start">

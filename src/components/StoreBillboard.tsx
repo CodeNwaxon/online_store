@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
 
 interface StoreBillboardProps {
   categoryName: string; // e.g., 'uk-used', 'wears', 'cosmetics'
@@ -45,7 +46,7 @@ export default function StoreBillboard({ categoryName, isSpecialStoreView }: Sto
   useEffect(() => {
     const loadProducts = async () => {
       const prods = await fetchCollection(categoryName.replace('-', '_') as any);
-      setAllProducts(prods);
+      setAllProducts(normalizeExpiredPromos(prods));
     };
     loadProducts();
   }, [categoryName, fetchCollection]);

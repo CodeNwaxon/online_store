@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
-import { FaSearch, FaCouch, FaChevronDown, FaStore, FaFilter, FaShareAlt } from 'react-icons/fa';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
+import { FaSearch, FaCouch, FaChevronDown, FaStore, FaFilter, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/data/products';
 import Fuse from 'fuse.js';
@@ -33,7 +34,7 @@ function FurnitureContent() {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const sortedProds = await fetchCollection('products');
+        const sortedProds = normalizeExpiredPromos(await fetchCollection('products'));
 
         // Filter for only Furniture group
         const furnitureProds = sortedProds.filter((p: any) => p.group && p.group.toLowerCase() === 'furniture');
@@ -104,7 +105,17 @@ function FurnitureContent() {
             </p>
             <StoreRatingStars salesCount={storeTypeSales.furniture} textColor="text-amber-100" className="mt-2" />
           </div>
-          <button 
+          <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="p-2 md:p-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-colors text-white mt-1 md:mt-2 shrink-0 hidden sm:flex items-center justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt className="w-4 h-4 md:w-5 md:h-5" />
+              </button>
+              <button 
             onClick={() => {
               const urlObj = new URL(window.location.origin + window.location.pathname);
               if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -123,6 +134,7 @@ function FurnitureContent() {
           >
             <FaShareAlt className="w-4 h-4 md:w-5 md:h-5" />
           </button>
+            </div>
         </div>
       </div>
 

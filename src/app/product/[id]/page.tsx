@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
   } catch (error) {
-    console.error("Error generating metadata:", error instanceof Error ? error.message : String(error));
+    console.log("Metadata fetch failed, falling back to default (likely due to quota limit)");
   }
   
   return {

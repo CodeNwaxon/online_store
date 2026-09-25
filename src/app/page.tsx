@@ -12,6 +12,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 import { products as staticProducts } from '@/data/products';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
 
 const getOrdinal = (d: number) => {
   if (d > 3 && d < 21) return 'th';
@@ -104,28 +105,39 @@ export default function Home() {
         });
 
         // Auto-remove expired promos
-        const expiredPromos = allProducts.filter((p: any) =>
-          p.isPromo &&
-          p.promoEndDate &&
-          new Date(p.promoEndDate) < now
-        );
-
-        if (expiredPromos.length > 0) {
-          for (const promo of expiredPromos) {
+        allProducts = allProducts.map((p: any) => {
+          const getPromoEndTime = (val: any) => {
+              if (!val) return 0;
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              return new Date(val).getTime() || 0;
+            };
+            const promoEndNum = getPromoEndTime(p.promoEndDate);
+            if (p.isPromo && promoEndNum > 0 && promoEndNum < now.getTime()) {
+            // Attempt to update Firestore in background (may fail for non-admins)
             try {
-              await updateDoc(doc(db, 'products', promo.id), {
+              const updateData: any = {
                 isPromo: false,
                 promoEndDate: null,
                 updatedAt: now.toISOString()
-              });
-            } catch (err) {
-              console.error("Error auto-removing promo:", err);
-            }
+              };
+              if ((p as any).oldPrice) {
+                updateData.price = (p as any).oldPrice;
+                updateData.oldPrice = null;
+              }
+              updateDoc(doc(db, 'products', p.id), updateData).catch(() => {});
+            } catch (err) {}
+            
+            // Return locally mutated object for rendering
+            return {
+              ...p,
+              isPromo: false,
+              promoEndDate: null,
+              price: (p as any).oldPrice || p.price,
+              oldPrice: null
+            };
           }
-          // Refresh data after auto-removal
-          loadData();
-          return;
-        }
+          return p;
+        });
 
         // 2. Fetch promo materials
         let activePromoMaterial = null;
@@ -160,7 +172,7 @@ export default function Home() {
           console.error("Error fetching hero settings:", err);
           slidesToSet = allProducts.filter(p => p.isPromo).slice(0, 5);
         }
-        setHeroSlides(slidesToSet);
+        setHeroSlides(normalizeExpiredPromos(slidesToSet));
         if (slidesToSet.length > 0) {
           setCurrentSlide(Math.floor(Math.random() * slidesToSet.length));
         }

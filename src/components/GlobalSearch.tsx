@@ -6,6 +6,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { FaSearch, FaSpinner } from 'react-icons/fa';
 import Link from 'next/link';
 import Fuse from 'fuse.js';
+import { normalizeExpiredPromo } from '@/lib/promoUtils';
 
 interface SearchItem {
   id: string;
@@ -14,6 +15,7 @@ interface SearchItem {
   oldPrice?: number;
   image: string;
   isPromo?: boolean;
+  promoEndDate?: any;
   category: string;
   group?: string;
   manufacturer?: string;
@@ -122,6 +124,7 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   oldPrice: data.oldPrice,
                   image: data.images?.[0] || data.image || '/images/placeholder.png',
                   isPromo: data.isPromo || false,
+                  promoEndDate: data.promoEndDate || null,
                   category: colName,
                   group: data.group || '',
                   manufacturer: data.manufacturer || '',
@@ -142,7 +145,7 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
           });
 
           const resultsArray = await Promise.all(fetchPromises);
-          itemsToSearch = resultsArray.flat();
+          itemsToSearch = resultsArray.flat().map(item => normalizeExpiredPromo(item) as SearchItem);
           setAllItems(itemsToSearch);
           setDataLoaded(true);
         } catch (error) {

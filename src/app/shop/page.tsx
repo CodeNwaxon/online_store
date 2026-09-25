@@ -4,12 +4,13 @@ import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
+import { normalizeExpiredPromos } from '@/lib/promoUtils';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
@@ -39,30 +40,41 @@ function ShopContent() {
     const loadProducts = async () => {
       setLoading(true);
       try {
-        const dynamicProducts = await fetchCollection('products');
+        const dynamicProducts = normalizeExpiredPromos(await fetchCollection('products'));
 
-        // Auto-remove expired promos
-        const now = new Date();
-        const expiredPromos = dynamicProducts.filter((p: any) =>
-          p.isPromo &&
-          p.promoEndDate &&
-          new Date(p.promoEndDate) < now
-        );
-
-        if (expiredPromos.length > 0) {
-          for (const promo of expiredPromos) {
+        // Auto-remove expired promos locally
+        const promoNow = new Date();
+        const mutatedProducts = dynamicProducts.map((p: any) => {
+          const getPromoEndTime = (val: any) => {
+              if (!val) return 0;
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              return new Date(val).getTime() || 0;
+            };
+            const promoEndNum = getPromoEndTime(p.promoEndDate);
+            if (p.isPromo && promoEndNum > 0 && promoEndNum < promoNow.getTime()) {
             try {
-              await updateDoc(doc(db, 'products', promo.id), {
+              const updateData: any = {
                 isPromo: false,
                 promoEndDate: null,
-                updatedAt: now.toISOString()
-              });
-            } catch (err) {
-              console.error("Error auto-removing promo:", err);
-            }
+                updatedAt: promoNow.toISOString()
+              };
+              if ((p as any).oldPrice) {
+                updateData.price = (p as any).oldPrice;
+                updateData.oldPrice = null;
+              }
+              updateDoc(doc(db, 'products', p.id), updateData).catch(() => {});
+            } catch (err) {}
+            
+            return {
+              ...p,
+              isPromo: false,
+              promoEndDate: null,
+              price: (p as any).oldPrice || p.price,
+              oldPrice: null
+            };
           }
-          // After updates, ideally we'd refresh, but just updating the local state is fine for now
-        }
+          return p;
+        });
 
         const parseDate = (dateVal: any) => {
           if (!dateVal) return 0;
@@ -70,7 +82,7 @@ function ShopContent() {
           return new Date(dateVal).getTime() || 0;
         };
 
-        const sortedProducts = (dynamicProducts.length > 0 ? dynamicProducts : staticProducts).sort((a: any, b: any) => {
+        const sortedProducts = (mutatedProducts.length > 0 ? mutatedProducts : staticProducts).sort((a: any, b: any) => {
           const dateA = parseDate(a.updatedAt);
           const dateB = parseDate(b.updatedAt);
           return dateB - dateA;
@@ -225,7 +237,17 @@ function ShopContent() {
               <p className="-mt-1 text-[10px] md:text-base text-muted-foreground">Explore our range of premium African-inspired goods.</p>
               <StoreRatingStars salesCount={storeTypeSales.shop} textColor="text-muted-foreground" className="mt-1" />
             </div>
-            <button
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="p-2 border border-border rounded-full hover:bg-muted transition-colors text-muted-foreground hidden sm:flex items-center justify-center"
+                title="Refresh page to get latest data"
+              >
+                <FaSyncAlt className="w-4 h-4" />
+              </button>
+              <button
               onClick={() => {
                 const urlObj = new URL(window.location.origin + window.location.pathname);
                 if (searchQuery) urlObj.searchParams.set('search', searchQuery);
@@ -245,6 +267,7 @@ function ShopContent() {
             >
               <FaShareAlt className="w-4 h-4" />
             </button>
+            </div>
           </div>
           <Link href="/installments" className="text-xs md:text-base bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
             <FaCreditCard /> Installmental Payment

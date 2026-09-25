@@ -3,6 +3,7 @@
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
 import { FieldValue } from 'firebase-admin/firestore';
+import { normalizeExpiredPromo } from '@/lib/promoUtils';
 
 // ─── PAYSTACK VERIFICATION ──────────────────────────────────────────────
 // This function contacts Paystack's server directly using the SECRET key
@@ -134,6 +135,9 @@ export async function verifyAndFulfillOrder(
     if (!productData) {
       return { success: false, error: `Item ${item.name} not found in products.` };
     }
+    
+    // Normalize expired promos to ensure backend price matches the client-side corrected price
+    productData = normalizeExpiredPromo(productData);
     
     let itemPrice = productData.price || 0;
     let itemCost = productData.rdpPrice || productData.costPrice || 0;
@@ -599,7 +603,10 @@ export async function verifyAndCreateInstallment(
   if (!productDoc) {
     return { success: false, error: 'Product not found.' };
   }
-  const realProductPrice = productDoc.data()?.price || 0;
+  
+  // Normalize expired promos for backend calculation
+  const productData = normalizeExpiredPromo(productDoc.data());
+  const realProductPrice = productData.price || 0;
 
   // Step 3: Fetch Installment Settings to recalculate everything
   const settingsDoc = await adminDb.collection('settings').doc('installments').get();

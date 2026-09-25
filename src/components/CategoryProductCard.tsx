@@ -11,6 +11,7 @@ import { getAvailableVariantQuantity } from '@/lib/cartUtils';
 import LikeButton from './LikeButton';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 import { getValidColor } from './ShopCard';
+import { normalizeExpiredPromo } from '@/lib/promoUtils';
 
 export interface CategoryProduct {
   id: string;
@@ -49,7 +50,7 @@ interface CategoryProductCardProps {
 }
 
 export default function CategoryProductCard({
-  product,
+  product: rawProduct,
   isAdmin,
   priority = false,
   onEdit,
@@ -58,6 +59,7 @@ export default function CategoryProductCard({
   categoryName,
   detailPath
 }: CategoryProductCardProps) {
+  const product = normalizeExpiredPromo(rawProduct) as CategoryProduct;
   const newTagDurationDays = useNewTagDurationDays();
   const addItem = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
@@ -174,6 +176,13 @@ export default function CategoryProductCard({
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : 'auto'}
         />
+        {(product as any).isPromo && (
+          <div className="absolute top-2 left-2 z-10 animate-in fade-in zoom-in duration-300">
+            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-sm shadow-md uppercase tracking-wider">
+              Promo
+            </span>
+          </div>
+        )}
         {sizeLabel && (
           <div className="absolute top-1 left-1 bg-white dark:bg-zinc-800 py-1 px-1.5 rounded z-30 shadow-sm border border-gray-100 dark:border-zinc-700 text-[8px] md:text-[10px] leading-tight">
             <span className="font-bold text-gray-800 dark:text-zinc-200">{sizeLabel}</span>
@@ -406,6 +415,11 @@ export default function CategoryProductCard({
 
         <div className='flex items-end justify-between mt-auto pt-2'>
           <div className="flex flex-col">
+            {(product as any).oldPrice && (
+              <span className="text-[0.75rem] text-muted-foreground dark:text-zinc-400 line-through -mb-1 opacity-70">
+                &#8358;{(product as any).oldPrice.toLocaleString()}
+              </span>
+            )}
             <span className={`text-lg max-md:text-[0.95rem] font-bold text-slate-900 dark:text-zinc-100`}>
               &#8358;{product.price.toLocaleString()}
             </span>

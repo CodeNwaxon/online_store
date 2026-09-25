@@ -186,11 +186,16 @@ function AdminProductsContent() {
       if (expiredPromos.length > 0) {
         for (const promo of expiredPromos) {
           try {
-            await updateDoc(doc(db, 'products', promo.id), {
+            const updateData: any = {
               isPromo: false,
               promoEndDate: null,
               updatedAt: now.toISOString()
-            });
+            };
+            if ((promo as any).oldPrice) {
+              updateData.price = (promo as any).oldPrice;
+              updateData.oldPrice = null;
+            }
+            await updateDoc(doc(db, 'products', promo.id), updateData);
           } catch (err) {
             console.error("Error auto-removing promo:", err);
           }
