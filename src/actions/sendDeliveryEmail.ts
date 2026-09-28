@@ -7,7 +7,8 @@ export async function sendDeliveryEmailAction(
   customerName: string,
   orderId: string,
   isShip: boolean,
-  shippingMaxDays: number
+  shippingMaxDays: number,
+  baseUrl: string = 'https://nomostores.com'
 ) {
   if (!email) return { success: false, error: 'No email provided' };
 
@@ -19,13 +20,15 @@ export async function sendDeliveryEmailAction(
     ? "Your order has been <b>delivered</b> and should arrive shortly!"
     : "Your order has been <b>delivered</b>, You can come pick it up!";
 
+  const receiptUrl = `${baseUrl}/receipt/${orderId}`;
+
   const html = `
     <div style="font-family: Arial, sans-serif; color: #333;">
       <p>Hello ${customerName || 'Customer'},</p>
       <p>Warm greetings from <b>NOMO STOREZ</b> !!! 🌟</p>
       <p>${deliveredMessage}${deliveryNote}</p>
       <p>You can view and download your <b>Customer's Copy Receipt</b> here:<br>
-      <a href="https://nomostores.com/receipt/${orderId}">https://nomostores.com/receipt/${orderId}</a></p>
+      <a href="${receiptUrl}">${receiptUrl}</a></p>
       <p>Thank you for shopping with us!</p>
     </div>
   `;

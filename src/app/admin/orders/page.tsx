@@ -169,12 +169,14 @@ export default function AdminOrders() {
         });
       }
 
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://nomostores.com';
+
       // Automatically open WhatsApp to notify the customer
       if (orderToNotify?.phone) {
         let phone = orderToNotify.phone.replace(/\D/g, '');
         if (phone.startsWith('0')) phone = '234' + phone.slice(1);
 
-        const receiptUrl = `https://nomostores.com/receipt/${orderToNotify.id}`;
+        const receiptUrl = `${baseUrl}/receipt/${orderToNotify.id}`;
         const isShip = orderToNotify.deliveryMethod === 'ship';
         const deliveryNote = isShip
           ? `\n\n📌 *Delivery Note:* Estimated delivery time is max *${shippingMaxDays} business ${shippingMaxDays === 1 ? 'day' : 'days'}* (items often arrive earlier!). If your order is not delivered within ${shippingMaxDays} ${shippingMaxDays === 1 ? 'day' : 'days'}, you are guaranteed a full refund.`
@@ -198,7 +200,8 @@ export default function AdminOrders() {
             orderToNotify.customerName || 'Customer',
             orderToNotify.id,
             orderToNotify.deliveryMethod === 'ship',
-            shippingMaxDays
+            shippingMaxDays,
+            baseUrl
           );
         } catch (emailErr) {
           console.error("Failed to send delivery email", emailErr);
