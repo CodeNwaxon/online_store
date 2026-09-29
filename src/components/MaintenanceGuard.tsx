@@ -7,6 +7,7 @@ import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { FaTools, FaSignInAlt, FaSignOutAlt, FaPowerOff, FaArrowRight } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import SignOutConfirmation from './SignOutConfirmation';
 
 export default function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const [isMaintenance, setIsMaintenance] = useState(false);
@@ -15,6 +16,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
   const [signingIn, setSigningIn] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [ceoPreview, setCeoPreview] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const isCeoUser = isCEO || adminData?.role === 'CEO' || (adminData?.assignedRoutes && adminData.assignedRoutes.includes('/ADMIN/MANAGEMENT'));
 
@@ -118,6 +120,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
 
   // Maintenance View (Active Maintenance)
   return (
+    <>
     <div className="min-h-screen flex flex-col items-center justify-between p-4 md:p-6 bg-background text-foreground text-center">
       {/* Top Header with clean Sign In / User controls */}
       <header className="w-full max-w-4xl flex justify-between items-center py-4 border-b border-border">
@@ -129,7 +132,7 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground hidden sm:inline">{user.email}</span>
               <button
-                onClick={handleSignOut}
+                onClick={() => setShowSignOutConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-semibold hover:bg-muted transition-colors"
               >
                 <FaSignOutAlt /> Sign Out
@@ -183,6 +186,13 @@ export default function MaintenanceGuard({ children }: { children: React.ReactNo
         &copy; {new Date().getFullYear()} All Rights Reserved.
       </footer>
     </div>
+
+    <SignOutConfirmation
+      isOpen={showSignOutConfirm}
+      onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
+      onCancel={() => setShowSignOutConfirm(false)}
+    />
+    </>
   );
 }
 

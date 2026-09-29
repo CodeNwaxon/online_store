@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast';
 
 import { useAdmin } from '@/hooks/useAdmin';
 import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
+import SignOutConfirmation from './SignOutConfirmation';
 
 const ICON_MAP: any = {
   Facebook: <FaFacebook size={20} />,
@@ -29,6 +30,7 @@ export default function Footer() {
   const { isAdmin, isCEO, user } = useAdmin();
   const { unreadSales, setLastSalesCount, clearUnreadSales } = usePartnerNotificationStore();
   const [mounted, setMounted] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -76,6 +78,7 @@ export default function Footer() {
   };
 
   return (
+    <>
     <footer className="bg-card border-t border-border pt-16 pb-8 mt-auto">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -122,7 +125,7 @@ export default function Footer() {
               {user && (
                 <li>
                   <button 
-                    onClick={handleSignOut}
+                    onClick={() => setShowSignOutConfirm(true)}
                     className="text-muted-foreground hover:text-secondary transition-colors cursor-pointer p-0 bg-transparent border-none text-left w-full"
                   >
                     Sign Out
@@ -150,6 +153,13 @@ export default function Footer() {
         </div>
       </div>
     </footer>
+
+    <SignOutConfirmation
+      isOpen={showSignOutConfirm}
+      onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
+      onCancel={() => setShowSignOutConfirm(false)}
+    />
+    </>
   );
 }
 

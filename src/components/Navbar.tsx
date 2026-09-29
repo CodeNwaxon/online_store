@@ -23,6 +23,7 @@ import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore
 import { useNotificationStore } from '@/store/useNotificationStore';
 import NotificationWrapper from './NotificationWrapper';
 import { useAdminUnreadCounts } from '@/hooks/useAdminUnreadCounts';
+import SignOutConfirmation from './SignOutConfirmation';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
@@ -58,6 +59,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     const lastPage = localStorage.getItem('lastVisitedPage');
@@ -542,7 +544,7 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-[0.6rem]">
                 <img src={user.photoURL || ''} alt="avatar" className={`w-[30px] h-[30px] rounded-full border-2 ${(!isAdminRoute && pathname === '/partnership' && isPartnershipDarkMode) ? 'border-white/50' : 'border-primary'} object-cover`} />
-                <button onClick={handleSignOut} className={`text-[0.78rem] ${isDarkNav ? 'text-white/80 hover:text-white' : 'text-muted-foreground'} underline`}>Sign Out</button>
+                <button onClick={() => setShowSignOutConfirm(true)} className={`text-[0.78rem] ${isDarkNav ? 'text-white/80 hover:text-white' : 'text-muted-foreground'} underline`}>Sign Out</button>
               </div>
             ) : (
               <button onClick={handleSignIn} className={`border ${isDarkNav ? 'border-white/20 text-white hover:bg-white/10' : 'border-border text-foreground hover:bg-muted'} px-[0.9rem] py-[0.4rem] text-[0.85rem] rounded-md font-semibold transition-colors duration-200`}>
@@ -736,7 +738,7 @@ export default function Navbar() {
           )}
 
           {user ? (
-            <button onClick={handleSignOut} className="flex items-center justify-center gap-2 p-[0.7rem] rounded-lg border border-border bg-transparent font-semibold text-[0.88rem] text-foreground cursor-pointer">
+            <button onClick={() => setShowSignOutConfirm(true)} className="flex items-center justify-center gap-2 p-[0.7rem] rounded-lg border border-border bg-transparent font-semibold text-[0.88rem] text-foreground cursor-pointer">
               <FaSignOutAlt /> Sign Out
             </button>
           ) : (
@@ -749,6 +751,11 @@ export default function Navbar() {
 
       <CartSlider isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       <NotificationWrapper isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+      <SignOutConfirmation
+        isOpen={showSignOutConfirm}
+        onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
     </>
   );
 }

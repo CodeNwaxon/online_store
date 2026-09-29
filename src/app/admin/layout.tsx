@@ -9,12 +9,14 @@ import { useAdminUnreadCounts } from '@/hooks/useAdminUnreadCounts';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import SignOutConfirmation from '@/components/SignOutConfirmation';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { adminData, isCEO } = useAdmin();
   const { unreadCount, unreadOrders, unreadPartners, unreadComplaints } = useAdminUnreadCounts();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -134,12 +136,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="p-4 border-t border-border">
             <button
-              onClick={handleSignOut}
+              onClick={() => setShowSignOutConfirm(true)}
               className="flex items-center gap-3 px-4 py-3 w-full text-left text-secondary hover:bg-secondary/10 rounded-md transition-colors font-semibold"
             >
               <FaSignOutAlt /> Sign Out
             </button>
           </div>
+
+          <SignOutConfirmation
+            isOpen={showSignOutConfirm}
+            onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
+            onCancel={() => setShowSignOutConfirm(false)}
+          />
         </aside>
 
         {/* Main Content */}
