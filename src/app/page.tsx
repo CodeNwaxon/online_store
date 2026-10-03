@@ -51,6 +51,13 @@ export default function Home() {
   const [installmentBg, setInstallmentBg] = useState('/images/environment.jpeg');
   const [siteName, setSiteName] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
+  const [isSeoScrolledToBottom, setIsSeoScrolledToBottom] = useState(false);
+  
+  // SEO Section State
+  const [seoSection, setSeoSection] = useState({
+    title: 'Welcome to NomoStores – Your Reliable Store in Lagos',
+    content: 'Welcome to NomoStores, your go-to store right here in Lagos and across Nigeria. We provide high-quality items at very affordable prices. We are primarily a retail store selling top-notch electronics, durable home furniture, essential phone accessories, and beautiful toilet & kitchen fittings. If you need it for your home or daily life, NomoStores has got you covered! We even offer flexible installmental payment plans so you can get what you need now and pay small-small.\n\nWhile NomoStores directly handles most of these major categories, we also run a trusted marketplace system. We allow verified vendors to showcase their own products in specific categories like Cosmetics, Wears, and UK Used items. This means you get a massive variety of goods in one single place.\n\nEvery single vendor on NomoStores goes through a very strict verification process. We don’t allow blurry images, copied text, or fake products. Whether you are buying directly from NomoStores or from one of our verified vendors, you are guaranteed authentic goods that deliver on their promise. Enjoy fast delivery, transparency, and top-tier customer service right to your doorstep.'
+  });
   const [activePromo, setActivePromo] = useState<any>(null);
 
   // Food Market Section
@@ -261,6 +268,12 @@ export default function Home() {
             const gData = generalSnap.data();
             if (gData.installmentBg) setInstallmentBg(gData.installmentBg);
             if (gData.siteName) setSiteName(gData.siteName);
+            if (gData.seoSection) {
+              setSeoSection(prev => ({
+                title: gData.seoSection.title || prev.title,
+                content: gData.seoSection.content || prev.content
+              }));
+            }
             if (gData.categoriesExplorer) {
               setCategoriesExplorer(prev => ({
                 toiletKitchen: gData.categoriesExplorer.toiletKitchen || prev.toiletKitchen,
@@ -567,7 +580,7 @@ export default function Home() {
       </section>
 
       {/* Food Market Section */}
-      <section className="border-t-2 border-green-200 relative py-24 max-md:py-14 overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-950 text-white">
+      <section className="border-t-2 border-green-200 relative py-24 max-md:py-8 overflow-hidden bg-gradient-to-br from-emerald-900 via-green-800 to-emerald-950 text-white">
         {/* Background image */}
         {foodSection.image && (
           <div className="absolute inset-0 z-0">
@@ -593,7 +606,7 @@ export default function Home() {
             {/* Image Side */}
             {foodSection.image && (
               <div className="flex-1 w-full max-md:order-1">
-                <div className="relative w-full aspect-[4/3] md:aspect-square md:rounded-xl overflow-hidden shadow-2xl border-2 border-white/10">
+                <div className="relative w-full aspect-[4/3] md:aspect-square md:rounded-xl rounded-lg overflow-hidden shadow-2xl border-2 border-white/10 max-md:max-h-[140px] max-md:aspect-[3/1]">
                   <Image
                     src={foodSection.image}
                     alt="Food Market"
@@ -608,18 +621,18 @@ export default function Home() {
 
             {/* Text Side */}
             <div className={`flex-1 ${foodSection.image ? '' : 'text-center max-w-[800px] mx-auto'} max-md:order-2 max-md:text-center`}>
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold mb-6 text-green-200">
+              <div className="inline-flex items-center gap-2 bg-white px-4 py-2 max-md:py-1.5 rounded-full text-sm max-md:text-[0.7rem] font-bold mb-6 max-md:mb-3 text-black shadow-md">
                 <FaLeaf /> Food Market
               </div>
-              <h2 className="text-4xl max-md:text-2xl font-black mb-6 leading-tight">
+              <h2 className="text-4xl max-md:text-xl font-black mb-6 max-md:mb-2 leading-tight">
                 {foodSection.title}
               </h2>
-              <p className="text-lg max-md:text-sm text-green-100 mb-10 leading-relaxed opacity-90">
+              <p className="text-lg max-md:text-[0.8rem] text-green-100 mb-10 max-md:mb-4 leading-relaxed opacity-90">
                 {foodSection.description}
               </p>
               <Link
                 href="/foods"
-                className="inline-flex items-center gap-3 bg-white text-emerald-900 hover:bg-green-50 px-8 py-4 max-md:px-6 max-md:py-3 rounded-xl font-bold text-lg max-md:text-sm transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                className="inline-flex items-center gap-3 bg-white text-emerald-900 hover:bg-green-50 px-8 py-4 max-md:px-5 max-md:py-2.5 rounded-xl max-md:rounded-lg font-bold text-lg max-md:text-xs transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               >
                 Shop Food Market <FaArrowRight />
               </Link>
@@ -730,6 +743,32 @@ export default function Home() {
       </section>
 
       {/* Reviews Section */}
+      {/* SEO & About NomoStores Section */}
+      <section className="py-24 max-md:py-8 bg-white">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 text-center">
+          <h2 className="text-xl md:text-3xl font-black mb-4 md:mb-6 text-slate-900">{seoSection.title}</h2>
+          <div className="relative max-w-4xl mx-auto">
+            <div 
+              className="text-slate-600 space-y-4 md:space-y-6 text-sm md:text-lg leading-relaxed text-justify max-h-[250px] md:max-h-none overflow-y-auto pr-2 md:pr-0"
+              onScroll={(e) => {
+                const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+                setIsSeoScrolledToBottom(scrollTop + clientHeight >= scrollHeight - 2);
+              }}
+            >
+              {seoSection.content.split('\n').map((paragraph, idx) => (
+                paragraph.trim() ? <p key={idx}>{paragraph}</p> : null
+              ))}
+            </div>
+            {/* Mobile Scroll Indicator */}
+            {!isSeoScrolledToBottom && (
+              <div className="md:hidden absolute bottom-0 right-4 bg-white/90 p-2 rounded-full shadow border border-primary/20 text-primary flex flex-col items-center animate-bounce pointer-events-none transition-opacity duration-300">
+                <FaArrowRight className="rotate-90" size={12} />
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       <ReviewSection />
 
 

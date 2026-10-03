@@ -85,6 +85,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* AdSense Script */}
+        <Script 
+          async 
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
+          crossOrigin="anonymous" 
+          strategy="lazyOnload"
+        />
+      </head>
       <body suppressHydrationWarning className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <ToasterProvider />
         <Suspense><VisitorTracker /></Suspense>

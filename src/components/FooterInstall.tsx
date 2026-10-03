@@ -35,10 +35,10 @@ export default function FooterInstall() {
   };
 
   return (
-    <li>
+    <li className="text-sm max-md:text-xs">
       <button 
         onClick={handleInstallClick}
-        className="text-primary font-bold flex items-center gap-2 text-[0.9rem]"
+        className="text-primary font-bold flex items-center gap-2"
       >
         <FaDownload /> Install App
       </button>

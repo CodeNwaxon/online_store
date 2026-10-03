@@ -20,6 +20,7 @@ const SOCIAL_PLATFORMS = [
 export default function AdminSettings() {
   const [siteName, setSiteName] = useState('');
   const [footerMessage, setFooterMessage] = useState('');
+  const [seoSection, setSeoSection] = useState({ title: '', content: '' });
   const [siteLogo, setSiteLogo] = useState('');
   const [siteLogoUrlInput, setSiteLogoUrlInput] = useState('');
   const [siteLogoUploading, setSiteLogoUploading] = useState(false);
@@ -72,6 +73,7 @@ export default function AdminSettings() {
     addresses: any[];
     socialLinks: any[];
     categoriesExplorer: any;
+    seoSection: any;
   }) => {
     const ce = data.categoriesExplorer || {};
     return JSON.stringify({
@@ -83,6 +85,10 @@ export default function AdminSettings() {
       emails: data.emails || [],
       addresses: data.addresses || [],
       socialLinks: data.socialLinks || [],
+      seoSection: {
+        title: data.seoSection?.title || '',
+        content: data.seoSection?.content || '',
+      },
       // Explicitly reconstruct with fixed key order to avoid JSON.stringify key-order mismatch
       categoriesExplorer: {
         toiletKitchen: {
@@ -120,6 +126,7 @@ export default function AdminSettings() {
         const loadedEmails = data.emails || [];
         const loadedAddresses = data.addresses || [];
         const loadedSocialLinks = data.socialLinks || [];
+        const loadedSeoSection = data.seoSection || { title: '', content: '' };
         const rawCE = data.categoriesExplorer || {};
 
         // Normalize to fixed structure — same shape used by buildSnapshot
@@ -150,6 +157,7 @@ export default function AdminSettings() {
         setEmails(loadedEmails);
         setAddresses(loadedAddresses);
         setSocialLinks(loadedSocialLinks);
+        setSeoSection(loadedSeoSection);
         setWarrantyPolicy(data.warrantyPolicy || DEFAULT_WARRANTY_POLICY);
         setCategoriesExplorer(loadedCategoriesExplorer);
 
@@ -164,6 +172,7 @@ export default function AdminSettings() {
           addresses: loadedAddresses,
           socialLinks: loadedSocialLinks,
           categoriesExplorer: loadedCategoriesExplorer,
+          seoSection: loadedSeoSection,
         }));
       }
     };
@@ -171,7 +180,7 @@ export default function AdminSettings() {
   }, []);
 
   // Dirty: compare live state JSON to the saved snapshot JSON
-  const currentSnapshot = buildSnapshot({ siteName, footerMessage, siteLogo, installmentBg, phones, emails, addresses, socialLinks, categoriesExplorer });
+  const currentSnapshot = buildSnapshot({ siteName, footerMessage, siteLogo, installmentBg, phones, emails, addresses, socialLinks, categoriesExplorer, seoSection });
   const isDirty = originalData !== null && currentSnapshot !== originalData;
 
   const handleSave = async () => {
@@ -185,7 +194,8 @@ export default function AdminSettings() {
         emails,
         addresses,
         socialLinks,
-        categoriesExplorer
+        categoriesExplorer,
+        seoSection
       };
       await setDoc(doc(db, 'settings', 'general'), updatedData, { merge: true });
 
@@ -208,6 +218,7 @@ export default function AdminSettings() {
       setEmails(parsed.emails || []);
       setAddresses(parsed.addresses || []);
       setSocialLinks(parsed.socialLinks || []);
+      setSeoSection(parsed.seoSection || { title: '', content: '' });
       if (parsed.categoriesExplorer) {
         setCategoriesExplorer(parsed.categoriesExplorer);
       }
@@ -375,6 +386,34 @@ export default function AdminSettings() {
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
               Tip: Wrap your company name in square brackets like <code className="bg-muted px-1 rounded">[Your Store Name]</code> to make it bold and primary-colored in the footer.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* HOMEPAGE SEO SECTION */}
+      <section className="bg-card p-3 md:p-8 md:rounded-[var(--radius)] border-y md:border border-border shadow-sm space-y-6">
+        <h2 className="text-lg md:text-xl font-bold border-b border-border pb-4">Homepage SEO Content</h2>
+        <p className="text-xs text-muted-foreground">This is the ~300-word write-up at the bottom of the homepage.</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold mb-2">Header Title</label>
+            <input
+              type="text"
+              className="w-full p-3 rounded-lg border border-border bg-background font-semibold text-primary shadow-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+              value={seoSection.title}
+              onChange={(e) => setSeoSection({ ...seoSection, title: e.target.value })}
+              placeholder="e.g. Welcome to NomoStores..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2">Write-up Content</label>
+            <textarea
+              rows={8}
+              className="w-full p-3 rounded-lg border border-border bg-background shadow-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all resize-none leading-relaxed"
+              value={seoSection.content}
+              onChange={(e) => setSeoSection({ ...seoSection, content: e.target.value })}
+              placeholder="Enter the main paragraphs here. Use line breaks (Enter key) to create separate paragraphs."
+            />
           </div>
         </div>
       </section>

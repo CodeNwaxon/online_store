@@ -46,10 +46,11 @@ const adminLinks = [
   { href: '/admin/complaints', label: 'Complaints', icon: <FaCommentDots />, id: '/ADMIN/COMPLAINTS' },
   { href: '/admin/orders', label: 'Orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
   { href: '/admin/partnership', label: 'Partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
+  { href: '/admin/broadcast', label: 'Broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
+  { href: '/admin/blog', label: 'Blog', icon: <FaCommentDots />, id: '/ADMIN/BLOG' },
+  { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
   { href: '/admin/settings', label: 'Settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
   { href: '/admin/stats', label: 'Statistics', icon: <FaChartBar />, id: '/ADMIN/STATS' },
-  { href: '/admin/about', label: 'Admin About Editor', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
-  { href: '/admin/broadcast', label: 'Broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
 ];
 
 export default function Navbar() {

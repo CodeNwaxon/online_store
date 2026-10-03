@@ -41,9 +41,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Orders', href: '/admin/orders', icon: <FaShoppingCart />, id: '/ADMIN/ORDERS' },
     { label: 'Partnership', href: '/admin/partnership', icon: <FaHandshake />, id: '/ADMIN/PARTNERSHIP' },
     { label: 'Broadcast', href: '/admin/broadcast', icon: <FaBullhorn />, id: '/ADMIN/BROADCAST' },
+    { label: 'Blog', href: '/admin/blog', icon: <FaCommentDots />, id: '/ADMIN/BLOG' },
+    { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
     { label: 'Settings', href: '/admin/settings', icon: <FaCog />, id: '/ADMIN/SETTINGS' },
     { label: 'Statistics', href: '/admin/stats', icon: <FaChartBar />, id: '/ADMIN/STATS' },
-    { label: 'Admin About Editor', href: '/admin/about', icon: <FaUserTie />, id: '/ADMIN/ABOUT' },
   ];
 
   const filteredNav = navItems.filter(item => {

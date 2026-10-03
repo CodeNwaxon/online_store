@@ -247,6 +247,22 @@ export default function About() {
                   </div>
                 </div>
               ))}
+              
+              {/* AdSense Privacy Policy */}
+              <div className="flex gap-4 md:gap-6 items-start p-4 md:p-6 bg-muted/30 rounded-sm md:rounded-lg">
+                <FaCheckCircle size={24} className="shrink-0 text-primary" />
+                <div>
+                  <h3 className="font-bold text-foreground text-xl mb-2">Google AdSense and DoubleClick Cookie</h3>
+                  <div className="leading-relaxed space-y-2">
+                    <p>NomoStores uses Google AdSense to display advertisements on certain pages (like our Blog). Google, as a third-party vendor, uses cookies to serve ads on our site.</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li><strong>DoubleClick Cookie:</strong> Google's use of the DoubleClick cookie enables it and its partners to serve ads to our users based on their visit to NomoStores and/or other sites on the Internet.</li>
+                      <li><strong>Opting Out:</strong> Users may opt out of the use of the DoubleClick cookie for interest-based advertising by visiting the Google Ads Preference Manager or <a href="https://aboutads.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">aboutads.info</a>.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
