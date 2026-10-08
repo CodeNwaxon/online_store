@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { isBlogPostExpired } from "@/lib/blogUtils";
 import Link from "next/link";
 import Image from "next/image";
 import AdSenseBox from "@/components/AdSenseBox";
@@ -15,6 +16,7 @@ interface BlogPost {
   excerpt: string;
   imageUrl: string;
   author: string;
+  tag?: string;
   createdAt: any;
   productLinks?: { name: string, url: string }[];
 }
@@ -26,6 +28,7 @@ const defaultPost: BlogPost = {
   excerpt: "Discover the best electronics, furniture, and men's accessories available at NomoStores. A comprehensive guide to making the right choice.",
   imageUrl: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
   author: "NomoStores Editorial",
+  tag: "Buying Guides",
   createdAt: { toDate: () => new Date() },
   productLinks: [
     { name: "Shop Phones", url: "/shop/electronics" },
@@ -113,6 +116,7 @@ const defaultPost: BlogPost = {
 export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTag, setSelectedTag] = useState('All');
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -120,14 +124,14 @@ export default function BlogPage() {
         const q = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         
-        if (querySnapshot.empty) {
+        const activePosts = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(post => !isBlogPostExpired(post));
+
+        if (activePosts.length === 0) {
           setPosts([defaultPost]);
         } else {
-          const fetchedPosts = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as BlogPost[];
-          setPosts(fetchedPosts);
+          setPosts(activePosts as BlogPost[]);
         }
       } catch (error) {
         console.error("Error fetching blogs:", error);
@@ -149,24 +153,39 @@ export default function BlogPage() {
     );
   }
 
+  const availableTags = Array.from(new Set(posts.map(post => post.tag?.trim()).filter((tag): tag is string => Boolean(tag))));
+  const visiblePosts = selectedTag === 'All' ? posts : posts.filter(post => post.tag === selectedTag);
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <AdSenseBox adSlot="top_blog_banner" />
-      
-      <div className="text-center mb-12">
+      <div className="text-center mb-6">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-foreground">NomoStores Blog</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Buying guides, tech reviews, lifestyle tips, and everything you need to know about our premium products.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content Area */}
-        <div className="lg:col-span-2 space-y-12">
-          {posts.map((post) => (
-            <article key={post.id} className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden p-6 md:p-8">
+      {availableTags.length > 0 && (
+        <nav aria-label="Filter blog posts by category" className="sticky top-[72px] z-40 mx-auto mb-6 max-w-5xl">
+          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-full border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur-md sm:gap-2 sm:p-2">
+            {['All', ...availableTags].map(tag => (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={selectedTag === tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${selectedTag === tag ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+              >{tag}</button>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      <main className="mx-auto max-w-4xl space-y-12">
+          {visiblePosts.map((post) => (
+            <article key={post.id} className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6 md:p-8">
               {post.imageUrl && (
-                <div className="relative w-full h-64 md:h-[400px] mb-6 rounded-xl overflow-hidden">
+                <div className="relative mb-6 h-56 w-full overflow-hidden rounded-lg bg-muted sm:h-72 md:h-[400px]">
                   <Image 
                     src={post.imageUrl} 
                     alt={post.title} 
@@ -189,7 +208,8 @@ export default function BlogPage() {
                 </div>
               </div>
 
-              <h2 className="text-3xl font-bold mb-6">{post.title}</h2>
+              {post.tag && <p className="mb-3 text-xs font-bold uppercase text-primary">{post.tag}</p>}
+              <h2 className="mb-6 text-2xl font-bold leading-tight sm:text-3xl">{post.title}</h2>
               
               {/* Render HTML content safely */}
               <div 
@@ -216,42 +236,7 @@ export default function BlogPage() {
               )}
             </article>
           ))}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-8">
-          <div className="bg-card rounded-2xl shadow-sm border border-border p-6 sticky top-24">
-            <h3 className="text-xl font-bold mb-4 border-b pb-2">About Our Blog</h3>
-            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-              We share insights, detailed buying guides, and the latest trends in tech, fashion, and lifestyle. Discover the true value of premium African-inspired goods.
-            </p>
-            
-            <AdSenseBox adSlot="sidebar_square" adFormat="rectangle" />
-            
-            <h3 className="text-xl font-bold mt-8 mb-4 border-b pb-2">Quick Links</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link href="/shop/electronics" className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-between">
-                  Electronics & Gadgets
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop/furniture" className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-between">
-                  Home Furniture
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop/wears" className="text-muted-foreground hover:text-primary transition-colors flex items-center justify-between">
-                  Men's Fashion
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+      </main>
       
       <div className="mt-12">
         <AdSenseBox adSlot="bottom_blog_banner" />

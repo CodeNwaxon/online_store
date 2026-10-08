@@ -607,6 +607,7 @@ export default function AdminWears() {
   const visibleProducts = hasFullAccess ? products : products.filter(p => (p as any).vendor === user?.email);
 
   const baseFilteredProducts = visibleProducts.filter(p => {
+    if (filterGroup === 'Promo') return Boolean(p.isPromo);
     if (filterGroup === 'Low Stock') {
       const totalQty = (p.quantity ?? 0) + (p.sizeQuantities ? Object.values(p.sizeQuantities).reduce((a: any, b: any) => a + (parseInt(b) || 0), 0) : 0);
       return totalQty <= 5;
@@ -1518,6 +1519,7 @@ export default function AdminWears() {
                   <option value="All">Groups</option>
                   <option value="Low Stock">Low Stock (≤ 5)</option>
                   {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                  <option value="Promo">PROMO</option>
                 </select>
                 <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 text-muted-foreground pointer-events-none" />
               </div>

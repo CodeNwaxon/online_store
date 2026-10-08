@@ -19,6 +19,7 @@ export interface ShopProduct {
   description?: string;
   costPrice: number;
   price: number; // selling price
+  isPromo?: boolean;
   images: string[];
   quantity?: number;
   group?: string;

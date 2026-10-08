@@ -11,6 +11,19 @@ export default function AdSenseBox({ adSlot, adFormat = "auto", fullWidthRespons
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    if (!isClient || !pathname.startsWith('/blog')) return;
+
+    try {
+      if (typeof window !== "undefined") {
+        // @ts-ignore
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      }
+    } catch (e) {
+      console.error("AdSense error:", e);
+    }
+  }, [isClient, pathname]);
+
   // Put AdSense ONLY on blog to avoid slowing down the marketplace
   if (!pathname.startsWith('/blog')) {
     return null;
@@ -20,18 +33,6 @@ export default function AdSenseBox({ adSlot, adFormat = "auto", fullWidthRespons
   if (!isClient) {
     return null;
   }
-
-  // Next.js requires us to push to adsbygoogle manually when components render
-  useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        // @ts-ignore
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      }
-    } catch (e) {
-      console.error("AdSense error:", e);
-    }
-  }, []);
 
   return (
     <div className="w-full overflow-hidden flex justify-center items-center my-4">

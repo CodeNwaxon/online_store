@@ -23,11 +23,13 @@ import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore
 import { useNotificationStore } from '@/store/useNotificationStore';
 import NotificationWrapper from './NotificationWrapper';
 import { useAdminUnreadCounts } from '@/hooks/useAdminUnreadCounts';
+import { useHasActiveBlogs } from '@/hooks/useHasActiveBlogs';
 import SignOutConfirmation from './SignOutConfirmation';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: <FaHome /> },
   { href: '/shop', label: 'Shop', icon: <FaStore /> },
+  { href: '/blog', label: 'Blog', icon: <FaCommentDots /> },
   { href: '/about', label: 'About', icon: <FaInfoCircle /> },
   { href: '/contact', label: 'Contact', icon: <FaPhone /> },
   { href: '/partnership', label: 'Partnership', icon: <FaHandshake /> },
@@ -89,6 +91,7 @@ export default function Navbar() {
     }
   }, [pathname, router]);
   const { user, isAdmin, isCEO, adminData } = useAdmin();
+  const hasActiveBlogs = useHasActiveBlogs();
   const [siteName, setSiteName] = useState('');
   const [siteLogo, setSiteLogo] = useState('/logo_nomo.png');
   const [mounted, setMounted] = useState(false);
@@ -471,7 +474,7 @@ export default function Navbar() {
 
           {/* Desktop centre links */}
           <div className="hidden md:flex gap-10 items-center">
-            {navLinks.map(l => {
+            {navLinks.filter(link => link.label !== 'Blog').map(l => {
               if (l.label === 'Partnership') return null;
 
               if (l.label === 'Shop') {
@@ -511,6 +514,7 @@ export default function Navbar() {
                     </span>
                     <div className="absolute top-full left-0 mt-0 w-40 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
                       <Link href="/about" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
+                      {hasActiveBlogs && <Link href="/blog" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border">Blog</Link>}
                       <Link href="/partnership" onClick={handlePartnershipClick} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border flex items-center justify-between">
                         Partnership
                         {mounted && partnerNotifCount > 0 && (
@@ -662,7 +666,7 @@ export default function Navbar() {
           ) : (
             // Normal Store Links
             <div className="flex flex-col">
-              {navLinks.map(l => {
+              {navLinks.filter(link => link.label !== 'Blog' || hasActiveBlogs).map(l => {
                 if (l.label === 'Shop') {
                   return (
                     <div key="mobile-shop-group" className="flex flex-col">

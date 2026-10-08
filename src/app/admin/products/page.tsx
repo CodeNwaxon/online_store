@@ -641,6 +641,7 @@ function AdminProductsContent() {
     let matchBrand = true;
 
     if (filterGroup === 'Low Stock') matchGroup = (p.quantity ?? 0) <= 5;
+    else if (filterGroup === 'Promo') matchGroup = Boolean(p.isPromo);
     else if (filterGroup !== 'All') matchGroup = p.group === filterGroup;
 
     if (filterBrand !== 'All') matchBrand = (p.manufacturer || 'Unknown').trim().toLowerCase() === filterBrand.toLowerCase();
@@ -1336,6 +1337,7 @@ function AdminProductsContent() {
               <option value="All">All Groups</option>
               <option value="Low Stock">Low Stock (≤ 5)</option>
               {groups.map(g => <option key={g} value={g}>{g}</option>)}
+              <option value="Promo">PROMO</option>
             </select>
           </div>
         </div>

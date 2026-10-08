@@ -437,7 +437,8 @@ export default function AdminUkUsed() {
     let matchGroup = true;
     let matchBrand = true;
 
-    if (filterGroup === 'Low Stock') matchGroup = (p.quantity ?? 0) <= 5;
+    if (filterGroup === 'Promo') matchGroup = Boolean(p.isPromo);
+    else if (filterGroup === 'Low Stock') matchGroup = (p.quantity ?? 0) <= 5;
     else if (filterGroup !== 'All') matchGroup = p.group?.toLowerCase() === filterGroup.toLowerCase();
 
     if (filterBrand !== 'All') matchBrand = ((p as any).manufacturer || 'Unknown').trim().toLowerCase() === filterBrand.toLowerCase();
@@ -1053,6 +1054,7 @@ export default function AdminUkUsed() {
                 <option value="All">Groups</option>
                 <option value="Low Stock">Low Stock (≤ 5)</option>
                 {groups.map(g => <option key={g} value={g}>{g}</option>)}
+                <option value="Promo">PROMO</option>
               </select>
             </div>
           </div>

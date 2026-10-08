@@ -16,7 +16,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown, FaInfoCircle, FaStar, FaWrench } from 'react-icons/fa';
+import { FaUserPlus, FaTrash, FaSearch, FaLink, FaUserTie, FaSave, FaLock, FaUserShield, FaEdit, FaTimes, FaStore, FaExchangeAlt, FaCrown, FaChevronDown, FaInfoCircle, FaStar, FaWrench, FaFileExcel } from 'react-icons/fa';
 import Image from 'next/image';
 import { uploadImageToCloudinary } from '@/actions/upload';
 import SpecialStoreEditOverlay from '@/components/SpecialStoreEditOverlay';
@@ -24,6 +24,7 @@ import { useStarThresholds } from '@/hooks/useStarThresholds';
 import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 import { useNewTagDurationDays } from '@/hooks/useNewTagDurationDays';
 import { getAdminRoutes } from '@/actions/getAdminRoutes';
+import * as XLSX from 'xlsx';
 
 const DEFAULT_INTERNAL_ROUTES = [
   '/ADMIN/MANAGEMENT',
@@ -73,6 +74,11 @@ export default function AdminManagement() {
   // Maintenance State
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [showInventoryExport, setShowInventoryExport] = useState(false);
+  const [inventoryExportFormat, setInventoryExportFormat] = useState<'excel' | 'shopify'>('excel');
+  const [inventoryExportPasskey, setInventoryExportPasskey] = useState('');
+  const [inventoryExportError, setInventoryExportError] = useState('');
+  const [inventoryExportLoading, setInventoryExportLoading] = useState(false);
 
   // Passkey State
   const [oldPasskey, setOldPasskey] = useState('');
@@ -602,8 +608,207 @@ export default function AdminManagement() {
     setMaintenanceLoading(false);
   };
 
+  const handleDownloadInventory = async () => {
+    if (!inventoryExportPasskey) {
+      setInventoryExportError('Enter the CEO passkey to continue.');
+      return;
+    }
+
+    setInventoryExportLoading(true);
+    setInventoryExportError('');
+    try {
+      const settingsSnap = await getDoc(doc(db, 'settings', 'general'));
+      const currentPasskey = settingsSnap.data()?.passkey || 'admin1234';
+      if (inventoryExportPasskey !== currentPasskey) {
+        setInventoryExportError('Incorrect CEO passkey. Please try again.');
+        return;
+      }
+
+      const inventoryCollections = [
+        { name: 'Products', collectionName: 'products' },
+        { name: 'Foods', collectionName: 'foods' },
+        { name: 'Cosmetics', collectionName: 'cosmetics' },
+        { name: 'Wears', collectionName: 'wears' },
+        { name: 'Toilet & Kitchen', collectionName: 'toilet_kitchen' },
+        { name: 'UK Used', collectionName: 'uk_used' },
+      ];
+      const workbook = XLSX.utils.book_new();
+      const snapshots = await Promise.all(
+        inventoryCollections.map(({ collectionName }) => getDocs(collection(db, collectionName)))
+      );
+
+      if (inventoryExportFormat === 'shopify') {
+        const headers = [
+          'Handle', 'Title', 'Body (HTML)', 'Vendor', 'Product Category', 'Type', 'Tags', 'Published',
+          'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 'Option3 Name', 'Option3 Value',
+          'Variant SKU', 'Variant Inventory Tracker', 'Variant Inventory Qty', 'Variant Inventory Policy',
+          'Variant Fulfillment Service', 'Variant Price', 'Variant Compare At Price', 'Variant Requires Shipping',
+          'Variant Taxable', 'Image Src', 'Image Position', 'Image Alt Text', 'Status'
+        ];
+        const csvCell = (value: unknown) => {
+          const text = value === null || value === undefined ? '' : String(value);
+          return `"${text.replace(/"/g, '""')}"`;
+        };
+        const csvRows = [headers.map(csvCell).join(',')];
+
+        snapshots.forEach((snapshot, collectionIndex) => {
+          snapshot.docs.forEach((item) => {
+            const product = item.data();
+            const title = String(product.name || 'Untitled Product');
+            const handle = `${title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'product'}-${item.id}`;
+            const images = Array.from(new Set([
+              ...(Array.isArray(product.images) ? product.images : []),
+              ...(typeof product.image === 'string' ? [product.image] : [])
+            ].filter((url): url is string => typeof url === 'string' && /^https?:\/\//i.test(url))));
+            const productType = [product.group, product.category].filter(Boolean).join(' / ') || inventoryCollections[collectionIndex].name;
+            const tags = [product.group, product.category, product.isPromo ? 'Promo' : ''].filter(Boolean).join(', ');
+            const compareAtPrice = product.isPromo ? product.oldPrice ?? '' : '';
+            const inventory = product.quantity ?? 0;
+
+            const variants: Array<{ color?: string; size?: string; quantity?: number }> =
+              Array.isArray(product.variants) && product.variants.length > 0
+                ? product.variants
+                : product.sizeQuantities && typeof product.sizeQuantities === 'object'
+                  ? Object.entries(product.sizeQuantities).map(([size, quantity]) => ({ size, quantity: Number(quantity) || 0 }))
+                  : [{ color: product.color, size: product.size, quantity: Number(inventory) || 0 }];
+
+            variants.forEach((variant, variantIndex) => {
+              const color = variant.color || product.color || '';
+              const size = variant.size || (variants.length === 1 ? product.size : '') || '';
+              const option1Name = color ? 'Color' : size ? 'Size' : 'Title';
+              const option1Value = color || size || 'Default Title';
+              const option2Name = color && size ? 'Size' : '';
+              const option2Value = color && size ? size : '';
+              const row: Record<string, unknown> = {
+                Handle: handle,
+                Title: variantIndex === 0 ? title : '',
+                'Body (HTML)': variantIndex === 0 ? product.description || '' : '',
+                Vendor: variantIndex === 0 ? product.manufacturer || 'NomoStores' : '',
+                'Product Category': '',
+                Type: variantIndex === 0 ? productType : '',
+                Tags: variantIndex === 0 ? tags : '',
+                Published: variantIndex === 0 ? 'FALSE' : '',
+                'Option1 Name': option1Name,
+                'Option1 Value': option1Value,
+                'Option2 Name': option2Name,
+                'Option2 Value': option2Value,
+                'Option3 Name': '',
+                'Option3 Value': '',
+                'Variant SKU': product.productCode || '',
+                'Variant Inventory Tracker': 'shopify',
+                'Variant Inventory Qty': variant.quantity ?? inventory,
+                'Variant Inventory Policy': 'deny',
+                'Variant Fulfillment Service': 'manual',
+                'Variant Price': product.price ?? '',
+                'Variant Compare At Price': compareAtPrice,
+                'Variant Requires Shipping': 'TRUE',
+                'Variant Taxable': 'TRUE',
+                'Image Src': variantIndex === 0 ? images[0] || '' : '',
+                'Image Position': variantIndex === 0 && images.length > 0 ? 1 : '',
+                'Image Alt Text': variantIndex === 0 && images.length > 0 ? title : '',
+                Status: variantIndex === 0 ? 'draft' : '',
+              };
+              csvRows.push(headers.map(header => csvCell(row[header])).join(','));
+            });
+
+            images.slice(1).forEach((imageUrl, imageIndex) => {
+              const row: Record<string, unknown> = {
+                Handle: handle,
+                'Image Src': imageUrl,
+                'Image Position': imageIndex + 2,
+                'Image Alt Text': title,
+              };
+              csvRows.push(headers.map(header => csvCell(row[header])).join(','));
+            });
+          });
+        });
+
+        const csvBlob = new Blob([`\uFEFF${csvRows.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+        const downloadUrl = URL.createObjectURL(csvBlob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = `shopify-products-${new Date().toISOString().slice(0, 10)}.csv`;
+        downloadLink.click();
+        URL.revokeObjectURL(downloadUrl);
+        toast.success('Shopify product CSV downloaded as drafts.');
+        setShowInventoryExport(false);
+        setInventoryExportPasskey('');
+        return;
+      }
+
+      inventoryCollections.forEach(({ name }, index) => {
+        const rows = snapshots[index].docs.map((item) => {
+          const data = item.data();
+          const row: Record<string, string | number | boolean> = { documentId: item.id };
+          Object.entries(data).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+              row[key] = '';
+            } else if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+              row[key] = value.toDate().toISOString();
+            } else if (Array.isArray(value)) {
+              row[key] = value.map(entry => typeof entry === 'object' ? JSON.stringify(entry) : String(entry)).join(' | ');
+            } else if (typeof value === 'object') {
+              row[key] = JSON.stringify(value);
+            } else {
+              row[key] = value;
+            }
+          });
+          return row;
+        });
+        const headers = Array.from(new Set(['documentId', ...rows.flatMap(row => Object.keys(row))]));
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+        worksheet['!cols'] = headers.map(header => ({ wch: Math.min(Math.max(header.length + 2, 16), 48) }));
+        XLSX.utils.book_append_sheet(workbook, worksheet, name);
+      });
+
+      const date = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `product-inventory-${date}.xlsx`);
+      toast.success('Product inventory downloaded.');
+      setShowInventoryExport(false);
+      setInventoryExportPasskey('');
+    } catch (error) {
+      console.error('Inventory export failed:', error);
+      toast.error('Failed to export product inventory.');
+    } finally {
+      setInventoryExportLoading(false);
+    }
+  };
+
   return (
     <AdminGuard requireCEO={true}>
+      {showInventoryExport && (
+        <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-sm rounded-[var(--radius)] border border-border bg-card p-6 shadow-2xl">
+            <h2 className="text-lg font-bold">Confirm Inventory Export</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Enter the CEO passkey to download the selected inventory file.</p>
+            <label htmlFor="inventory-export-passkey" className="mt-5 block text-xs font-bold text-muted-foreground">CEO Passkey</label>
+            <input
+              id="inventory-export-passkey"
+              type="password"
+              autoFocus
+              value={inventoryExportPasskey}
+              onChange={event => { setInventoryExportPasskey(event.target.value); setInventoryExportError(''); }}
+              onKeyDown={event => event.key === 'Enter' && handleDownloadInventory()}
+              className="mt-1 w-full rounded-md border border-border bg-background p-3 text-sm"
+            />
+            {inventoryExportError && <p className="mt-2 text-sm text-secondary">{inventoryExportError}</p>}
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowInventoryExport(false); setInventoryExportPasskey(''); setInventoryExportError(''); }}
+                disabled={inventoryExportLoading}
+                className="flex-1 whitespace-nowrap rounded-md border border-border px-2 py-2.5 text-xs font-semibold hover:bg-muted disabled:opacity-50 md:px-4 md:text-sm"
+              >Cancel</button>
+              <button
+                type="button"
+                onClick={handleDownloadInventory}
+                disabled={inventoryExportLoading || !inventoryExportPasskey}
+                className="flex-1 whitespace-nowrap rounded-md bg-primary px-2 py-2.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50 md:px-4 md:text-sm"
+              >{inventoryExportLoading ? 'Preparing…' : 'Download'}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── REMOVE ADMIN PASSKEY OVERLAY ── */}
       {pendingRemoveId && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70 px-4">
@@ -1439,6 +1644,29 @@ export default function AdminManagement() {
               🔐 Security Lock: Too many failed attempts. Try again in {Math.ceil((securityStats.lockoutUntil - Date.now()) / (1000 * 60 * 60))} hours.
             </p>
           )}
+        </section>
+
+        <section className="border-t border-border pt-8">
+            <div className="max-w-2xl">
+            <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
+              <FaFileExcel className="text-primary" aria-hidden="true" /> Product Inventory Export
+            </h2>
+            <p className="mt-2 text-xs text-muted-foreground md:text-sm">
+              Download product inventory across all store categories as an Excel workbook or as a Shopify-ready CSV. The Shopify CSV imports products as drafts so you can review them before publishing. Your CEO passkey is required for either export.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => { setInventoryExportFormat('excel'); setInventoryExportPasskey(''); setInventoryExportError(''); setShowInventoryExport(true); }}
+                className="inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary px-3 py-3 text-xs font-bold text-white hover:opacity-90 md:px-6 md:text-sm"
+              ><FaFileExcel aria-hidden="true" /> Download Excel</button>
+              <button
+                type="button"
+                onClick={() => { setInventoryExportFormat('shopify'); setInventoryExportPasskey(''); setInventoryExportError(''); setShowInventoryExport(true); }}
+                className="inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-secondary px-3 py-3 text-xs font-bold text-white hover:opacity-90 md:px-6 md:text-sm"
+              >Shopify CSV</button>
+            </div>
+          </div>
         </section>
 
         {/* SPECIAL STORE EDIT OVERLAY */}

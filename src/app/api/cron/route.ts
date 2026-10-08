@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { sendEmail } from '@/lib/sendEmail';
+import { isBlogPostExpired } from '@/lib/blogUtils';
 
 export async function GET(request: Request) {
   try {
@@ -320,7 +321,29 @@ export async function GET(request: Request) {
       console.log(`Deleted ${deletedCount} old notifications/broadcasts`);
     }
 
-    return NextResponse.json({ success: true, message: 'Cron job executed successfully', emailsSent: emailsToSend.length, notificationsDeleted: deletedCount });
+    // 5. Delete blog posts after twelve months from publication
+    const blogsSnap = await adminDb.collection('blogs').get();
+    let blogsDeleted = 0;
+    let blogBatch = adminDb.batch();
+    let blogBatchSize = 0;
+
+    for (const blog of blogsSnap.docs) {
+      if (!isBlogPostExpired(blog.data(), now)) continue;
+      blogBatch.delete(blog.ref);
+      blogsDeleted++;
+      blogBatchSize++;
+
+      if (blogBatchSize >= 450) {
+        await blogBatch.commit();
+        blogBatch = adminDb.batch();
+        blogBatchSize = 0;
+      }
+    }
+
+    if (blogBatchSize > 0) await blogBatch.commit();
+    if (blogsDeleted > 0) console.log(`Deleted ${blogsDeleted} expired blog posts`);
+
+    return NextResponse.json({ success: true, message: 'Cron job executed successfully', emailsSent: emailsToSend.length, notificationsDeleted: deletedCount, blogsDeleted });
   } catch (error) {
     console.error("Cron Error:", error);
     return NextResponse.json({ success: false, error: 'Failed to process cron job' }, { status: 500 });

@@ -13,6 +13,7 @@ import { toast } from 'react-hot-toast';
 import { useAdmin } from '@/hooks/useAdmin';
 import { usePartnerNotificationStore } from '@/store/usePartnerNotificationStore';
 import SignOutConfirmation from './SignOutConfirmation';
+import { useHasActiveBlogs } from '@/hooks/useHasActiveBlogs';
 
 const ICON_MAP: any = {
   Facebook: <FaFacebook size={20} />,
@@ -28,6 +29,7 @@ const ICON_MAP: any = {
 export default function Footer() {
   const [settings, setSettings] = useState<any>(null);
   const { isAdmin, isCEO, user } = useAdmin();
+  const hasActiveBlogs = useHasActiveBlogs();
   const { unreadSales, setLastSalesCount, clearUnreadSales } = usePartnerNotificationStore();
   const [mounted, setMounted] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -94,12 +96,13 @@ export default function Footer() {
               </p>
             </div>
           </div>
-          <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex justify-between gap-4 max-md:px-4">
+          <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex max-lg:justify-between lg:justify-start gap-4 lg:gap-8 max-md:px-4">
             <div>
               <h4 className="mb-3 text-primary font-bold max-md:text-sm">{siteName}</h4>
               <ul className="list-none flex flex-col gap-2.5">
                 <li><Link href="/" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
                 <li><Link href="/shop" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
+                {hasActiveBlogs && <li><Link href="/blog" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>}
                 <li><Link href="/foods" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Food Market</Link></li>
                 <li>
                   <Link href="/partnership" onClick={handlePartnershipClick} className="text-green-600 font-black hover:text-green-700 transition-colors inline-flex items-center gap-2 text-sm max-md:text-xs">
@@ -117,9 +120,9 @@ export default function Footer() {
                 )}
               </ul>
             </div>
-            <div className="text-right">
+            <div className="text-right lg:text-left">
               <h4 className="mb-3 font-bold max-md:text-sm">Support</h4>
-              <ul className="list-none flex flex-col items-end gap-2.5">
+              <ul className="list-none flex flex-col items-end gap-2.5 lg:items-start">
                 <li><a href="/about#faq" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">FAQ</a></li>
                 <li><a href="/about#privacy" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
                 <li><Link href="/contact" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
