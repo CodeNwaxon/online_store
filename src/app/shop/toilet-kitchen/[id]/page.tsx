@@ -1,5 +1,5 @@
 import CategoryDetailPage from '@/components/CategoryDetailPage';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCachedDocSnap } from '@/lib/cachedMetadata';
 import { Metadata } from 'next';
 
 type Props = {
@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   
   try {
-    const docSnap = await adminDb.collection('toilet_kitchen').doc(id).get();
+    const docSnap = await getCachedDocSnap('toilet_kitchen', id);
     if (docSnap.exists) {
       const data = docSnap.data();
       const title = data?.name || 'Toilet & Kitchen Product';

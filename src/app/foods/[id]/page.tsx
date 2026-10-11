@@ -1,5 +1,5 @@
 import FoodDetailClient from '@/components/FoodDetailClient';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCachedDocSnap } from '@/lib/cachedMetadata';
 import { Metadata } from 'next';
 
 type Props = {
@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   
   try {
-    const docSnap = await adminDb.collection('foods').doc(id).get();
+    const docSnap = await getCachedDocSnap('foods', id);
     if (docSnap.exists) {
       const data = docSnap.data();
       const title = data?.name || 'Food Market Product';

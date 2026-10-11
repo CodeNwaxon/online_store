@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getCachedStoreSnap } from '@/lib/cachedMetadata';
 import UkUsedClient from './UkUsedClient';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +13,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
   if (storeSlug) {
     try {
-      const snap = await adminDb.collection('admins')
-        .where('specialStore.slug', '==', storeSlug)
-        .get();
+      const snap = await getCachedStoreSnap(storeSlug);
 
       if (!snap.empty) {
         const store = snap.docs[0].data().specialStore;
