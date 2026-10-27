@@ -15,6 +15,7 @@
   --color-border: var(--border);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-destructive: #DC2626;
   
   --radius: var(--radius);
   --radius-sm: calc(var(--radius) - 2px);

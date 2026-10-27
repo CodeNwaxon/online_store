@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getBlogExpiryDate } from "@/lib/blogUtils";
+import { blogContentClasses } from "@/lib/blogContentStyles";
 import { uploadImageToCloudinary, deleteImagesFromCloudinary } from "@/actions/upload";
 import { Edit2, Trash2, X, Save, FileText, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -29,6 +30,9 @@ export default function AdminBlogPage() {
   const [blogTags, setBlogTags] = useState<string[]>([]);
   const [showNewTagInput, setShowNewTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<{ type: 'post'; id: string; label: string } | { type: 'tag'; tag: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [tagInUse, setTagInUse] = useState<{ tag: string; titles: string[] } | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<Partial<BlogPost>>({
@@ -120,6 +124,37 @@ export default function AdminBlogPage() {
       console.error('Failed to add blog tag:', error);
       alert('Failed to add blog tag');
     }
+  };
+
+  const handleDeleteTag = async (tag: string) => {
+    const postsUsingTag = posts.filter(post => post.tag === tag);
+    if (postsUsingTag.length > 0) {
+      setTagInUse({ tag, titles: postsUsingTag.map(post => post.title || 'Untitled post') });
+      return;
+    }
+    setTagInUse(null);
+    setPendingDelete({ type: 'tag', tag, label: tag });
+  };
+
+  const performTagDelete = async (tag: string) => {
+    try {
+      const updatedTags = blogTags.filter(item => item !== tag);
+      await setDoc(doc(db, 'settings', 'general'), { blogTags: updatedTags }, { merge: true });
+      setBlogTags(updatedTags);
+      setFormData(current => (current.tag === tag ? { ...current, tag: '' } : current));
+    } catch (error) {
+      console.error('Failed to delete blog tag:', error);
+      alert('Failed to delete blog tag');
+    }
+  };
+
+  const confirmPendingDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    if (pendingDelete.type === 'post') await handleDelete(pendingDelete.id);
+    else await performTagDelete(pendingDelete.tag);
+    setDeleting(false);
+    setPendingDelete(null);
   };
 
   useEffect(() => {
@@ -224,7 +259,6 @@ export default function AdminBlogPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
 
     setLoading(true);
     try {
@@ -245,6 +279,51 @@ export default function AdminBlogPage() {
 
   return (
     <div className="container mx-auto px-1 md:px-4 py-8 max-w-6xl">
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => !deleting && setPendingDelete(null)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-2xl"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="flex flex-col items-center text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <Trash2 size={20} aria-hidden="true" />
+              </span>
+              <h2 id="delete-dialog-title" className="mt-3 text-lg font-bold text-foreground">
+                {pendingDelete.type === 'post' ? 'Delete this post?' : 'Delete this tag?'}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                <span className="break-words font-semibold text-foreground">&ldquo;{pendingDelete.label}&rdquo;</span>{' '}
+                will be permanently removed. This can&apos;t be undone.
+              </p>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting}
+                className="w-full rounded-md border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmPendingDelete}
+                disabled={deleting}
+                className="w-full rounded-md bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Manage Blog Posts</h1>
         {editingId && (
@@ -332,6 +411,43 @@ export default function AdminBlogPage() {
                     className="text-sm min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2"
                   />
                   <button type="button" onClick={handleAddTag} className="rounded-md bg-primary px-3 py-2 text-xs font-bold text-white hover:opacity-90">Save tag</button>
+                </div>
+              )}
+
+              {blogTags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {blogTags.map(tag => (
+                    <span key={tag} className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 py-1 pl-2.5 pr-1 text-xs font-semibold text-foreground">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTag(tag)}
+                        aria-label={`Delete tag ${tag}`}
+                        title={`Delete tag ${tag}`}
+                        className="rounded p-1 text-destructive transition-colors hover:bg-destructive/10"
+                      >
+                        <Trash2 size={12} aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {tagInUse && (
+                <div role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      The tag &ldquo;{tagInUse.tag}&rdquo; is in use and can&apos;t be deleted.
+                    </p>
+                    <button type="button" onClick={() => setTagInUse(null)} aria-label="Dismiss" className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted">
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">Blogs using this tag:</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm font-medium text-destructive">
+                    {tagInUse.titles.map((title, index) => <li key={index}>{title}</li>)}
+                  </ul>
+                  <p className="mt-2 text-xs text-muted-foreground">Delete or re-tag these blogs first.</p>
                 </div>
               )}
             </div>
@@ -463,7 +579,7 @@ export default function AdminBlogPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(post.id)}
+                            onClick={() => setPendingDelete({ type: 'post', id: post.id, label: post.title || 'Untitled post' })}
                             aria-label={`Delete ${post.title || 'blog post'}`}
                             title="Delete post"
                             className="inline-flex min-h-9 w-full items-center justify-center gap-1 rounded-md border border-destructive/25 px-2 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 sm:px-3"
@@ -490,7 +606,7 @@ export default function AdminBlogPage() {
                             <h4 className="text-xl font-bold leading-tight text-foreground sm:text-3xl">{post.title || 'Untitled post'}</h4>
                             {post.excerpt && <p className="mt-4 border-l-2 border-primary pl-4 text-base leading-relaxed text-muted-foreground">{post.excerpt}</p>}
                             <div
-                              className="prose prose-lg mt-6 max-w-none space-y-6 text-foreground [&_a]:text-primary [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-3 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_p]:leading-relaxed"
+                              className={`mt-6 max-w-none ${blogContentClasses}`}
                               dangerouslySetInnerHTML={{ __html: post.content }}
                             />
                           </div>

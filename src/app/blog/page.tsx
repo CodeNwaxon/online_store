@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { isBlogPostExpired } from "@/lib/blogUtils";
+import { blogContentClasses } from "@/lib/blogContentStyles";
 import Link from "next/link";
 import Image from "next/image";
 import AdSenseBox from "@/components/AdSenseBox";
@@ -167,14 +168,14 @@ export default function BlogPage() {
 
       {availableTags.length > 0 && (
         <nav aria-label="Filter blog posts by category" className="sticky top-[72px] z-40 mx-auto mb-6 max-w-5xl">
-          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-full border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur-md sm:gap-2 sm:p-2">
+          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-md sm:rounded-full border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur-md sm:gap-2 sm:p-2">
             {['All', ...availableTags].map(tag => (
               <button
                 key={tag}
                 type="button"
                 aria-pressed={selectedTag === tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${selectedTag === tag ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`shrink-0 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${selectedTag === tag ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >{tag}</button>
             ))}
           </div>
@@ -213,7 +214,7 @@ export default function BlogPage() {
               
               {/* Render HTML content safely */}
               <div 
-                className="mt-6 leading-relaxed [&_p]:mb-4 [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary [&_a]:font-semibold [&_a:hover]:underline [&_strong]:font-semibold"
+                className={`mt-6 ${blogContentClasses}`}
                 dangerouslySetInnerHTML={{ __html: post.content }} 
               />
               
