@@ -18,6 +18,7 @@ interface BlogPost {
   imageUrl: string;
   author: string;
   tag?: string;
+  fullImage?: boolean;
   createdAt: any;
   productLinks?: { name: string, url: string }[];
 }
@@ -189,12 +190,12 @@ export default function BlogPage() {
           {visiblePosts.map((post) => (
             <article key={post.id} className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6 md:p-8">
               {post.imageUrl && (
-                <div className="relative mb-6 h-56 w-full overflow-hidden rounded-lg bg-muted sm:h-72 md:h-[400px]">
+                <div className="relative mb-6 h-56 w-full overflow-hidden rounded-lg bg-white sm:h-72 md:h-[400px]">
                   <Image 
                     src={post.imageUrl} 
                     alt={post.title} 
                     fill 
-                    className="object-cover transition-transform duration-500 hover:scale-105"
+                    className={`${post.fullImage ? 'object-contain' : 'object-cover'} transition-transform duration-500 hover:scale-105`}
                   />
                 </div>
               )}

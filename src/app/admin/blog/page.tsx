@@ -16,6 +16,7 @@ interface BlogPost {
   imageUrl: string;
   author: string;
   tag?: string;
+  fullImage?: boolean;
   createdAt?: any;
 }
 
@@ -211,6 +212,7 @@ export default function AdminBlogPage() {
           imageUrl,
           author: formData.author,
           tag: formData.tag || '',
+          fullImage: Boolean(formData.fullImage),
         });
       } else {
         await addDoc(collection(db, "blogs"), {
@@ -220,6 +222,7 @@ export default function AdminBlogPage() {
           imageUrl,
           author: formData.author,
           tag: formData.tag || '',
+          fullImage: Boolean(formData.fullImage),
           createdAt: serverTimestamp(),
           expiresAt: Timestamp.fromDate(getBlogExpiryDate()),
         });
@@ -254,6 +257,7 @@ export default function AdminBlogPage() {
       imageUrl: post.imageUrl,
       author: post.author,
       tag: post.tag || '',
+      fullImage: Boolean(post.fullImage),
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -455,13 +459,13 @@ export default function AdminBlogPage() {
             <div className="py-6 space-y-3">
               <div>
                 <label className="block text-sm font-bold mb-1">Image URL</label>
-              <input
-                type="text"
-                value={formData.imageUrl}
-                onChange={e => handleImageUrlChange(e.target.value)}
-                className="text-sm sm:text-base w-full rounded-lg max-md:rounded-md border border-border px-3 py-2 md:p-3 bg-background shadow-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
-                placeholder="https://..."
-              />
+                <input
+                  type="text"
+                  value={formData.imageUrl}
+                  onChange={e => handleImageUrlChange(e.target.value)}
+                  className="text-sm sm:text-base w-full rounded-lg max-md:rounded-md border border-border px-3 py-2 md:p-3 bg-background shadow-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
+                  placeholder="https://..."
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Or Upload Image</label>
@@ -474,8 +478,18 @@ export default function AdminBlogPage() {
                 />
                 <p className="mt-1 text-xs text-muted-foreground">The image uploads to Cloudinary only when you publish or update the post.</p>
               </div>
+              <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.fullImage)}
+                  onChange={event => setFormData(current => ({ ...current, fullImage: event.target.checked }))}
+                  className="h-4 w-4 shrink-0 accent-primary"
+                />
+                Full Image
+                <span className="text-[0.7rem] font-normal text-muted-foreground sm:text-xs">(show full image)</span>
+              </label>
               {(imagePreview || formData.imageUrl) && (
-                <div className="overflow-hidden rounded-md border border-border bg-muted/30 p-2">
+                <div className="overflow-hidden rounded-md border border-border bg-white p-2">
                   <p className="mb-2 text-xs font-semibold text-muted-foreground">Image preview</p>
                   <img
                     src={imagePreview || formData.imageUrl}
@@ -594,8 +608,8 @@ export default function AdminBlogPage() {
                       <div className="border-t border-border bg-muted/20 px-1 py-5 sm:px-6">
                         <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border bg-background shadow-sm">
                           {post.imageUrl && (
-                            <div className="max-h-[400px] overflow-hidden bg-muted">
-                              <img src={post.imageUrl} alt={post.title} className="max-h-[400px] w-full object-cover" />
+                            <div className="max-h-[400px] overflow-hidden bg-white">
+                              <img src={post.imageUrl} alt={post.title} className={`max-h-[400px] w-full ${post.fullImage ? 'object-contain' : 'object-cover'}`} />
                             </div>
                           )}
                           <div className="px-1 py-5 sm:p-8">
