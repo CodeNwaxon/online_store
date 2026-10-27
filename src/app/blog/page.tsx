@@ -174,7 +174,10 @@ export default function BlogPage() {
                 key={tag}
                 type="button"
                 aria-pressed={selectedTag === tag}
-                onClick={() => setSelectedTag(tag)}
+                onClick={() => {
+                  setSelectedTag(tag);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className={`shrink-0 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${selectedTag === tag ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
               >{tag}</button>
             ))}
