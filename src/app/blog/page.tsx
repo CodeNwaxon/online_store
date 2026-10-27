@@ -159,8 +159,8 @@ export default function BlogPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center mb-6">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-foreground">NomoStores Blog</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+        <h1 className="text-2xl md:text-5xl font-bold tracking-tight mb-4 text-foreground">NomoStores Blog</h1>
+        <p className="text-xs md:text-lg text-muted-foreground max-w-2xl mx-auto">
           Buying guides, tech reviews, lifestyle tips, and everything you need to know about our premium products.
         </p>
       </div>
@@ -209,7 +209,7 @@ export default function BlogPage() {
               </div>
 
               {post.tag && <p className="mb-3 text-xs font-bold uppercase text-primary">{post.tag}</p>}
-              <h2 className="mb-6 text-2xl font-bold leading-tight sm:text-3xl">{post.title}</h2>
+              <h2 className="mb-6 text-xl font-bold leading-tight sm:text-3xl">{post.title}</h2>
               
               {/* Render HTML content safely */}
               <div 
