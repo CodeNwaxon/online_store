@@ -450,7 +450,7 @@ export default function AdminBlogPage() {
                             aria-expanded={isPreviewOpen}
                             className="col-span-2 inline-flex min-h-9 w-full items-center justify-center gap-1 rounded-md border border-border px-1.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
                           >
-                            View more
+                            {isPreviewOpen ? 'View less' : 'View more'}
                             {isPreviewOpen ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
                           </button>
                           <button
