@@ -213,7 +213,7 @@ export default function BlogPage() {
               
               {/* Render HTML content safely */}
               <div 
-                className="mt-6"
+                className="mt-6 leading-relaxed [&_p]:mb-4 [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary [&_a]:font-semibold [&_a:hover]:underline [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: post.content }} 
               />
               

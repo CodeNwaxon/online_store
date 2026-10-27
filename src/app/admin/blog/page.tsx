@@ -490,7 +490,7 @@ export default function AdminBlogPage() {
                             <h4 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">{post.title || 'Untitled post'}</h4>
                             {post.excerpt && <p className="mt-4 border-l-2 border-primary pl-4 text-base leading-relaxed text-muted-foreground">{post.excerpt}</p>}
                             <div
-                              className="prose prose-lg mt-6 max-w-none space-y-6 text-foreground [&_a]:text-primary [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_p]:leading-relaxed"
+                              className="prose prose-lg mt-6 max-w-none space-y-6 text-foreground [&_a]:text-primary [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-3 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-bold [&_p]:leading-relaxed"
                               dangerouslySetInnerHTML={{ __html: post.content }}
                             />
                           </div>
