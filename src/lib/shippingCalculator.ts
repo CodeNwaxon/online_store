@@ -69,7 +69,9 @@ export const calculateCartShippingForArea = (
       } else if (measurement.includes('1 bag')) {
         // 1 bag = default, no change
       } else {
-        unitShipping = 1500; // Flat fee for cups, congo, mudu, etc.
+        unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
+          ? item.customShippingAmount
+          : 1500; // Flat fee for cups, congo, mudu, etc.
       }
     }
 
@@ -114,7 +116,9 @@ export const calculateCartShippingForArea = (
       } else if (measurement.includes('1 bag')) {
         // 1 bag = default, no change
       } else {
-        unitShipping = 1500;
+        unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
+          ? item.customShippingAmount
+          : 1500;
       }
     }
     

@@ -178,6 +178,18 @@ export default function CategoryDetailPage({
   }
   const measurementKeys = Object.keys(parsedMeasurements);
 
+  let parsedMeasurementQuantities: Record<string, number> = {};
+  if ((product as any).measurementQuantities) {
+    try {
+      const parsed = typeof (product as any).measurementQuantities === 'string'
+        ? JSON.parse((product as any).measurementQuantities)
+        : (product as any).measurementQuantities;
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurementQuantities[k] = Number(v) || 0;
+      });
+    } catch {}
+  }
+
   const productImages = (product.images && product.images.length > 0
     ? product.images
     : [product.image || '/images/placeholder.png']).map(sanitizeImageUrl);
@@ -381,12 +393,23 @@ export default function CategoryDetailPage({
                 <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-border md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
                   {measurementKeys.map((m: string, i: number) => {
                     const mPrice = parsedMeasurements[m];
+                    const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                    const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : null;
+                    const cartItem = cartItems.find(item => item.id === product.id && (item as any).selectedMeasurement === m);
+                    const inCart = cartItem ? cartItem.quantity : 0;
+                    const available = rawStock !== null ? Math.max(0, rawStock - inCart) : null;
                     return (
                       <span
                         key={i}
-                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md"
+                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-gray-200 shadow-sm transition-colors hover:shadow-md inline-flex items-center gap-1.5"
                       >
-                        {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                        <span>{m}</span>
+                        {mPrice && Number(mPrice) > 0 ? <span className="opacity-75">- ₦{Number(mPrice).toLocaleString()}</span> : ''}
+                        {available !== null && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${available <= 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                            {available <= 0 ? 'Sold Out' : `${available} left`}
+                          </span>
+                        )}
                       </span>
                     );
                   })}
@@ -630,20 +653,37 @@ export default function CategoryDetailPage({
                           <div className="flex flex-wrap gap-2">
                             {measurementKeys.map((m: string, i: number) => {
                               const mPrice = parsedMeasurements[m];
+                              const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                              const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : (product.quantity ?? 0);
+                              const cartItem = cartItems.find(item => item.id === product.id && (item as any).selectedMeasurement === m);
+                              const inCart = cartItem ? cartItem.quantity : 0;
+                              const available = Math.max(0, rawStock - inCart);
+                              const isOutOfStock = available <= 0;
+
                               return (
                                 <button
                                   key={i}
-                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors ${tempSelectedMeasurement === m
-                                    ? `${themeConfig.btn} text-white border-transparent`
-                                    : 'bg-white border-gray-300 hover:bg-gray-50'
-                                    }`}
+                                  disabled={isOutOfStock}
+                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors flex flex-col items-center justify-center ${
+                                    isOutOfStock
+                                      ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                                      : tempSelectedMeasurement === m
+                                      ? `${themeConfig.btn} text-white border-transparent`
+                                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                                  }`}
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
+                                    if (isOutOfStock) return;
                                     setTempSelectedMeasurement(m);
                                   }}
                                 >
-                                  {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                                  <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
+                                  {hasCustomQty && (
+                                    <span className={`text-[10px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-white/80' : 'text-muted-foreground'}`}>
+                                      {isOutOfStock ? 'Sold Out' : `${available} in stock`}
+                                    </span>
+                                  )}
                                 </button>
                               );
                             })}
@@ -663,7 +703,9 @@ export default function CategoryDetailPage({
                           e.stopPropagation();
                           if (!canAdd) return;
 
-                          const qtyToCheck = tempSelectedSize
+                          const qtyToCheck = tempSelectedMeasurement && parsedMeasurementQuantities[tempSelectedMeasurement] !== undefined
+                            ? parsedMeasurementQuantities[tempSelectedMeasurement]
+                            : tempSelectedSize
                             ? (product.sizeQuantities as Record<string, number>)[tempSelectedSize]
                             : product.quantity;
 
@@ -703,6 +745,7 @@ export default function CategoryDetailPage({
                             selectedColor: finalColor || undefined,
                             selectedMeasurement: tempSelectedMeasurement || undefined,
                             measurementPrice: measurePriceStr ? finalPrice : undefined,
+                            measurementQuantities: (product as any).measurementQuantities,
                           } as any);
 
                           const parts = [tempSelectedSize, finalColor, tempSelectedMeasurement].filter(Boolean);

@@ -22,7 +22,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [siteName, setSiteName] = useState('Quick Choice');
-  const [exceededStockItem, setExceededStockItem] = useState<{ id: string; name: string; available: number; color?: string; size?: string } | null>(null);
+  const [exceededStockItem, setExceededStockItem] = useState<{ id: string; name: string; available: number; color?: string; size?: string; measurement?: string } | null>(null);
 
   const handleIncreaseQuantity = async (item: any) => {
     try {
@@ -39,14 +39,15 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
       }
       
       if (docSnap.exists()) {
-        const liveQty = getAvailableVariantQuantity(docSnap.data(), item.selectedSize, item.selectedColor);
+        const liveQty = getAvailableVariantQuantity(docSnap.data(), item.selectedSize, item.selectedColor, item.selectedMeasurement);
         if (item.quantity + 1 > liveQty) {
           setExceededStockItem({
             id: item.id,
             name: item.name,
             available: liveQty,
             color: item.selectedColor,
-            size: item.selectedSize
+            size: item.selectedSize,
+            measurement: item.selectedMeasurement
           });
           return;
         }
@@ -54,14 +55,15 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
       updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor, item.selectedMeasurement);
     } catch (error) {
       console.error("Error verifying quantity:", error);
-      const fallbackQty = getAvailableVariantQuantity(item, item.selectedSize, item.selectedColor);
+      const fallbackQty = getAvailableVariantQuantity(item, item.selectedSize, item.selectedColor, item.selectedMeasurement);
       if (item.quantity + 1 > fallbackQty) {
           setExceededStockItem({
             id: item.id,
             name: item.name,
             available: fallbackQty,
             color: item.selectedColor,
-            size: item.selectedSize
+            size: item.selectedSize,
+            measurement: item.selectedMeasurement
           });
           return;
       }
@@ -232,6 +234,7 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                 We only have <span className="font-bold text-amber-600 text-sm">{exceededStockItem.available}</span> quantity{' '}
                 {exceededStockItem.color && <span>of this color [{(exceededStockItem.color.startsWith('http') || exceededStockItem.color.startsWith('data:')) ? (exceededStockItem.color.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT") : exceededStockItem.color}] </span>}
                 {exceededStockItem.size && <span>of this size [{exceededStockItem.size}] </span>}
+                {exceededStockItem.measurement && <span>of size [{exceededStockItem.measurement}] </span>}
                 left of <span className="font-bold text-foreground">{exceededStockItem.name}</span> in stock.
               </p>
               <button

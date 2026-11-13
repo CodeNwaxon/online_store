@@ -217,6 +217,7 @@ export async function verifyAndFulfillOrder(
       // ALWAYS map items to include rdpPrice and vendor
       let totalProfitForReferral = 0;
       const itemsWithCostAndVendor: any[] = [];
+      const productDocsDataMap: Record<string, any> = {};
       for (const item of orderData.items) {
         const sellPrice = item.price || 0;
         const collections = ['products', 'foods', 'wears', 'cosmetics', 'toilet_kitchen', 'uk_used'];
@@ -233,6 +234,9 @@ export async function verifyAndFulfillOrder(
         }
 
         const productData = productDoc?.data();
+        if (productData) {
+          productDocsDataMap[item.id] = productData;
+        }
         let rdpPrice = productData ? (productData.rdpPrice || productData.costPrice || 0) : 0;
         if (item.selectedMeasurement && productData?.measurementCostPrices) {
           try {
@@ -329,14 +333,52 @@ export async function verifyAndFulfillOrder(
         createdAt: new Date().toISOString(),
       });
 
-      // Deduct product quantities
+      // Deduct product quantities (grouped by product doc so each doc is updated exactly once in the transaction)
+      const updatesByDoc: Record<string, { productRef: any; totalQty: number; measurementQuantitiesObj?: Record<string, number> | null }> = {};
+
       for (const item of orderData.items) {
         const collectionName = (item as any)._collection || 'products';
-        const productRef = adminDb.collection(collectionName).doc(item.id);
-        transaction.update(productRef, {
-          quantity: FieldValue.increment(-item.quantity),
-        });
+        const docKey = `${collectionName}/${item.id}`;
+        const prodData = productDocsDataMap[item.id];
+
+        if (!updatesByDoc[docKey]) {
+          let mqObj: Record<string, number> | null = null;
+          if (prodData?.measurementQuantities) {
+            try {
+              mqObj = typeof prodData.measurementQuantities === 'string'
+                ? JSON.parse(prodData.measurementQuantities)
+                : { ...prodData.measurementQuantities };
+            } catch (e) {
+              mqObj = null;
+            }
+          }
+          updatesByDoc[docKey] = {
+            productRef: adminDb.collection(collectionName).doc(item.id),
+            totalQty: 0,
+            measurementQuantitiesObj: mqObj,
+          };
+        }
+
+        const entry = updatesByDoc[docKey];
+        const itemQty = item.quantity || 1;
+        entry.totalQty += itemQty;
+
+        if (item.selectedMeasurement && entry.measurementQuantitiesObj && entry.measurementQuantitiesObj[item.selectedMeasurement] !== undefined) {
+          const currentVal = Number(entry.measurementQuantitiesObj[item.selectedMeasurement]) || 0;
+          entry.measurementQuantitiesObj[item.selectedMeasurement] = Math.max(0, currentVal - itemQty);
+        }
+
         delete (item as any)._collection; // clean up before saving to db
+      }
+
+      for (const entry of Object.values(updatesByDoc)) {
+        const updatePayload: any = {
+          quantity: FieldValue.increment(-entry.totalQty),
+        };
+        if (entry.measurementQuantitiesObj) {
+          updatePayload.measurementQuantities = JSON.stringify(entry.measurementQuantitiesObj);
+        }
+        transaction.update(entry.productRef, updatePayload);
       }
 
       // Increment public sales counts in settings/salesCounts

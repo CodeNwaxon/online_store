@@ -56,9 +56,11 @@ export default function AdminFoods() {
   const [includeMeasurements, setIncludeMeasurements] = useState(false);
   const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, string>>({});
   const [selectedMeasurementCosts, setSelectedMeasurementCosts] = useState<Record<string, string>>({});
+  const [selectedMeasurementQuantities, setSelectedMeasurementQuantities] = useState<Record<string, string>>({});
 
   const grainMeasurements = ['1 cup', '1 congo', '1 mudu', '1 paint rubber', '1/4 bag (quarter bag)', '1/2 bag (half bag)', '1 bag', '2 bags'];
   const weightMeasurements = ['1 kg', '2 kg', '5 kg', '10 kg', '25 kg', '50 kg'];
+  const eggMeasurements = ['Big', 'Medium', 'Small'];
 
   const toggleMeasurement = (m: string) => {
     setSelectedMeasurements(prev => {
@@ -79,6 +81,15 @@ export default function AdminFoods() {
       }
       return copy;
     });
+    setSelectedMeasurementQuantities(prev => {
+      const copy = { ...prev };
+      if (m in copy) {
+        delete copy[m];
+      } else {
+        copy[m] = '';
+      }
+      return copy;
+    });
   };
 
   const setMeasurementPrice = (m: string, value: string) => {
@@ -88,6 +99,24 @@ export default function AdminFoods() {
   const setMeasurementCost = (m: string, value: string) => {
     setSelectedMeasurementCosts(prev => ({ ...prev, [m]: value }));
   };
+
+  const setMeasurementQuantity = (m: string, value: string) => {
+    setSelectedMeasurementQuantities(prev => ({ ...prev, [m]: value }));
+  };
+
+  // Auto-calculate total quantity from egg measurements when present
+  useEffect(() => {
+    if (includeMeasurements) {
+      const activeEggSizes = eggMeasurements.filter(m => m in selectedMeasurements);
+      if (activeEggSizes.length > 0) {
+        const total = activeEggSizes.reduce((sum, m) => {
+          const val = parseInt(selectedMeasurementQuantities[m] || '0', 10);
+          return sum + (isNaN(val) || val < 0 ? 0 : val);
+        }, 0);
+        setQuantity(total.toString());
+      }
+    }
+  }, [selectedMeasurementQuantities, selectedMeasurements, includeMeasurements]);
 
   // Dynamic Groups & Categories State
   const [groups, setGroups] = useState<string[]>([]);
@@ -243,6 +272,7 @@ export default function AdminFoods() {
     setIncludeMeasurements(false);
     setSelectedMeasurements({});
     setSelectedMeasurementCosts({});
+    setSelectedMeasurementQuantities({});
     setImages([]);
     setImageUrlInput('');
   };
@@ -273,6 +303,16 @@ export default function AdminFoods() {
         const parsed = parseFloat(mCost.replace(/,/g, ''));
         if (!mCost.trim() || isNaN(parsed) || parsed < 1) {
           return toast.error(`Please enter a valid cost price (minimum ₦1) for "${mName}".`);
+        }
+      }
+
+      for (const mName of eggMeasurements) {
+        if (mName in selectedMeasurements) {
+          const mQty = selectedMeasurementQuantities[mName];
+          const parsed = parseInt(mQty || '', 10);
+          if (mQty === undefined || mQty === '' || isNaN(parsed) || parsed < 0) {
+            return toast.error(`Please enter a valid quantity (0 or more) for egg size "${mName}".`);
+          }
         }
       }
     }
@@ -315,6 +355,13 @@ export default function AdminFoods() {
           ? JSON.stringify(
             Object.fromEntries(
               Object.entries(selectedMeasurementCosts).map(([k, v]) => [k, parseFloat(v.replace(/,/g, '')) || 0])
+            )
+          )
+          : '',
+        measurementQuantities: includeMeasurements && Object.keys(selectedMeasurementQuantities).length > 0
+          ? JSON.stringify(
+            Object.fromEntries(
+              Object.entries(selectedMeasurementQuantities).map(([k, v]) => [k, parseInt(v, 10) || 0])
             )
           )
           : '',
@@ -407,10 +454,27 @@ export default function AdminFoods() {
       } else {
         setSelectedMeasurementCosts({});
       }
+
+      const foodMeasurementQuantities = (food as any).measurementQuantities;
+      if (foodMeasurementQuantities) {
+        try {
+          const parsedQty = typeof foodMeasurementQuantities === 'string' ? JSON.parse(foodMeasurementQuantities) : foodMeasurementQuantities;
+          const qtyObj: Record<string, string> = {};
+          Object.entries(parsedQty).forEach(([k, v]) => {
+            qtyObj[k] = String(v);
+          });
+          setSelectedMeasurementQuantities(qtyObj);
+        } catch {
+          setSelectedMeasurementQuantities({});
+        }
+      } else {
+        setSelectedMeasurementQuantities({});
+      }
     } else {
       setIncludeMeasurements(false);
       setSelectedMeasurements({});
       setSelectedMeasurementCosts({});
+      setSelectedMeasurementQuantities({});
     }
 
     setImages((food.images || []).map(url => ({ type: 'url', value: url })));
@@ -741,6 +805,59 @@ export default function AdminFoods() {
                     </div>
                   </div>
 
+                  {/* Eggs Measurements */}
+                  <div>
+                    <p className="text-xs font-black text-green-800 mb-1.5">Eggs</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {eggMeasurements.map(m => (
+                        <div key={`em-${m}`} className={`flex flex-col gap-1.5 p-2 rounded border text-xs transition-colors ${m in selectedMeasurements ? 'border-green-500 bg-green-100' : 'border-border bg-background hover:bg-muted'}`}>
+                          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => toggleMeasurement(m)}>
+                            <input type="checkbox" checked={m in selectedMeasurements} readOnly className="accent-green-600 pointer-events-none" />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {m in selectedMeasurements && (
+                            <div className="flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-green-800">₦</span>
+                                <input
+                                  type="text"
+                                  placeholder="Sell"
+                                  value={selectedMeasurements[m]}
+                                  onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full p-1.5 rounded border border-green-300 bg-white text-xs font-bold focus:border-green-500 focus:ring-1 focus:ring-green-500/30 outline-none"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-amber-700">Cost</span>
+                                <input
+                                  type="text"
+                                  placeholder="Cost"
+                                  value={selectedMeasurementCosts[m] || ''}
+                                  onChange={e => setMeasurementCost(m, formatPriceInput(e.target.value))}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full p-1.5 rounded border border-amber-300 bg-white text-xs font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-blue-700">Qty</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="Quantity"
+                                  value={selectedMeasurementQuantities[m] || ''}
+                                  onChange={e => setMeasurementQuantity(m, e.target.value)}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-full p-1.5 rounded border border-blue-300 bg-white text-xs font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {Object.keys(selectedMeasurements).length > 0 && (
                     <div className="text-xs font-bold text-green-700 pt-2 border-t border-green-200 space-y-1">
                       <p>Selected Measurements:</p>
@@ -748,6 +865,7 @@ export default function AdminFoods() {
                         {Object.entries(selectedMeasurements).map(([m, p]) => (
                           <span key={m} className="inline-flex items-center gap-1 bg-green-200/60 px-2 py-0.5 rounded-full">
                             {m}{(m === '1 bag' || m === '1 kg') ? ' — default price' : p ? ` — ₦${p}` : ' (no price)'}
+                            {selectedMeasurementQuantities[m] ? ` (Qty: ${selectedMeasurementQuantities[m]})` : ''}
                           </span>
                         ))}
                       </div>
@@ -818,8 +936,15 @@ export default function AdminFoods() {
 
             {/* QUANTITY MOVED HERE */}
             <div className="pt-4 border-t border-border mt-4">
-              <div className="max-w-[200px] space-y-2">
-                <label className="text-xs md:text-sm font-bold text-green-700">Quantity In Stock</label>
+              <div className="max-w-[280px] space-y-2">
+                <label className="text-xs md:text-sm font-bold text-green-700 flex flex-wrap items-center justify-between gap-1">
+                  <span>Quantity In Stock</span>
+                  {includeMeasurements && eggMeasurements.some(m => m in selectedMeasurements && selectedMeasurementQuantities[m]) && (
+                    <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                      Auto-calculated from egg sizes
+                    </span>
+                  )}
+                </label>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"

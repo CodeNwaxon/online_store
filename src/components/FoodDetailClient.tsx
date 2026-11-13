@@ -144,6 +144,18 @@ export default function FoodDetailClient() {
   }
   const measurementKeys = Object.keys(parsedMeasurements);
 
+  let parsedMeasurementQuantities: Record<string, number> = {};
+  if ((food as any).measurementQuantities) {
+    try {
+      const parsed = typeof (food as any).measurementQuantities === 'string'
+        ? JSON.parse((food as any).measurementQuantities)
+        : (food as any).measurementQuantities;
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurementQuantities[k] = Number(v) || 0;
+      });
+    } catch {}
+  }
+
   // Parse colors
   const colors = food.color ? food.color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
 
@@ -262,12 +274,23 @@ export default function FoodDetailClient() {
                 <div className="flex flex-row gap-2 overflow-x-auto pb-1 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:bg-green-200 md:[&::-webkit-scrollbar-thumb]:rounded-full md:[scrollbar-width:thin]">
                   {measurementKeys.map((m: string, i: number) => {
                     const mPrice = parsedMeasurements[m];
+                    const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                    const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : null;
+                    const cartItem = cartItems.find(item => item.id === food.id && item.selectedMeasurement === m);
+                    const inCart = cartItem ? cartItem.quantity : 0;
+                    const available = rawStock !== null ? Math.max(0, rawStock - inCart) : null;
                     return (
                       <span
                         key={i}
-                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900"
+                        className="shrink-0 text-xs font-bold capitalize px-3 py-1.5 rounded-md bg-white border border-green-200 shadow-sm transition-colors hover:shadow-md text-green-900 inline-flex items-center gap-1.5"
                       >
-                        {m} {mPrice && Number(mPrice) > 0 ? ` — ₦${Number(mPrice).toLocaleString()}` : ''}
+                        <span>{m}</span>
+                        {mPrice && Number(mPrice) > 0 ? <span className="text-emerald-700">— ₦{Number(mPrice).toLocaleString()}</span> : ''}
+                        {available !== null && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${available <= 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                            {available <= 0 ? 'Sold Out' : `${available} left`}
+                          </span>
+                        )}
                       </span>
                     );
                   })}
@@ -496,18 +519,42 @@ export default function FoodDetailClient() {
                       <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64 mb-4">
                         {measurementKeys.map((m: string) => {
                           const mPrice = parsedMeasurements[m];
+                          const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                          const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : (food.quantity ?? 0);
+                          const cartItem = cartItems.find(item => item.id === food.id && item.selectedMeasurement === m);
+                          const inCart = cartItem ? cartItem.quantity : 0;
+                          const available = Math.max(0, rawStock - inCart);
+                          const isOutOfStock = available <= 0;
+
                           return (
                             <button
                               key={m}
-                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors flex flex-col items-center justify-center ${tempSelectedMeasurement === m ? 'bg-green-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                              disabled={isOutOfStock}
+                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors flex flex-col items-center justify-center ${
+                                isOutOfStock
+                                  ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                                  : tempSelectedMeasurement === m
+                                  ? 'bg-green-600 text-white border-transparent'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                              }`}
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                if (isOutOfStock) return;
                                 setTempSelectedMeasurement(m);
                               }}
                             >
                               <span>{m}</span>
-                              {mPrice && Number(mPrice) > 0 && <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>₦{Number(mPrice).toLocaleString()}</span>}
+                              {mPrice && Number(mPrice) > 0 && (
+                                <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>
+                                  ₦{Number(mPrice).toLocaleString()}
+                                </span>
+                              )}
+                              {hasCustomQty && (
+                                <span className={`text-[10px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-green-100' : 'text-muted-foreground'}`}>
+                                  {isOutOfStock ? 'Sold Out' : `${available} in stock`}
+                                </span>
+                              )}
                             </button>
                           );
                         })}
@@ -524,8 +571,11 @@ export default function FoodDetailClient() {
                             const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
                             const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement && item.selectedColor === finalColor);
                             const currentInCart = existing ? existing.quantity : 0;
-                            if (currentInCart + 1 > (food.quantity ?? 0)) {
-                              toast.error(`Only ${food.quantity ?? 0} available in stock`);
+                            const hasCustomQty = parsedMeasurementQuantities[tempSelectedMeasurement] !== undefined;
+                            const maxAllowed = hasCustomQty ? parsedMeasurementQuantities[tempSelectedMeasurement] : (food.quantity ?? 0);
+
+                            if (currentInCart + 1 > maxAllowed) {
+                              toast.error(`Only ${maxAllowed} available for ${tempSelectedMeasurement}`);
                               return;
                             }
                             const measurePriceStr = parsedMeasurements[tempSelectedMeasurement];
@@ -541,6 +591,7 @@ export default function FoodDetailClient() {
                               description: food.description,
                               selectedMeasurement: tempSelectedMeasurement,
                               measurementPrice: measurePrice,
+                              measurementQuantities: (food as any).measurementQuantities,
                             };
                             if (finalColor) cartProduct.selectedColor = finalColor;
                             addItem(cartProduct as any);

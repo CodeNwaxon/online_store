@@ -1,7 +1,8 @@
 export const getAvailableVariantQuantity = (
   product: any,
   selectedSize?: string,
-  selectedColor?: string
+  selectedColor?: string,
+  selectedMeasurement?: string
 ): number => {
   // If product doesn't exist, return 0
   if (!product) return 0;
@@ -29,6 +30,19 @@ export const getAvailableVariantQuantity = (
     const qty = product.sizeQuantities[selectedSize];
     if (qty !== undefined) {
       return Number(qty) || 0;
+    }
+  }
+
+  // Rule 1c: measurementQuantities (Food / Eggs)
+  if (product.measurementQuantities && selectedMeasurement) {
+    let mq = product.measurementQuantities;
+    if (typeof mq === 'string') {
+      try {
+        mq = JSON.parse(mq);
+      } catch {}
+    }
+    if (typeof mq === 'object' && mq !== null && mq[selectedMeasurement] !== undefined) {
+      return Number(mq[selectedMeasurement]) || 0;
     }
   }
 

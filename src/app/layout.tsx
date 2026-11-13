@@ -8,6 +8,8 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   let siteName = '';
+  let installmentBg = '';
+  const backupImage = "https://res.cloudinary.com/dfwpxohxg/image/upload/v1794582043/lxluvvo7dbpc19fjedye.jpg";
 
   try {
     // Using fetch REST API to avoid GRPC errors in server-side metadata generation
@@ -20,10 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
     if (response.ok) {
       const data = await response.json();
       siteName = data.fields?.siteName?.stringValue || '';
+      installmentBg = data.fields?.installmentBg?.stringValue || '';
     }
   } catch (error) {
     // Silent fallback to avoid console noise during build
   }
+
+  const metaImage = installmentBg && installmentBg.trim() !== '' ? installmentBg.trim() : backupImage;
 
   return {
     metadataBase: new URL("https://nomostores.com"),
@@ -40,16 +45,10 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: siteName,
       images: [
         {
-          url: "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
-          width: 800,
-          height: 600,
-          alt: `${siteName} Logo`,
-        },
-        {
-          url: "https://nomostores.com/nomoStore_building.jpeg",
-          width: 800,
-          height: 600,
-          alt: `${siteName} Store Building`,
+          url: metaImage,
+          width: 1200,
+          height: 630,
+          alt: `${siteName || 'Store'} Preview`,
         },
       ],
       locale: "en_US",
@@ -59,10 +58,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: `${siteName} | Premium African Inspired Goods`,
       description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      images: [
-        "https://res.cloudinary.com/dfwpxohxg/image/upload/v1785519623/euo3jpon7aqikkox8dxh.jpg",
-        "https://nomostores.com/nomoStore_building.jpeg"
-      ],
+      images: [metaImage],
     },
   };
 }

@@ -38,6 +38,8 @@ export interface ShopProduct {
   requiresMinShipping?: boolean;
   minShippingQty?: number;
   measurements?: string;
+  measurementQuantities?: string | Record<string, number>;
+  measurementCostPrices?: string | Record<string, number>;
 }
 
 const colorMap: Record<string, string> = {
@@ -257,6 +259,18 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
     }
   }
   const measurementKeys = Object.keys(parsedMeasurements);
+
+  let parsedMeasurementQuantities: Record<string, number> = {};
+  if ((food as any).measurementQuantities) {
+    try {
+      const parsed = typeof (food as any).measurementQuantities === 'string'
+        ? JSON.parse((food as any).measurementQuantities)
+        : (food as any).measurementQuantities;
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurementQuantities[k] = Number(v) || 0;
+      });
+    } catch {}
+  }
 
   const CardContent = (
     <div className={`relative h-52 max-md:h-40 w-full cursor-pointer bg-gradient-to-br ${theme.bgGradient} p-1`}>
@@ -757,17 +771,37 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                   <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
                     {measurementKeys.map(m => {
                       const mPrice = parsedMeasurements[m];
+                      const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                      const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : (food.quantity ?? 0);
+                      const cartItem = cartItems.find(item => item.id === food.id && item.selectedMeasurement === m);
+                      const inCart = cartItem ? cartItem.quantity : 0;
+                      const available = Math.max(0, rawStock - inCart);
+                      const isOutOfStock = available <= 0;
+
                       return (
                         <button
                           key={m}
-                          className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors ${tempSelectedMeasurement === m ? `${theme.bgPrimary} text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                          disabled={isOutOfStock}
+                          className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors flex flex-col items-center justify-center ${
+                            isOutOfStock
+                              ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                              : tempSelectedMeasurement === m
+                              ? `${theme.bgPrimary} text-white border-transparent`
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (isOutOfStock) return;
                             setTempSelectedMeasurement(m);
                           }}
                         >
-                          {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
+                          <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
+                          {hasCustomQty && (
+                            <span className={`text-[9px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-white/80' : 'text-muted-foreground'}`}>
+                              {isOutOfStock ? 'Sold Out' : `${available} left`}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -789,8 +823,11 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
                         const existing = cartItems.find(item => item.id === food.id && item.selectedMeasurement === tempSelectedMeasurement && item.selectedColor === finalColor);
                         const currentInCart = existing ? existing.quantity : 0;
-                        if (currentInCart + 1 > (food.quantity ?? 0)) {
-                          toast.error(`Only ${food.quantity ?? 0} available in stock`);
+                        const hasCustomQty = parsedMeasurementQuantities[tempSelectedMeasurement] !== undefined;
+                        const maxAllowed = hasCustomQty ? parsedMeasurementQuantities[tempSelectedMeasurement] : (food.quantity ?? 0);
+
+                        if (currentInCart + 1 > maxAllowed) {
+                          toast.error(`Only ${maxAllowed} available for ${tempSelectedMeasurement}`);
                           return;
                         }
                         
@@ -807,6 +844,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                           description: food.description,
                           selectedMeasurement: tempSelectedMeasurement,
                           measurementPrice: measurePrice,
+                          measurementQuantities: (food as any).measurementQuantities,
                         };
                         if (finalColor) cartProduct.selectedColor = finalColor;
                         addItem(cartProduct as any);

@@ -163,6 +163,18 @@ export default function CategoryProductCard({
   }
   const measurementKeys = Object.keys(parsedMeasurements);
 
+  let parsedMeasurementQuantities: Record<string, number> = {};
+  if ((product as any).measurementQuantities) {
+    try {
+      const parsed = typeof (product as any).measurementQuantities === 'string'
+        ? JSON.parse((product as any).measurementQuantities)
+        : (product as any).measurementQuantities;
+      Object.entries(parsed).forEach(([k, v]) => {
+        parsedMeasurementQuantities[k] = Number(v) || 0;
+      });
+    } catch {}
+  }
+
   const CardContent = (
     <div className={`relative h-45 max-md:h-40 w-full cursor-pointer bg-muted/20 p-0.5 dark:bg-muted/10`}>
       <div className="relative w-full h-full overflow-hidden rounded-[calc(var(--radius)-2px)] md:rounded-[calc(var(--radius)-1px)]">
@@ -649,23 +661,43 @@ export default function CategoryProductCard({
                     <div className="flex flex-wrap gap-2">
                       {measurementKeys.map((m, i) => {
                         const mPrice = parsedMeasurements[m];
+                        const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
+                        const rawStock = hasCustomQty ? parsedMeasurementQuantities[m] : (product.quantity ?? 0);
+                        const cartItem = cartItems.find(item => item.id === product.id && (item as any).selectedMeasurement === m);
+                        const inCart = cartItem ? cartItem.quantity : 0;
+                        const available = Math.max(0, rawStock - inCart);
+                        const isOutOfStock = available <= 0;
+
                         return (
                           <button
                             key={i}
-                            className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors ${tempSelectedMeasurement === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'}`}
+                            disabled={isOutOfStock}
+                            className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors flex flex-col items-center justify-center ${
+                              isOutOfStock
+                                ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
+                                : tempSelectedMeasurement === m
+                                ? 'bg-purple-600 text-white border-purple-600'
+                                : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'
+                            }`}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              if (isOutOfStock) return;
                               setTempSelectedMeasurement(m);
                             }}
                           >
-                            {m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
+                            <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
+                            {hasCustomQty && (
+                              <span className={`text-[9px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-purple-100' : 'text-muted-foreground'}`}>
+                                {isOutOfStock ? 'Sold Out' : `${available} left`}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
                 </>
               );
             })()}
@@ -703,7 +735,7 @@ export default function CategoryProductCard({
                     if (!hasSizeColors2 && colors.length > 0 && !tempSelectedColor) return;
 
                     const finalColor = tempSelectedColor === 'Any Color' ? undefined : tempSelectedColor;
-                    const qtyToCheck = getAvailableVariantQuantity(product, tempSelectedSize || undefined, finalColor);
+                    const qtyToCheck = getAvailableVariantQuantity(product, tempSelectedSize || undefined, finalColor, tempSelectedMeasurement || undefined);
                     
                     const existing = cartItems.find(item => item.id === product.id && item.selectedSize === tempSelectedSize && (item as any).selectedColor === finalColor && (item as any).selectedMeasurement === (tempSelectedMeasurement || undefined));
                     const currentInCart = existing ? existing.quantity : 0;
@@ -734,6 +766,7 @@ export default function CategoryProductCard({
                       selectedColor: tempSelectedColor,
                       selectedMeasurement: tempSelectedMeasurement || undefined,
                       measurementPrice: measurePriceStr ? finalPrice : undefined,
+                      measurementQuantities: (product as any).measurementQuantities,
                     } as any);
 
                     let successMsg = `${product.name}`;
