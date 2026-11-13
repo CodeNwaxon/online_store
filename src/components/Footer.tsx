@@ -81,89 +81,89 @@ export default function Footer() {
 
   return (
     <>
-    <footer className="bg-card border-t border-border pt-16 pb-8 mt-auto">
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div>
-            <div className="flex gap-4 items-start">
-              <img
-                src={siteLogo}
-                alt="Logo"
-                className="w-[40px] h-[40px] object-contain shrink-0 p-0.5"
-              />
-              <p className="text-muted-foreground text-[0.9rem] m-0">
-                {renderMessage(footerMessage)}
-              </p>
-            </div>
-          </div>
-          <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex max-lg:justify-between lg:justify-start gap-4 lg:gap-8 max-md:px-4">
+      <footer className="bg-card border-t border-border pt-16 pb-8 mt-auto">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
-              <h4 className="mb-3 text-primary font-bold max-md:text-sm">{siteName}</h4>
-              <ul className="list-none flex flex-col gap-2.5">
-                <li><Link href="/" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
-                <li><Link href="/shop" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
-                {hasActiveBlogs && <li><Link href="/blog" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>}
-                <li><Link href="/foods" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Food Market</Link></li>
-                <li>
-                  <Link href="/partnership" onClick={handlePartnershipClick} className="text-green-600 font-black hover:text-green-700 transition-colors inline-flex items-center gap-2 text-sm max-md:text-xs">
-                    Partnership
-                    {mounted && unreadSales > 0 && (
-                      <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        {unreadSales}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-                <li><Link href="/about" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
-                {isAdmin && (
-                  <li><Link href="/admin" className="text-sm max-md:text-xs text-secondary font-bold hover:text-primary transition-colors">{isCEO ? 'CEO Panel' : 'Admin Panel'}</Link></li>
-                )}
-              </ul>
+              <div className="flex gap-4 items-start">
+                <img
+                  src={siteLogo}
+                  alt="Logo"
+                  className="w-[40px] h-[40px] object-contain shrink-0 p-0.5"
+                />
+                <p className="text-muted-foreground text-[0.9rem] m-0">
+                  {renderMessage(footerMessage)}
+                </p>
+              </div>
             </div>
-            <div className="text-right lg:text-left">
-              <h4 className="mb-3 font-bold max-md:text-sm">Support</h4>
-              <ul className="list-none flex flex-col items-end gap-2.5 lg:items-start">
-                <li><a href="/about#faq" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">FAQ</a></li>
-                <li><a href="/about#privacy" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><Link href="/contact" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
-                {user && (
+            <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex max-lg:justify-between lg:justify-start gap-4 lg:gap-8 max-md:px-4">
+              <div>
+                <h4 className="mb-3 text-primary font-bold max-md:text-sm">{siteName}</h4>
+                <ul className="list-none flex flex-col gap-2.5">
+                  <li><Link href="/" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
+                  <li><Link href="/shop" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Shop</Link></li>
+                  {hasActiveBlogs && <li><Link href="/blog" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>}
+                  <li><Link href="/foods" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Food Market</Link></li>
                   <li>
-                    <button 
-                      onClick={() => setShowSignOutConfirm(true)}
-                      className="text-sm max-md:text-xs text-muted-foreground hover:text-secondary transition-colors cursor-pointer p-0 bg-transparent border-none text-right w-full"
-                    >
-                      Sign Out
-                    </button>
+                    <Link href="/partnership" onClick={handlePartnershipClick} className="text-green-600 font-black hover:text-green-700 transition-colors inline-flex items-center gap-2 text-sm max-md:text-xs">
+                      Partnership
+                      {mounted && unreadSales > 0 && (
+                        <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                          {unreadSales}
+                        </span>
+                      )}
+                    </Link>
                   </li>
-                )}
-                <FooterInstall />
-              </ul>
+                  <li><Link href="/about" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
+                  {isAdmin && (
+                    <li><Link href="/admin" className="text-sm max-md:text-xs text-secondary font-bold hover:text-primary transition-colors">{isCEO ? 'CEO Panel' : 'Admin Panel'}</Link></li>
+                  )}
+                </ul>
+              </div>
+              <div className="text-right lg:text-left">
+                <h4 className="mb-3 font-bold max-md:text-sm">Support</h4>
+                <ul className="list-none flex flex-col items-end gap-2.5 lg:items-start">
+                  <li><a href="/about#faq" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">FAQ</a></li>
+                  <li><a href="/about#privacy" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
+                  <li><Link href="/contact" className="text-sm max-md:text-xs text-muted-foreground hover:text-primary transition-colors">Customer Care</Link></li>
+                  {user && (
+                    <li>
+                      <button
+                        onClick={() => setShowSignOutConfirm(true)}
+                        className="text-sm max-md:text-xs text-muted-foreground hover:text-secondary transition-colors cursor-pointer p-0 bg-transparent border-none text-right w-full"
+                      >
+                        Sign Out
+                      </button>
+                    </li>
+                  )}
+                  <FooterInstall />
+                </ul>
+              </div>
+            </div>
+            <div>
+              <h4 className="mb-6 font-bold max-md:text-sm">Connect With Us</h4>
+              <div className="flex gap-4">
+                {settings?.socialLinks?.map((link: any, i: number) => (
+                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
+                    {ICON_MAP[link.platform] || <FaShareAlt size={20} />}
+                  </a>
+                )) || (
+                    <p className="text-xs text-muted-foreground italic">Follow us on social media</p>
+                  )}
+              </div>
             </div>
           </div>
-          <div>
-            <h4 className="mb-6 font-bold max-md:text-sm">Connect With Us</h4>
-            <div className="flex gap-4">
-              {settings?.socialLinks?.map((link: any, i: number) => (
-                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover transition-colors">
-                  {ICON_MAP[link.platform] || <FaShareAlt size={20} />}
-                </a>
-              )) || (
-                <p className="text-xs text-muted-foreground italic">Follow us on social media</p>
-              )}
-            </div>
+          <div className="mt-12 pt-8 border-t border-border text-center text-muted-foreground text-sm">
+            &copy; {new Date().getFullYear()} {siteName}. All rights reserved. Created by Nwachukwu P.O.
           </div>
         </div>
-        <div className="mt-12 pt-8 border-t border-border text-center text-muted-foreground text-sm">
-          &copy; {new Date().getFullYear()} {siteName}. All rights reserved. Designed with passion.
-        </div>
-      </div>
-    </footer>
+      </footer>
 
-    <SignOutConfirmation
-      isOpen={showSignOutConfirm}
-      onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
-      onCancel={() => setShowSignOutConfirm(false)}
-    />
+      <SignOutConfirmation
+        isOpen={showSignOutConfirm}
+        onConfirm={() => { setShowSignOutConfirm(false); handleSignOut(); }}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
     </>
   );
 }
