@@ -491,54 +491,85 @@ export default function AdminBlogPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-1">Blog tag</label>
-              <div className="flex gap-2">
-                <select
-                  value={formData.tag || ''}
-                  onChange={event => setFormData(current => ({ ...current, tag: event.target.value }))}
-                  className="text-sm sm:text-base min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 md:p-3"
-                >
-                  <option value="">No tag</option>
-                  {blogTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowNewTagInput(open => !open)}
-                  className="shrink-0 rounded-md border border-primary/25 bg-primary/5 px-3 text-xs font-semibold text-primary hover:bg-primary/10"
-                >{showNewTagInput ? 'Cancel' : 'Add tag'}</button>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-bold text-foreground">Blog Tag</label>
+                {formData.tag && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(current => ({ ...current, tag: '' }))}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                  >
+                    Clear selection
+                  </button>
+                )}
               </div>
-              {showNewTagInput && (
-                <div className="mt-2 flex gap-2">
-                  <input
-                    type="text"
-                    value={newTagName}
-                    onChange={event => setNewTagName(event.target.value)}
-                    onKeyDown={event => event.key === 'Enter' && (event.preventDefault(), handleAddTag())}
-                    placeholder="e.g. Phones & Electronics"
-                    className="text-sm min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2"
-                  />
-                  <button type="button" onClick={handleAddTag} className="rounded-md bg-primary px-3 py-2 text-xs font-bold text-white hover:opacity-90">Save tag</button>
+
+              {/* Displayed tags as selectable pills with scrollable container */}
+              {blogTags.length > 0 ? (
+                <div
+                  className="flex flex-wrap gap-1.5 mb-3 max-h-36 overflow-y-auto pr-1.5 p-1 rounded-md border border-border/50 bg-background/50 custom-scrollbar [scrollbar-width:thin] [scrollbar-color:#D48806_transparent]"
+                  style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}
+                >
+                  {blogTags.map(tag => {
+                    const isSelected = formData.tag === tag;
+                    return (
+                      <div
+                        key={tag}
+                        onClick={() => setFormData(current => ({ ...current, tag: current.tag === tag ? '' : tag }))}
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold cursor-pointer transition-all select-none ${
+                          isSelected
+                            ? 'bg-primary text-white border-primary shadow-sm font-bold'
+                            : 'border-border bg-muted/40 text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTag(tag);
+                          }}
+                          aria-label={`Delete tag ${tag}`}
+                          title={`Delete tag ${tag}`}
+                          className={`rounded p-0.5 transition-colors ${
+                            isSelected
+                              ? 'text-white/80 hover:text-white hover:bg-white/20'
+                              : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                          }`}
+                        >
+                          <Trash2 size={11} aria-hidden="true" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mb-2">No tags created yet. Create one below.</p>
               )}
 
-              {blogTags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {blogTags.map(tag => (
-                    <span key={tag} className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 py-1 pl-2.5 pr-1 text-xs font-semibold text-foreground">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTag(tag)}
-                        aria-label={`Delete tag ${tag}`}
-                        title={`Delete tag ${tag}`}
-                        className="rounded p-1 text-destructive transition-colors hover:bg-destructive/10"
-                      >
-                        <Trash2 size={12} aria-hidden="true" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* Input reserved for creating tags */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={event => setNewTagName(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  placeholder="Create new tag (e.g. Phones & Tech)"
+                  className="text-xs sm:text-sm min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTag}
+                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 transition-opacity shrink-0"
+                >
+                  Add Tag
+                </button>
+              </div>
 
               {tagInUse && (
                 <div role="alert" className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
@@ -562,36 +593,23 @@ export default function AdminBlogPage() {
             <div className="py-4 space-y-4 border-y border-border">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm font-bold text-foreground">Blog Images (Max 4)</label>
-                  <p className="text-xs text-muted-foreground">Grid layout adapts automatically (1, 2, 3, or 4 images).</p>
+                  <label className="block text-sm font-bold text-foreground">Blog Images</label>
+                  <p className="text-xs text-muted-foreground">Maximum images allowed (4).</p>
                 </div>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${formImages.length === 4 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-muted text-muted-foreground'}`}>
                   {formImages.length}/4
                 </span>
               </div>
 
-              {/* Action buttons if less than 4 images */}
+              {/* Single "Upload photo" button */}
               {formImages.length < 4 && (
-                <div className="flex flex-wrap gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors">
-                    <Plus size={14} /> Upload Images
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => {
-                        handleFilesSelected(e.target.files);
-                        e.target.value = '';
-                      }}
-                      className="hidden"
-                    />
-                  </label>
+                <div>
                   <button
                     type="button"
                     onClick={handleAddImageSlot}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-border hover:bg-muted text-xs font-semibold transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-colors shadow-sm"
                   >
-                    <ImageIcon size={14} /> Add by URL
+                    <Plus size={14} /> Upload photo
                   </button>
                 </div>
               )}
@@ -600,62 +618,58 @@ export default function AdminBlogPage() {
               {formImages.length > 0 && (
                 <div className="space-y-3">
                   {formImages.map((item, index) => (
-                    <div key={item.id} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2.5">
+                    <div key={item.id} className="p-3 rounded-lg border border-border bg-muted/20 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                          <ImageIcon size={12} className="text-primary" /> Image #{index + 1}
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <ImageIcon size={13} className="text-primary" /> Photo #{index + 1}
                         </span>
                         <button
                           type="button"
                           onClick={() => removeImageSlot(item.id)}
                           className="text-destructive hover:bg-destructive/10 p-1 rounded transition-colors"
-                          title="Remove image"
+                          title="Remove photo"
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <input
-                          type="text"
-                          placeholder="Image URL (https://...)"
-                          value={item.url}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateImageSlot(item.id, {
-                              url: val,
-                              file: null,
-                              preview: val
-                            });
-                          }}
-                          className="text-xs w-full rounded-md border border-border px-2.5 py-1.5 bg-background outline-none focus:ring-1 focus:ring-primary"
-                        />
+                      <div className="space-y-2">
+                        {/* File input */}
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                updateImageSlot(item.id, {
+                                  file: f,
+                                  url: '',
+                                  preview: URL.createObjectURL(f)
+                                });
+                              }
+                              e.target.value = '';
+                            }}
+                            className="w-full text-xs file:mr-2.5 file:rounded file:border-0 file:bg-primary/15 file:text-primary file:px-2.5 file:py-1.5 file:text-xs file:font-bold cursor-pointer"
+                          />
+                        </div>
 
-                        <div className="flex items-center justify-between text-[11px]">
-                          <label className="cursor-pointer font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                            <span>Or select file</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) {
-                                  updateImageSlot(item.id, {
-                                    file: f,
-                                    url: '',
-                                    preview: URL.createObjectURL(f)
-                                  });
-                                }
-                                e.target.value = '';
-                              }}
-                              className="hidden"
-                            />
-                          </label>
-                          {item.file && (
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
-                              {item.file.name}
-                            </span>
-                          )}
+                        {/* URL input */}
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Or paste image URL (https://...)"
+                            value={item.url}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateImageSlot(item.id, {
+                                url: val,
+                                file: null,
+                                preview: val
+                              });
+                            }}
+                            className="text-xs w-full rounded-md border border-border px-2.5 py-1.5 bg-background outline-none focus:ring-1 focus:ring-primary"
+                          />
                         </div>
                       </div>
 
@@ -677,10 +691,10 @@ export default function AdminBlogPage() {
 
                       {/* Thumbnail Preview */}
                       {item.preview && (
-                        <div className="relative h-28 w-full rounded overflow-hidden bg-black/10 border border-border flex items-center justify-center">
+                        <div className="relative h-32 w-full rounded overflow-hidden bg-black/10 border border-border flex items-center justify-center">
                           <img
                             src={item.preview}
-                            alt={`Preview #${index + 1}`}
+                            alt={`Photo #${index + 1}`}
                             className={`w-full h-full ${item.fullImage ? 'object-contain' : 'object-cover'}`}
                           />
                         </div>
@@ -830,31 +844,28 @@ export default function AdminBlogPage() {
 
                             return (
                               <div
-                                className={`w-full overflow-hidden bg-black/5 p-1 ${
-                                  previewImages.length === 1
-                                    ? 'grid grid-cols-1'
-                                    : 'grid grid-cols-2 gap-1.5'
-                                }`}
+                                className={`w-full overflow-hidden bg-black/5 p-1 ${previewImages.length === 1
+                                  ? 'grid grid-cols-1'
+                                  : 'grid grid-cols-2 gap-1.5'
+                                  }`}
                               >
                                 {previewImages.map((img, idx) => {
                                   const isSpan2 = previewImages.length === 3 && idx === 2;
                                   return (
                                     <div
                                       key={idx}
-                                      className={`relative ${
-                                        previewImages.length === 1
-                                          ? 'max-h-[360px] h-64 sm:h-72'
-                                          : isSpan2
+                                      className={`relative ${previewImages.length === 1
+                                        ? 'max-h-[360px] h-64 sm:h-72'
+                                        : isSpan2
                                           ? 'col-span-2 h-52 sm:h-64'
                                           : 'h-40 sm:h-48'
-                                      } w-full overflow-hidden rounded bg-white dark:bg-slate-900`}
+                                        } w-full overflow-hidden rounded bg-white dark:bg-slate-900`}
                                     >
                                       <img
                                         src={img.url}
                                         alt=""
-                                        className={`w-full h-full ${
-                                          img.fullImage ? 'object-contain' : 'object-cover'
-                                        }`}
+                                        className={`w-full h-full ${img.fullImage ? 'object-contain' : 'object-cover'
+                                          }`}
                                       />
                                     </div>
                                   );
