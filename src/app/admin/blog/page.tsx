@@ -329,7 +329,7 @@ export default function AdminBlogPage() {
         </div>
       )}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Manage Blog Posts</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Manage Blog Posts</h1>
         {editingId && (
           <button
             onClick={() => {
@@ -341,7 +341,7 @@ export default function AdminBlogPage() {
             }}
             className="flex items-center gap-2 bg-secondary text-white font-bold px-4 py-2 rounded-lg hover:bg-secondary/80 shadow-sm transition-colors"
           >
-            <X size={16} /> Cancel Edit
+            <X size={16} /> <span className="hidden md:block">Cancel Edit</span>
           </button>
         )}
       </div>
