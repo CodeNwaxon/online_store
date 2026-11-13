@@ -468,7 +468,7 @@ function ShopContent() {
                   ) : (
                     <>
                       <FaFilter className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                      <span className="hidden md:inline text-xs font-semibold">Filter</span>
+                      <span className="hidden md:inline text-xs font-semibold">Prices</span>
                     </>
                   )}
                   <FaChevronDown
