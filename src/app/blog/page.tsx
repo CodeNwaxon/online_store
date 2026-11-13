@@ -125,6 +125,30 @@ export default function BlogPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const router = useRouter();
 
+  // Load saved theme preference from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('nomo_blog_theme');
+      if (savedTheme === 'light') {
+        setIsDarkMode(false);
+      } else if (savedTheme === 'dark') {
+        setIsDarkMode(true);
+      }
+    } catch (e) {
+      // Ignore in case of private browsing storage restrictions
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('nomo_blog_theme', next ? 'dark' : 'light');
+      } catch (e) { }
+      return next;
+    });
+  };
+
   // Scroll listener for dynamic back-to-top button
   useEffect(() => {
     const handleScroll = () => {
@@ -206,7 +230,7 @@ export default function BlogPage() {
     : 'shrink-0 flex items-center justify-center gap-1 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm text-muted-foreground hover:bg-muted hover:text-foreground text-center';
 
   return (
-    <div className={`min-h-screen relative overflow-hidden transition-colors duration-300 ${isDarkMode
+    <div className={`min-h-screen relative transition-colors duration-300 ${isDarkMode
       ? 'bg-slate-950 text-slate-100 selection:bg-amber-500/30 selection:text-amber-200'
       : 'bg-background text-foreground'
       }`}>
@@ -268,7 +292,7 @@ export default function BlogPage() {
       )}
 
       {/* ── Top header nav: sticky top-0, spans full edge with separator line (Home / Shop / Exit) ── */}
-      <div className={`sticky top-0 z-40 w-full backdrop-blur-md border-b shadow-sm transition-colors ${isDarkMode ? 'bg-slate-900/90 border-sky-900/50' : 'bg-card/95 border-border'
+      <div className={`sticky top-0 z-50 w-full backdrop-blur-md border-b shadow-sm transition-colors ${isDarkMode ? 'bg-slate-900/95 border-sky-900/50' : 'bg-card/95 border-border'
         }`}>
         <div className="container mx-auto px-4 max-w-5xl flex items-center justify-center gap-3 sm:gap-6 py-2">
           <Link href="/" className={`${navBtnClass} flex-1 max-w-[140px]`}>
@@ -293,7 +317,7 @@ export default function BlogPage() {
           {/* Far-right dark/light theme switch */}
           <div className="absolute right-0 top-0 flex items-center z-20">
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={toggleTheme}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full border text-xs font-medium transition-all shadow-sm ${isDarkMode
                 ? 'bg-slate-900/80 border-sky-800 text-amber-300 hover:bg-slate-800 hover:border-amber-400'
@@ -389,7 +413,7 @@ export default function BlogPage() {
                       ? 'bg-slate-950/80 text-amber-300 border border-amber-500/30'
                       : 'bg-black/60 text-white'
                       }`}>
-                      {isDarkMode && <Sparkles className="w-3 h-3 text-amber-400" />} View full image
+                      View full image
                     </span>
                   </div>
                 </div>

@@ -635,6 +635,16 @@ function AdminStatsContent() {
           const currentYear = new Date().getFullYear();
           const monthKey = `${currentYear}_${showPasskeyModal.monthKey}`;
           await setDoc(doc(db, 'visitors', 'monthly'), { [monthKey]: 0 }, { merge: true });
+          try {
+            const monthlySnap = await getDocs(collection(db, 'visitor_monthly_visits'));
+            for (const mDoc of monthlySnap.docs) {
+              if (mDoc.id.startsWith(monthKey)) {
+                await deleteDoc(doc(db, 'visitor_monthly_visits', mDoc.id));
+              }
+            }
+          } catch (e) {
+            console.warn('Error clearing monthly visits:', e);
+          }
           toast.success(`${showPasskeyModal.monthKey.charAt(0).toUpperCase() + showPasskeyModal.monthKey.slice(1)} visitors reset to 0`);
         } else if (showPasskeyModal?.type === 'clear_all_visitors') {
           // Reset total and all months for the current year
@@ -646,6 +656,14 @@ function AdminStatsContent() {
           const visitorIdSnap = await getDocs(collection(db, 'visitor_ids'));
           for (const visitorDoc of visitorIdSnap.docs) {
             await deleteDoc(doc(db, 'visitor_ids', visitorDoc.id));
+          }
+          try {
+            const monthlySnap = await getDocs(collection(db, 'visitor_monthly_visits'));
+            for (const mDoc of monthlySnap.docs) {
+              await deleteDoc(doc(db, 'visitor_monthly_visits', mDoc.id));
+            }
+          } catch (e) {
+            console.warn('Error clearing monthly visits:', e);
           }
           toast.success('All visitor data cleared. Count reset to 0.');
         }

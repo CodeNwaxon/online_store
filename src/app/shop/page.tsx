@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaChevronLeft, FaChevronRight, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
@@ -55,6 +55,16 @@ function ShopContent() {
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('All');
   const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
   const priceFilterRef = useRef<HTMLDivElement>(null);
+  const filterSliderRef = useRef<HTMLDivElement>(null);
+
+  const scrollSlider = (direction: 'left' | 'right') => {
+    if (filterSliderRef.current) {
+      filterSliderRef.current.scrollBy({
+        left: direction === 'left' ? -220 : 220,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -327,84 +337,111 @@ function ShopContent() {
 
         <div className="flex flex-col gap-3 md:gap-6 mb-6 md:mb-12 max-md:-mx-1">
           {/* Main Filters Bar */}
-          <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between p-2 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
-            <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}>
-
-              {/* ALL Group Button (Always First) */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-5 items-stretch md:items-start justify-between p-2 md:p-4 lg:p-5 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
+            {/* Filter Slider Container with Desktop Scroll Arrows (Expanded width) */}
+            <div className="relative flex items-center flex-1 min-w-0 md:max-w-[67%] lg:max-w-[70%] xl:max-w-[72%] shrink">
+              {/* Left Arrow Button (Desktop Only) - Compact Size */}
               <button
-                onClick={() => setSelectedGroup('All')}
-                className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap font-semibold shrink-0 ${selectedGroup === 'All' ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
+                type="button"
+                onClick={() => scrollSlider('left')}
+                className="hidden md:flex shrink-0 items-center justify-center w-5.5 h-5.5 md:w-6 md:h-6 mr-3 rounded-full border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shadow-sm focus:outline-none"
+                aria-label="Scroll filter left"
+                title="Scroll left"
               >
-                ALL
+                <FaChevronLeft className="w-2 h-2" />
               </button>
 
-              {/* Brand Dropdown - Independent Filter */}
-              <div className="relative inline-flex items-center shrink-0">
-                <select
-                  value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="appearance-none w-[98px] md:w-[130px] pl-2 pr-5 py-1.5 md:pl-3 md:pr-7 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap outline-none font-bold cursor-pointer uppercase text-ellipsis overflow-hidden bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted"
+              {/* Scrollable Filter Buttons */}
+              <div
+                ref={filterSliderRef}
+                className="flex items-center gap-2 w-full overflow-x-auto pb-1.5 md:pb-1 custom-scrollbar flex-nowrap px-1 md:px-0 scroll-smooth"
+                style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}
+              >
+                {/* ALL Group Button (Always First) */}
+                <button
+                  onClick={() => setSelectedGroup('All')}
+                  className={`h-[34px] px-3 md:px-4 text-[10px] md:text-xs rounded-md transition-colors whitespace-nowrap font-semibold shrink-0 flex items-center justify-center ${selectedGroup === 'All' ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
                 >
-                  <option value="All" className="text-slate-900 bg-white font-bold normal-case">All Brands</option>
-                  {manufacturers.map(m => {
-                    const brandStr = m as string;
-                    const displayBrand = brandStr.charAt(0).toUpperCase() + brandStr.slice(1).toLowerCase();
-                    return (
-                      <option key={brandStr} value={brandStr} className="text-slate-900 bg-white font-semibold normal-case">{displayBrand}</option>
-                    );
-                  })}
-                </select>
-                <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 md:w-3 md:h-3 pointer-events-none text-slate-500" />
+                  ALL
+                </button>
+
+                {/* Brand Dropdown - Independent Filter */}
+                <div className="relative inline-flex items-center shrink-0">
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="appearance-none h-[34px] w-[98px] md:w-[120] pl-2 pr-5 md:pl-3 md:pr-7 text-[10px] md:text-xs rounded-md transition-colors whitespace-nowrap outline-none cursor-pointer uppercase text-ellipsis overflow-hidden bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted"
+                  >
+                    <option value="All" className="text-slate-900 bg-white font-bold normal-case">All Brands</option>
+                    {manufacturers.map(m => {
+                      const brandStr = m as string;
+                      const displayBrand = brandStr.charAt(0).toUpperCase() + brandStr.slice(1).toLowerCase();
+                      return (
+                        <option key={brandStr} value={brandStr} className="text-slate-900 bg-white font-semibold normal-case">{displayBrand}</option>
+                      );
+                    })}
+                  </select>
+                  <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 md:w-3 md:h-3 pointer-events-none text-slate-500" />
+                </div>
+
+                {/* Rest of the Group Buttons */}
+                {groups.map(group => {
+                  if (group === 'All') return null;
+                  return (
+                    <button
+                      key={group}
+                      onClick={() => setSelectedGroup(group)}
+                      className={`h-[34px] px-3 md:px-4 text-[10px] md:text-xs rounded-md transition-colors whitespace-nowrap shrink-0 flex items-center justify-center ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
+                    >
+                      {group.toUpperCase()}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setShowPromoOnly(!showPromoOnly)}
+                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                >
+                  Promos
+                </button>
+
+                <button
+                  onClick={() => setShowLikedOnly(!showLikedOnly)}
+                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                >
+                  {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
+                  Favorites
+                </button>
+
+                <button
+                  onClick={() => setSortBy(sortBy === 'top_rated' ? 'default' : 'top_rated')}
+                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${sortBy === 'top_rated' ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                >
+                  Top Rated
+                </button>
               </div>
 
-              {/* Rest of the Group Buttons */}
-              {groups.map(group => {
-                if (group === 'All') return null;
-                return (
-                  <button
-                    key={group}
-                    onClick={() => setSelectedGroup(group)}
-                    className={`px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm rounded-md transition-colors whitespace-nowrap font-semibold shrink-0 ${selectedGroup === group ? 'bg-primary text-white border-transparent' : 'bg-transparent text-slate-800 dark:text-slate-200 border border-border hover:bg-muted'}`}
-                  >
-                    {group.toUpperCase()}
-                  </button>
-                );
-              })}
-
+              {/* Right Arrow Button (Desktop Only) - Compact Size with safe margin */}
               <button
-                onClick={() => setShowPromoOnly(!showPromoOnly)}
-                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${showPromoOnly ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                type="button"
+                onClick={() => scrollSlider('right')}
+                className="hidden md:flex shrink-0 items-center justify-center w-5.5 h-5.5 md:w-6 md:h-6 ml-3 mr-0 rounded-full border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shadow-sm focus:outline-none"
+                aria-label="Scroll filter right"
+                title="Scroll right"
               >
-                Promos
+                <FaChevronRight className="w-2 h-2" />
               </button>
-
-              <button
-                onClick={() => setShowLikedOnly(!showLikedOnly)}
-                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${showLikedOnly ? 'bg-[#ff4d4f] text-white border-[#ff4d4f]' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
-              >
-                {showLikedOnly ? <FaHeart /> : <FaRegHeart />}
-                Favorites
-              </button>
-
-              <button
-                onClick={() => setSortBy(sortBy === 'top_rated' ? 'default' : 'top_rated')}
-                className={`px-3 py-1.5 md:px-4 md:py-2 text-[10px] md:text-sm border rounded-md flex items-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap ${sortBy === 'top_rated' ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
-              >
-                Top Rated
-              </button>
-
-
-
             </div>
 
-            <div className="flex items-center gap-2 flex-1 min-w-[250px] max-md:w-full max-md:px-2">
+            {/* Search and Price Filter Wrapper (Reduced balanced width with safe spacing) */}
+            <div className="flex items-center gap-2 w-full md:w-auto md:min-w-[240px] md:max-w-[310px] lg:max-w-[340px] shrink-0 max-md:px-1">
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="Search by name, brand or description..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-xs md:text-sm w-full py-2 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
+                  className="text-xs md:text-sm w-full h-[34px] md:h-[38px] pr-4 pl-8 md:pl-9 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
                 />
                 <FaSearch
                   size={14}
@@ -417,7 +454,7 @@ function ShopContent() {
                 <button
                   type="button"
                   onClick={() => setIsPriceFilterOpen(!isPriceFilterOpen)}
-                  className={`flex items-center justify-between gap-1.5 px-2 py-2 md:px-3 md:py-2 rounded-[var(--radius)] border transition-all duration-200 whitespace-nowrap min-w-[42px] ${selectedPriceRange !== 'All' ? 'min-w-[78px] md:min-w-[100px]' : ''
+                  className={`flex items-center justify-between gap-1.5 px-2.5 h-[34px] md:h-[38px] rounded-[var(--radius)] border transition-all duration-200 whitespace-nowrap min-w-[42px] ${selectedPriceRange !== 'All' ? 'min-w-[78px] md:min-w-[100px]' : ''
                     } ${selectedPriceRange !== 'All'
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : 'bg-background text-foreground border-border hover:bg-muted'
@@ -461,7 +498,10 @@ function ShopContent() {
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+                    <div
+                      className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-2 custom-scrollbar [scrollbar-width:thin] [scrollbar-color:#D48806_transparent]"
+                      style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}
+                    >
                       <button
                         type="button"
                         onClick={() => {
