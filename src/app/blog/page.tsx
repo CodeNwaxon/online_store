@@ -8,7 +8,8 @@ import { blogContentClasses } from "@/lib/blogContentStyles";
 import Link from "next/link";
 import Image from "next/image";
 import AdSenseBox from "@/components/AdSenseBox";
-import { Clock, ChevronRight, User } from "lucide-react";
+import { Clock, ChevronRight, User, Home, ShoppingBag, X, Sparkles, BookOpen, ArrowUp, Sun, Moon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface BlogPost {
   id: string;
@@ -119,13 +120,46 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState('All');
+  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const router = useRouter();
+
+  // Scroll listener for dynamic back-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const openLightbox = (url: string, alt: string) => setLightbox({ url, alt });
+  const closeLightbox = () => setLightbox(null);
+
+  const handleExit = () => {
+    // If there's a history entry to go back to, use it; else fall back to home
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const q = query(collection(db, "blogs"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
-        
+
         const activePosts = querySnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(post => !isBlogPostExpired(post));
@@ -147,9 +181,17 @@ export default function BlogPage() {
     fetchPosts();
   }, []);
 
+  // Close lightbox on Escape key
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeLightbox(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
+      <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -158,82 +200,260 @@ export default function BlogPage() {
   const availableTags = Array.from(new Set(posts.map(post => post.tag?.trim()).filter((tag): tag is string => Boolean(tag))));
   const visiblePosts = selectedTag === 'All' ? posts : posts.filter(post => post.tag === selectedTag);
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl md:text-5xl font-bold tracking-tight mb-4 text-foreground">NomoStores Blog</h1>
-        <p className="text-xs md:text-lg text-muted-foreground max-w-2xl mx-auto">
-          Buying guides, tech reviews, lifestyle tips, and everything you need to know about our premium products.
-        </p>
-      </div>
+  /* ── Shared button style (matches filter nav exactly) ── */
+  const navBtnClass = isDarkMode
+    ? 'shrink-0 flex items-center justify-center gap-1 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm text-sky-200/80 hover:bg-sky-900/60 hover:text-white text-center'
+    : 'shrink-0 flex items-center justify-center gap-1 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm text-muted-foreground hover:bg-muted hover:text-foreground text-center';
 
-      {availableTags.length > 0 && (
-        <nav aria-label="Filter blog posts by category" className="sticky top-[72px] z-40 mx-auto mb-6 max-w-5xl">
-          <div className="flex w-full min-w-0 items-center gap-1.5 overflow-x-auto overscroll-x-contain rounded-md sm:rounded-full border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur-md sm:gap-2 sm:p-2">
-            {['All', ...availableTags].map(tag => (
-              <button
-                key={tag}
-                type="button"
-                aria-pressed={selectedTag === tag}
-                onClick={() => {
-                  setSelectedTag(tag);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className={`shrink-0 rounded-md sm:rounded-full px-3 py-1.5 text-[0.7rem] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${selectedTag === tag ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-              >{tag}</button>
-            ))}
-          </div>
-        </nav>
+  return (
+    <div className={`min-h-screen relative overflow-hidden transition-colors duration-300 ${isDarkMode
+      ? 'bg-slate-950 text-slate-100 selection:bg-amber-500/30 selection:text-amber-200'
+      : 'bg-background text-foreground'
+      }`}>
+      {/* Decorative dark-blue mesh & luminous gradients */}
+      {isDarkMode && (
+        <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-blue-700/15 blur-[120px]" />
+          <div className="absolute top-1/3 -right-40 w-[650px] h-[650px] rounded-full bg-indigo-600/15 blur-[140px]" />
+          <div className="absolute -bottom-40 left-1/4 w-[700px] h-[700px] rounded-full bg-sky-600/10 blur-[130px]" />
+          {/* Subtle high-tech grid overlay */}
+          <div
+            className="absolute inset-0 opacity-[0.035]"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.7) 1px, transparent 0)',
+              backgroundSize: '32px 32px'
+            }}
+          />
+        </div>
       )}
 
-      <main className="mx-auto max-w-4xl space-y-12">
+      {/* ── Lightbox overlay ── */}
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lightbox.alt}
+          className="fixed inset-0 z-[500] flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+          onClick={closeLightbox}
+        >
+          {/* Close button */}
+          <button
+            onClick={closeLightbox}
+            aria-label="Close image"
+            className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Image container — stop click from propagating so only backdrop click closes */}
+          <div
+            className="relative w-full h-full max-w-5xl max-h-[90vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            <Image
+              src={lightbox.url}
+              alt={lightbox.alt}
+              fill
+              className="object-contain"
+              sizes="100vw"
+              priority
+            />
+          </div>
+
+          {/* Tap hint on mobile */}
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs select-none pointer-events-none sm:hidden">
+            Tap outside to close
+          </p>
+        </div>
+      )}
+
+      {/* ── Top header nav: sticky top-0, spans full edge with separator line (Home / Shop / Exit) ── */}
+      <div className={`sticky top-0 z-40 w-full backdrop-blur-md border-b shadow-sm transition-colors ${isDarkMode ? 'bg-slate-900/90 border-sky-900/50' : 'bg-card/95 border-border'
+        }`}>
+        <div className="container mx-auto px-4 max-w-5xl flex items-center justify-center gap-3 sm:gap-6 py-2">
+          <Link href="/" className={`${navBtnClass} flex-1 max-w-[140px]`}>
+            <Home className={`h-3.5 w-3.5 shrink-0 ${isDarkMode ? 'text-amber-400' : ''}`} />
+            <span>Home</span>
+          </Link>
+          <div className={`h-4 w-px shrink-0 ${isDarkMode ? 'bg-sky-900/60' : 'bg-border'}`} />
+          <Link href="/shop" className={`${navBtnClass} flex-1 max-w-[140px]`}>
+            <ShoppingBag className={`h-3.5 w-3.5 shrink-0 ${isDarkMode ? 'text-amber-400' : ''}`} />
+            <span>Shop</span>
+          </Link>
+          <div className={`h-4 w-px shrink-0 ${isDarkMode ? 'bg-sky-900/60' : 'bg-border'}`} />
+          <button onClick={handleExit} className={`${navBtnClass} flex-1 max-w-[140px]`}>
+            <X className={`h-3.5 w-3.5 shrink-0 ${isDarkMode ? 'text-rose-400' : ''}`} />
+            <span>Exit</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
+        <div className="text-center mb-8 relative">
+          {/* Far-right dark/light theme switch */}
+          <div className="absolute right-0 top-0 flex items-center z-20">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full border text-xs font-medium transition-all shadow-sm ${isDarkMode
+                ? 'bg-slate-900/80 border-sky-800 text-amber-300 hover:bg-slate-800 hover:border-amber-400'
+                : 'bg-card border-border text-foreground hover:bg-muted'
+                }`}
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="w-4 h-4 text-amber-400" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-4 h-4 text-sky-600" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <h1 className={`text-2xl md:text-4xl font-extrabold tracking-tight mb-3 pr-14 sm:pr-0 ${isDarkMode ? 'text-white' : 'text-foreground'}`}>
+            Nomo Storez {isDarkMode ? (
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Blog</span>
+            ) : (
+              <span>Blog</span>
+            )}
+          </h1>
+          <p className={`text-xs md:text-sm max-w-2xl mx-auto leading-relaxed ${isDarkMode ? 'text-sky-200/70' : 'text-muted-foreground'
+            }`}>
+            Buying guides, tech reviews, lifestyle tips, and everything you need to know about our premium products.
+          </p>
+        </div>
+
+        {/* ── Filter tags nav (non-sticky, so ONLY the Home/Shop/Exit nav stays sticky) ── */}
+        <div className="mx-auto mb-8 max-w-5xl">
+          <nav aria-label="Filter blog posts by category">
+            <div className={`flex w-full min-w-0 items-center justify-start sm:justify-center gap-1.5 overflow-x-auto overscroll-x-contain rounded border p-1.5 shadow-md backdrop-blur-md sm:gap-2 sm:p-2 transition-colors ${isDarkMode ? 'border-sky-900/60 bg-slate-900/85' : 'border-border bg-card/95'
+              }`}>
+
+              {/* Filter tag buttons */}
+              {availableTags.length > 0 && ['All', ...availableTags].map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={selectedTag === tag}
+                  onClick={() => {
+                    setSelectedTag(tag);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`shrink-0 rounded px-3 py-1.5 text-[0.7rem] font-semibold transition-all sm:px-4 sm:py-2 sm:text-sm ${isDarkMode
+                    ? selectedTag === tag
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'text-sky-200/80 hover:bg-sky-950 hover:text-white border border-transparent hover:border-sky-800/50'
+                    : selectedTag === tag
+                      ? 'bg-primary text-white'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                >{tag}</button>
+              ))}
+            </div>
+          </nav>
+        </div>
+
+        <main className="mx-auto max-w-4xl space-y-12">
           {visiblePosts.map((post) => (
-            <article key={post.id} className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6 md:p-8">
+            <article
+              key={post.id}
+              className={`group relative overflow-hidden rounded-sm border p-4 sm:p-6 md:p-8 shadow-sm transition-all duration-300 ${isDarkMode
+                ? 'border-sky-900/40 bg-slate-900/70 shadow-xl backdrop-blur-sm hover:border-sky-700/60 hover:shadow-2xl hover:shadow-blue-950/40'
+                : 'border-border bg-card hover:shadow-md'
+                }`}
+            >
+              {/* Top accent marker line (dark mode) */}
+              {isDarkMode && (
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent opacity-70 group-hover:opacity-100 transition-opacity" />
+              )}
+
               {post.imageUrl && (
-                <div className="relative mb-6 h-56 w-full overflow-hidden rounded-lg bg-white sm:h-72 md:h-[400px]">
-                  <Image 
-                    src={post.imageUrl} 
-                    alt={post.title} 
-                    fill 
-                    className={`${post.fullImage ? 'object-contain' : 'object-cover'} transition-transform duration-500 hover:scale-105`}
+                <div
+                  onClick={() => openLightbox(post.imageUrl, post.title)}
+                  className={`relative mb-6 h-56 w-full overflow-hidden rounded-sm bg-white sm:h-72 md:h-[400px] cursor-pointer group/img ${isDarkMode ? 'border border-sky-950 bg-slate-950' : ''
+                    }`}
+                  title="Click to view full image"
+                >
+                  <Image
+                    src={post.imageUrl}
+                    alt={post.title}
+                    fill
+                    className={`${post.fullImage ? 'object-contain' : 'object-cover'} transition-transform duration-500 group-hover/img:scale-105`}
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/25 transition-colors flex items-center justify-center pointer-events-none">
+                    <span className={`opacity-0 group-hover/img:opacity-100 transition-opacity text-xs px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg flex items-center gap-1.5 font-medium ${isDarkMode
+                      ? 'bg-slate-950/80 text-amber-300 border border-amber-500/30'
+                      : 'bg-black/60 text-white'
+                      }`}>
+                      {isDarkMode && <Sparkles className="w-3 h-3 text-amber-400" />} View full image
+                    </span>
+                  </div>
                 </div>
               )}
-              
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-1">
-                  <User className="w-4 h-4" />
-                  <span>{post.author}</span>
+
+              <div className={`flex items-center gap-4 text-xs md:text-sm mb-4 pb-3 border-b ${isDarkMode ? 'text-sky-300/70 border-sky-900/40' : 'text-muted-foreground border-border'
+                }`}>
+                <div className="flex items-center gap-1.5">
+                  <User className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : ''}`} />
+                  <span className={isDarkMode ? 'text-slate-200 font-medium' : ''}>{post.author}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
+                <div className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-sky-700' : 'bg-muted-foreground'}`} />
+                <div className="flex items-center gap-1.5">
+                  <Clock className={`w-3.5 h-3.5 ${isDarkMode ? 'text-sky-400' : ''}`} />
                   <span>
                     {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString() : new Date().toLocaleDateString()}
                   </span>
                 </div>
               </div>
 
-              {post.tag && <p className="mb-3 text-xs font-bold uppercase text-primary">{post.tag}</p>}
-              <h2 className="mb-6 text-xl font-bold leading-tight sm:text-3xl">{post.title}</h2>
-              
+              {post.tag && (
+                <div className="mb-3">
+                  <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider ${isDarkMode
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    : 'text-primary font-bold'
+                    }`}>
+                    {post.tag}
+                  </span>
+                </div>
+              )}
+              <h2 className={`mb-6 text-xl font-bold leading-tight sm:text-3xl transition-colors ${isDarkMode ? 'text-white group-hover:text-amber-300/90' : 'text-foreground'
+                }`}>
+                {post.title}
+              </h2>
+
               {/* Render HTML content safely */}
-              <div 
-                className={`mt-6 ${blogContentClasses}`}
-                dangerouslySetInnerHTML={{ __html: post.content }} 
+              <div
+                className={`mt-6 ${blogContentClasses} ${isDarkMode
+                  ? 'text-slate-200 [&_h2]:text-white [&_h3]:text-white [&_strong]:text-amber-200 [&_a]:text-amber-400 [&_a:hover]:text-amber-300 [&_blockquote]:border-amber-400 [&_blockquote]:text-sky-200/90 [&_blockquote]:bg-sky-950/30 [&_blockquote]:py-1 [&_blockquote]:rounded-r'
+                  : ''
+                  }`}
+                dangerouslySetInnerHTML={{ __html: post.content }}
               />
-              
+
               {post.productLinks && post.productLinks.length > 0 && (
-                <div className="mt-10 p-6 bg-muted/30 rounded-xl border border-border">
-                  <h3 className="font-semibold text-lg mb-4">Featured in this article:</h3>
-                  <div className="flex flex-wrap gap-3">
+                <div className={`mt-10 p-4 sm:p-6 rounded border ${isDarkMode ? 'bg-slate-950/60 border-sky-900/50' : 'bg-muted/30 border-border'
+                  }`}>
+                  <h3 className={`font-semibold text-base sm:text-lg mb-3 flex items-center gap-2 ${isDarkMode ? 'text-sky-200' : 'text-foreground'
+                    }`}>
+                    <ShoppingBag className={`w-4 h-4 ${isDarkMode ? 'text-amber-400' : 'text-primary'}`} />
+                    <span>Featured in this article:</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-2.5">
                     {post.productLinks.map((link, idx) => (
-                      <Link 
-                        key={idx} 
+                      <Link
+                        key={idx}
                         href={link.url}
-                        className="inline-flex items-center gap-1 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                        className={`inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all shadow-sm ${isDarkMode
+                          ? 'bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 text-amber-300 border border-amber-500/30 hover:border-amber-400'
+                          : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground'
+                          }`}
                       >
                         {link.name}
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                     ))}
                   </div>
@@ -241,11 +461,27 @@ export default function BlogPage() {
               )}
             </article>
           ))}
-      </main>
-      
-      <div className="mt-12">
-        <AdSenseBox adSlot="bottom_blog_banner" />
+        </main>
+
+        <div className="mt-12">
+          <AdSenseBox adSlot="bottom_blog_banner" />
+        </div>
       </div>
+
+      {/* ── Floating scroll-to-top button (bottom-right, dynamic on scroll) ── */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll back to top"
+          className={`fixed bottom-6 right-6 z-50 flex items-center justify-center w-10 h-10 rounded-full shadow-2xl transition-all duration-300 active:scale-95 animate-in fade-in zoom-in-75 ${isDarkMode
+            ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300/40 shadow-amber-500/30'
+            : 'bg-primary hover:bg-primary-hover text-white shadow-lg'
+            }`}
+          title="Back to top"
+        >
+          <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+        </button>
+      )}
     </div>
   );
 }

@@ -116,6 +116,7 @@ export default function Navbar() {
   });
 
   const isAdminRoute = pathname?.startsWith('/admin') || false;
+  const isBlogRoute = pathname === '/blog';
   const isDarkNav = !isAdminRoute && ((pathname === '/partnership' && isPartnershipDarkMode) || pathname?.startsWith('/foods') || pathname?.startsWith('/shop/cosmetics') || pathname?.startsWith('/shop/wears') || pathname?.startsWith('/shop/furniture') || pathname?.startsWith('/shop/toilet-kitchen'));
 
   useEffect(() => {
@@ -456,6 +457,8 @@ export default function Navbar() {
 
     return adminData?.assignedRoutes?.includes(item.id);
   });
+
+  if (isBlogRoute) return null;
 
   return (
     <>

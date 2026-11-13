@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt , FaSyncAlt} from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
@@ -15,6 +15,25 @@ import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
 import Fuse from 'fuse.js';
+
+// Price range options for price filter - easily add more items here!
+export interface PriceRangeOption {
+  id: string;
+  label: string;
+  min: number;
+  max: number | null;
+}
+
+export const PRICE_RANGE_OPTIONS: PriceRangeOption[] = [
+  { id: '10k+', label: '₦ 10k+', min: 10000, max: null },
+  { id: '20k-50k', label: '20k - 50k', min: 20000, max: 50000 },
+  { id: '50k-100k', label: '50k - 100k', min: 50000, max: 100000 },
+  { id: '100k-200k', label: '100k - 200k', min: 100000, max: 200000 },
+  { id: '200k-300k', label: '200k - 300k', min: 200000, max: 300000 },
+  { id: '300k-500k', label: '300k - 500k', min: 300000, max: 500000 },
+  { id: '500k-1m', label: '500k - 1m', min: 500000, max: 1000000 },
+  { id: '1m+', label: '1,000,000+', min: 1000000, max: null },
+];
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -33,6 +52,23 @@ function ShopContent() {
   const { storeTypeSales } = useStoreSales();
   const [likesCounts, setLikesCounts] = useState<Record<string, number>>({});
   const [sortBy, setSortBy] = useState<'default' | 'top_rated' | 'newest'>('default');
+  const [selectedPriceRange, setSelectedPriceRange] = useState<string>('All');
+  const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
+  const priceFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (priceFilterRef.current && !priceFilterRef.current.contains(event.target as Node)) {
+        setIsPriceFilterOpen(false);
+      }
+    };
+    if (isPriceFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isPriceFilterOpen]);
 
   const { fetchCollection } = useProductCache();
 
@@ -46,12 +82,12 @@ function ShopContent() {
         const promoNow = new Date();
         const mutatedProducts = dynamicProducts.map((p: any) => {
           const getPromoEndTime = (val: any) => {
-              if (!val) return 0;
-              if (typeof val.toDate === 'function') return val.toDate().getTime();
-              return new Date(val).getTime() || 0;
-            };
-            const promoEndNum = getPromoEndTime(p.promoEndDate);
-            if (p.isPromo && promoEndNum > 0 && promoEndNum < promoNow.getTime()) {
+            if (!val) return 0;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            return new Date(val).getTime() || 0;
+          };
+          const promoEndNum = getPromoEndTime(p.promoEndDate);
+          if (p.isPromo && promoEndNum > 0 && promoEndNum < promoNow.getTime()) {
             try {
               const updateData: any = {
                 isPromo: false,
@@ -62,9 +98,9 @@ function ShopContent() {
                 updateData.price = (p as any).oldPrice;
                 updateData.oldPrice = null;
               }
-              updateDoc(doc(db, 'products', p.id), updateData).catch(() => {});
-            } catch (err) {}
-            
+              updateDoc(doc(db, 'products', p.id), updateData).catch(() => { });
+            } catch (err) { }
+
             return {
               ...p,
               isPromo: false,
@@ -153,33 +189,48 @@ function ShopContent() {
   }).filter(Boolean))).sort();
 
   const baseFilteredProducts = products.filter(product => {
-    const matchesGroup = selectedGroup === 'All' || 
+    const matchesGroup = selectedGroup === 'All' ||
       (typeof product.group === 'string' && product.group.trim().toLowerCase() === selectedGroup.trim().toLowerCase());
-      
-    const matchesCategory = selectedCategory === 'All' || 
+
+    const matchesCategory = selectedCategory === 'All' ||
       (typeof product.category === 'string' && product.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
-    
+
     let matchesBrand = selectedBrand === 'All';
     if (!matchesBrand && selectedBrand) {
       const brandQ = selectedBrand.trim().toLowerCase();
       const mfg = typeof product.manufacturer === 'string' ? product.manufacturer.toLowerCase().trim() : '';
       const name = typeof product.name === 'string' ? product.name.toLowerCase() : '';
-      
+
       matchesBrand = mfg.includes(brandQ) || name.includes(brandQ);
     }
 
     const matchesLiked = !showLikedOnly || likedProductIds[product.id];
     const matchesPromo = !showPromoOnly || product.isPromo;
+
+    // Price range filtering
+    let matchesPrice = true;
+    if (selectedPriceRange !== 'All') {
+      const option = PRICE_RANGE_OPTIONS.find(o => o.id === selectedPriceRange);
+      if (option) {
+        const prodPrice = Number(product.price) || 0;
+        if (option.max !== null) {
+          matchesPrice = prodPrice >= option.min && prodPrice <= option.max;
+        } else {
+          matchesPrice = prodPrice >= option.min;
+        }
+      }
+    }
+
     const isVisible = (product.quantity ?? 0) > 0;
-    return matchesGroup && matchesCategory && matchesBrand && matchesLiked && matchesPromo && isVisible;
+    return matchesGroup && matchesCategory && matchesBrand && matchesLiked && matchesPromo && matchesPrice && isVisible;
   });
 
   const filteredProducts = (() => {
     if (!searchQuery.trim()) return baseFilteredProducts;
-    
+
     // First try a simple case-insensitive substring search (more predictable for users)
     const q = searchQuery.toLowerCase().trim();
-    const simpleMatches = baseFilteredProducts.filter(p => 
+    const simpleMatches = baseFilteredProducts.filter(p =>
       p.name?.toLowerCase().includes(q) ||
       p.manufacturer?.toLowerCase().includes(q) ||
       p.category?.toLowerCase().includes(q) ||
@@ -248,25 +299,25 @@ function ShopContent() {
                 <FaSyncAlt className="w-4 h-4" />
               </button>
               <button
-              onClick={() => {
-                const urlObj = new URL(window.location.origin + window.location.pathname);
-                if (searchQuery) urlObj.searchParams.set('search', searchQuery);
-                if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
-                if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
-                const url = urlObj.toString();
-                const title = 'Our Collection | Nomo Storez';
-                if (navigator.share) {
-                  navigator.share({ title, url }).catch(() => { });
-                } else {
-                  navigator.clipboard.writeText(url);
-                  toast.success('Page link copied!');
-                }
-              }}
-              className="p-2 border border-border rounded-full hover:bg-muted transition-colors text-muted-foreground"
-              title="Share this page"
-            >
-              <FaShareAlt className="w-4 h-4" />
-            </button>
+                onClick={() => {
+                  const urlObj = new URL(window.location.origin + window.location.pathname);
+                  if (searchQuery) urlObj.searchParams.set('search', searchQuery);
+                  if (selectedGroup !== 'All') urlObj.searchParams.set('group', selectedGroup);
+                  if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
+                  const url = urlObj.toString();
+                  const title = 'Our Collection | Nomo Storez';
+                  if (navigator.share) {
+                    navigator.share({ title, url }).catch(() => { });
+                  } else {
+                    navigator.clipboard.writeText(url);
+                    toast.success('Page link copied!');
+                  }
+                }}
+                className="p-2 border border-border rounded-full hover:bg-muted transition-colors text-muted-foreground"
+                title="Share this page"
+              >
+                <FaShareAlt className="w-4 h-4" />
+              </button>
             </div>
           </div>
           <Link href="/installments" className="text-xs md:text-base bg-primary hover:bg-primary-hover text-white flex items-center gap-2 rounded-md font-semibold px-4 py-2 transition-colors">
@@ -278,7 +329,7 @@ function ShopContent() {
           {/* Main Filters Bar */}
           <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between p-2 md:p-6 bg-card border-y md:border border-border md:rounded-[var(--radius)]">
             <div className="flex gap-2 w-full overflow-x-auto pb-2 custom-scrollbar flex-nowrap px-2 md:px-0" style={{ '--scrollbar-thumb': '#D48806' } as React.CSSProperties}>
-              
+
               {/* ALL Group Button (Always First) */}
               <button
                 onClick={() => setSelectedGroup('All')}
@@ -346,18 +397,105 @@ function ShopContent() {
 
             </div>
 
-            <div className="relative flex-1 min-w-[250px] max-md:w-full max-md:px-2">
-              <input
-                type="text"
-                placeholder="Search by name, brand or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="text-xs md:text-sm w-full py-2 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
-              />
-              <FaSearch
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
+            <div className="flex items-center gap-2 flex-1 min-w-[250px] max-md:w-full max-md:px-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search by name, brand or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="text-xs md:text-sm w-full py-2 pr-4 pl-8 md:pl-10 rounded-[var(--radius)] border border-border bg-background outline-none focus:border-primary"
+                />
+                <FaSearch
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+              </div>
+
+              {/* Price Filter Dropdown */}
+              <div className="relative shrink-0" ref={priceFilterRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsPriceFilterOpen(!isPriceFilterOpen)}
+                  className={`flex items-center justify-between gap-1.5 px-2 py-2 md:px-3 md:py-2 rounded-[var(--radius)] border transition-all duration-200 whitespace-nowrap min-w-[42px] ${selectedPriceRange !== 'All' ? 'min-w-[78px] md:min-w-[100px]' : ''
+                    } ${selectedPriceRange !== 'All'
+                      ? 'bg-primary text-white border-primary shadow-sm'
+                      : 'bg-background text-foreground border-border hover:bg-muted'
+                    }`}
+                  title="Filter by Price"
+                >
+                  {selectedPriceRange !== 'All' ? (
+                    <span className="text-[10px] md:text-xs font-bold leading-none truncate max-w-[85px] md:max-w-none">
+                      {PRICE_RANGE_OPTIONS.find(o => o.id === selectedPriceRange)?.label || selectedPriceRange}
+                    </span>
+                  ) : (
+                    <>
+                      <FaFilter className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                      <span className="hidden md:inline text-xs font-semibold">Filter</span>
+                    </>
+                  )}
+                  <FaChevronDown
+                    className={`w-2.5 h-2.5 shrink-0 transition-transform duration-200 ${isPriceFilterOpen ? 'rotate-180' : ''
+                      }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isPriceFilterOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-48 md:w-56 bg-card border border-border rounded-lg shadow-xl z-50 p-2 overflow-hidden animate-[fadeIn_0.15s_ease-out]">
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-border px-1">
+                      <span className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Price Filter
+                      </span>
+                      {selectedPriceRange !== 'All' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedPriceRange('All');
+                            setIsPriceFilterOpen(false);
+                          }}
+                          className="text-[10px] md:text-xs text-primary hover:underline font-semibold"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPriceRange('All');
+                          setIsPriceFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors text-[10px] md:text-xs font-medium ${selectedPriceRange === 'All'
+                          ? 'bg-primary text-white font-bold'
+                          : 'hover:bg-muted text-foreground'
+                          }`}
+                      >
+                        All Prices
+                      </button>
+
+                      {PRICE_RANGE_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPriceRange(option.id);
+                            setIsPriceFilterOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 rounded-md transition-colors text-[10px] md:text-xs font-medium ${selectedPriceRange === option.id
+                            ? 'bg-primary text-white font-bold'
+                            : 'hover:bg-muted text-foreground'
+                            }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -398,7 +536,7 @@ function ShopContent() {
             <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
             <button
               className="border border-border hover:bg-muted text-foreground px-4 py-2 rounded-md font-semibold mt-6 inline-block transition-colors"
-              onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); setSearchQuery(''); setVisibleCount(32); }}
+              onClick={() => { setSelectedGroup('All'); setSelectedCategory('All'); setSelectedBrand('All'); setSelectedPriceRange('All'); setSearchQuery(''); setVisibleCount(32); }}
             >
               Reset All Filters
             </button>

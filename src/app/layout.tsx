@@ -86,12 +86,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* AdSense Script */}
-        <Script 
-          async 
+        {/* AdSense Script — plain <script> avoids Next.js injecting data-nscript which AdSense rejects */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script
+          async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-          crossOrigin="anonymous" 
-          strategy="lazyOnload"
+          crossOrigin="anonymous"
         />
       </head>
       <body suppressHydrationWarning className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
