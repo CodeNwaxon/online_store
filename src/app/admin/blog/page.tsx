@@ -6,27 +6,39 @@ import { db } from "@/lib/firebase";
 import { getBlogExpiryDate } from "@/lib/blogUtils";
 import { blogContentClasses } from "@/lib/blogContentStyles";
 import { uploadImageToCloudinary, deleteImagesFromCloudinary } from "@/actions/upload";
-import { Edit2, Trash2, X, Save, FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { Edit2, Trash2, X, Save, FileText, ChevronDown, ChevronUp, Plus, Image as ImageIcon } from "lucide-react";
+
+export interface BlogImage {
+  url: string;
+  fullImage?: boolean;
+}
 
 interface BlogPost {
   id: string;
   title: string;
   content: string;
   excerpt: string;
-  imageUrl: string;
+  imageUrl?: string;
+  images?: BlogImage[];
   author: string;
   tag?: string;
   fullImage?: boolean;
   createdAt?: any;
 }
 
+interface FormImageItem {
+  id: string;
+  url: string;
+  file: File | null;
+  preview: string;
+  fullImage: boolean;
+}
+
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [formImages, setFormImages] = useState<FormImageItem[]>([]);
   const [expandedPreviewId, setExpandedPreviewId] = useState<string | null>(null);
   const [blogTags, setBlogTags] = useState<string[]>([]);
   const [showNewTagInput, setShowNewTagInput] = useState(false);
@@ -45,11 +57,79 @@ export default function AdminBlogPage() {
     tag: ""
   });
 
-  const loadPhoneGuideSample = () => {
+  const resetFormState = () => {
     setEditingId(null);
-    setImageFile(null);
-    setImagePreview('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
+    formImages.forEach(item => {
+      if (item.preview && item.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+    setFormImages([]);
+    setFormData({
+      title: "",
+      excerpt: "",
+      content: "",
+      imageUrl: "",
+      author: "NomoStores Admin",
+      tag: ""
+    });
+  };
+
+  const handleAddImageSlot = () => {
+    if (formImages.length >= 4) return;
+    setFormImages(prev => [
+      ...prev,
+      {
+        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        url: '',
+        file: null,
+        preview: '',
+        fullImage: false
+      }
+    ]);
+  };
+
+  const handleFilesSelected = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const availableSlots = 4 - formImages.length;
+    if (availableSlots <= 0) return;
+    const filesToAdd = Array.from(files).slice(0, availableSlots);
+
+    const newItems: FormImageItem[] = filesToAdd.map((file, idx) => ({
+      id: `img-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+      url: '',
+      file,
+      preview: URL.createObjectURL(file),
+      fullImage: false
+    }));
+
+    setFormImages(prev => [...prev, ...newItems]);
+  };
+
+  const updateImageSlot = (id: string, updates: Partial<FormImageItem>) => {
+    setFormImages(prev => prev.map(item => {
+      if (item.id === id) {
+        if (updates.file !== undefined && item.preview && item.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(item.preview);
+        }
+        return { ...item, ...updates };
+      }
+      return item;
+    }));
+  };
+
+  const removeImageSlot = (id: string) => {
+    setFormImages(prev => {
+      const target = prev.find(i => i.id === id);
+      if (target?.preview && target.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(target.preview);
+      }
+      return prev.filter(i => i.id !== id);
+    });
+  };
+
+  const loadPhoneGuideSample = () => {
+    resetFormState();
     setFormData({
       title: "How to Choose the Right Smartphone: A Practical Buying Guide",
       author: "NomoStores Editorial",
@@ -160,23 +240,13 @@ export default function AdminBlogPage() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+      formImages.forEach(item => {
+        if (item.preview && item.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(item.preview);
+        }
+      });
     };
-  }, [imagePreview]);
-
-  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    setImageFile(file);
-    setImagePreview(file ? URL.createObjectURL(file) : '');
-    if (file) setFormData(current => ({ ...current, imageUrl: '' }));
-  };
-
-  const handleImageUrlChange = (value: string) => {
-    setImageFile(null);
-    setImagePreview('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
-    setFormData(current => ({ ...current, imageUrl: value }));
-  };
+  }, [formImages]);
 
   const isCloudinaryImageUrl = (value: string) => {
     try {
@@ -192,53 +262,61 @@ export default function AdminBlogPage() {
     if (!formData.title || !formData.content) return alert("Title and content are required.");
 
     setLoading(true);
-    let uploadedImageUrl = '';
+    const newlyUploadedUrls: string[] = [];
     try {
-      let imageUrl = formData.imageUrl || '';
-      if (imageFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', imageFile);
-        const uploadResult = await uploadImageToCloudinary(uploadFormData);
-        imageUrl = uploadResult.secure_url;
-        uploadedImageUrl = imageUrl;
+      const finalImages: BlogImage[] = [];
+
+      for (const item of formImages) {
+        if (item.file) {
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', item.file);
+          const uploadResult = await uploadImageToCloudinary(uploadFormData);
+          const secureUrl = uploadResult.secure_url;
+          newlyUploadedUrls.push(secureUrl);
+          finalImages.push({
+            url: secureUrl,
+            fullImage: Boolean(item.fullImage),
+          });
+        } else if (item.url && item.url.trim()) {
+          finalImages.push({
+            url: item.url.trim(),
+            fullImage: Boolean(item.fullImage),
+          });
+        }
       }
+
+      const primaryImageUrl = finalImages[0]?.url || '';
+      const primaryFullImage = Boolean(finalImages[0]?.fullImage);
+
+      const postPayload = {
+        title: formData.title,
+        excerpt: formData.excerpt,
+        content: formData.content,
+        author: formData.author,
+        tag: formData.tag || '',
+        images: finalImages,
+        imageUrl: primaryImageUrl,
+        fullImage: primaryFullImage,
+      };
 
       if (editingId) {
         const postRef = doc(db, "blogs", editingId);
-        await updateDoc(postRef, {
-          title: formData.title,
-          excerpt: formData.excerpt,
-          content: formData.content,
-          imageUrl,
-          author: formData.author,
-          tag: formData.tag || '',
-          fullImage: Boolean(formData.fullImage),
-        });
+        await updateDoc(postRef, postPayload);
       } else {
         await addDoc(collection(db, "blogs"), {
-          title: formData.title,
-          excerpt: formData.excerpt,
-          content: formData.content,
-          imageUrl,
-          author: formData.author,
-          tag: formData.tag || '',
-          fullImage: Boolean(formData.fullImage),
+          ...postPayload,
           createdAt: serverTimestamp(),
           expiresAt: Timestamp.fromDate(getBlogExpiryDate()),
         });
       }
-      uploadedImageUrl = '';
 
-      // Reset form
-      setEditingId(null);
-      setImageFile(null);
-      setImagePreview('');
-      if (imageInputRef.current) imageInputRef.current.value = '';
-      setFormData({ title: "", excerpt: "", content: "", imageUrl: "", author: "NomoStores Admin", tag: "" });
+      resetFormState();
       await fetchPosts();
     } catch (error) {
       console.error("Error saving post:", error);
-      if (uploadedImageUrl) await deleteImagesFromCloudinary([uploadedImageUrl]);
+      if (newlyUploadedUrls.length > 0) {
+        await deleteImagesFromCloudinary(newlyUploadedUrls);
+      }
       alert("Failed to save post");
     } finally {
       setLoading(false);
@@ -247,14 +325,33 @@ export default function AdminBlogPage() {
 
   const handleEdit = (post: BlogPost) => {
     setEditingId(post.id);
-    setImageFile(null);
-    setImagePreview('');
-    if (imageInputRef.current) imageInputRef.current.value = '';
+    formImages.forEach(item => {
+      if (item.preview && item.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+
+    const existingImages: BlogImage[] = (
+      post.images && post.images.length > 0
+        ? post.images
+        : post.imageUrl
+          ? [{ url: post.imageUrl, fullImage: Boolean(post.fullImage) }]
+          : []
+    ).slice(0, 4);
+
+    setFormImages(existingImages.map((im, idx) => ({
+      id: `img-${post.id}-${idx}`,
+      url: im.url,
+      file: null,
+      preview: im.url,
+      fullImage: Boolean(im.fullImage),
+    })));
+
     setFormData({
       title: post.title,
       excerpt: post.excerpt,
       content: post.content,
-      imageUrl: post.imageUrl,
+      imageUrl: post.imageUrl || '',
       author: post.author,
       tag: post.tag || '',
       fullImage: Boolean(post.fullImage),
@@ -263,14 +360,26 @@ export default function AdminBlogPage() {
   };
 
   const handleDelete = async (id: string) => {
-
     setLoading(true);
     try {
       const postSnapshot = await getDoc(doc(db, "blogs", id));
-      const imageUrl = postSnapshot.data()?.imageUrl;
+      const data = postSnapshot.data();
+      const urlsToDelete: string[] = [];
+
+      if (data?.imageUrl && isCloudinaryImageUrl(data.imageUrl)) {
+        urlsToDelete.push(data.imageUrl);
+      }
+      if (Array.isArray(data?.images)) {
+        for (const img of data.images) {
+          if (img?.url && isCloudinaryImageUrl(img.url) && !urlsToDelete.includes(img.url)) {
+            urlsToDelete.push(img.url);
+          }
+        }
+      }
+
       await deleteDoc(doc(db, "blogs", id));
-      if (typeof imageUrl === 'string' && isCloudinaryImageUrl(imageUrl)) {
-        await deleteImagesFromCloudinary([imageUrl]);
+      if (urlsToDelete.length > 0) {
+        await deleteImagesFromCloudinary(urlsToDelete);
       }
       await fetchPosts();
     } catch (error) {
@@ -332,13 +441,7 @@ export default function AdminBlogPage() {
         <h1 className="text-2xl md:text-3xl font-bold">Manage Blog Posts</h1>
         {editingId && (
           <button
-            onClick={() => {
-              setEditingId(null);
-              setImageFile(null);
-              setImagePreview('');
-              if (imageInputRef.current) imageInputRef.current.value = '';
-              setFormData({ title: "", excerpt: "", content: "", imageUrl: "", author: "NomoStores Admin", tag: "" });
-            }}
+            onClick={resetFormState}
             className="flex items-center gap-2 bg-secondary text-white font-bold px-4 py-2 rounded-lg hover:bg-secondary/80 shadow-sm transition-colors"
           >
             <X size={16} /> <span className="hidden md:block">Cancel Edit</span>
@@ -456,46 +559,134 @@ export default function AdminBlogPage() {
               )}
             </div>
 
-            <div className="py-6 space-y-3">
-              <div>
-                <label className="block text-sm font-bold mb-1">Image URL</label>
-                <input
-                  type="text"
-                  value={formData.imageUrl}
-                  onChange={e => handleImageUrlChange(e.target.value)}
-                  className="text-sm sm:text-base w-full rounded-lg max-md:rounded-md border border-border px-3 py-2 md:p-3 bg-background shadow-sm focus:ring-2 focus:ring-primary/30 outline-none transition-all"
-                  placeholder="https://..."
-                />
+            <div className="py-4 space-y-4 border-y border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-bold text-foreground">Blog Images (Max 4)</label>
+                  <p className="text-xs text-muted-foreground">Grid layout adapts automatically (1, 2, 3, or 4 images).</p>
+                </div>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${formImages.length === 4 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-muted text-muted-foreground'}`}>
+                  {formImages.length}/4
+                </span>
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Or Upload Image</label>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageFileChange}
-                  className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-xs file:font-semibold"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">The image uploads to Cloudinary only when you publish or update the post.</p>
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData.fullImage)}
-                  onChange={event => setFormData(current => ({ ...current, fullImage: event.target.checked }))}
-                  className="h-4 w-4 shrink-0 accent-primary"
-                />
-                Full Image
-                <span className="text-[0.7rem] font-normal text-muted-foreground sm:text-xs">(show full image)</span>
-              </label>
-              {(imagePreview || formData.imageUrl) && (
-                <div className="overflow-hidden rounded-md border border-border bg-white p-2">
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">Image preview</p>
-                  <img
-                    src={imagePreview || formData.imageUrl}
-                    alt="Blog image preview"
-                    className="max-h-56 w-full rounded object-contain"
-                  />
+
+              {/* Action buttons if less than 4 images */}
+              {formImages.length < 4 && (
+                <div className="flex flex-wrap gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors">
+                    <Plus size={14} /> Upload Images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        handleFilesSelected(e.target.files);
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddImageSlot}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-border hover:bg-muted text-xs font-semibold transition-colors"
+                  >
+                    <ImageIcon size={14} /> Add by URL
+                  </button>
+                </div>
+              )}
+
+              {/* List of Image Slots */}
+              {formImages.length > 0 && (
+                <div className="space-y-3">
+                  {formImages.map((item, index) => (
+                    <div key={item.id} className="p-3 rounded-lg border border-border bg-muted/20 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                          <ImageIcon size={12} className="text-primary" /> Image #{index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeImageSlot(item.id)}
+                          className="text-destructive hover:bg-destructive/10 p-1 rounded transition-colors"
+                          title="Remove image"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          placeholder="Image URL (https://...)"
+                          value={item.url}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateImageSlot(item.id, {
+                              url: val,
+                              file: null,
+                              preview: val
+                            });
+                          }}
+                          className="text-xs w-full rounded-md border border-border px-2.5 py-1.5 bg-background outline-none focus:ring-1 focus:ring-primary"
+                        />
+
+                        <div className="flex items-center justify-between text-[11px]">
+                          <label className="cursor-pointer font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                            <span>Or select file</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) {
+                                  updateImageSlot(item.id, {
+                                    file: f,
+                                    url: '',
+                                    preview: URL.createObjectURL(f)
+                                  });
+                                }
+                                e.target.value = '';
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          {item.file && (
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                              {item.file.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Independent Full Image Toggle */}
+                      <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold select-none">
+                          <input
+                            type="checkbox"
+                            checked={item.fullImage}
+                            onChange={(e) => updateImageSlot(item.id, { fullImage: e.target.checked })}
+                            className="h-3.5 w-3.5 rounded accent-primary cursor-pointer"
+                          />
+                          <span>Full Image</span>
+                          <span className="text-[10px] font-normal text-muted-foreground">
+                            ({item.fullImage ? 'object-contain' : 'object-cover'})
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Thumbnail Preview */}
+                      {item.preview && (
+                        <div className="relative h-28 w-full rounded overflow-hidden bg-black/10 border border-border flex items-center justify-center">
+                          <img
+                            src={item.preview}
+                            alt={`Preview #${index + 1}`}
+                            className={`w-full h-full ${item.fullImage ? 'object-contain' : 'object-cover'}`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -552,15 +743,34 @@ export default function AdminBlogPage() {
                 return (
                   <article key={post.id} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
-                      {post.imageUrl ? (
-                        <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-md bg-muted sm:aspect-square sm:w-28">
-                          <img src={post.imageUrl} alt="" className="h-full w-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:aspect-square sm:w-28">
-                          <FileText size={24} aria-hidden="true" />
-                        </div>
-                      )}
+                      {(() => {
+                        const postImages: BlogImage[] = (
+                          post.images && post.images.length > 0
+                            ? post.images
+                            : post.imageUrl
+                              ? [{ url: post.imageUrl, fullImage: post.fullImage }]
+                              : []
+                        ).slice(0, 4);
+
+                        if (postImages.length > 0) {
+                          return (
+                            <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-md bg-muted sm:aspect-square sm:w-28">
+                              <img src={postImages[0].url} alt="" className="h-full w-full object-cover" />
+                              {postImages.length > 1 && (
+                                <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
+                                  +{postImages.length - 1}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:aspect-square sm:w-28">
+                            <FileText size={24} aria-hidden="true" />
+                          </div>
+                        );
+                      })()}
 
                       <div className="min-w-0 flex-1">
                         <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -607,11 +817,51 @@ export default function AdminBlogPage() {
                     {isPreviewOpen && (
                       <div className="border-t border-border bg-muted/20 px-1 py-5 sm:px-6">
                         <div className="mx-auto max-w-3xl overflow-hidden rounded-lg border border-border bg-background shadow-sm">
-                          {post.imageUrl && (
-                            <div className="max-h-[400px] overflow-hidden bg-white">
-                              <img src={post.imageUrl} alt={post.title} className={`max-h-[400px] w-full ${post.fullImage ? 'object-contain' : 'object-cover'}`} />
-                            </div>
-                          )}
+                          {(() => {
+                            const previewImages: BlogImage[] = (
+                              post.images && post.images.length > 0
+                                ? post.images
+                                : post.imageUrl
+                                  ? [{ url: post.imageUrl, fullImage: post.fullImage }]
+                                  : []
+                            ).slice(0, 4);
+
+                            if (previewImages.length === 0) return null;
+
+                            return (
+                              <div
+                                className={`w-full overflow-hidden bg-black/5 p-1 ${
+                                  previewImages.length === 1
+                                    ? 'grid grid-cols-1'
+                                    : 'grid grid-cols-2 gap-1.5'
+                                }`}
+                              >
+                                {previewImages.map((img, idx) => {
+                                  const isSpan2 = previewImages.length === 3 && idx === 2;
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className={`relative ${
+                                        previewImages.length === 1
+                                          ? 'max-h-[360px] h-64 sm:h-72'
+                                          : isSpan2
+                                          ? 'col-span-2 h-52 sm:h-64'
+                                          : 'h-40 sm:h-48'
+                                      } w-full overflow-hidden rounded bg-white dark:bg-slate-900`}
+                                    >
+                                      <img
+                                        src={img.url}
+                                        alt=""
+                                        className={`w-full h-full ${
+                                          img.fullImage ? 'object-contain' : 'object-cover'
+                                        }`}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                           <div className="px-1 py-5 sm:p-8">
                             <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" />{post.author || 'NomoStores Admin'}</span>

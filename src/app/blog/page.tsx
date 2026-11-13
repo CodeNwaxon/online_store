@@ -11,12 +11,18 @@ import AdSenseBox from "@/components/AdSenseBox";
 import { Clock, ChevronRight, User, Home, ShoppingBag, X, Sparkles, BookOpen, ArrowUp, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+interface BlogImage {
+  url: string;
+  fullImage?: boolean;
+}
+
 interface BlogPost {
   id: string;
   title: string;
   content: string; // HTML or Markdown
   excerpt: string;
-  imageUrl: string;
+  imageUrl?: string;
+  images?: BlogImage[];
   author: string;
   tag?: string;
   fullImage?: boolean;
@@ -395,29 +401,73 @@ export default function BlogPage() {
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent opacity-70 group-hover:opacity-100 transition-opacity" />
               )}
 
-              {post.imageUrl && (
-                <div
-                  onClick={() => openLightbox(post.imageUrl, post.title)}
-                  className={`relative mb-6 h-56 w-full overflow-hidden rounded-sm bg-white sm:h-72 md:h-[400px] cursor-pointer group/img ${isDarkMode ? 'border border-sky-950 bg-slate-950' : ''
+              {/* Dynamic Image Grid (1, 2, 3, or 4 images) */}
+              {(() => {
+                const postImages: BlogImage[] = (
+                  post.images && post.images.length > 0
+                    ? post.images
+                    : post.imageUrl
+                      ? [{ url: post.imageUrl, fullImage: post.fullImage }]
+                      : []
+                ).slice(0, 4);
+
+                if (postImages.length === 0) return null;
+
+                return (
+                  <div
+                    className={`mb-6 w-full ${
+                      postImages.length === 1
+                        ? 'grid grid-cols-1'
+                        : 'grid grid-cols-2 gap-2 sm:gap-3'
                     }`}
-                  title="Click to view full image"
-                >
-                  <Image
-                    src={post.imageUrl}
-                    alt={post.title}
-                    fill
-                    className={`${post.fullImage ? 'object-contain' : 'object-cover'} transition-transform duration-500 group-hover/img:scale-105`}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/25 transition-colors flex items-center justify-center pointer-events-none">
-                    <span className={`opacity-0 group-hover/img:opacity-100 transition-opacity text-xs px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg flex items-center gap-1.5 font-medium ${isDarkMode
-                      ? 'bg-slate-950/80 text-amber-300 border border-amber-500/30'
-                      : 'bg-black/60 text-white'
-                      }`}>
-                      View full image
-                    </span>
+                  >
+                    {postImages.map((img, idx) => {
+                      const isSpan2 = postImages.length === 3 && idx === 2;
+                      const heightClass =
+                        postImages.length === 1
+                          ? 'h-56 sm:h-72 md:h-[400px]'
+                          : isSpan2
+                          ? 'h-52 sm:h-64 md:h-80'
+                          : 'h-44 sm:h-56 md:h-72';
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => openLightbox(img.url, `${post.title} - image ${idx + 1}`)}
+                          className={`relative ${heightClass} ${
+                            isSpan2 ? 'col-span-2' : ''
+                          } w-full overflow-hidden rounded-sm cursor-pointer group/img transition-all ${
+                            isDarkMode
+                              ? 'border border-sky-950 bg-slate-950'
+                              : 'bg-white border border-border/50'
+                          }`}
+                          title="Click to view full image"
+                        >
+                          <Image
+                            src={img.url}
+                            alt={`${post.title} image ${idx + 1}`}
+                            fill
+                            className={`${
+                              img.fullImage ? 'object-contain' : 'object-cover'
+                            } transition-transform duration-500 group-hover/img:scale-105`}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/25 transition-colors flex items-center justify-center pointer-events-none">
+                            <span
+                              className={`opacity-0 group-hover/img:opacity-100 transition-opacity text-xs px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg flex items-center gap-1.5 font-medium ${
+                                isDarkMode
+                                  ? 'bg-slate-950/80 text-amber-300 border border-amber-500/30'
+                                  : 'bg-black/60 text-white'
+                              }`}
+                            >
+                              View full image
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className={`flex items-center gap-4 text-xs md:text-sm mb-4 pb-3 border-b ${isDarkMode ? 'text-sky-300/70 border-sky-900/40' : 'text-muted-foreground border-border'
                 }`}>
