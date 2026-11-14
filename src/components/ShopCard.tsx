@@ -588,7 +588,7 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
           >
             <div
-              className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[400px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+              className={`bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 ${measurementKeys.length > 0 ? 'max-w-[560px] md:max-w-[620px]' : 'md:max-w-[400px]'} max-h-[85vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-4 sm:p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300`}
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -767,8 +767,8 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
 
               {measurementKeys.length > 0 && (
                 <>
-                  <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Measurement</h3>
-                  <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+                  <h3 className="text-sm font-bold mb-2.5 pr-6 text-foreground leading-tight">Select Measurement</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 overflow-y-auto max-h-60 sm:max-h-72 mb-3 p-0.5">
                     {measurementKeys.map(m => {
                       const mPrice = parsedMeasurements[m];
                       const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
@@ -782,12 +782,12 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                         <button
                           key={m}
                           disabled={isOutOfStock}
-                          className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold border transition-colors flex flex-col items-center justify-center ${
+                          className={`p-2.5 sm:p-3 rounded-xl border transition-all flex flex-col justify-between text-left ${
                             isOutOfStock
                               ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
                               : tempSelectedMeasurement === m
-                              ? `${theme.bgPrimary} text-white border-transparent`
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                              ? `${theme.bgPrimary} text-white border-transparent shadow-sm ring-2 ring-primary/40`
+                              : 'bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted/40'
                           }`}
                           onClick={(e) => {
                             e.preventDefault();
@@ -796,11 +796,30 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                             setTempSelectedMeasurement(m);
                           }}
                         >
-                          <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
-                          {hasCustomQty && (
-                            <span className={`text-[9px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-white/80' : 'text-muted-foreground'}`}>
-                              {isOutOfStock ? 'Sold Out' : `${available} left`}
+                          <div className="flex flex-col gap-1 w-full">
+                            <span className="text-[11px] sm:text-xs font-bold leading-snug line-clamp-2">
+                              {m}
                             </span>
+                            {mPrice && Number(mPrice) > 0 && (
+                              <span className={`text-sm sm:text-base font-extrabold ${
+                                tempSelectedMeasurement === m ? 'text-white' : 'text-green-600 dark:text-green-400'
+                              }`}>
+                                ₦{Number(mPrice).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {hasCustomQty && (
+                            <div className="mt-1.5 pt-1 border-t border-current/10 flex items-center justify-between">
+                              <span className={`text-[10px] sm:text-[11px] font-semibold ${
+                                isOutOfStock
+                                  ? 'text-red-500 font-bold'
+                                  : tempSelectedMeasurement === m
+                                  ? 'text-white/90'
+                                  : 'text-muted-foreground'
+                              }`}>
+                                {isOutOfStock ? 'Sold Out' : `${available} left`}
+                              </span>
+                            </div>
                           )}
                         </button>
                       );

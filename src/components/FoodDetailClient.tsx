@@ -385,7 +385,7 @@ export default function FoodDetailClient() {
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
               >
                 <div
-                  className="bg-card w-full max-w-[400px] max-h-[90%] rounded-xl shadow-2xl border border-border p-5 flex flex-col relative"
+                  className={`bg-card w-full ${measurementKeys.length > 0 ? 'max-w-[560px] md:max-w-[640px]' : 'max-w-[400px]'} max-h-[90%] rounded-2xl shadow-2xl border border-border p-5 flex flex-col relative`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -515,8 +515,8 @@ export default function FoodDetailClient() {
 
                   {measurementKeys.length > 0 && (
                     <>
-                      <h3 className="text-lg font-bold mb-4 pr-8 text-foreground leading-tight">Select Measurement</h3>
-                      <div className="flex flex-wrap gap-2 overflow-y-auto max-h-64 mb-4">
+                      <h3 className="text-base sm:text-lg font-bold mb-3 pr-8 text-foreground leading-tight">Select Measurement</h3>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3 overflow-y-auto max-h-72 sm:max-h-80 mb-4 p-0.5">
                         {measurementKeys.map((m: string) => {
                           const mPrice = parsedMeasurements[m];
                           const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
@@ -530,12 +530,12 @@ export default function FoodDetailClient() {
                             <button
                               key={m}
                               disabled={isOutOfStock}
-                              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors flex flex-col items-center justify-center ${
+                              className={`p-3 rounded-xl border transition-all flex flex-col justify-between text-left ${
                                 isOutOfStock
                                   ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
                                   : tempSelectedMeasurement === m
-                                  ? 'bg-green-600 text-white border-transparent'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-green-600 text-white border-transparent shadow-md ring-2 ring-green-600/40'
+                                  : 'bg-card text-foreground border-border hover:border-green-500/60 hover:bg-muted/40'
                               }`}
                               onClick={(e) => {
                                 e.preventDefault();
@@ -544,16 +544,30 @@ export default function FoodDetailClient() {
                                 setTempSelectedMeasurement(m);
                               }}
                             >
-                              <span>{m}</span>
-                              {mPrice && Number(mPrice) > 0 && (
-                                <span className={`text-xs mt-1 ${tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-700'}`}>
-                                  ₦{Number(mPrice).toLocaleString()}
+                              <div className="flex flex-col gap-1 w-full">
+                                <span className="text-xs sm:text-sm font-bold leading-snug line-clamp-2">
+                                  {m}
                                 </span>
-                              )}
+                                {mPrice && Number(mPrice) > 0 && (
+                                  <span className={`text-sm sm:text-base font-extrabold ${
+                                    tempSelectedMeasurement === m ? 'text-green-100' : 'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    ₦{Number(mPrice).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
                               {hasCustomQty && (
-                                <span className={`text-[10px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-green-100' : 'text-muted-foreground'}`}>
-                                  {isOutOfStock ? 'Sold Out' : `${available} in stock`}
-                                </span>
+                                <div className="mt-2 pt-1 border-t border-current/10 flex items-center justify-between">
+                                  <span className={`text-[10px] sm:text-xs font-semibold ${
+                                    isOutOfStock
+                                      ? 'text-red-500 font-bold'
+                                      : tempSelectedMeasurement === m
+                                      ? 'text-green-100'
+                                      : 'text-muted-foreground'
+                                  }`}>
+                                    {isOutOfStock ? 'Sold Out' : `${available} in stock`}
+                                  </span>
+                                </div>
                               )}
                             </button>
                           );

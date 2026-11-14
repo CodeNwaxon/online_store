@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { FaShoppingBag, FaCreditCard, FaShieldAlt, FaCheckCircle, FaArrowLeft, FaPrint, FaMapMarkerAlt, FaTruck } from 'react-icons/fa';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -18,6 +19,7 @@ import { useShippingMaxDays } from '@/hooks/useShippingMaxDays';
 import PaymentReviewOverlay from '@/components/PaymentReviewOverlay';
 
 export default function Checkout() {
+  const router = useRouter();
   const shippingMaxDays = useShippingMaxDays();
   const { items, getTotalPrice, clearCart } = useCartStore();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -108,6 +110,27 @@ export default function Checkout() {
     );
     return () => unsubs.forEach(unsub => unsub());
   }, []);
+
+  const handleBack = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      const hasFood = items.some(item => 
+        item.category?.toLowerCase() === 'food' || 
+        item.category?.toLowerCase() === 'foods' ||
+        (dbProductCollection[item.id] || '').toLowerCase() === 'foods'
+      );
+      if (hasFood) {
+        router.push('/foods');
+      } else {
+        router.push('/shop');
+      }
+    }
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'distribution_areas'), (snap) => {
@@ -240,6 +263,8 @@ export default function Checkout() {
       size: (dbProducts[item.id]?.size || item.size || 'medium') as any,
       quantity: item.quantity,
       price: dbProducts[item.id]?.price || item.price,
+      selectedMeasurement: (item as any).selectedMeasurement,
+      customShippingAmount: dbProducts[item.id]?.customShippingAmount,
     }));
 
     if (matchedArea) {
@@ -407,7 +432,13 @@ export default function Checkout() {
           <FaShoppingBag size={64} className="text-muted-foreground mb-6 opacity-50 mx-auto" />
           <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
           <p className="text-muted-foreground mb-8">Add some items to your cart before checking out.</p>
-          <Link href="/shop" className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors inline-block">Go to Shop</Link>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-md font-semibold transition-colors inline-block cursor-pointer"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -555,9 +586,14 @@ export default function Checkout() {
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-6">
         <div className="mb-12">
-          <Link href="/shop" className="flex items-center gap-2 text-muted-foreground mb-4 hover:text-foreground transition-colors w-fit">
-            <FaArrowLeft size={16} /> Back to Shop
-          </Link>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center gap-2 text-muted-foreground mb-4 hover:text-foreground transition-colors w-fit font-medium cursor-pointer group"
+          >
+            <FaArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+            <span>Back</span>
+          </button>
           <h1 className="text-4xl font-bold">Checkout</h1>
         </div>
 

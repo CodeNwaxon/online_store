@@ -513,7 +513,7 @@ export default function CategoryProductCard({
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
           >
             <div
-              className="bg-white dark:bg-zinc-900 w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-sm max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border dark:border-zinc-800 p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+              className={`bg-white dark:bg-zinc-900 w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 ${measurementKeys.length > 0 ? 'max-w-[560px] md:max-w-[620px]' : 'md:max-w-sm'} max-h-[85vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border dark:border-zinc-800 p-4 sm:p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300`}
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -658,7 +658,7 @@ export default function CategoryProductCard({
                 {measurementKeys.length > 0 && (
                   <div className="mb-2">
                     <h3 className="text-sm font-bold mb-3 text-foreground dark:text-zinc-100 leading-tight">Select Measurement</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-2.5 overflow-y-auto max-h-60 sm:max-h-72 mb-2 p-0.5">
                       {measurementKeys.map((m, i) => {
                         const mPrice = parsedMeasurements[m];
                         const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
@@ -672,12 +672,12 @@ export default function CategoryProductCard({
                           <button
                             key={i}
                             disabled={isOutOfStock}
-                            className={`px-3 py-2 rounded-md text-xs font-bold border transition-colors flex flex-col items-center justify-center ${
+                            className={`p-2.5 sm:p-3 rounded-xl border transition-all flex flex-col justify-between text-left ${
                               isOutOfStock
                                 ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
                                 : tempSelectedMeasurement === m
-                                ? 'bg-purple-600 text-white border-purple-600'
-                                : 'bg-white text-gray-500 border-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-zinc-700'
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-2 ring-purple-500/40'
+                                : 'bg-card text-foreground border-border hover:border-purple-500/50 hover:bg-muted/40'
                             }`}
                             onClick={(e) => {
                               e.preventDefault();
@@ -686,11 +686,30 @@ export default function CategoryProductCard({
                               setTempSelectedMeasurement(m);
                             }}
                           >
-                            <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
-                            {hasCustomQty && (
-                              <span className={`text-[9px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-purple-100' : 'text-muted-foreground'}`}>
-                                {isOutOfStock ? 'Sold Out' : `${available} left`}
+                            <div className="flex flex-col gap-1 w-full">
+                              <span className="text-[11px] sm:text-xs font-bold leading-snug line-clamp-2">
+                                {m}
                               </span>
+                              {mPrice && Number(mPrice) > 0 && (
+                                <span className={`text-sm sm:text-base font-extrabold ${
+                                  tempSelectedMeasurement === m ? 'text-white' : 'text-purple-600 dark:text-purple-400'
+                                }`}>
+                                  ₦{Number(mPrice).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            {hasCustomQty && (
+                              <div className="mt-1.5 pt-1 border-t border-current/10 flex items-center justify-between">
+                                <span className={`text-[10px] sm:text-[11px] font-semibold ${
+                                  isOutOfStock
+                                    ? 'text-red-500 font-bold'
+                                    : tempSelectedMeasurement === m
+                                    ? 'text-purple-100'
+                                    : 'text-muted-foreground'
+                                }`}>
+                                  {isOutOfStock ? 'Sold Out' : `${available} left`}
+                                </span>
+                              </div>
                             )}
                           </button>
                         );

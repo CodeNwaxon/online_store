@@ -60,19 +60,33 @@ export const calculateCartShippingForArea = (
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();
-      if (measurement.includes('2 bags')) {
+      if (measurement.includes('2 bags') || measurement.includes('2 bag')) {
         unitShipping = Math.ceil(unitShipping + unitShipping * 0.5); // 1 bag + half = 1.5x
-      } else if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+      } else if (measurement.includes('1/2 bag') || measurement.includes('half bag')) {
         unitShipping = Math.ceil(unitShipping / 2) + 1000;
-      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
+      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter bag')) {
         unitShipping = Math.ceil(unitShipping / 3) + 500;
       } else if (measurement.includes('1 bag')) {
         // 1 bag = default, no change
-      } else {
+      } else if (
+        measurement.includes('cup') ||
+        measurement.includes('congo') ||
+        measurement.includes('mudu') ||
+        measurement.includes('paint rubber') ||
+        measurement.includes('sachet')
+      ) {
         unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
           ? item.customShippingAmount
-          : 1500; // Flat fee for cups, congo, mudu, etc.
+          : 1500; // Flat fee for smaller portions
+      } else if (
+        measurement.includes('half crate') ||
+        measurement.includes('1/2 crate') ||
+        measurement.includes('half carton') ||
+        measurement.includes('1/2 carton')
+      ) {
+        unitShipping = Math.max(1000, Math.ceil(unitShipping * 0.7));
       }
+      // Full crates, big/medium/small tins, full cartons, 1kg, 2kg, etc. retain their unitShipping from product size or custom amount
     }
 
     return Array.from({ length: item.quantity }, () => ({
@@ -107,19 +121,33 @@ export const calculateCartShippingForArea = (
     
     if (item.selectedMeasurement) {
       const measurement = item.selectedMeasurement.toLowerCase();
-      if (measurement.includes('2 bags')) {
+      if (measurement.includes('2 bags') || measurement.includes('2 bag')) {
         unitShipping = Math.ceil(unitShipping + unitShipping * 0.5);
-      } else if (measurement.includes('1/2 bag') || measurement.includes('half')) {
+      } else if (measurement.includes('1/2 bag') || measurement.includes('half bag')) {
         unitShipping = Math.ceil(unitShipping / 2) + 1000;
-      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter')) {
+      } else if (measurement.includes('1/4 bag') || measurement.includes('quarter bag')) {
         unitShipping = Math.ceil(unitShipping / 3) + 500;
       } else if (measurement.includes('1 bag')) {
         // 1 bag = default, no change
-      } else {
+      } else if (
+        measurement.includes('cup') ||
+        measurement.includes('congo') ||
+        measurement.includes('mudu') ||
+        measurement.includes('paint rubber') ||
+        measurement.includes('sachet')
+      ) {
         unitShipping = (item.customShippingAmount !== undefined && item.customShippingAmount !== null)
           ? item.customShippingAmount
           : 1500;
+      } else if (
+        measurement.includes('half crate') ||
+        measurement.includes('1/2 crate') ||
+        measurement.includes('half carton') ||
+        measurement.includes('1/2 carton')
+      ) {
+        unitShipping = Math.max(1000, Math.ceil(unitShipping * 0.7));
       }
+      // Full crates, big/medium/small tins, full cartons, 1kg, 2kg, etc. retain their unitShipping from product size or custom amount
     }
     
     const unitCharges = chargedUnits.filter((unit) => unit.id === item.id);

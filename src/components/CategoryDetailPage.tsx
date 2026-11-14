@@ -558,7 +558,7 @@ export default function CategoryDetailPage({
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSizeOverlay(false); }}
                 >
                   <div
-                    className="bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 md:max-w-[420px] max-h-[80vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300"
+                    className={`bg-card w-[calc(100%-16px)] md:w-full mb-2 md:mb-0 md:mx-0 ${needsMeasurement ? 'max-w-[560px] md:max-w-[620px]' : 'md:max-w-[420px]'} max-h-[85vh] md:max-h-[90vh] rounded-2xl md:rounded-xl shadow-2xl border border-border p-4 sm:p-5 flex flex-col relative animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 duration-300`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
@@ -650,7 +650,7 @@ export default function CategoryDetailPage({
                       {needsMeasurement && (
                         <div className="mb-3">
                           <h3 className="text-base font-bold mb-3 text-foreground">Select Measurement</h3>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 overflow-y-auto max-h-60 sm:max-h-72 mb-2 p-0.5">
                             {measurementKeys.map((m: string, i: number) => {
                               const mPrice = parsedMeasurements[m];
                               const hasCustomQty = parsedMeasurementQuantities[m] !== undefined;
@@ -664,12 +664,12 @@ export default function CategoryDetailPage({
                                 <button
                                   key={i}
                                   disabled={isOutOfStock}
-                                  className={`px-4 py-2 rounded-lg text-sm font-bold border capitalize transition-colors flex flex-col items-center justify-center ${
+                                  className={`p-2.5 sm:p-3 rounded-xl border capitalize transition-all flex flex-col justify-between text-left ${
                                     isOutOfStock
                                       ? 'opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border'
                                       : tempSelectedMeasurement === m
-                                      ? `${themeConfig.btn} text-white border-transparent`
-                                      : 'bg-white border-gray-300 hover:bg-gray-50'
+                                      ? `${themeConfig.btn} text-white border-transparent shadow-sm ring-2 ring-primary/40`
+                                      : 'bg-card text-foreground border-border hover:border-primary/50 hover:bg-muted/40'
                                   }`}
                                   onClick={(e) => {
                                     e.preventDefault();
@@ -678,11 +678,30 @@ export default function CategoryDetailPage({
                                     setTempSelectedMeasurement(m);
                                   }}
                                 >
-                                  <span>{m} {mPrice && Number(mPrice) > 0 && <span className="opacity-75"> - ₦{Number(mPrice).toLocaleString()}</span>}</span>
-                                  {hasCustomQty && (
-                                    <span className={`text-[10px] mt-0.5 ${isOutOfStock ? 'text-red-500 font-bold' : tempSelectedMeasurement === m ? 'text-white/80' : 'text-muted-foreground'}`}>
-                                      {isOutOfStock ? 'Sold Out' : `${available} in stock`}
+                                  <div className="flex flex-col gap-1 w-full">
+                                    <span className="text-[11px] sm:text-xs font-bold leading-snug line-clamp-2">
+                                      {m}
                                     </span>
+                                    {mPrice && Number(mPrice) > 0 && (
+                                      <span className={`text-sm sm:text-base font-extrabold ${
+                                        tempSelectedMeasurement === m ? 'text-white' : 'text-green-600 dark:text-green-400'
+                                      }`}>
+                                        ₦{Number(mPrice).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {hasCustomQty && (
+                                    <div className="mt-1.5 pt-1 border-t border-current/10 flex items-center justify-between">
+                                      <span className={`text-[10px] sm:text-[11px] font-semibold ${
+                                        isOutOfStock
+                                          ? 'text-red-500 font-bold'
+                                          : tempSelectedMeasurement === m
+                                          ? 'text-white/80'
+                                          : 'text-muted-foreground'
+                                      }`}>
+                                        {isOutOfStock ? 'Sold Out' : `${available} in stock`}
+                                      </span>
+                                    </div>
                                   )}
                                 </button>
                               );
