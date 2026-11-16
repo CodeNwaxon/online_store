@@ -27,11 +27,17 @@ export interface CategoryProduct {
   itemSize?: string;
   color?: string;
   sizeQuantities?: Record<string, number>;
+  sizeColorQuantities?: Record<string, Record<string, number>>;
+  sizePrices?: string | Record<string, number>;
+  sizeCostPrices?: string | Record<string, number>;
   selectedSize?: string;
   updatedAt?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
   measurements?: string;
+  measurementQuantities?: string | Record<string, number>;
+  measurementCostPrices?: string | Record<string, number>;
+  measurementMinShippingQuantities?: string | Record<string, number>;
   vendor?: string;
   uniqueDesigns?: Record<string, number>;
   hasUniqueImageVariants?: boolean;
