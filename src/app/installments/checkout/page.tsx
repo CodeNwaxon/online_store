@@ -197,7 +197,7 @@ function LoanCheckoutContent() {
         if (!hasStandardItem) {
           const maxRequired = product.minShippingQty || 0;
           if (1 < maxRequired) {
-            setShippingError(`This product requires at least ${maxRequired} items to qualify for standalone shipping.`);
+            setShippingError(`This product requires at least ${maxRequired} items to qualify for shipping.`);
             setShippingBreakdown(null);
             setCalculatingShipping(false);
             return;
@@ -314,7 +314,7 @@ function LoanCheckoutContent() {
         if (shippingCost === -2) { setShowPickupOnlyError(true); return; }
         if (shippingCost === -3) { 
           const maxRequired = product?.minShippingQty || 0;
-          toast.error(`This product requires at least ${maxRequired} items to qualify for standalone shipping.`); 
+          toast.error(`This product requires at least ${maxRequired} items to qualify for shipping.`); 
           return; 
         }
         if (!formData.address.trim()) { toast.error('Please enter your house address.'); return; }
@@ -659,7 +659,7 @@ function LoanCheckoutContent() {
                       {shippingCost === -3 ? (
                         <div className="bg-red-50 text-red-700 p-4 rounded-md border border-red-200">
                           <h4 className="font-bold mb-1">Shipping Unavailable</h4>
-                          <p className="text-sm">{shippingError || "Minimum quantity required for standalone shipping is not met."}</p>
+                          <p className="text-sm">{shippingError || "Minimum quantity required for shipping is not met."}</p>
                         </div>
                       ) : (
                         <ShippingBreakdownComponent

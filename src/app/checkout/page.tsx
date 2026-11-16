@@ -825,7 +825,7 @@ export default function Checkout() {
                   {shippingCost === -3 ? (
                     <div className="bg-red-50 text-red-700 p-4 rounded-md border border-red-200">
                       <h4 className="font-bold mb-1">Shipping Unavailable</h4>
-                      <p className="text-sm">{shippingError || "Minimum quantity required for standalone shipping is not met."}</p>
+                      <p className="text-sm">{shippingError || "Minimum quantity required for shipping is not met."}</p>
                     </div>
                   ) : (
                     <ShippingBreakdownComponent

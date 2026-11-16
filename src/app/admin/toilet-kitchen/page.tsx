@@ -739,7 +739,7 @@ export default function AdminToiletKitchen() {
             <div className="pt-4 border-t border-border mt-4">
               <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-3">
                 <input type="checkbox" checked={requiresMinShipping} onChange={e => setRequiresMinShipping(e.target.checked)} className="size-4 accent-teal-600" />
-                Require Minimum Quantity for Standalone Shipping?
+                Require Minimum Quantity for Shipping?
               </label>
               {requiresMinShipping && (
                 <div className="max-w-[200px] space-y-2 animate-in slide-in-from-top-2">
