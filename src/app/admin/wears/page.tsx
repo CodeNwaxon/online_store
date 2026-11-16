@@ -34,6 +34,10 @@ const parsePriceInput = (value: string) => {
   return value.replace(/\D/g, "");
 };
 
+const isImageColorKey = (key: string) => {
+  return key.startsWith('http://') || key.startsWith('https://') || key.startsWith('data:') || key.startsWith('local_image_');
+};
+
 export default function AdminWears() {
   const { user, isCEO, adminData } = useAdmin();
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -63,6 +67,21 @@ export default function AdminWears() {
   const [activeSizeForColors, setActiveSizeForColors] = useState<string | null>(null);
   const [tempColorsForSize, setTempColorsForSize] = useState('');
   const [color, setColor] = useState('');
+
+  // Per-Size Pricing State
+  const [useUniquePricing, setUseUniquePricing] = useState(true);
+  const [uniquePrice, setUniquePrice] = useState('');
+  const [uniqueCostPrice, setUniqueCostPrice] = useState('');
+  const [customSizePrices, setCustomSizePrices] = useState<Record<string, string>>({});
+  const [customSizeCosts, setCustomSizeCosts] = useState<Record<string, string>>({});
+
+  const setCustomSizePrice = (sz: string, val: string) => {
+    setCustomSizePrices(prev => ({ ...prev, [sz]: val }));
+  };
+
+  const setCustomSizeCost = (sz: string, val: string) => {
+    setCustomSizeCosts(prev => ({ ...prev, [sz]: val }));
+  };
 
   // Measurements State (for Materials)
   const [includeMeasurements, setIncludeMeasurements] = useState(false);
@@ -139,6 +158,44 @@ export default function AdminWears() {
     if (isNaN(num) || num < 1) {
       setSizeQuantities(prev => ({ ...prev, [sz]: 1 }));
     }
+  };
+
+  const handleToggleUseImagesAsColors = (checked: boolean) => {
+    setUseImagesAsColors(checked);
+    setTempColorsForSize('');
+
+    // Clean sizeColorQuantities so text colors and image colors never mix
+    setSizeColorQuantities(prev => {
+      const updated: Record<string, Record<string, number>> = {};
+      for (const [sz, colorMap] of Object.entries(prev)) {
+        const filtered: Record<string, number> = {};
+        for (const [cKey, qty] of Object.entries(colorMap)) {
+          const isImg = isImageColorKey(cKey);
+          if (checked ? isImg : !isImg) {
+            filtered[cKey] = qty;
+          }
+        }
+        updated[sz] = filtered;
+      }
+      return updated;
+    });
+
+    // Re-calculate each size's stock so total quantity updates accurately without lingering ghost quantities
+    setSizeQuantities(prev => {
+      const updatedSq: Record<string, number> = { ...prev };
+      for (const sz of Object.keys(updatedSq)) {
+        const colorMap = sizeColorQuantities[sz];
+        if (colorMap && Object.keys(colorMap).length > 0) {
+          const activeColorTotal = Object.entries(colorMap)
+            .filter(([cKey]) => checked ? isImageColorKey(cKey) : !isImageColorKey(cKey))
+            .reduce((sum, [, q]) => sum + (q || 0), 0);
+          if (activeColorTotal > 0) {
+            updatedSq[sz] = activeColorTotal;
+          }
+        }
+      }
+      return updatedSq;
+    });
   };
 
   // Auto-compute total quantity from sizeQuantities when wears group
@@ -366,6 +423,11 @@ export default function AdminWears() {
     setIncludeMeasurements(false);
     setSelectedMeasurements({});
     setSelectedMeasurementCosts({});
+    setUseUniquePricing(true);
+    setUniquePrice('');
+    setUniqueCostPrice('');
+    setCustomSizePrices({});
+    setCustomSizeCosts({});
     setImageUrlInput('');
   };
 
@@ -438,6 +500,7 @@ export default function AdminWears() {
             for (const [sz, colorMap] of Object.entries(sizeColorQuantities)) {
               mappedSq[sz] = {};
               for (const [colorKey, qty] of Object.entries(colorMap)) {
+                if (!isImageColorKey(colorKey)) continue; // skip any lingering text colors
                 if (colorKey.startsWith('local_image_')) {
                   const idx = parseInt(colorKey.replace('local_image_', ''));
                   if (uploadedUrls[idx]) mappedSq[sz][uploadedUrls[idx]] = qty;
@@ -448,11 +511,20 @@ export default function AdminWears() {
             }
             return mappedSq;
           }
-          return sizeColorQuantities;
+          const textSq: Record<string, Record<string, number>> = {};
+          for (const [sz, colorMap] of Object.entries(sizeColorQuantities)) {
+            textSq[sz] = {};
+            for (const [colorKey, qty] of Object.entries(colorMap)) {
+              if (!isImageColorKey(colorKey)) {
+                textSq[sz][colorKey] = qty;
+              }
+            }
+          }
+          return textSq;
         })() : {},
         itemSize: Object.keys(sizeQuantities).join(', '),
         color: (isShoeGroup || isClothGroup)
-          ? Array.from(new Set(Object.values(sizeColorQuantities).flatMap(colorMap => Object.keys(colorMap).filter(c => (colorMap[c] || 0) > 0)))).join(', ')
+          ? Array.from(new Set(Object.values(sizeColorQuantities).flatMap(colorMap => Object.keys(colorMap).filter(c => (colorMap[c] || 0) > 0 && (useImagesAsColors ? isImageColorKey(c) : !isImageColorKey(c)))))).join(', ')
           : (includeColor ? color.trim() : ''),
         requiresMinShipping,
         minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
@@ -466,7 +538,22 @@ export default function AdminWears() {
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
         vendor: isCEO ? (selectedVendorEmail || user?.email || '') : (user?.email || ''),
-        useImagesAsColors: useImagesAsColors
+        useImagesAsColors: useImagesAsColors,
+        useUniquePricing: useUniquePricing,
+        sizePrices: (!useUniquePricing && (isShoeGroup || isClothGroup))
+          ? JSON.stringify(Object.fromEntries(
+              Object.keys(sizeQuantities)
+                .filter(sz => customSizePrices[sz] && parseFloat(customSizePrices[sz].replace(/,/g, '')) > 0)
+                .map(sz => [sz, parseFloat(customSizePrices[sz].replace(/,/g, ''))])
+            ))
+          : '',
+        sizeCostPrices: (!useUniquePricing && (isShoeGroup || isClothGroup))
+          ? JSON.stringify(Object.fromEntries(
+              Object.keys(sizeQuantities)
+                .filter(sz => customSizeCosts[sz] && parseFloat(customSizeCosts[sz].replace(/,/g, '')) > 0)
+                .map(sz => [sz, parseFloat(customSizeCosts[sz].replace(/,/g, ''))])
+            ))
+          : ''
       };
 
       if (editingId) {
@@ -562,6 +649,45 @@ export default function AdminWears() {
       setSelectedMeasurementCosts({});
     }
 
+    const pUnique = (product as any).useUniquePricing !== undefined ? (product as any).useUniquePricing : true;
+    setUseUniquePricing(pUnique);
+    setUniquePrice(formatPriceInput(((product as any).price || 0).toString()));
+    setUniqueCostPrice(formatPriceInput(((product as any).costPrice || 0).toString()));
+
+    if ((product as any).sizePrices) {
+      try {
+        const parsed = typeof (product as any).sizePrices === 'string'
+          ? JSON.parse((product as any).sizePrices)
+          : (product as any).sizePrices;
+        const sMap: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          sMap[k] = formatPriceInput(String(v));
+        }
+        setCustomSizePrices(sMap);
+      } catch (e) {
+        setCustomSizePrices({});
+      }
+    } else {
+      setCustomSizePrices({});
+    }
+
+    if ((product as any).sizeCostPrices) {
+      try {
+        const parsed = typeof (product as any).sizeCostPrices === 'string'
+          ? JSON.parse((product as any).sizeCostPrices)
+          : (product as any).sizeCostPrices;
+        const cMap: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          cMap[k] = formatPriceInput(String(v));
+        }
+        setCustomSizeCosts(cMap);
+      } catch (e) {
+        setCustomSizeCosts({});
+      }
+    } else {
+      setCustomSizeCosts({});
+    }
+
     const loadedImages = (product.images || []).map(url => ({ type: 'url' as const, value: url }));
     setImages(loadedImages);
     
@@ -639,7 +765,7 @@ export default function AdminWears() {
                    <input value={tempColorsForSize} onChange={e => {
                      const newVal = e.target.value;
                      setTempColorsForSize(newVal);
-                     const activeColors = newVal.split(',').map(c => c.trim()).filter(Boolean);
+                     const activeColors = newVal.split(',').map(c => c.trim()).filter(c => c && !isImageColorKey(c));
                      
                      const currentSizeColors = sizeColorQuantities[activeSizeForColors] || {};
                      const newSizeColors: Record<string, number> = {};
@@ -653,11 +779,11 @@ export default function AdminWears() {
                      }));
                      
                      const sizeTotal = Object.values(newSizeColors).reduce((sum, q) => sum + q, 0);
-                     setSizeQuantities(prev => ({ ...prev, [activeSizeForColors]: sizeTotal }));
+                     setSizeQuantities(prev => ({ ...prev, [activeSizeForColors]: sizeTotal || 1 }));
                    }} type="text" placeholder="e.g. Red, Blue, Black" className="w-full p-2 rounded-md border border-border bg-background text-sm" />
                 </div>
               )}
-              {(useImagesAsColors ? images.length > 0 : tempColorsForSize.trim()) && (
+              {(useImagesAsColors ? images.length > 0 : tempColorsForSize.split(',').map(c => c.trim()).filter(c => c && !isImageColorKey(c)).length > 0) && (
                  <table className="w-full text-sm text-left border-collapse border border-border">
                    <thead className="bg-muted text-muted-foreground">
                      <tr>
@@ -666,7 +792,10 @@ export default function AdminWears() {
                      </tr>
                    </thead>
                    <tbody>
-                     {(useImagesAsColors ? images.map((img, i) => img.type === 'url' ? img.value as string : `local_image_${i}`) : tempColorsForSize.split(',').filter(c => c.trim()).map(c => c.trim())).map((colorKey, i) => {
+                     {(useImagesAsColors 
+                       ? images.map((img, i) => img.type === 'url' ? img.value as string : `local_image_${i}`) 
+                       : tempColorsForSize.split(',').map(c => c.trim()).filter(c => c && !isImageColorKey(c))
+                     ).map((colorKey, i) => {
                        const isUrl = colorKey.startsWith('http') || colorKey.startsWith('data:') || colorKey.startsWith('local_image_');
                        const imageSrc = isUrl && colorKey.startsWith('local_image_') ? URL.createObjectURL(images[parseInt(colorKey.replace('local_image_', ''))].value as File) : colorKey;
                        
@@ -689,16 +818,23 @@ export default function AdminWears() {
                                 value={sizeColorQuantities[activeSizeForColors]?.[colorKey] || 0} 
                                 onChange={e => {
                                    const newQty = parseInt(e.target.value) || 0;
+                                   const currentMap = sizeColorQuantities[activeSizeForColors] || {};
+                                   // Strictly keep only keys belonging to current mode
+                                   const cleanedMap: Record<string, number> = {};
+                                   for (const [k, q] of Object.entries(currentMap)) {
+                                     if (useImagesAsColors ? isImageColorKey(k) : !isImageColorKey(k)) {
+                                       cleanedMap[k] = q;
+                                     }
+                                   }
+                                   cleanedMap[colorKey] = newQty;
+
                                    setSizeColorQuantities(prev => ({
                                      ...prev,
-                                     [activeSizeForColors]: {
-                                       ...(prev[activeSizeForColors] || {}),
-                                       [colorKey]: newQty
-                                     }
+                                     [activeSizeForColors]: cleanedMap
                                    }));
                                    
-                                   // auto-update the overall size quantity
-                                   const sizeTotal = Object.values({ ...(sizeColorQuantities[activeSizeForColors] || {}), [colorKey]: newQty }).reduce((sum, q) => sum + q, 0);
+                                   // auto-update the overall size quantity from current mode's colors
+                                   const sizeTotal = Object.values(cleanedMap).reduce((sum, q) => sum + q, 0);
                                    setSizeQuantities(prev => ({ ...prev, [activeSizeForColors]: sizeTotal }));
                                 }}
                                 className="w-24 p-1 rounded border border-border text-center"
@@ -1077,6 +1213,20 @@ export default function AdminWears() {
                   </div>
                 ))}
               </div>
+
+              {(isShoeGroup || isClothGroup) && (
+                <div className="pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-xs bg-purple-100 hover:bg-purple-200 text-purple-900 p-2.5 rounded-lg border border-purple-200 transition-colors w-fit">
+                    <input
+                      type="checkbox"
+                      checked={useImagesAsColors}
+                      onChange={(e) => handleToggleUseImagesAsColors(e.target.checked)}
+                      className="size-4 accent-purple-600"
+                    />
+                    Use Product Images as Colors
+                  </label>
+                </div>
+              )}
             </div>
 
             {!(isShoeGroup || isClothGroup) && (
@@ -1108,152 +1258,204 @@ export default function AdminWears() {
 
             {(isShoeGroup || isClothGroup) && (
               <div className="space-y-4 mb-6 py-4 px-2 border border-purple-200 rounded-lg bg-purple-50/50">
-                <label className="text-sm font-bold block">Available Sizes (tick to add, enter qty)</label>
-                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-4 bg-purple-100 p-2 rounded w-fit">
-                  <input
-                    type="checkbox"
-                    checked={useImagesAsColors}
-                    onChange={(e) => setUseImagesAsColors(e.target.checked)}
-                    className="size-4 accent-purple-600"
-                  />
-                  Use Product Images as Colors
-                </label>
+                <label className="text-sm font-bold block pb-1 border-b border-purple-200">Available Sizes (tick to add, enter qty)</label>
 
-                {isShoeGroup && (
-                  <>
-                    {/* Men's Shoe Sizes */}
-                    <div>
-                      <p className="text-xs font-black text-purple-800 mb-1.5">Men&apos;s Sizes</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {menShoeSizes.map(sz => (
-                          <div key={`m-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
-                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[sz] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                {/* Unique Pricing Checkbox */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-purple-100/80 border border-purple-300 rounded-lg">
+                  <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-purple-950">
+                    <input
+                      type="checkbox"
+                      checked={useUniquePricing}
+                      onChange={(e) => {
+                        setUseUniquePricing(e.target.checked);
+                        if (e.target.checked) {
+                          if (!uniquePrice && price) setUniquePrice(price);
+                          if (!uniqueCostPrice && costPrice) setUniqueCostPrice(costPrice);
+                        }
+                      }}
+                      className="size-4 accent-purple-600"
+                    />
+                    Use Unique pricing
+                  </label>
+                  {useUniquePricing && (
+                    <div className="flex flex-wrap items-center gap-2 animate-in fade-in">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-purple-900">Sell (₦):</span>
+                        <input
+                          type="text"
+                          placeholder="Unique Sell"
+                          value={uniquePrice || price}
+                          onChange={e => {
+                            const formatted = formatPriceInput(e.target.value);
+                            setUniquePrice(formatted);
+                            setPrice(formatted);
+                          }}
+                          className="w-28 p-1.5 rounded border border-purple-400 bg-white text-xs font-bold focus:border-purple-600 outline-none"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-amber-900">Cost (₦):</span>
+                        <input
+                          type="text"
+                          placeholder="Unique Cost"
+                          value={uniqueCostPrice || costPrice}
+                          onChange={e => {
+                            const formatted = formatPriceInput(e.target.value);
+                            setUniqueCostPrice(formatted);
+                            setCostPrice(formatted);
+                          }}
+                          className="w-28 p-1.5 rounded border border-amber-400 bg-white text-xs font-bold focus:border-amber-600 outline-none"
+                        />
                       </div>
                     </div>
-                    {/* Women's Shoe Sizes */}
-                    <div>
-                      <p className="text-xs font-black text-purple-800 mb-1.5">Women&apos;s Sizes</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {womenShoeSizes.map(sz => (
-                          <div key={`w-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`W${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`W${sz}`)}>
-                            <input type="checkbox" checked={sizeQuantities[`W${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[`W${sz}`] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[`W${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`W${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`W${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(`W${sz}`); setTempColorsForSize(Object.keys(sizeColorQuantities[`W${sz}`] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Children's Shoe Sizes */}
-                    <div>
-                      <p className="text-xs font-black text-purple-800 mb-1.5">Children&apos;s Sizes</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {childrenShoeSizes.map(sz => (
-                          <div key={`c-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[`C${sz}`] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(`C${sz}`)}>
-                            <input type="checkbox" checked={sizeQuantities[`C${sz}`] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[`C${sz}`] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[`C${sz}`]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(`C${sz}`, e.target.value)} onBlur={e => handleSizeQtyBlur(`C${sz}`, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(`C${sz}`); setTempColorsForSize(Object.keys(sizeColorQuantities[`C${sz}`] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
 
-                {isClothGroup && (
-                  <>
-                    {/* Letter Sizes */}
-                    <div>
-                      <p className="text-xs font-black text-purple-800 mb-1.5">Letter Sizes</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {clothLetterSizes.map(sz => (
-                          <div key={`l-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
-                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[sz] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
+                {(() => {
+                  const renderSizeItem = (szKey: string, label: string = szKey, keyPrefix: string = '') => {
+                    const isSelected = sizeQuantities[szKey] !== undefined;
+                    return (
+                      <div
+                        key={`${keyPrefix}-${szKey}`}
+                        className={`p-2 rounded border text-xs transition-colors ${
+                          isSelected ? 'border-purple-500 bg-purple-100/70 shadow-xs' : 'border-border bg-background hover:bg-muted'
+                        }`}
+                        onClick={() => toggleSize(szKey)}
+                      >
+                        <div className="flex items-center justify-between gap-1.5 cursor-pointer">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="accent-purple-600 pointer-events-none"
+                            />
+                            <span className="font-bold">{label}</span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Number Sizes */}
-                    <div>
-                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Number Sizes (UK/US)</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {clothNumberSizes.map(sz => (
-                          <div key={`n-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
-                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[sz] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
+                          {isSelected && (
+                            <div className="ml-auto flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="number"
+                                min="1"
+                                value={sizeQuantities[szKey]}
+                                onChange={e => updateSizeQty(szKey, e.target.value)}
+                                onBlur={e => handleSizeQtyBlur(szKey, e.target.value)}
+                                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                                className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white"
+                                placeholder="Qty"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveSizeForColors(szKey);
+                                  if (useImagesAsColors) {
+                                    setTempColorsForSize('');
+                                  } else {
+                                    const textColors = Object.keys(sizeColorQuantities[szKey] || {}).filter(k => !isImageColorKey(k));
+                                    setTempColorsForSize(textColors.join(', '));
+                                  }
+                                }}
+                                className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider"
+                              >
+                                Colors
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isSelected && !useUniquePricing && (
+                          <div className="grid grid-cols-2 gap-1.5 mt-2 pt-1.5 border-t border-purple-200/80 animate-in fade-in" onClick={e => e.stopPropagation()}>
+                            <div>
+                              <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
+                              <input
+                                type="text"
+                                placeholder="Sell"
+                                value={customSizePrices[szKey] || ''}
+                                onChange={e => setCustomSizePrice(szKey, formatPriceInput(e.target.value))}
+                                className="w-full p-1 rounded border border-green-300 bg-white text-[11px] font-bold outline-none focus:border-green-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-amber-700 block">Cost (₦) <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="text"
+                                placeholder="Auto"
+                                value={customSizeCosts[szKey] || ''}
+                                onChange={e => setCustomSizeCost(szKey, formatPriceInput(e.target.value))}
+                                className="w-full p-1 rounded border border-amber-300 bg-white text-[11px] font-bold outline-none focus:border-amber-500"
+                              />
+                            </div>
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                    {/* Waist Sizes */}
-                    <div>
-                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Waist Sizes</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {clothWaistSizes.map(sz => (
-                          <div key={`ws-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
-                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[sz] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
+                    );
+                  };
+
+                  const sizeGridClass = `grid gap-2 ${useUniquePricing ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'}`;
+
+                  return (
+                    <>
+                      {isShoeGroup && (
+                        <>
+                          {/* Men's Shoe Sizes */}
+                          <div>
+                            <p className="text-xs font-black text-purple-800 mb-1.5">Men&apos;s Sizes</p>
+                            <div className={sizeGridClass}>
+                              {menShoeSizes.map(sz => renderSizeItem(sz, sz, 'm'))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Children Sizes */}
-                    <div>
-                      <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Children Sizes</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {clothChildrenSizes.map(sz => (
-                          <div key={`cs-${sz}`} className={`flex items-center gap-1.5 p-1.5 rounded border text-xs cursor-pointer transition-colors ${sizeQuantities[sz] !== undefined ? 'border-purple-500 bg-purple-100' : 'border-border bg-background hover:bg-muted'}`} onClick={() => toggleSize(sz)}>
-                            <input type="checkbox" checked={sizeQuantities[sz] !== undefined} readOnly className="accent-purple-600 pointer-events-none" />
-                            <span className="font-bold">{sz}</span>
-                            {sizeQuantities[sz] !== undefined && (
-                              <div className="ml-auto flex items-center gap-1">
-                                <input type="number" min="1" value={sizeQuantities[sz]} onClick={e => e.stopPropagation()} onChange={e => updateSizeQty(sz, e.target.value)} onBlur={e => handleSizeQtyBlur(sz, e.target.value)} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-10 text-center p-0.5 rounded border border-purple-300 text-xs font-bold bg-white" placeholder="Qty" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setActiveSizeForColors(sz); setTempColorsForSize(Object.keys(sizeColorQuantities[sz] || {}).join(', ')); }} className="text-[9px] font-bold bg-purple-600 hover:bg-purple-700 text-white px-1 py-0.5 rounded uppercase tracking-wider">Colors</button>
-                              </div>
-                            )}
+                          {/* Women's Shoe Sizes */}
+                          <div>
+                            <p className="text-xs font-black text-purple-800 mb-1.5">Women&apos;s Sizes</p>
+                            <div className={sizeGridClass}>
+                              {womenShoeSizes.map(sz => renderSizeItem(`W${sz}`, sz, 'w'))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                          {/* Children's Shoe Sizes */}
+                          <div>
+                            <p className="text-xs font-black text-purple-800 mb-1.5">Children&apos;s Sizes</p>
+                            <div className={sizeGridClass}>
+                              {childrenShoeSizes.map(sz => renderSizeItem(`C${sz}`, sz, 'c'))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {isClothGroup && (
+                        <>
+                          {/* Letter Sizes */}
+                          <div>
+                            <p className="text-xs font-black text-purple-800 mb-1.5">Letter Sizes</p>
+                            <div className={sizeGridClass}>
+                              {clothLetterSizes.map(sz => renderSizeItem(sz, sz, 'l'))}
+                            </div>
+                          </div>
+                          {/* Number Sizes */}
+                          <div>
+                            <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Number Sizes (UK/US)</h4>
+                            <div className={sizeGridClass}>
+                              {clothNumberSizes.map(sz => renderSizeItem(sz, sz, 'n'))}
+                            </div>
+                          </div>
+                          {/* Waist Sizes */}
+                          <div>
+                            <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Waist Sizes</h4>
+                            <div className={sizeGridClass}>
+                              {clothWaistSizes.map(sz => renderSizeItem(sz, sz, 'ws'))}
+                            </div>
+                          </div>
+                          {/* Children Sizes */}
+                          <div>
+                            <h4 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Children Sizes</h4>
+                            <div className={sizeGridClass}>
+                              {clothChildrenSizes.map(sz => renderSizeItem(sz, sz, 'cs'))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {Object.keys(sizeQuantities).length > 0 && (
                   <div className="text-xs font-bold text-purple-700 pt-2 border-t border-purple-200">

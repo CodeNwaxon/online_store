@@ -40,8 +40,12 @@ export interface ShopProduct {
   measurements?: string;
   measurementQuantities?: string | Record<string, number>;
   measurementCostPrices?: string | Record<string, number>;
+  measurementMinShippingQuantities?: string | Record<string, number>;
   pricingType?: string;
   customPortions?: string[];
+  useUniquePricing?: boolean;
+  sizePrices?: string | Record<string, number>;
+  sizeCostPrices?: string | Record<string, number>;
 }
 
 const colorMap: Record<string, string> = {
@@ -740,10 +744,23 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                               toast.error(`Only ${liveQty} available for size ${sz}${finalColor ? ` - ${finalColor}` : ''}`);
                               return;
                             }
+                            let finalSizePrice = food.price;
+                            if (sz && (food as any).sizePrices) {
+                              try {
+                                const sp = typeof (food as any).sizePrices === 'string'
+                                  ? JSON.parse((food as any).sizePrices)
+                                  : (food as any).sizePrices;
+                                const sPrice = Number(sp[sz]);
+                                if (!isNaN(sPrice) && sPrice > 0) {
+                                  finalSizePrice = sPrice;
+                                }
+                              } catch (e) {}
+                            }
+
                             const cartProduct: any = {
                               id: food.id,
                               name: food.name,
-                              price: food.price,
+                              price: finalSizePrice,
                               image: food.images?.[0] || '/images/placeholder.png',
                               category: 'Food',
                               description: food.description,
@@ -759,7 +776,25 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                             setShowSizeOverlay(false);
                           }}
                         >
-                          {sz} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                          {(() => {
+                            let sPriceDisplay = '';
+                            if (sz && (food as any).sizePrices) {
+                              try {
+                                const sp = typeof (food as any).sizePrices === 'string'
+                                  ? JSON.parse((food as any).sizePrices)
+                                  : (food as any).sizePrices;
+                                const sPrice = Number(sp[sz]);
+                                if (!isNaN(sPrice) && sPrice > 0) {
+                                  sPriceDisplay = ` - ₦${sPrice.toLocaleString()}`;
+                                }
+                              } catch (e) {}
+                            }
+                            return (
+                              <>
+                                {sz}{sPriceDisplay} {qty > 0 && <span className="opacity-70">({qty})</span>}
+                              </>
+                            );
+                          })()}
                         </button>
                       );
                     })}

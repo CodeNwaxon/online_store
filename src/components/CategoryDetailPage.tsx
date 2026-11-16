@@ -578,6 +578,18 @@ export default function CategoryDetailPage({
                           <div className="flex flex-wrap gap-2">
                             {sizeKeys.map(sz => {
                               const qty = (product.sizeQuantities as Record<string, number>)[sz];
+                              let sPriceDisplay = '';
+                              if (sz && (product as any).sizePrices) {
+                                try {
+                                  const sp = typeof (product as any).sizePrices === 'string'
+                                    ? JSON.parse((product as any).sizePrices)
+                                    : (product as any).sizePrices;
+                                  const sPrice = Number(sp[sz]);
+                                  if (!isNaN(sPrice) && sPrice > 0) {
+                                    sPriceDisplay = ` - ₦${sPrice.toLocaleString()}`;
+                                  }
+                                } catch (e) {}
+                              }
                               return (
                                 <button
                                   key={sz}
@@ -594,7 +606,7 @@ export default function CategoryDetailPage({
                                     setTempSelectedSize(sz);
                                   }}
                                 >
-                                  {sz} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
+                                  {sz}{sPriceDisplay} {qty > 0 && <span className="opacity-70 text-xs ml-1">({qty})</span>}
                                 </button>
                               );
                             })}
@@ -745,7 +757,19 @@ export default function CategoryDetailPage({
 
                           const measurePriceStr = tempSelectedMeasurement ? parsedMeasurements[tempSelectedMeasurement] : null;
                           const parsedMPrice = Number(measurePriceStr);
-                          const finalPrice = (parsedMPrice && !isNaN(parsedMPrice) && parsedMPrice > 0) ? parsedMPrice : product.price;
+                          let finalPrice = (parsedMPrice && !isNaN(parsedMPrice) && parsedMPrice > 0) ? parsedMPrice : product.price;
+
+                          if (tempSelectedSize && (product as any).sizePrices) {
+                            try {
+                              const sp = typeof (product as any).sizePrices === 'string'
+                                ? JSON.parse((product as any).sizePrices)
+                                : (product as any).sizePrices;
+                              const sPrice = Number(sp[tempSelectedSize]);
+                              if (!isNaN(sPrice) && sPrice > 0) {
+                                finalPrice = sPrice;
+                              }
+                            } catch (e) {}
+                          }
 
                           addItem({
                             id: product.id,

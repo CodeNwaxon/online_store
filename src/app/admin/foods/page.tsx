@@ -60,6 +60,7 @@ export default function AdminFoods() {
   const [selectedMeasurements, setSelectedMeasurements] = useState<Record<string, string>>({});
   const [selectedMeasurementCosts, setSelectedMeasurementCosts] = useState<Record<string, string>>({});
   const [selectedMeasurementQuantities, setSelectedMeasurementQuantities] = useState<Record<string, string>>({});
+  const [selectedMeasurementMinShipping, setSelectedMeasurementMinShipping] = useState<Record<string, string>>({});
 
   // Custom portion/measurement inputs
   const [customPortions, setCustomPortions] = useState<string[]>([]);
@@ -113,6 +114,13 @@ export default function AdminFoods() {
       }
       return copy;
     });
+    setSelectedMeasurementMinShipping(prev => {
+      const copy = { ...prev };
+      if (m in copy) {
+        delete copy[m];
+      }
+      return copy;
+    });
   };
 
   const setMeasurementPrice = (m: string, value: string) => {
@@ -125,6 +133,10 @@ export default function AdminFoods() {
 
   const setMeasurementQuantity = (m: string, value: string) => {
     setSelectedMeasurementQuantities(prev => ({ ...prev, [m]: value }));
+  };
+
+  const setMeasurementMinShipping = (m: string, value: string) => {
+    setSelectedMeasurementMinShipping(prev => ({ ...prev, [m]: value }));
   };
 
   // Auto-calculate total quantity from active measurements when multi-tier pricing is used
@@ -313,6 +325,7 @@ export default function AdminFoods() {
     setSelectedMeasurements({});
     setSelectedMeasurementCosts({});
     setSelectedMeasurementQuantities({});
+    setSelectedMeasurementMinShipping({});
     setCustomPortions([]);
     setNewCustomPortionInput('');
     setIsAddingCustomPortion(false);
@@ -437,6 +450,19 @@ export default function AdminFoods() {
       }
     }
 
+    const cleanMinShipping: Record<string, number> = {};
+    if (pricingType !== 'standard') {
+      for (const mName of Object.keys(cleanMeasurements)) {
+        const valStr = selectedMeasurementMinShipping[mName];
+        if (valStr !== undefined && valStr.trim() !== '') {
+          const val = parseInt(valStr, 10);
+          if (!isNaN(val) && val > 0) {
+            cleanMinShipping[mName] = val;
+          }
+        }
+      }
+    }
+
     setLoading(true);
     try {
       const uploadedUrls = await Promise.all(images.map(async (img) => {
@@ -462,8 +488,9 @@ export default function AdminFoods() {
         measurements: Object.keys(cleanMeasurements).length > 0 ? JSON.stringify(cleanMeasurements) : '',
         measurementCostPrices: Object.keys(cleanCosts).length > 0 ? JSON.stringify(cleanCosts) : '',
         measurementQuantities: Object.keys(cleanQuantities).length > 0 ? JSON.stringify(cleanQuantities) : '',
-        requiresMinShipping,
-        minShippingQty: requiresMinShipping ? Number(minShippingQty) : 0,
+        measurementMinShippingQuantities: Object.keys(cleanMinShipping).length > 0 ? JSON.stringify(cleanMinShipping) : '',
+        requiresMinShipping: pricingType === 'standard' ? requiresMinShipping : false,
+        minShippingQty: (pricingType === 'standard' && requiresMinShipping) ? Number(minShippingQty) : 0,
         images: uploadedUrls,
         updatedAt: new Date().toISOString(),
         vendor: user?.email || '',
@@ -659,6 +686,22 @@ export default function AdminFoods() {
         } else {
           setSelectedMeasurementQuantities({});
         }
+
+        const foodMinShipping = (food as any).measurementMinShippingQuantities;
+        if (foodMinShipping) {
+          try {
+            const parsedMin = typeof foodMinShipping === 'string' ? JSON.parse(foodMinShipping) : foodMinShipping;
+            const minObj: Record<string, string> = {};
+            Object.entries(parsedMin).forEach(([k, v]) => {
+              minObj[k] = String(v);
+            });
+            setSelectedMeasurementMinShipping(minObj);
+          } catch {
+            setSelectedMeasurementMinShipping({});
+          }
+        } else {
+          setSelectedMeasurementMinShipping({});
+        }
       } catch {
         const mObj: Record<string, string> = {};
         foodMeasurements.split(', ').forEach((m: string) => {
@@ -667,12 +710,14 @@ export default function AdminFoods() {
         setSelectedMeasurements(mObj);
         setPricingType(targetPricingType || 'bags');
         setCustomPortions(loadedCustomPortions);
+        setSelectedMeasurementMinShipping({});
       }
     } else {
       setPricingType(targetPricingType);
       setSelectedMeasurements({});
       setSelectedMeasurementCosts({});
       setSelectedMeasurementQuantities({});
+      setSelectedMeasurementMinShipping({});
       setCustomPortions(loadedCustomPortions);
     }
 
@@ -850,7 +895,7 @@ export default function AdminFoods() {
                 <div className="space-y-4">
                   <div className="p-3 bg-green-50/60 border border-green-200 rounded-lg">
                     <p className="text-xs font-bold text-green-900 mb-2">Base Unit: 1 Bag Pricing & Stock</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="text-[11px] font-bold text-red-700 block mb-1">1 Bag Cost Price (₦)</label>
                         <input
@@ -874,7 +919,7 @@ export default function AdminFoods() {
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-muted-foreground block mb-1">1 Bag Available Stock Qty</label>
+                        <label className="text-[11px] font-bold text-muted-foreground block mb-1">1 Bag Stock Qty</label>
                         <input
                           required
                           type="number"
@@ -883,6 +928,18 @@ export default function AdminFoods() {
                           onChange={e => setQuantity(e.target.value)}
                           placeholder="e.g. 15"
                           className="w-full p-2 rounded border border-border bg-white text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-purple-700 block mb-1">Min Ship Qty <span className="opacity-70 font-normal">(Opt)</span></label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={selectedMeasurementMinShipping['1 bag'] || ''}
+                          onChange={e => setMeasurementMinShipping('1 bag', e.target.value)}
+                          placeholder="None"
+                          className="w-full p-2 rounded border border-purple-300 bg-white text-xs font-bold"
+                          title="Minimum 1-bag quantity customer must order to ship standalone"
                         />
                       </div>
                     </div>
@@ -963,7 +1020,7 @@ export default function AdminFoods() {
                             )}
                           </div>
                           {m in selectedMeasurements && (
-                            <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-green-200/60 animate-in fade-in duration-200">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-green-200/60 animate-in fade-in duration-200">
                               <div>
                                 <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                                 <input
@@ -993,6 +1050,18 @@ export default function AdminFoods() {
                                   value={selectedMeasurementQuantities[m] || ''}
                                   onChange={e => setMeasurementQuantity(m, e.target.value)}
                                   className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold focus:border-blue-500 outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="None"
+                                  value={selectedMeasurementMinShipping[m] || ''}
+                                  onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                  className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold focus:border-purple-500 outline-none"
+                                  title="Minimum quantity customer must order to ship standalone"
                                 />
                               </div>
                             </div>
@@ -1044,7 +1113,7 @@ export default function AdminFoods() {
                               <span className="font-bold text-[11px]">Full Crate (30 Eggs)</span>
                             </div>
                             {fullKey in selectedMeasurements && (
-                              <div className="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
                                 <div>
                                   <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                                   <input
@@ -1076,6 +1145,18 @@ export default function AdminFoods() {
                                     className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
                                   />
                                 </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="None"
+                                    value={selectedMeasurementMinShipping[fullKey] || ''}
+                                    onChange={e => setMeasurementMinShipping(fullKey, e.target.value)}
+                                    className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                    title="Minimum quantity to ship standalone"
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1094,7 +1175,7 @@ export default function AdminFoods() {
                               <span className="font-bold text-[11px]">Half Crate (15 Eggs)</span>
                             </div>
                             {halfKey in selectedMeasurements && (
-                              <div className="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
                                 <div>
                                   <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                                   <input
@@ -1124,6 +1205,18 @@ export default function AdminFoods() {
                                     value={selectedMeasurementQuantities[halfKey] || ''}
                                     onChange={e => setMeasurementQuantity(halfKey, e.target.value)}
                                     className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="None"
+                                    value={selectedMeasurementMinShipping[halfKey] || ''}
+                                    onChange={e => setMeasurementMinShipping(halfKey, e.target.value)}
+                                    className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                    title="Minimum quantity to ship standalone"
                                   />
                                 </div>
                               </div>
@@ -1170,7 +1263,7 @@ export default function AdminFoods() {
                               </button>
                             </div>
                             {m in selectedMeasurements && (
-                              <div className="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
                                 <div>
                                   <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                                   <input
@@ -1200,6 +1293,18 @@ export default function AdminFoods() {
                                     value={selectedMeasurementQuantities[m] || ''}
                                     onChange={e => setMeasurementQuantity(m, e.target.value)}
                                     className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="None"
+                                    value={selectedMeasurementMinShipping[m] || ''}
+                                    onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                    className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                    title="Minimum quantity to ship standalone"
                                   />
                                 </div>
                               </div>
@@ -1289,7 +1394,7 @@ export default function AdminFoods() {
                           )}
                         </div>
                         {m in selectedMeasurements && (
-                          <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20 animate-in fade-in duration-200">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-primary/20 animate-in fade-in duration-200">
                             <div>
                               <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                               <input
@@ -1319,6 +1424,18 @@ export default function AdminFoods() {
                                 value={selectedMeasurementQuantities[m] || ''}
                                 onChange={e => setMeasurementQuantity(m, e.target.value)}
                                 className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="None"
+                                value={selectedMeasurementMinShipping[m] || ''}
+                                onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                title="Minimum quantity to ship standalone"
                               />
                             </div>
                           </div>
@@ -1406,7 +1523,7 @@ export default function AdminFoods() {
                           )}
                         </div>
                         {m in selectedMeasurements && (
-                          <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-primary/20">
                             <div>
                               <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                               <input
@@ -1436,6 +1553,18 @@ export default function AdminFoods() {
                                 value={selectedMeasurementQuantities[m] || ''}
                                 onChange={e => setMeasurementQuantity(m, e.target.value)}
                                 className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="None"
+                                value={selectedMeasurementMinShipping[m] || ''}
+                                onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                title="Minimum quantity to ship standalone"
                               />
                             </div>
                           </div>
@@ -1523,7 +1652,7 @@ export default function AdminFoods() {
                           )}
                         </div>
                         {m in selectedMeasurements && (
-                          <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-primary/20">
                             <div>
                               <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                               <input
@@ -1553,6 +1682,18 @@ export default function AdminFoods() {
                                 value={selectedMeasurementQuantities[m] || ''}
                                 onChange={e => setMeasurementQuantity(m, e.target.value)}
                                 className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="None"
+                                value={selectedMeasurementMinShipping[m] || ''}
+                                onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                title="Minimum quantity to ship standalone"
                               />
                             </div>
                           </div>
@@ -1640,7 +1781,7 @@ export default function AdminFoods() {
                           )}
                         </div>
                         {m in selectedMeasurements && (
-                          <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2 pt-2 border-t border-primary/20">
                             <div>
                               <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                               <input
@@ -1670,6 +1811,18 @@ export default function AdminFoods() {
                                 value={selectedMeasurementQuantities[m] || ''}
                                 onChange={e => setMeasurementQuantity(m, e.target.value)}
                                 className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="None"
+                                value={selectedMeasurementMinShipping[m] || ''}
+                                onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                title="Minimum quantity to ship standalone"
                               />
                             </div>
                           </div>
@@ -1745,7 +1898,7 @@ export default function AdminFoods() {
                               <span className="text-[10px] hidden sm:inline">Delete</span>
                             </button>
                           </div>
-                          <div className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-primary/20">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 border-t border-primary/20">
                             <div>
                               <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
                               <input
@@ -1775,6 +1928,18 @@ export default function AdminFoods() {
                                 value={selectedMeasurementQuantities[m] || ''}
                                 onChange={e => setMeasurementQuantity(m, e.target.value)}
                                 className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-purple-700 block">Min Ship <span className="opacity-70 font-normal">(Opt)</span></label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="None"
+                                value={selectedMeasurementMinShipping[m] || ''}
+                                onChange={e => setMeasurementMinShipping(m, e.target.value)}
+                                className="w-full p-1 rounded border border-purple-300 bg-white text-[11px] font-bold"
+                                title="Minimum quantity to ship standalone"
                               />
                             </div>
                           </div>
@@ -2024,25 +2189,27 @@ export default function AdminFoods() {
             </div>
 
             {/* MIN SHIPPING QTY */}
-            <div className="pt-4 border-t border-border mt-4">
-              <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-3">
-                <input type="checkbox" checked={requiresMinShipping} onChange={e => setRequiresMinShipping(e.target.checked)} className="size-4 accent-green-600" />
-                Require Minimum Quantity for Standalone Shipping?
-              </label>
-              {requiresMinShipping && (
-                <div className="max-w-[200px] space-y-2 animate-in slide-in-from-top-2">
-                  <label className="text-xs md:text-sm font-bold text-green-700">Minimum Quantity Required</label>
-                  <input
-                    required={requiresMinShipping}
-                    value={minShippingQty}
-                    onChange={e => setMinShippingQty(e.target.value)}
-                    type="number"
-                    min="1"
-                    className="w-full p-2 rounded-md border border-border bg-background text-sm font-bold focus:border-green-500 outline-none"
-                  />
-                </div>
-              )}
-            </div>
+            {pricingType === 'standard' && (
+              <div className="pt-4 border-t border-border mt-4">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-sm mb-3">
+                  <input type="checkbox" checked={requiresMinShipping} onChange={e => setRequiresMinShipping(e.target.checked)} className="size-4 accent-green-600" />
+                  Require Minimum Quantity for Standalone Shipping?
+                </label>
+                {requiresMinShipping && (
+                  <div className="max-w-[200px] space-y-2 animate-in slide-in-from-top-2">
+                    <label className="text-xs md:text-sm font-bold text-green-700">Minimum Quantity Required</label>
+                    <input
+                      required={requiresMinShipping}
+                      value={minShippingQty}
+                      onChange={e => setMinShippingQty(e.target.value)}
+                      type="number"
+                      min="1"
+                      className="w-full p-2 rounded-md border border-border bg-background text-sm font-bold focus:border-green-500 outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col md:flex-row gap-4 pt-4 border-t border-border mt-4">
               <button

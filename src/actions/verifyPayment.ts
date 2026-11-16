@@ -154,6 +154,18 @@ export async function verifyAndFulfillOrder(
       }
     }
 
+    if (item.selectedSize && productData.sizePrices) {
+      try {
+        const parsedSizes = typeof productData.sizePrices === 'string'
+          ? JSON.parse(productData.sizePrices)
+          : productData.sizePrices;
+        const sPrice = Number(parsedSizes[item.selectedSize]);
+        if (!isNaN(sPrice) && sPrice > 0) {
+          itemPrice = sPrice;
+        }
+      } catch (e) {}
+    }
+
     if (item.selectedMeasurement && productData.measurementCostPrices) {
       try {
         const parsedCost = JSON.parse(productData.measurementCostPrices);
@@ -164,6 +176,18 @@ export async function verifyAndFulfillOrder(
       } catch (e) {
         // Fallback for old format or invalid JSON
       }
+    }
+
+    if (item.selectedSize && productData.sizeCostPrices) {
+      try {
+        const parsedSizeCosts = typeof productData.sizeCostPrices === 'string'
+          ? JSON.parse(productData.sizeCostPrices)
+          : productData.sizeCostPrices;
+        const sCost = Number(parsedSizeCosts[item.selectedSize]);
+        if (!isNaN(sCost) && sCost > 0) {
+          itemCost = sCost;
+        }
+      } catch (e) {}
     }
     
     serverCalculatedTotal += itemPrice * item.quantity;
@@ -247,6 +271,19 @@ export async function verifyAndFulfillOrder(
             }
           } catch (e) {
             // ignore invalid measurement cost data
+          }
+        }
+        if (item.selectedSize && productData?.sizeCostPrices) {
+          try {
+            const parsedSizeCosts = typeof productData.sizeCostPrices === 'string'
+              ? JSON.parse(productData.sizeCostPrices)
+              : productData.sizeCostPrices;
+            const selectedCost = Number(parsedSizeCosts[item.selectedSize]);
+            if (!isNaN(selectedCost) && selectedCost > 0) {
+              rdpPrice = selectedCost;
+            }
+          } catch (e) {
+            // ignore invalid size cost data
           }
         }
         const vendorEmail = productDoc ? (productDoc?.data()?.vendor || null) : (item.vendor || null);
@@ -334,7 +371,7 @@ export async function verifyAndFulfillOrder(
       });
 
       // Deduct product quantities (grouped by product doc so each doc is updated exactly once in the transaction)
-      const updatesByDoc: Record<string, { productRef: any; totalQty: number; measurementQuantitiesObj?: Record<string, number> | null }> = {};
+      const updatesByDoc: Record<string, { productRef: any; totalQty: number; measurementQuantitiesObj?: Record<string, number> | null; sizeQuantitiesObj?: Record<string, number> | null }> = {};
 
       for (const item of orderData.items) {
         const collectionName = (item as any)._collection || 'products';
@@ -352,10 +389,21 @@ export async function verifyAndFulfillOrder(
               mqObj = null;
             }
           }
+          let sqObj: Record<string, number> | null = null;
+          if (prodData?.sizeQuantities) {
+            try {
+              sqObj = typeof prodData.sizeQuantities === 'string'
+                ? JSON.parse(prodData.sizeQuantities)
+                : { ...prodData.sizeQuantities };
+            } catch (e) {
+              sqObj = null;
+            }
+          }
           updatesByDoc[docKey] = {
             productRef: adminDb.collection(collectionName).doc(item.id),
             totalQty: 0,
             measurementQuantitiesObj: mqObj,
+            sizeQuantitiesObj: sqObj,
           };
         }
 
@@ -368,6 +416,11 @@ export async function verifyAndFulfillOrder(
           entry.measurementQuantitiesObj[item.selectedMeasurement] = Math.max(0, currentVal - itemQty);
         }
 
+        if (item.selectedSize && entry.sizeQuantitiesObj && entry.sizeQuantitiesObj[item.selectedSize] !== undefined) {
+          const currentVal = Number(entry.sizeQuantitiesObj[item.selectedSize]) || 0;
+          entry.sizeQuantitiesObj[item.selectedSize] = Math.max(0, currentVal - itemQty);
+        }
+
         delete (item as any)._collection; // clean up before saving to db
       }
 
@@ -377,6 +430,9 @@ export async function verifyAndFulfillOrder(
         };
         if (entry.measurementQuantitiesObj) {
           updatePayload.measurementQuantities = JSON.stringify(entry.measurementQuantitiesObj);
+        }
+        if (entry.sizeQuantitiesObj) {
+          updatePayload.sizeQuantities = entry.sizeQuantitiesObj;
         }
         transaction.update(entry.productRef, updatePayload);
       }

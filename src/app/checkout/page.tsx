@@ -168,6 +168,27 @@ export default function Checkout() {
     return areas.filter(a => normalizeCity(a.city).includes(norm));
   }, [formData.city, areas]);
 
+  // Helper to determine minimum shipping requirement for an item
+  const getItemMinShippingReq = (item: any, dbProd: any): number => {
+    if (!dbProd) return 0;
+    if (item.selectedMeasurement && dbProd.measurementMinShippingQuantities) {
+      try {
+        const parsed = typeof dbProd.measurementMinShippingQuantities === 'string'
+          ? JSON.parse(dbProd.measurementMinShippingQuantities)
+          : dbProd.measurementMinShippingQuantities;
+        const mVal = Number(parsed[item.selectedMeasurement]);
+        if (!isNaN(mVal) && mVal > 0) {
+          return mVal;
+        }
+        return 0; // If variant has no min shipping specified, it is unrestricted
+      } catch (e) {}
+    }
+    if (dbProd.requiresMinShipping && dbProd.minShippingQty) {
+      return Number(dbProd.minShippingQty) || 0;
+    }
+    return 0;
+  };
+
   // Calculate Shipping with New System
   useEffect(() => {
     if (deliveryMethod === 'pickup' || !formData.city.trim()) {
@@ -199,9 +220,9 @@ export default function Checkout() {
           return;
         }
 
-        const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+        const hasStandardItem = items.some(item => getItemMinShippingReq(item, dbProducts[item.id]) === 0);
         if (!hasStandardItem && items.length > 0) {
-          const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+          const maxRequired = Math.max(...items.map(item => getItemMinShippingReq(item, dbProducts[item.id])));
           const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
           
           if (totalQty < maxRequired) {
@@ -249,9 +270,9 @@ export default function Checkout() {
     if (!matchedArea) return -1;
     if (matchedArea.isActive === false) return -2;
 
-    const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+    const hasStandardItem = items.some(item => getItemMinShippingReq(item, dbProducts[item.id]) === 0);
     if (!hasStandardItem && items.length > 0) {
-      const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+      const maxRequired = Math.max(...items.map(item => getItemMinShippingReq(item, dbProducts[item.id])));
       const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
       if (totalQty < maxRequired) return -3;
     }
@@ -622,13 +643,13 @@ export default function Checkout() {
                 <button
                   type="button"
                   onClick={() => {
-                    const hasStandardItem = items.some(item => !dbProducts[item.id]?.requiresMinShipping);
+                    const hasStandardItem = items.some(item => getItemMinShippingReq(item, dbProducts[item.id]) === 0);
                     if (!hasStandardItem && items.length > 0) {
                       let maxReqItem = items[0];
                       let maxRequired = 0;
                       
                       for (const item of items) {
-                        const req = dbProducts[item.id]?.minShippingQty || 0;
+                        const req = getItemMinShippingReq(item, dbProducts[item.id]);
                         if (req > maxRequired) {
                           maxRequired = req;
                           maxReqItem = item;
@@ -638,7 +659,7 @@ export default function Checkout() {
                       const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
                       if (totalQty < maxRequired) {
                          setMinShippingOverlay({
-                            name: maxReqItem.name,
+                            name: maxReqItem.selectedMeasurement ? `${maxReqItem.name} (${maxReqItem.selectedMeasurement})` : maxReqItem.name,
                             needed: maxRequired - totalQty,
                             current: totalQty,
                             required: maxRequired
@@ -852,7 +873,7 @@ export default function Checkout() {
                     return;
                   }
                   if (shippingCost === -3) {
-                    const maxRequired = Math.max(...items.map(item => dbProducts[item.id]?.minShippingQty || 0));
+                    const maxRequired = Math.max(...items.map(item => getItemMinShippingReq(item, dbProducts[item.id])));
                     toast.error(`Your cart requires at least ${maxRequired} items to qualify for shipping, or add a standard product.`);
                     return;
                   }
