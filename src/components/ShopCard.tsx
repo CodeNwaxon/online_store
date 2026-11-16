@@ -40,6 +40,8 @@ export interface ShopProduct {
   measurements?: string;
   measurementQuantities?: string | Record<string, number>;
   measurementCostPrices?: string | Record<string, number>;
+  pricingType?: string;
+  customPortions?: string[];
 }
 
 const colorMap: Record<string, string> = {

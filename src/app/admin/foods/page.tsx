@@ -457,6 +457,8 @@ export default function AdminFoods() {
         quantity: parsedQty,
         size: size || 'medium',
         customShippingAmount: isCustomShipping && customShippingAmount ? Number(parsePriceInput(customShippingAmount)) : null,
+        pricingType: pricingType || 'standard',
+        customPortions: customPortions,
         measurements: Object.keys(cleanMeasurements).length > 0 ? JSON.stringify(cleanMeasurements) : '',
         measurementCostPrices: Object.keys(cleanCosts).length > 0 ? JSON.stringify(cleanCosts) : '',
         measurementQuantities: Object.keys(cleanQuantities).length > 0 ? JSON.stringify(cleanQuantities) : '',
@@ -515,6 +517,10 @@ export default function AdminFoods() {
 
     // Load measurements if they exist
     const foodMeasurements = (food as any).measurements;
+    const foodPricingType = (food as any).pricingType as FoodPricingType | undefined;
+    let targetPricingType: FoodPricingType = foodPricingType || 'standard';
+    const loadedCustomPortions: string[] = Array.isArray((food as any).customPortions) ? (food as any).customPortions : [];
+
     if (foodMeasurements) {
       try {
         const parsed = JSON.parse(foodMeasurements);
@@ -538,24 +544,120 @@ export default function AdminFoods() {
 
         setSelectedMeasurements(mObj);
 
-        // Detect pricing type
+        // Detect pricing type if not already saved in document
         const keys = Object.keys(mObj);
         const keysLower = keys.join(' ').toLowerCase();
-        if (keysLower.includes('crate') || keysLower.includes('egg') || keys.some(k => ['Big', 'Medium', 'Small'].includes(k))) {
-          setPricingType('crates');
-        } else if (keysLower.includes('tin') || keysLower.includes('sachet') || keysLower.includes('roll')) {
-          setPricingType('tins');
-        } else if (keysLower.includes('carton') || keysLower.includes('pack')) {
-          setPricingType('cartons');
-        } else if (keysLower.includes('kg')) {
-          setPricingType('weight');
-        } else if (keysLower.includes('tuber') || keysLower.includes('heap') || keysLower.includes('bunch')) {
-          setPricingType('tubers');
-        } else if (keysLower.includes('bag') || keysLower.includes('mudu') || keysLower.includes('congo') || keysLower.includes('paint rubber') || keysLower.includes('cup')) {
-          setPricingType('bags');
+        if (!foodPricingType || foodPricingType === 'standard') {
+          if (keysLower.includes('crate') || keysLower.includes('egg') || keys.some(k => ['Big', 'Medium', 'Small'].includes(k))) {
+            targetPricingType = 'crates';
+          } else if (keysLower.includes('tin') || keysLower.includes('sachet') || keysLower.includes('roll')) {
+            targetPricingType = 'tins';
+          } else if (keysLower.includes('carton') || keysLower.includes('pack')) {
+            targetPricingType = 'cartons';
+          } else if (keysLower.includes('kg')) {
+            targetPricingType = 'weight';
+          } else if (keysLower.includes('tuber') || keysLower.includes('heap') || keysLower.includes('bunch')) {
+            targetPricingType = 'tubers';
+          } else if (keysLower.includes('bag') || keysLower.includes('mudu') || keysLower.includes('congo') || keysLower.includes('paint rubber') || keysLower.includes('cup')) {
+            targetPricingType = 'bags';
+          } else if (keys.length > 0) {
+            targetPricingType = 'custom';
+          }
+        }
+        setPricingType(targetPricingType);
+
+        // Identify any custom portions from mObj that are not part of standard presets
+        const knownPresetMap: Record<string, string[]> = {
+          bags: bagPortionPresets,
+          crates: [
+            'Big - Full Crate (30 Eggs)', 'Big - Half Crate (15 Eggs)',
+            'Medium - Full Crate (30 Eggs)', 'Medium - Half Crate (15 Eggs)',
+            'Small - Full Crate (30 Eggs)', 'Small - Half Crate (15 Eggs)',
+            'Big', 'Medium', 'Small'
+          ],
+          tins: tinPresets,
+          cartons: cartonPresets,
+          weight: weightPresets,
+          tubers: tuberPresets,
+          custom: [],
+          standard: [],
+        };
+        const standardList = knownPresetMap[targetPricingType] || [];
+        const extraKeys = keys.filter(k => k !== '1 bag' && !standardList.includes(k));
+        const allCustomPortions = Array.from(new Set([...loadedCustomPortions, ...extraKeys]));
+        setCustomPortions(allCustomPortions);
+
+        const foodMeasurementCosts = (food as any).measurementCostPrices;
+        if (foodMeasurementCosts) {
+          try {
+            const parsedCosts = JSON.parse(foodMeasurementCosts);
+            const costObj: Record<string, string> = {};
+            Object.entries(parsedCosts).forEach(([k, v]) => {
+              costObj[k] = formatPriceInput(String(v));
+            });
+
+            // Migrate old egg costs to Full Crate
+            const eggCostMigrationMap: Record<string, string> = {
+              'Big': 'Big - Full Crate (30 Eggs)',
+              'Medium': 'Medium - Full Crate (30 Eggs)',
+              'Small': 'Small - Full Crate (30 Eggs)',
+            };
+            Object.entries(eggCostMigrationMap).forEach(([oldK, newK]) => {
+              if (oldK in costObj && !(newK in costObj)) {
+                costObj[newK] = costObj[oldK];
+                delete costObj[oldK];
+              }
+            });
+
+            // Automatically sanitize any old stored costs on half portions that were set >= selling price
+            Object.keys(costObj).forEach((k) => {
+              const costVal = parseFloat((costObj[k] || '').replace(/,/g, '')) || 0;
+              const sellVal = parseFloat((mObj[k] || '').replace(/,/g, '')) || 0;
+              if (costVal > 0 && sellVal > 0 && costVal >= sellVal) {
+                if (k.toLowerCase().includes('half') || k.toLowerCase().includes('1/2')) {
+                  costObj[k] = formatPriceInput(String(Math.round(costVal * 0.5) < sellVal ? Math.round(costVal * 0.5) : Math.round(sellVal * 0.7)));
+                } else {
+                  costObj[k] = formatPriceInput(String(Math.round(sellVal * 0.75)));
+                }
+              }
+            });
+
+            setSelectedMeasurementCosts(costObj);
+          } catch {
+            setSelectedMeasurementCosts({});
+          }
         } else {
-          setPricingType('custom');
-          setCustomPortions(keys);
+          setSelectedMeasurementCosts({});
+        }
+
+        const foodMeasurementQuantities = (food as any).measurementQuantities;
+        if (foodMeasurementQuantities) {
+          try {
+            const parsedQty = typeof foodMeasurementQuantities === 'string' ? JSON.parse(foodMeasurementQuantities) : foodMeasurementQuantities;
+            const qtyObj: Record<string, string> = {};
+            Object.entries(parsedQty).forEach(([k, v]) => {
+              qtyObj[k] = String(v);
+            });
+
+            // Migrate old egg quantities to Full Crate
+            const eggQtyMigrationMap: Record<string, string> = {
+              'Big': 'Big - Full Crate (30 Eggs)',
+              'Medium': 'Medium - Full Crate (30 Eggs)',
+              'Small': 'Small - Full Crate (30 Eggs)',
+            };
+            Object.entries(eggQtyMigrationMap).forEach(([oldK, newK]) => {
+              if (oldK in qtyObj && !(newK in qtyObj)) {
+                qtyObj[newK] = qtyObj[oldK];
+                delete qtyObj[oldK];
+              }
+            });
+
+            setSelectedMeasurementQuantities(qtyObj);
+          } catch {
+            setSelectedMeasurementQuantities({});
+          }
+        } else {
+          setSelectedMeasurementQuantities({});
         }
       } catch {
         const mObj: Record<string, string> = {};
@@ -563,87 +665,15 @@ export default function AdminFoods() {
           if (m) mObj[m] = '';
         });
         setSelectedMeasurements(mObj);
-        setPricingType('bags');
-      }
-
-      const foodMeasurementCosts = (food as any).measurementCostPrices;
-      if (foodMeasurementCosts) {
-        try {
-          const parsedCosts = JSON.parse(foodMeasurementCosts);
-          const costObj: Record<string, string> = {};
-          Object.entries(parsedCosts).forEach(([k, v]) => {
-            costObj[k] = formatPriceInput(String(v));
-          });
-
-          // Migrate old egg costs to Full Crate
-          const eggCostMigrationMap: Record<string, string> = {
-            'Big': 'Big - Full Crate (30 Eggs)',
-            'Medium': 'Medium - Full Crate (30 Eggs)',
-            'Small': 'Small - Full Crate (30 Eggs)',
-          };
-          Object.entries(eggCostMigrationMap).forEach(([oldK, newK]) => {
-            if (oldK in costObj && !(newK in costObj)) {
-              costObj[newK] = costObj[oldK];
-              delete costObj[oldK];
-            }
-          });
-
-          // Automatically sanitize any old stored costs on half portions that were set >= selling price
-          Object.keys(costObj).forEach((k) => {
-            const costVal = parseFloat((costObj[k] || '').replace(/,/g, '')) || 0;
-            const sellVal = parseFloat((selectedMeasurements[k] || '').replace(/,/g, '')) || 0;
-            if (costVal > 0 && sellVal > 0 && costVal >= sellVal) {
-              if (k.toLowerCase().includes('half') || k.toLowerCase().includes('1/2')) {
-                costObj[k] = formatPriceInput(String(Math.round(costVal * 0.5) < sellVal ? Math.round(costVal * 0.5) : Math.round(sellVal * 0.7)));
-              } else {
-                costObj[k] = formatPriceInput(String(Math.round(sellVal * 0.75)));
-              }
-            }
-          });
-
-          setSelectedMeasurementCosts(costObj);
-        } catch {
-          setSelectedMeasurementCosts({});
-        }
-      } else {
-        setSelectedMeasurementCosts({});
-      }
-
-      const foodMeasurementQuantities = (food as any).measurementQuantities;
-      if (foodMeasurementQuantities) {
-        try {
-          const parsedQty = typeof foodMeasurementQuantities === 'string' ? JSON.parse(foodMeasurementQuantities) : foodMeasurementQuantities;
-          const qtyObj: Record<string, string> = {};
-          Object.entries(parsedQty).forEach(([k, v]) => {
-            qtyObj[k] = String(v);
-          });
-
-          // Migrate old egg quantities to Full Crate
-          const eggQtyMigrationMap: Record<string, string> = {
-            'Big': 'Big - Full Crate (30 Eggs)',
-            'Medium': 'Medium - Full Crate (30 Eggs)',
-            'Small': 'Small - Full Crate (30 Eggs)',
-          };
-          Object.entries(eggQtyMigrationMap).forEach(([oldK, newK]) => {
-            if (oldK in qtyObj && !(newK in qtyObj)) {
-              qtyObj[newK] = qtyObj[oldK];
-              delete qtyObj[oldK];
-            }
-          });
-
-          setSelectedMeasurementQuantities(qtyObj);
-        } catch {
-          setSelectedMeasurementQuantities({});
-        }
-      } else {
-        setSelectedMeasurementQuantities({});
+        setPricingType(targetPricingType || 'bags');
+        setCustomPortions(loadedCustomPortions);
       }
     } else {
-      setPricingType('standard');
+      setPricingType(targetPricingType);
       setSelectedMeasurements({});
       setSelectedMeasurementCosts({});
       setSelectedMeasurementQuantities({});
-      setCustomPortions([]);
+      setCustomPortions(loadedCustomPortions);
     }
 
     setImages((food.images || []).map(url => ({ type: 'url', value: url })));
@@ -906,14 +936,31 @@ export default function AdminFoods() {
                             m in selectedMeasurements ? 'border-green-500 bg-green-50/70 shadow-sm' : 'border-border bg-background'
                           }`}
                         >
-                          <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMeasurement(m)}>
-                            <input
-                              type="checkbox"
-                              checked={m in selectedMeasurements}
-                              readOnly
-                              className="accent-green-600 pointer-events-none"
-                            />
-                            <span className="font-bold">{m}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                              <input
+                                type="checkbox"
+                                checked={m in selectedMeasurements}
+                                readOnly
+                                className="accent-green-600 pointer-events-none"
+                              />
+                              <span className="font-bold">{m}</span>
+                            </div>
+                            {customPortions.includes(m) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCustomPortions(customPortions.filter(x => x !== m));
+                                  if (m in selectedMeasurements) toggleMeasurement(m);
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                                title="Delete custom portion"
+                              >
+                                <FaTrash size={11} />
+                                <span className="text-[10px] hidden sm:inline">Delete</span>
+                              </button>
+                            )}
                           </div>
                           {m in selectedMeasurements && (
                             <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-green-200/60 animate-in fade-in duration-200">
@@ -1086,6 +1133,82 @@ export default function AdminFoods() {
                       );
                     })}
                   </div>
+
+                  {customPortions.length > 0 && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs font-bold text-foreground mb-2">Additional / Custom Egg Options</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {customPortions.map(m => (
+                          <div
+                            key={`crate-custom-${m}`}
+                            className={`p-2.5 rounded-lg border text-xs transition-all ${
+                              m in selectedMeasurements ? 'border-amber-400 bg-amber-50/50 shadow-sm' : 'border-border bg-background'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                                <input
+                                  type="checkbox"
+                                  checked={m in selectedMeasurements}
+                                  readOnly
+                                  className="accent-amber-600 pointer-events-none"
+                                />
+                                <span className="font-bold">{m}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCustomPortions(customPortions.filter(x => x !== m));
+                                  if (m in selectedMeasurements) toggleMeasurement(m);
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                                title="Delete custom option"
+                              >
+                                <FaTrash size={10} />
+                                <span className="text-[10px] hidden sm:inline">Delete</span>
+                              </button>
+                            </div>
+                            {m in selectedMeasurements && (
+                              <div className="grid grid-cols-3 gap-1.5 mt-2 pt-1.5 border-t border-amber-200/60">
+                                <div>
+                                  <label className="text-[9px] font-bold text-green-800 block">Sell (₦)</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Sell"
+                                    value={selectedMeasurements[m]}
+                                    onChange={e => setMeasurementPrice(m, formatPriceInput(e.target.value))}
+                                    className="w-full p-1 rounded border border-green-300 bg-white text-[11px] font-bold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-amber-700 block">Cost (₦) <span className="opacity-70 font-normal">(Opt)</span></label>
+                                  <input
+                                    type="text"
+                                    placeholder="Auto"
+                                    value={selectedMeasurementCosts[m] || ''}
+                                    onChange={e => setMeasurementCost(m, formatPriceInput(e.target.value))}
+                                    className="w-full p-1 rounded border border-amber-300 bg-white text-[11px] font-bold"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[9px] font-bold text-blue-700 block">Qty</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="Qty"
+                                    value={selectedMeasurementQuantities[m] || ''}
+                                    onChange={e => setMeasurementQuantity(m, e.target.value)}
+                                    className="w-full p-1 rounded border border-blue-300 bg-white text-[11px] font-bold"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1139,14 +1262,31 @@ export default function AdminFoods() {
                           m in selectedMeasurements ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background'
                         }`}
                       >
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMeasurement(m)}>
-                          <input
-                            type="checkbox"
-                            checked={m in selectedMeasurements}
-                            readOnly
-                            className="accent-primary pointer-events-none"
-                          />
-                          <span className="font-bold">{m}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                            <input
+                              type="checkbox"
+                              checked={m in selectedMeasurements}
+                              readOnly
+                              className="accent-primary pointer-events-none"
+                            />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {customPortions.includes(m) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomPortions(customPortions.filter(x => x !== m));
+                                if (m in selectedMeasurements) toggleMeasurement(m);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                              title="Delete custom size"
+                            >
+                              <FaTrash size={11} />
+                              <span className="text-[10px] hidden sm:inline">Delete</span>
+                            </button>
+                          )}
                         </div>
                         {m in selectedMeasurements && (
                           <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20 animate-in fade-in duration-200">
@@ -1192,23 +1332,78 @@ export default function AdminFoods() {
               {/* Type 5: Cartons & Packs */}
               {pricingType === 'cartons' && (
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-foreground">Select Carton & Pack Options (Tick to activate)</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {cartonPresets.map(m => (
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-bold text-foreground">Select Carton & Pack Options (Tick to activate)</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCustomPortion(!isAddingCustomPortion)}
+                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <FaPlus size={9} /> {isAddingCustomPortion ? 'Cancel' : 'Add Custom Carton / Pack'}
+                    </button>
+                  </div>
+
+                  {isAddingCustomPortion && (
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        placeholder="Option name (e.g. 5-in-1 Pack, Single Bottle, Roll)..."
+                        value={newCustomPortionInput}
+                        onChange={e => setNewCustomPortionInput(e.target.value)}
+                        className="flex-1 p-2 rounded border border-primary text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newCustomPortionInput.trim()) {
+                            const trimmed = newCustomPortionInput.trim();
+                            if (!customPortions.includes(trimmed) && !cartonPresets.includes(trimmed)) {
+                              setCustomPortions([...customPortions, trimmed]);
+                              toggleMeasurement(trimmed);
+                            }
+                            setNewCustomPortionInput('');
+                            setIsAddingCustomPortion(false);
+                          }
+                        }}
+                        className="bg-primary text-white px-3 py-1.5 rounded text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {[...cartonPresets, ...customPortions].map(m => (
                       <div
                         key={`carton-${m}`}
                         className={`p-2.5 rounded-lg border text-xs transition-all ${
                           m in selectedMeasurements ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background'
                         }`}
                       >
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMeasurement(m)}>
-                          <input
-                            type="checkbox"
-                            checked={m in selectedMeasurements}
-                            readOnly
-                            className="accent-primary pointer-events-none"
-                          />
-                          <span className="font-bold">{m}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                            <input
+                              type="checkbox"
+                              checked={m in selectedMeasurements}
+                              readOnly
+                              className="accent-primary pointer-events-none"
+                            />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {customPortions.includes(m) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomPortions(customPortions.filter(x => x !== m));
+                                if (m in selectedMeasurements) toggleMeasurement(m);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                              title="Delete custom option"
+                            >
+                              <FaTrash size={11} />
+                              <span className="text-[10px] hidden sm:inline">Delete</span>
+                            </button>
+                          )}
                         </div>
                         {m in selectedMeasurements && (
                           <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
@@ -1254,23 +1449,78 @@ export default function AdminFoods() {
               {/* Type 6: Weight (Kg) */}
               {pricingType === 'weight' && (
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-foreground">Select Weight Options (Tick to activate)</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-bold text-foreground">Select Weight Options (Tick to activate)</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCustomPortion(!isAddingCustomPortion)}
+                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <FaPlus size={9} /> {isAddingCustomPortion ? 'Cancel' : 'Add Custom Weight'}
+                    </button>
+                  </div>
+
+                  {isAddingCustomPortion && (
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        placeholder="Weight name (e.g. 500g, Half Kilo, 15 kg, 50 kg)..."
+                        value={newCustomPortionInput}
+                        onChange={e => setNewCustomPortionInput(e.target.value)}
+                        className="flex-1 p-2 rounded border border-primary text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newCustomPortionInput.trim()) {
+                            const trimmed = newCustomPortionInput.trim();
+                            if (!customPortions.includes(trimmed) && !weightPresets.includes(trimmed)) {
+                              setCustomPortions([...customPortions, trimmed]);
+                              toggleMeasurement(trimmed);
+                            }
+                            setNewCustomPortionInput('');
+                            setIsAddingCustomPortion(false);
+                          }
+                        }}
+                        className="bg-primary text-white px-3 py-1.5 rounded text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {weightPresets.map(m => (
+                    {[...weightPresets, ...customPortions].map(m => (
                       <div
                         key={`weight-${m}`}
                         className={`p-2.5 rounded-lg border text-xs transition-all ${
                           m in selectedMeasurements ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background'
                         }`}
                       >
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMeasurement(m)}>
-                          <input
-                            type="checkbox"
-                            checked={m in selectedMeasurements}
-                            readOnly
-                            className="accent-primary pointer-events-none"
-                          />
-                          <span className="font-bold">{m}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                            <input
+                              type="checkbox"
+                              checked={m in selectedMeasurements}
+                              readOnly
+                              className="accent-primary pointer-events-none"
+                            />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {customPortions.includes(m) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomPortions(customPortions.filter(x => x !== m));
+                                if (m in selectedMeasurements) toggleMeasurement(m);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                              title="Delete custom option"
+                            >
+                              <FaTrash size={11} />
+                              <span className="text-[10px] hidden sm:inline">Delete</span>
+                            </button>
+                          )}
                         </div>
                         {m in selectedMeasurements && (
                           <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
@@ -1316,23 +1566,78 @@ export default function AdminFoods() {
               {/* Type 7: Tubers & Heaps */}
               {pricingType === 'tubers' && (
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-foreground">Select Tuber / Heap Options (Tick to activate)</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-bold text-foreground">Select Tuber / Heap Options (Tick to activate)</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCustomPortion(!isAddingCustomPortion)}
+                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <FaPlus size={9} /> {isAddingCustomPortion ? 'Cancel' : 'Add Custom Tuber / Heap'}
+                    </button>
+                  </div>
+
+                  {isAddingCustomPortion && (
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        placeholder="Option name (e.g. Heap of 20, Half Bunch, Small Basket)..."
+                        value={newCustomPortionInput}
+                        onChange={e => setNewCustomPortionInput(e.target.value)}
+                        className="flex-1 p-2 rounded border border-primary text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newCustomPortionInput.trim()) {
+                            const trimmed = newCustomPortionInput.trim();
+                            if (!customPortions.includes(trimmed) && !tuberPresets.includes(trimmed)) {
+                              setCustomPortions([...customPortions, trimmed]);
+                              toggleMeasurement(trimmed);
+                            }
+                            setNewCustomPortionInput('');
+                            setIsAddingCustomPortion(false);
+                          }
+                        }}
+                        className="bg-primary text-white px-3 py-1.5 rounded text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {tuberPresets.map(m => (
+                    {[...tuberPresets, ...customPortions].map(m => (
                       <div
                         key={`tuber-${m}`}
                         className={`p-2.5 rounded-lg border text-xs transition-all ${
                           m in selectedMeasurements ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background'
                         }`}
                       >
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMeasurement(m)}>
-                          <input
-                            type="checkbox"
-                            checked={m in selectedMeasurements}
-                            readOnly
-                            className="accent-primary pointer-events-none"
-                          />
-                          <span className="font-bold">{m}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => toggleMeasurement(m)}>
+                            <input
+                              type="checkbox"
+                              checked={m in selectedMeasurements}
+                              readOnly
+                              className="accent-primary pointer-events-none"
+                            />
+                            <span className="font-bold">{m}</span>
+                          </div>
+                          {customPortions.includes(m) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomPortions(customPortions.filter(x => x !== m));
+                                if (m in selectedMeasurements) toggleMeasurement(m);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                              title="Delete custom option"
+                            >
+                              <FaTrash size={11} />
+                              <span className="text-[10px] hidden sm:inline">Delete</span>
+                            </button>
+                          )}
                         </div>
                         {m in selectedMeasurements && (
                           <div className="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-primary/20">
@@ -1433,9 +1738,11 @@ export default function AdminFoods() {
                                 setCustomPortions(customPortions.filter(x => x !== m));
                                 toggleMeasurement(m);
                               }}
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 flex items-center gap-1 text-[11px] font-bold"
+                              title="Delete measurement"
                             >
-                              <FaTimes size={12} />
+                              <FaTrash size={11} />
+                              <span className="text-[10px] hidden sm:inline">Delete</span>
                             </button>
                           </div>
                           <div className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-primary/20">
