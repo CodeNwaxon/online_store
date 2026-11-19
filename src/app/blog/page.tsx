@@ -401,7 +401,37 @@ export default function BlogPage() {
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent opacity-70 group-hover:opacity-100 transition-opacity" />
               )}
 
-              {/* Dynamic Image Grid (1, 2, 3, or 4 images) */}
+              <div className={`flex items-center gap-4 text-xs md:text-sm mb-4 pb-3 border-b ${isDarkMode ? 'text-sky-300/70 border-sky-900/40' : 'text-muted-foreground border-border'
+                }`}>
+                <div className="flex items-center gap-1.5">
+                  <User className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : ''}`} />
+                  <span className={isDarkMode ? 'text-slate-200 font-medium' : ''}>{post.author}</span>
+                </div>
+                <div className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-sky-700' : 'bg-muted-foreground'}`} />
+                <div className="flex items-center gap-1.5">
+                  <Clock className={`w-3.5 h-3.5 ${isDarkMode ? 'text-sky-400' : ''}`} />
+                  <span>
+                    {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString() : new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {post.tag && (
+                <div className="mb-3">
+                  <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider ${isDarkMode
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    : 'text-primary font-bold'
+                    }`}>
+                    {post.tag}
+                  </span>
+                </div>
+              )}
+              <h2 className={`mb-6 text-xl font-bold leading-tight sm:text-3xl transition-colors ${isDarkMode ? 'text-white group-hover:text-amber-300/90' : 'text-foreground'
+                }`}>
+                {post.title}
+              </h2>
+
+              {/* Dynamic Image Grid (1, 2, 3, or 4 images) placed after the title */}
               {(() => {
                 const postImages: BlogImage[] = (
                   post.images && post.images.length > 0
@@ -468,36 +498,6 @@ export default function BlogPage() {
                   </div>
                 );
               })()}
-
-              <div className={`flex items-center gap-4 text-xs md:text-sm mb-4 pb-3 border-b ${isDarkMode ? 'text-sky-300/70 border-sky-900/40' : 'text-muted-foreground border-border'
-                }`}>
-                <div className="flex items-center gap-1.5">
-                  <User className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : ''}`} />
-                  <span className={isDarkMode ? 'text-slate-200 font-medium' : ''}>{post.author}</span>
-                </div>
-                <div className={`w-1 h-1 rounded-full ${isDarkMode ? 'bg-sky-700' : 'bg-muted-foreground'}`} />
-                <div className="flex items-center gap-1.5">
-                  <Clock className={`w-3.5 h-3.5 ${isDarkMode ? 'text-sky-400' : ''}`} />
-                  <span>
-                    {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString() : new Date().toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              {post.tag && (
-                <div className="mb-3">
-                  <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider ${isDarkMode
-                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                    : 'text-primary font-bold'
-                    }`}>
-                    {post.tag}
-                  </span>
-                </div>
-              )}
-              <h2 className={`mb-6 text-xl font-bold leading-tight sm:text-3xl transition-colors ${isDarkMode ? 'text-white group-hover:text-amber-300/90' : 'text-foreground'
-                }`}>
-                {post.title}
-              </h2>
 
               {/* Render HTML content safely */}
               <div
