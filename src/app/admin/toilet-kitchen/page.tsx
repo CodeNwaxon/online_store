@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -19,6 +19,11 @@ import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/u
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
+import AllowShuffleToggle from '@/components/AllowShuffleToggle';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
 import { useAdmin } from '@/hooks/useAdmin';
 import Fuse from 'fuse.js';
 
@@ -395,15 +400,11 @@ export default function AdminToiletKitchen() {
     return p.group?.toLowerCase() === filterGroup.toLowerCase();
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'productCode'],
-      threshold: 0.1,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })();
+  const { allowShuffle } = useAllowShuffle('toilet_kitchen');
+
+  const filteredProducts = searchProductsWithRamRom(baseFilteredProducts, searchQuery);
+
+  const orderedProducts = useStableShuffle(filteredProducts as any[], allowShuffle) as typeof filteredProducts;
 
   return (
     <AdminGuard>
@@ -775,7 +776,10 @@ export default function AdminToiletKitchen() {
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
             <div className="flex flex-col gap-1 w-full md:w-auto">
-              <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+              <div className="flex items-center justify-between md:justify-start md:gap-4 w-full">
+                <h2 className="text-xl md:text-2xl font-bold">Inventory ({filteredProducts.length})</h2>
+                <AllowShuffleToggle collectionKey="toilet_kitchen" />
+              </div>
               <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="toilet_kitchen" allowAll />
             </div>
             <div className="flex flex-row gap-2 w-full md:w-auto items-center">
@@ -806,7 +810,7 @@ export default function AdminToiletKitchen() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {filteredProducts.map(product => (
+            {orderedProducts.map(product => (
               <div key={product.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
                   <ShopCard
@@ -821,7 +825,7 @@ export default function AdminToiletKitchen() {
               </div>
             ))}
           </div>
-          {filteredProducts.length === 0 && (
+          {orderedProducts.length === 0 && (
             <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
               No products found. Add some above!
             </div>

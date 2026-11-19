@@ -210,14 +210,27 @@ export default function ReceiptPage() {
 
           <div className="border-t border-slate-200 my-5"></div>
 
-          {order.items?.map((item: any, idx: number) => (
+          {order.items?.map((item: any, idx: number) => {
+            const isImageColor = Boolean(item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')));
+            return (
             <div key={idx} className="flex justify-between mb-3 text-xs">
-              <span className="text-slate-600 max-w-[190px]">
-                {item.name} {item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x{item.quantity}
+              <span className="text-slate-600 max-w-[210px] flex items-center gap-1 flex-wrap">
+                <span>{item.name}</span>
+                {item.selectedSize && <span className="font-bold">({item.selectedSize})</span>}
+                {item.selectedColor && (
+                  isImageColor ? (
+                    <img src={item.selectedColor} alt="Color" className="w-4 h-5 object-cover rounded border border-slate-300 inline-block align-middle" />
+                  ) : (
+                    <span className="font-bold">({item.selectedColor})</span>
+                  )
+                )}
+                {item.selectedMeasurement && <span className="font-bold">({item.selectedMeasurement})</span>}
+                <span>x{item.quantity}</span>
               </span>
               <span className="font-black">₦{(item.price * item.quantity).toLocaleString()}</span>
             </div>
-          ))}
+          );
+          })}
 
           <div className="border-t border-slate-200 my-5"></div>
 

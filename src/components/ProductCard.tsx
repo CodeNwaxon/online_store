@@ -80,7 +80,25 @@ export default function ProductCard({ product: rawProduct, isAdmin, priority = f
   }, []);
 
   const theme = cardThemes[index % 12];
-  const colors = (product as any).color ? (product as any).color.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+  const isUniqueImageVariants = Boolean(
+    product.hasUniqueImageVariants && (
+      (product.uniqueImageVariants && Object.keys(product.uniqueImageVariants).length > 0) ||
+      (product.images && product.images.length > 0)
+    )
+  );
+
+  let colors: string[] = [];
+  if (product.hasUniqueImageVariants) {
+    if (product.uniqueImageVariants && Object.keys(product.uniqueImageVariants).length > 0) {
+      colors = Object.keys(product.uniqueImageVariants);
+    } else if (product.images && product.images.length > 0) {
+      colors = product.images;
+    }
+  } else if (product.variants && product.variants.length > 0 && product.variants.some((v: any) => v.color)) {
+    colors = product.variants.map((v: any) => v.color).filter(Boolean);
+  } else if ((product as any).color && typeof (product as any).color === 'string') {
+    colors = (product as any).color.split(',').map((c: string) => c.trim()).filter(Boolean);
+  }
   const scrollbarColor = '#6b7280';
 
 
@@ -233,9 +251,14 @@ export default function ProductCard({ product: rawProduct, isAdmin, priority = f
       {/* Color bar below image */}
       {colors.length > 0 && (
         <div className="flex overflow-x-auto gap-1 mx-1 md:py-2 py-1 bg-gray-50 max-md:[&::-webkit-scrollbar]:hidden max-md:[-ms-overflow-style:none] max-md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:h-[3px] md:[&::-webkit-scrollbar-track]:bg-transparent md:[&::-webkit-scrollbar-thumb]:rounded-full" style={{ scrollbarColor: `${scrollbarColor} transparent`, ['--scrollbar-thumb' as string]: scrollbarColor } as React.CSSProperties}>
-          {colors.map((c: string, i: number) => (
-            <span key={i} title={c} className={`shrink-0 w-3 h-3 rounded-full border shadow-sm ${c.toLowerCase().includes('white') ? 'border-gray-200' : 'border-transparent'}`} style={{ backgroundColor: getValidColor(c) }} />
-          ))}
+          {colors.map((c: string, i: number) => {
+            const isImage = isUniqueImageVariants || c.startsWith('http') || c.startsWith('data:');
+            return isImage ? (
+              <img key={i} src={c} alt="Color variant" className="shrink-0 w-3 h-3 rounded-full object-cover border border-gray-200" />
+            ) : (
+              <span key={i} title={c} className={`shrink-0 w-3 h-3 rounded-full border shadow-sm ${c.toLowerCase().includes('white') ? 'border-gray-200' : 'border-transparent'}`} style={{ backgroundColor: getValidColor(c) }} />
+            );
+          })}
         </div>
       )}
 
@@ -458,9 +481,17 @@ export default function ProductCard({ product: rawProduct, isAdmin, priority = f
             </button>
             
             <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Color</h3>
-            <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+            <div className="flex flex-wrap items-center gap-2 py-3 px-2 overflow-y-auto max-h-52 mb-3">
               <button
-                className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                className={`rounded-md text-[11px] font-bold border transition-colors mx-1.5 my-1.5 ${
+                  isUniqueImageVariants
+                    ? 'h-18 md:h-20 px-3.5 flex items-center justify-center text-center shrink-0'
+                    : 'px-3 py-1.5'
+                } ${
+                  tempSelectedColor === 'Any Color'
+                    ? (isUniqueImageVariants ? 'bg-[#D48806] hover:bg-[#B57405] text-white border-transparent shadow-sm' : 'bg-gray-500 text-white border-transparent')
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600'
+                }`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -470,26 +501,60 @@ export default function ProductCard({ product: rawProduct, isAdmin, priority = f
                 Any Color
               </button>
               {colors.map((c: string) => {
+                const isImage = isUniqueImageVariants || c.startsWith('http') || c.startsWith('data:');
                 return (
                   <button
                     key={c}
-                    className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === c ? `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
-                    style={tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }}
+                    className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 mx-1.5 my-1.5 ${
+                      isImage
+                        ? 'w-14 h-18 md:w-16 md:h-20 shrink-0 p-0 shadow-sm'
+                        : 'px-3 py-1.5 text-[11px] font-bold shrink-0'
+                    } ${
+                      tempSelectedColor === c
+                        ? isImage
+                          ? 'border-[#D48806] ring-2 ring-[#D48806]/40 scale-105 shadow-md'
+                          : `${getContrastTextColor(c)} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                        : isImage
+                          ? 'border-gray-200 hover:border-[#D48806]/60 opacity-80 hover:opacity-100'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                    style={!isImage ? (tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       setTempSelectedColor(c);
                     }}
                   >
-                    {c}
+                    {isImage ? (
+                      <>
+                        <img src={c} alt="variant" className="w-full h-full object-cover" />
+                        {tempSelectedColor === c && (
+                          <div className="absolute top-1 right-1 bg-[#D48806] text-white rounded-full p-0.5 shadow-md">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      c
+                    )}
                   </button>
                 );
               })}
             </div>
             <div className="mt-2 pt-2 border-t border-border">
               <button
-                className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
-                style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
+                className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
+                  !tempSelectedColor
+                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                    : isUniqueImageVariants
+                      ? 'bg-[#D48806] hover:bg-[#B57405] text-white shadow-md'
+                      : tempSelectedColor === 'Any Color'
+                        ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90`
+                        : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`
+                }`}
+                style={!isUniqueImageVariants && tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
                 disabled={!tempSelectedColor}
                 onClick={async (e) => {
                   e.preventDefault();
@@ -522,9 +587,13 @@ export default function ProductCard({ product: rawProduct, isAdmin, priority = f
                   const cartProduct = { ...product } as any;
                   if (finalColor) {
                     cartProduct.selectedColor = finalColor;
+                    if (isUniqueImageVariants) {
+                      cartProduct.image = finalColor;
+                    }
                   }
                   addItem(cartProduct);
-                  toast.success(`${product.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {
+                  const isImageColor = Boolean(finalColor && (finalColor.startsWith('http') || finalColor.startsWith('data:')));
+                  toast.success(`${product.name} ${finalColor ? (isImageColor ? '' : `(${finalColor}) `) : ''}added to cart`, {
                     id: toastId,
                     style: { fontSize: '11px', padding: '4px 8px', minWidth: '120px', marginTop: '20px' },
                     position: 'bottom-center',

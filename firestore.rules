@@ -167,8 +167,9 @@ service cloud.firestore {
     // Settings Configuration
     match /settings/{id} {
       allow read: if true;
-      allow update: if isCEO() || (isAdmin() && id.matches('^advert_.*'));
-      allow create, delete: if isCEO();
+      allow update: if isCEO() || (isAdmin() && (id.matches('^advert_.*') || id == 'shuffle' || id.matches('^shuffle_.*')));
+      allow create: if isCEO() || (isAdmin() && (id.matches('^advert_.*') || id == 'shuffle' || id.matches('^shuffle_.*')));
+      allow delete: if isCEO();
     }
 
     // ─── 4. NEW FEATURES (Foods & Partnerships) ───────────────────

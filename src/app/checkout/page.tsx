@@ -777,10 +777,20 @@ export default function Checkout() {
                 <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}-${item.selectedMeasurement || ''}-${idx}`} className="flex justify-between items-center text-sm">
                   <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 rounded shrink-0 overflow-hidden">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                      <Image src={(item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:'))) ? item.selectedColor : item.image} alt={item.name} fill className="object-cover" sizes="64px" />
                     </div>
-                    <span className="text-muted-foreground">
-                      {item.name} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="font-bold text-foreground text-[10px]">({[item.selectedSize, item.selectedColor?.startsWith('http') || item.selectedColor?.startsWith('data:') ? (item.selectedColor.match(/[a-zA-Z0-9]{6,}/g)?.pop()?.slice(-6).toUpperCase() || "VARIANT") : item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} x {item.quantity}
+                    <span className="text-muted-foreground flex items-center gap-1 flex-wrap">
+                      <span>{item.name}</span>
+                      {item.selectedSize && <span className="font-bold text-foreground text-[10px]">({item.selectedSize})</span>}
+                      {item.selectedColor && (
+                        (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) ? (
+                          <img src={item.selectedColor} alt="Variant" className="w-4 h-5 object-cover rounded border border-border inline-block align-middle" />
+                        ) : (
+                          <span className="font-bold text-foreground text-[10px]">({item.selectedColor})</span>
+                        )
+                      )}
+                      {item.selectedMeasurement && <span className="font-bold text-foreground text-[10px]">({item.selectedMeasurement})</span>}
+                      <span>x {item.quantity}</span>
                     </span>
                   </div>
                   <span className="font-semibold">₦{(item.price * item.quantity).toLocaleString()}</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
@@ -15,6 +15,10 @@ import { useSearchParams } from 'next/navigation';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithCategorySpacing, shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
 
 function FurnitureContent() {
   const searchParams = useSearchParams();
@@ -27,6 +31,7 @@ function FurnitureContent() {
   const [visibleCount, setVisibleCount] = useState(86);
   const { likedProductIds } = useLikeStore();
   const { storeTypeSales } = useStoreSales();
+  const { allowShuffle } = useAllowShuffle('products');
 
   const { fetchCollection } = useProductCache();
 
@@ -76,17 +81,11 @@ function FurnitureContent() {
     return matchesCategory && matchesPrice;
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'category', 'description', 'productCode'],
-      threshold: 0.3,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })();
+  const filteredProducts = searchProductsWithRamRom(baseFilteredProducts, searchQuery);
 
-  const displayedProducts = filteredProducts.slice(0, visibleCount);
+  const orderedProducts = useStableShuffle(filteredProducts as any[], allowShuffle) as typeof filteredProducts;
+
+  const displayedProducts = orderedProducts.slice(0, visibleCount);
 
   return (
     <div className="min-h-screen bg-[#FDFBF9] pb-20">
@@ -211,7 +210,7 @@ function FurnitureContent() {
           </div>
 
           {/* Product Grid */}
-          {filteredProducts.length === 0 ? (
+          {orderedProducts.length === 0 ? (
             <div className="max-w-7xl mx-auto text-center px-2 py-20 bg-white rounded-2xl shadow-sm border border-amber-50">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
                 <FaSearch size={24} />
@@ -241,7 +240,7 @@ function FurnitureContent() {
                 ))}
               </div>
 
-              {filteredProducts.length > visibleCount && (
+              {orderedProducts.length > visibleCount && (
                 <div className="text-center mt-12 flex justify-center">
                   <button
                     className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-amber-200 bg-white hover:bg-amber-50 text-amber-800 px-6 py-3 text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-amber-300 hover:shadow-md"

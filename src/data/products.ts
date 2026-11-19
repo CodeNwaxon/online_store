@@ -26,6 +26,11 @@ export interface Product {
   ramRom?: string;
   requiresMinShipping?: boolean;
   minShippingQty?: number;
+  hasUniqueImageVariants?: boolean;
+  uniqueImageVariants?: Record<string, number>;
+  variants?: any[];
+  color?: string;
+  vendor?: string;
 }
 
 export const products: Product[] = [

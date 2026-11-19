@@ -14,6 +14,9 @@ import Fuse from 'fuse.js';
 import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithCategorySpacing, shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
 
 function FoodsContent() {
   const searchParams = useSearchParams();
@@ -90,6 +93,8 @@ function FoodsContent() {
     });
   }, [foods, selectedGroup, selectedCategory, selectedPriceFilter]);
 
+  const { allowShuffle } = useAllowShuffle('foods');
+
   const filteredFoods = useMemo(() => {
     if (!searchQuery.trim()) return baseFilteredFoods;
     const fuse = new Fuse(baseFilteredFoods, {
@@ -99,6 +104,8 @@ function FoodsContent() {
     });
     return fuse.search(searchQuery.trim()).map(r => r.item);
   }, [baseFilteredFoods, searchQuery]);
+
+  const displayedFoods = useStableShuffle(filteredFoods as any[], allowShuffle) as typeof filteredFoods;
 
   if (loading) {
     return (
@@ -257,7 +264,7 @@ function FoodsContent() {
         </div>
 
         {/* Product Grid */}
-        {filteredFoods.length === 0 ? (
+        {displayedFoods.length === 0 ? (
           <div className="max-w-7xl mx-auto text-center px-2 py-20 bg-white rounded-2xl shadow-sm border border-green-50">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
               <FaSearch size={24} />
@@ -281,12 +288,12 @@ function FoodsContent() {
         ) : (
           <>
             <div className="px-1.5 md:px-4 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 sm:gap-4 md:gap-6">
-              {filteredFoods.slice(0, visibleCount).map((food) => (
+              {displayedFoods.slice(0, visibleCount).map((food) => (
                 <ShopCard key={food.id} food={food} />
               ))}
             </div>
 
-            {filteredFoods.length > visibleCount && (
+            {displayedFoods.length > visibleCount && (
               <div className="text-center mt-12 flex justify-center">
                 <button
                   className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-green-200 bg-white hover:bg-green-50 text-green-700 px-6 py-3 text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-green-300 hover:shadow-md"

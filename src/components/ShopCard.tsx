@@ -607,10 +607,17 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
               {colors.length > 0 && (
                 <>
                   <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight mt-2">Select {food.hasUniqueImageVariants ? 'Variant' : 'Color'}</h3>
-                  <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
-                    {!food.hasUniqueImageVariants && (
-                      <button
-                        className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${tempSelectedColor === 'Any Color' ? `bg-gray-500 text-white border-transparent` : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  <div className="flex flex-wrap items-center gap-2 py-3 px-2 overflow-y-auto max-h-52 mb-3">
+                    <button
+                        className={`rounded-md text-[11px] font-bold border transition-colors mx-1.5 my-1.5 ${
+                          food.hasUniqueImageVariants
+                            ? 'h-18 md:h-20 px-3.5 flex items-center justify-center text-center shrink-0'
+                            : 'px-3 py-1.5'
+                        } ${
+                          tempSelectedColor === 'Any Color'
+                            ? (food.hasUniqueImageVariants ? 'bg-[#D48806] hover:bg-[#B57405] text-white border-transparent shadow-sm' : 'bg-gray-500 text-white border-transparent')
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600'
+                        }`}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -619,13 +626,12 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                       >
                         Any Color
                       </button>
-                    )}
                     {colors.map(c => {
                         const isImageUrl = c.startsWith('http') || c.startsWith('data:');
                         return (
                         <button
                           key={c}
-                          className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImageUrl ? 'w-8 h-12 shrink-0' : 'px-3 py-1.5 text-[11px] font-bold'} ${tempSelectedColor === c ? `${!isImageUrl ? getContrastTextColor(c) : ''} ${isImageUrl ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : `${isImageUrl ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}`}
+                          className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 mx-1.5 my-1.5 ${isImageUrl ? 'w-14 h-18 md:w-16 md:h-20 shrink-0 shadow-sm' : 'px-3 py-1.5 text-[11px] font-bold'} ${tempSelectedColor === c ? `${!isImageUrl ? getContrastTextColor(c) : ''} ${isImageUrl ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}` : `${isImageUrl ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}`}
                           style={!isImageUrl ? (tempSelectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
                           onClick={async (e) => {
                             e.preventDefault();
@@ -657,8 +663,16 @@ export default function ShopCard({ food, isAdmin, isFood = true, onEdit, onDelet
                   {sizeKeys.length === 0 && measurementKeys.length === 0 && (
                     <div className="mt-2 pt-2 border-t border-border">
                       <button
-                        className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!tempSelectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (tempSelectedColor === 'Any Color' ? `${theme.bgPrimary} ${theme.hoverBgPrimary} text-white` : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`)}`}
-                        style={tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
+                        className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
+                        !tempSelectedColor
+                          ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                          : food.hasUniqueImageVariants
+                            ? 'bg-[#D48806] hover:bg-[#B57405] text-white shadow-md'
+                            : tempSelectedColor === 'Any Color'
+                              ? `${theme.bgPrimary} ${theme.hoverBgPrimary} text-white`
+                              : `${getContrastTextColor(tempSelectedColor)} hover:opacity-90`
+                      }`}
+                      style={!food.hasUniqueImageVariants && tempSelectedColor && tempSelectedColor !== 'Any Color' ? { backgroundColor: getValidColor(tempSelectedColor) } : undefined}
                         disabled={!tempSelectedColor}
                         onClick={async (e) => {
                           e.preventDefault();

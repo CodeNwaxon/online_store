@@ -280,7 +280,7 @@ export default function AdminOrders() {
               <div class="divider"></div>
               ${order.items.map((item: any) => `
                 <div class="item-row">
-                  <span class="item-name">${item.name} ${isUkUsedItem(item) ? '<b style="background:#6b7280;color:#fff;padding:1px 5px;border-radius:8px;font-size:8px;margin-left:3px">Used</b>' : ''} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
+                  <span class="item-name">${item.name} ${isUkUsedItem(item) ? '<b style="background:#6b7280;color:#fff;padding:1px 5px;border-radius:8px;font-size:8px;margin-left:3px">Used</b>' : ''} ${item.selectedSize || item.selectedColor || item.selectedMeasurement ? `(${[item.selectedSize, item.selectedColor ? ((item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) ? `<img src="${item.selectedColor}" style="width:14px;height:18px;object-fit:cover;border-radius:2px;display:inline-block;vertical-align:middle;margin:0 2px;" />` : item.selectedColor) : '', item.selectedMeasurement].filter(Boolean).join(', ')})` : ''} x${item.quantity}</span>
                   <span class="item-price">₦${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               `).join('')}
@@ -490,17 +490,30 @@ export default function AdminOrders() {
                 </div>
 
                 <div className="space-y-3">
-                  {order.items.slice(0, 2).map((item: any, i: number) => (
+                  {order.items.slice(0, 2).map((item: any, i: number) => {
+                    const isImageColor = Boolean(item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')));
+                    return (
                     <div key={i} className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg">
                       <div className="relative w-10 h-10 rounded border border-border overflow-hidden shrink-0">
-                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="48px" />
+                        <Image src={isImageColor ? item.selectedColor : item.image} alt={item.name} fill className="object-cover" sizes="48px" />
                       </div>
-                      <span className="text-xs font-bold truncate flex-1">
-                        {item.name} {isUkUsedItem(item) && <span className="text-[8px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle">Used</span>} {(item.selectedSize || item.selectedColor) && <span className="text-[9px] text-muted-foreground ml-1">({[item.selectedSize, item.selectedColor].filter(Boolean).join(', ')})</span>}
+                      <span className="text-xs font-bold truncate flex-1 flex items-center gap-1">
+                        <span className="truncate">{item.name}</span>
+                        {isUkUsedItem(item) && <span className="text-[8px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle shrink-0">Used</span>}
+                        {item.selectedSize && <span className="text-[9px] text-muted-foreground ml-1 shrink-0">({item.selectedSize})</span>}
+                        {item.selectedColor && (
+                          isImageColor ? (
+                            <img src={item.selectedColor} alt="Color" className="w-4 h-5 object-cover rounded border border-gray-300 ml-1 shrink-0 inline-block align-middle" />
+                          ) : (
+                            <span className="text-[9px] text-muted-foreground ml-1 shrink-0">({item.selectedColor})</span>
+                          )
+                        )}
+                        {item.selectedMeasurement && <span className="text-[9px] text-muted-foreground ml-1 shrink-0">({item.selectedMeasurement})</span>}
                       </span>
-                      <span className="text-[10px] font-black text-muted-foreground">x{item.quantity}</span>
+                      <span className="text-[10px] font-black text-muted-foreground shrink-0">x{item.quantity}</span>
                     </div>
-                  ))}
+                  );
+                })}
                   {order.items.length > 2 && (
                     <p className="text-[10px] text-muted-foreground font-bold text-center">+{order.items.length - 2} more items</p>
                   )}
@@ -660,11 +673,24 @@ export default function AdminOrders() {
                     return (
                       <div key={i} className="flex items-center gap-6 bg-muted/20 p-4 rounded-md md:rounded-2xl border border-border/50">
                         <div className="relative w-16 h-16 rounded-xl border border-border overflow-hidden shrink-0">
-                          <Image src={item.image} alt={item.name} fill className="object-cover" sizes="120px" />
+                          <Image src={(item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:'))) ? item.selectedColor : item.image} alt={item.name} fill className="object-cover" sizes="120px" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h5 className="font-black text-sm truncate">
-                            {item.name} {isUkUsedItem(item) && <span className="text-[9px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle">Used</span>} {(item.selectedSize || item.selectedColor || item.selectedMeasurement) && <span className="text-xs text-muted-foreground ml-1 font-bold">({[item.selectedSize, item.selectedColor, item.selectedMeasurement].filter(Boolean).join(', ')})</span>}
+                          <h5 className="font-black text-sm truncate flex items-center gap-1.5 flex-wrap">
+                            <span>{item.name}</span>
+                            {isUkUsedItem(item) && <span className="text-[9px] font-black text-white bg-gray-500 px-1.5 py-0.5 rounded-full ml-1 align-middle">Used</span>}
+                            {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">({item.selectedSize})</span>}
+                            {item.selectedColor && (
+                              (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) ? (
+                                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-bold">
+                                  <span>Color:</span>
+                                  <img src={item.selectedColor} alt="Color variant" className="w-5 h-6 object-cover rounded border border-border inline-block shadow-xs align-middle" />
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground font-bold">({item.selectedColor})</span>
+                              )
+                            )}
+                            {item.selectedMeasurement && <span className="text-xs text-muted-foreground font-bold">({item.selectedMeasurement})</span>}
                           </h5>
                           <p className="text-xs text-muted-foreground font-bold">₦{item.price.toLocaleString()} per unit</p>
 

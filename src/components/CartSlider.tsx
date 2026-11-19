@@ -297,12 +297,20 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                       </div>
                       <div className="space-y-2 mb-4">
                         {order.items.slice(0, 2).map((item: any, i: number) => {
-                          const colorLabel = item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:')) 
-                            ? item.id.slice(-6).toUpperCase() 
-                            : item.selectedColor;
+                          const isImg = item.selectedColor && (item.selectedColor.startsWith('http') || item.selectedColor.startsWith('data:'));
                           return (
-                            <div key={i} className="text-[10px] font-bold text-foreground truncate">
-                              • {item.name} {(item.selectedSize || colorLabel || item.selectedMeasurement) && <span className="text-muted-foreground">({[item.selectedSize, colorLabel, item.selectedMeasurement].filter(Boolean).join(', ')})</span>} <span className="text-muted-foreground ">(x{item.quantity})</span>
+                            <div key={i} className="text-[10px] font-bold text-foreground truncate flex items-center gap-1">
+                              <span>• {item.name}</span>
+                              {item.selectedSize && <span className="text-muted-foreground">({item.selectedSize})</span>}
+                              {item.selectedColor && (
+                                isImg ? (
+                                  <img src={item.selectedColor} alt="Color" className="w-3.5 h-4 object-cover rounded border border-border inline-block align-middle" />
+                                ) : (
+                                  <span className="text-muted-foreground">({item.selectedColor})</span>
+                                )
+                              )}
+                              {item.selectedMeasurement && <span className="text-muted-foreground">({item.selectedMeasurement})</span>}
+                              <span className="text-muted-foreground">(x{item.quantity})</span>
                             </div>
                           );
                         })}
@@ -362,13 +370,20 @@ export default function CartSlider({ isOpen, onClose }: CartSliderProps) {
                           <div className="flex gap-2 items-center flex-wrap mt-0.5">
                             {item.selectedSize && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedSize}</span>}
                             {item.selectedMeasurement && <span className="text-xs text-muted-foreground font-bold">Size: {item.selectedMeasurement}</span>}
-                            {item.selectedColor && <span className="text-xs font-bold"><span className="text-muted-foreground">Color: </span>
-                              {isImageColor ? (
-                                <span className="bg-purple-100 text-purple-700 px-1 py-0.5 rounded border border-purple-200">[{colorLabel}]</span>
-                              ) : (
-                                <span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span>
-                              )}
-                            </span>}
+                            {item.selectedColor && (
+                              <span className="text-xs font-bold inline-flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Color:</span>
+                                {isImageColor ? (
+                                  <img
+                                    src={item.selectedColor}
+                                    alt="Color variant"
+                                    className="w-5 h-6 object-cover rounded border border-gray-300 shadow-xs inline-block align-middle"
+                                  />
+                                ) : (
+                                  <span className={`capitalize ${item.selectedColor.toLowerCase().includes('white') ? 'text-gray-300' : ''}`} style={{ color: item.selectedColor.toLowerCase().includes('white') ? undefined : item.selectedColor.toLowerCase().replace(/\s/g, '') }}>{item.selectedColor}</span>
+                                )}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button onClick={() => removeItem(item.id, item.selectedSize, item.selectedColor, item.selectedMeasurement)} className="text-secondary hover:text-secondary-hover transition-colors"><FaTrashAlt size={16} /></button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -26,6 +26,10 @@ import DistributionManager from '@/components/DistributionManager';
 import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/upload';
 import { useAdmin } from '@/hooks/useAdmin';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
+import AllowShuffleToggle from '@/components/AllowShuffleToggle';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
 
 const formatName = (str: string) => {
   return str.trim().replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -649,17 +653,19 @@ function AdminProductsContent() {
     return matchGroup && matchBrand;
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'manufacturer', 'productCode'],
-      threshold: 0.1,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })().sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt));
+  const { allowShuffle } = useAllowShuffle('products');
 
-  const displayedProducts = filteredProducts.slice(0, visibleCount);
+  const filteredProducts = useMemo(() => {
+    return searchProductsWithRamRom(baseFilteredProducts, searchQuery);
+  }, [baseFilteredProducts, searchQuery]);
+
+  const sortedByDate = useMemo(
+    () => [...filteredProducts].sort((a, b) => parseDate(b.updatedAt) - parseDate(a.updatedAt)),
+    [filteredProducts]
+  );
+  const orderedProducts = useStableShuffle(sortedByDate as any[], allowShuffle) as typeof sortedByDate;
+
+  const displayedProducts = orderedProducts.slice(0, visibleCount);
 
   return (
     <div className="space-y-8 md:space-y-12">
@@ -1101,7 +1107,7 @@ function AdminProductsContent() {
             {/* PREVIEW */}
             <div className="flex flex-wrap gap-4 mt-4">
               {images.map((img, i) => (
-                <div key={i} className={`relative flex flex-col gap-2 p-2 rounded-md border border-border bg-muted ${hasUniqueImageVariants ? 'w-32' : 'w-24 group'}`}>
+                <div key={i} className={`relative flex flex-col gap-2 p-2 rounded-md border border-border bg-muted group ${hasUniqueImageVariants ? 'w-32' : 'w-24'}`}>
                   <div className={`relative w-full ${hasUniqueImageVariants ? 'h-24' : 'h-20'} rounded-md overflow-hidden border border-border bg-background`}>
                     {/* Use standard img for preview to avoid Next.js Image component hostname restriction crashes in admin */}
                     <img
@@ -1130,7 +1136,8 @@ function AdminProductsContent() {
                           return newQ;
                         });
                       }}
-                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10"
+                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10 shadow-sm cursor-pointer"
+                      title="Delete image"
                     >
                       <FaTimes size={12} />
                     </button>
@@ -1203,7 +1210,7 @@ function AdminProductsContent() {
             >
               {loading ? 'Processing...' : (editingId ? 'Update Product' : 'Add Product')}
             </button>
-            {editingId && (
+            {(editingId || hasUniqueImageVariants) && (
               <button type="button" onClick={handleCancel} className="bg-muted px-8 py-4 rounded-md font-bold border border-border text-sm">Cancel</button>
             )}
           </div>
@@ -1302,7 +1309,10 @@ function AdminProductsContent() {
       <section className="space-y-6 md:space-y-8 px-0 pt-16 border-t border-border/50">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
           <div className="flex flex-col gap-1 w-full md:w-auto">
-            <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
+            <div className="flex items-center justify-between md:justify-start md:gap-4 w-full">
+              <h2 className="text-xl md:text-2xl font-bold">Existing Products ({filteredProducts.length})</h2>
+              <AllowShuffleToggle collectionKey="products" />
+            </div>
             <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="products" allowAll />
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">

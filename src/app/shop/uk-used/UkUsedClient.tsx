@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, where, getDocs , updateDoc, doc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
@@ -18,6 +18,10 @@ import StoreRatingStars from '@/components/StoreRatingStars';
 import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
 import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
 import StoreBillboard from '@/components/StoreBillboard';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithCategorySpacing, shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
 
 function UkUsedPageContent() {
   const searchParams = useSearchParams();
@@ -46,6 +50,7 @@ function UkUsedPageContent() {
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.uk_used;
   const unreadMessageCount = useSpecialStoreUnreadCount(storeSlug || undefined);
   const showSwapCard = storeData?.doesSwapping === 'yes';
+  const { allowShuffle } = useAllowShuffle('uk_used');
 
   const { fetchCollection } = useProductCache();
 
@@ -89,6 +94,7 @@ function UkUsedPageContent() {
           }
           return p;
         });
+
         setAllProductsCount(sortedProds.length);
 
         const filteredForStore = storeData ? sortedProds.filter(p => p.vendor === storeData.ownerEmail) : sortedProds;
@@ -216,17 +222,22 @@ function UkUsedPageContent() {
     return matchesGroup && matchesCategory && matchesPrice;
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'description', 'productCode'],
-      threshold: 0.3,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })();
+  const filteredProducts = useMemo(() => {
+    return searchProductsWithRamRom(baseFilteredProducts, searchQuery, ['name', 'manufacturer', 'group', 'category', 'description', 'productCode']);
+  }, [baseFilteredProducts, searchQuery]);
 
-  const displayedProducts = filteredProducts.slice(0, visibleCount);
+
+
+
+
+
+
+
+
+
+  const orderedProducts = useStableShuffle(filteredProducts as any[], allowShuffle) as typeof filteredProducts;
+
+  const displayedProducts = orderedProducts.slice(0, visibleCount);
 
   if (loading || storeLoading) {
     return (
@@ -507,7 +518,7 @@ function UkUsedPageContent() {
           </div>
 
           {/* Product Grid */}
-          {filteredProducts.length === 0 ? (
+          {orderedProducts.length === 0 ? (
             <div className="max-w-7xl mx-auto text-center px-2 py-20 bg-white rounded-2xl shadow-sm border border-slate-50">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
                 <FaSearch size={24} />
@@ -542,7 +553,7 @@ function UkUsedPageContent() {
                 ))}
               </div>
 
-              {filteredProducts.length > visibleCount && (
+              {orderedProducts.length > visibleCount && (
                 <div className="text-center mt-12 flex justify-center">
                   <button
                     className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-gray-400 hover:shadow-md"

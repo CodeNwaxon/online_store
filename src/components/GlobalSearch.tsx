@@ -7,6 +7,7 @@ import { FaSearch, FaSpinner } from 'react-icons/fa';
 import Link from 'next/link';
 import Fuse from 'fuse.js';
 import { normalizeExpiredPromo } from '@/lib/promoUtils';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
 
 interface SearchItem {
   id: string;
@@ -20,6 +21,10 @@ interface SearchItem {
   group?: string;
   manufacturer?: string;
   productCode?: string;
+  description?: string;
+  ramRom?: string;
+  ram?: string;
+  rom?: string;
   isNewItem?: boolean;
   createdAt?: number;
 }
@@ -129,6 +134,10 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
                   group: data.group || '',
                   manufacturer: data.manufacturer || '',
                   productCode: data.productCode || '',
+                  description: data.description || '',
+                  ramRom: data.ramRom || '',
+                  ram: data.ram || '',
+                  rom: data.rom || '',
                   isNewItem: data.isNewItem || false,
                   createdAt: (() => {
                     if (!data.createdAt) return 0;
@@ -155,35 +164,26 @@ export default function GlobalSearch({ containerBg = 'bg-white' }: GlobalSearchP
         }
       }
 
-      const q = query.toLowerCase().trim();
-      
-      const fuse = new Fuse(itemsToSearch, {
-        keys: ['name', 'category', 'group', 'manufacturer', 'productCode'],
-        threshold: 0.3,
-        ignoreLocation: true
-      });
-      
-      let results = fuse.search(q);
-      
+      let filtered = searchProductsWithRamRom(itemsToSearch, query, ['name', 'manufacturer', 'category', 'group', 'productCode', 'description']);
+
       // If no results, try searching with synonyms
-      if (results.length === 0) {
-        const queryWords = q.split(/\s+/);
+      if (filtered.length === 0) {
+        const queryWords = query.toLowerCase().trim().split(/\s+/);
         let hasSynonyms = false;
-        let synonymQuery = q;
-        
+        let synonymQuery = query;
+
         queryWords.forEach(word => {
           if (searchSynonyms[word]) {
             hasSynonyms = true;
             synonymQuery += ' ' + searchSynonyms[word].join(' ');
           }
         });
-        
+
         if (hasSynonyms) {
-          results = fuse.search(synonymQuery);
+          filtered = searchProductsWithRamRom(itemsToSearch, synonymQuery, ['name', 'manufacturer', 'category', 'group', 'productCode', 'description']);
         }
       }
-      const filtered = results.map(r => r.item);
-      
+
       setResults(filtered);
       setIsOpen(true);
     };

@@ -522,9 +522,17 @@ export default function ProductDetailClient() {
               </button>
 
               <h3 className="text-[0.75rem] font-bold mb-2 pr-6 text-foreground leading-tight">Select Color</h3>
-              <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-40 mb-3">
+              <div className="flex flex-wrap items-center gap-2 py-3 px-2 overflow-y-auto max-h-52 mb-3">
                 <button
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold border transition-colors ${selectedColor === 'Any Color' ? 'bg-gray-500 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                  className={`rounded-md text-[11px] font-bold border transition-colors mx-1.5 my-1.5 ${
+                    product.hasUniqueImageVariants
+                      ? 'h-18 md:h-20 px-3.5 flex items-center justify-center text-center shrink-0'
+                      : 'px-3 py-1.5'
+                  } ${
+                    selectedColor === 'Any Color'
+                      ? (product.hasUniqueImageVariants ? 'bg-[#D48806] hover:bg-[#B57405] text-white border-transparent shadow-sm' : 'bg-gray-500 text-white border-transparent')
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-gray-600'
+                  }`}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor('Any Color'); }}
                 >
                   Any Color
@@ -534,9 +542,17 @@ export default function ProductDetailClient() {
                   return (
                     <button
                       key={c}
-                      className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 ${isImage ? 'w-8 h-12 p-0 shrink-0' : 'px-3 py-1.5 text-[11px] font-bold shrink-0'} ${selectedColor === c
-                        ? `${!isImage ? getContrastTextColor(c) : ''} ${isImage ? 'border-primary scale-105 shadow-md' : c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
-                        : `${isImage ? 'border-transparent opacity-80 hover:opacity-100' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}`}
+                      className={`relative rounded-md overflow-hidden transition-all duration-200 border-2 mx-1.5 my-1.5 ${
+                        isImage ? 'w-14 h-18 md:w-16 md:h-20 p-0 shrink-0 shadow-sm' : 'px-3 py-1.5 text-[11px] font-bold shrink-0'
+                      } ${
+                        selectedColor === c
+                          ? isImage
+                            ? 'border-[#D48806] ring-2 ring-[#D48806]/40 scale-105 shadow-md'
+                            : `${!isImage ? getContrastTextColor(c) : ''} ${c.toLowerCase().includes('white') ? 'border-gray-300' : 'border-transparent'}`
+                          : isImage
+                            ? 'border-gray-200 hover:border-[#D48806]/60 opacity-80 hover:opacity-100'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
                       style={!isImage ? (selectedColor === c ? { backgroundColor: getValidColor(c) } : { borderLeftColor: c.toLowerCase().includes('white') ? '#ccc' : getValidColor(c), borderLeftWidth: '4px' }) : undefined}
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedColor(c); }}
                     >
@@ -558,8 +574,16 @@ export default function ProductDetailClient() {
               </div>
               <div className="mt-2 pt-2 border-t border-border">
                 <button
-                  className={`w-full py-1.5 rounded-md text-xs font-bold transition-all ${!selectedColor ? 'bg-gray-300 cursor-not-allowed text-gray-500' : (selectedColor === 'Any Color' ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90` : `${getContrastTextColor(selectedColor)} hover:opacity-90`)}`}
-                  style={selectedColor && selectedColor !== 'Any Color' ? { backgroundColor: getValidColor(selectedColor) } : undefined}
+                  className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all ${
+                    !selectedColor
+                      ? 'bg-gray-300 cursor-not-allowed text-gray-500'
+                      : product.hasUniqueImageVariants
+                        ? 'bg-[#D48806] hover:bg-[#B57405] text-white shadow-md'
+                        : selectedColor === 'Any Color'
+                          ? `${theme.btn.split(' ')[0]} text-white hover:opacity-90`
+                          : `${getContrastTextColor(selectedColor)} hover:opacity-90`
+                  }`}
+                  style={!product.hasUniqueImageVariants && selectedColor && selectedColor !== 'Any Color' ? { backgroundColor: getValidColor(selectedColor) } : undefined}
                   disabled={!selectedColor}
                   onClick={async (e) => {
                     e.preventDefault();
@@ -592,6 +616,9 @@ export default function ProductDetailClient() {
                     const cartProduct = { ...product } as any;
                     if (finalColor) {
                       cartProduct.selectedColor = finalColor;
+                      if (product.hasUniqueImageVariants) {
+                        cartProduct.image = finalColor;
+                      }
                     }
                     addItem(cartProduct);
                     toast.success(`${product.name} ${finalColor ? `(${finalColor}) ` : ''}added to cart`, {

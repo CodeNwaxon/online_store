@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, orderBy, where, getDocs , updateDoc, doc } from 'firebase/firestore';
 import { useProductCache } from '@/store/useProductCache';
@@ -18,6 +18,10 @@ import StoreRatingStars from '@/components/StoreRatingStars';
 import SpecialStoreMessageOverlay from '@/components/SpecialStoreMessageOverlay';
 import { useSpecialStoreUnreadCount } from '@/hooks/useSpecialStoreUnreadCount';
 import StoreBillboard from '@/components/StoreBillboard';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithCategorySpacing, shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
 
 function WearsPageContent() {
   const searchParams = useSearchParams();
@@ -45,6 +49,7 @@ function WearsPageContent() {
   const { getVendorSales, storeTypeSales } = useStoreSales();
   const currentSalesCount = storeData ? getVendorSales(storeData.ownerEmail) : storeTypeSales.wears;
   const unreadMessageCount = useSpecialStoreUnreadCount(storeSlug || undefined);
+  const { allowShuffle } = useAllowShuffle('wears');
 
   const { fetchCollection } = useProductCache();
 
@@ -213,17 +218,11 @@ function WearsPageContent() {
     return matchesGroup && matchesCategory && matchesPrice;
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'description', 'productCode'],
-      threshold: 0.3,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })();
+  const filteredProducts = searchProductsWithRamRom(baseFilteredProducts, searchQuery);
 
-  const displayedProducts = filteredProducts.slice(0, visibleCount);
+  const orderedProducts = useStableShuffle(filteredProducts as any[], allowShuffle) as typeof filteredProducts;
+
+  const displayedProducts = orderedProducts.slice(0, visibleCount);
 
   if (loading || storeLoading) {
     return (
@@ -469,7 +468,7 @@ function WearsPageContent() {
           )}
         </div>
 
-        {filteredProducts.length === 0 ? (
+        {orderedProducts.length === 0 ? (
           <div className="max-w-7xl mx-auto text-center px-2 py-20 bg-white rounded-2xl shadow-sm border border-purple-50">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4"><FaSearch size={24} /></div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">No products found</h3>
@@ -483,7 +482,7 @@ function WearsPageContent() {
                 <CategoryProductCard key={product.id} product={product} themeClass="bg-purple-600 hover:bg-purple-700" categoryName="Wears" detailPath="/shop/wears/" />
               ))}
             </div>
-            {filteredProducts.length > visibleCount && (
+            {orderedProducts.length > visibleCount && (
               <div className="text-center mt-12 flex justify-center">
                 <button className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full border border-purple-200 bg-white hover:bg-purple-50 text-purple-700 px-6 py-3 text-sm font-bold tracking-wider uppercase shadow-sm transition-all duration-300 hover:border-purple-300 hover:shadow-md" onClick={() => setVisibleCount(prev => prev + 24)}>
                   <span>Load More Products</span>

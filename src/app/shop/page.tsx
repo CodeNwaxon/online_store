@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { products as staticProducts, Category } from '@/data/products';
 import ProductCard from '@/components/ProductCard';
-import { FaFilter, FaSearch, FaChevronDown, FaChevronLeft, FaChevronRight, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaChevronDown, FaChevronLeft, FaChevronRight, FaCreditCard, FaHeart, FaRegHeart, FaShareAlt, FaSyncAlt, FaTimes, FaRandom } from 'react-icons/fa';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { db } from '@/lib/firebase';
@@ -15,6 +15,10 @@ import { useLikeStore } from '@/store/useLikeStore';
 import { useStoreSales } from '@/hooks/useStoreSales';
 import StoreRatingStars from '@/components/StoreRatingStars';
 import Fuse from 'fuse.js';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { shuffleWithCategorySpacing, shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
+import { searchProductsWithRamRom } from '@/lib/searchUtils';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
 
 // Price range options for price filter - easily add more items here!
 export interface PriceRangeOption {
@@ -54,6 +58,9 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState<'default' | 'top_rated' | 'newest'>('default');
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('All');
   const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
+  const { allowShuffle } = useAllowShuffle('products');
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const [isManualShuffle, setIsManualShuffle] = useState(false);
   const priceFilterRef = useRef<HTMLDivElement>(null);
   const filterSliderRef = useRef<HTMLDivElement>(null);
 
@@ -235,30 +242,9 @@ function ShopContent() {
     return matchesGroup && matchesCategory && matchesBrand && matchesLiked && matchesPromo && matchesPrice && isVisible;
   });
 
-  const filteredProducts = (() => {
-    if (!searchQuery.trim()) return baseFilteredProducts;
-
-    // First try a simple case-insensitive substring search (more predictable for users)
-    const q = searchQuery.toLowerCase().trim();
-    const simpleMatches = baseFilteredProducts.filter(p =>
-      p.name?.toLowerCase().includes(q) ||
-      p.manufacturer?.toLowerCase().includes(q) ||
-      p.category?.toLowerCase().includes(q) ||
-      p.group?.toLowerCase().includes(q) ||
-      p.productCode?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q)
-    );
-
-    if (simpleMatches.length > 0) return simpleMatches;
-
-    // Fallback to fuzzy search if no exact substrings found
-    const fuse = new Fuse(baseFilteredProducts, {
-      keys: ['name', 'group', 'category', 'manufacturer', 'productCode'],
-      threshold: 0.4,
-      ignoreLocation: true
-    });
-    return fuse.search(searchQuery.trim()).map(r => r.item);
-  })();
+  const filteredProducts = useMemo(() => {
+    return searchProductsWithRamRom(baseFilteredProducts, searchQuery);
+  }, [baseFilteredProducts, searchQuery]);
 
   const sortedFilteredProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'top_rated') {
@@ -277,7 +263,10 @@ function ShopContent() {
     return 0;
   });
 
-  const displayedProducts = sortedFilteredProducts.slice(0, visibleCount);
+  const shuffleActive = (allowShuffle || isManualShuffle) && sortBy !== 'top_rated' && sortBy !== 'newest';
+  const orderedProducts = useStableShuffle(sortedFilteredProducts, shuffleActive, shuffleSeed);
+
+  const displayedProducts = orderedProducts.slice(0, visibleCount);
 
   if (loading) {
     return (
@@ -418,6 +407,29 @@ function ShopContent() {
                   className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${sortBy === 'top_rated' ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
                 >
                   Top Rated
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (allowShuffle) {
+                      setShuffleSeed(prev => prev + 1);
+                      toast.success('Products reshuffled!');
+                    } else {
+                      setIsManualShuffle(prev => {
+                        const next = !prev;
+                        if (next) {
+                          setShuffleSeed(s => s + 1);
+                          toast.success('Shuffle enabled!');
+                        }
+                        return next;
+                      });
+                    }
+                  }}
+                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${(allowShuffle || isManualShuffle) ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                  title="Shuffle products"
+                >
+                  <FaRandom className="w-3 h-3" />
+                  Shuffle
                 </button>
               </div>
 

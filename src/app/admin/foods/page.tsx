@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -19,6 +19,10 @@ import { uploadImageToCloudinary, deleteImagesFromCloudinary } from '@/actions/u
 import ShopCard, { ShopProduct } from '@/components/ShopCard';
 import SearchableSelect from '@/components/SearchableSelect';
 import VendorSalesHistory from '@/components/VendorSalesHistory';
+import AllowShuffleToggle from '@/components/AllowShuffleToggle';
+import { useAllowShuffle } from '@/hooks/useAllowShuffle';
+import { useStableShuffle } from '@/hooks/useStableShuffle';
+import { shuffleWithLatestTwoFirst } from '@/lib/shuffleUtils';
 import { useAdmin } from '@/hooks/useAdmin';
 import Fuse from 'fuse.js';
 
@@ -768,6 +772,8 @@ export default function AdminFoods() {
     return food.group?.toLowerCase() === filterGroup.toLowerCase();
   });
 
+  const { allowShuffle } = useAllowShuffle('foods');
+
   const filteredFoods = (() => {
     if (!searchQuery.trim()) return baseFilteredFoods;
     const fuse = new Fuse(baseFilteredFoods, {
@@ -777,6 +783,8 @@ export default function AdminFoods() {
     });
     return fuse.search(searchQuery.trim()).map(r => r.item);
   })();
+
+  const orderedFoods = useStableShuffle(filteredFoods as any[], allowShuffle) as typeof filteredFoods;
 
   return (
     <AdminGuard>
@@ -2230,7 +2238,10 @@ export default function AdminFoods() {
         <section className="bg-card p-4 md:p-8 rounded-[var(--radius)] border border-border shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
             <div className="flex flex-col gap-1 w-full md:w-auto">
-              <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
+              <div className="flex items-center justify-between md:justify-start md:gap-4 w-full">
+                <h2 className="text-xl md:text-2xl font-bold">Food Inventory ({filteredFoods.length})</h2>
+                <AllowShuffleToggle collectionKey="foods" />
+              </div>
               <VendorSalesHistory userEmail={user?.email || null} isCEO={isCEO} inventoryCollection="foods" allowAll />
             </div>
             <div className="flex flex-row gap-2 w-full md:w-auto items-center">
@@ -2260,7 +2271,7 @@ export default function AdminFoods() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {filteredFoods.map(food => (
+            {orderedFoods.map(food => (
               <div key={food.id} className="relative group bg-card rounded-[var(--radius)] h-full flex flex-col">
                 <div className="relative flex-1 flex flex-col">
                   <ShopCard
@@ -2273,7 +2284,7 @@ export default function AdminFoods() {
               </div>
             ))}
           </div>
-          {filteredFoods.length === 0 && (
+          {orderedFoods.length === 0 && (
             <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
               No foods found. Add some above!
             </div>
