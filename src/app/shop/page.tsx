@@ -61,6 +61,8 @@ function ShopContent() {
   const { allowShuffle } = useAllowShuffle('products');
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [isManualShuffle, setIsManualShuffle] = useState(false);
+  // True the moment the user clicks shuffle in this session — after that, all items shuffle (no pinned first two)
+  const [hasClickedShuffle, setHasClickedShuffle] = useState(false);
   const priceFilterRef = useRef<HTMLDivElement>(null);
   const filterSliderRef = useRef<HTMLDivElement>(null);
 
@@ -263,8 +265,8 @@ function ShopContent() {
     return 0;
   });
 
-  const shuffleActive = (allowShuffle || isManualShuffle) && sortBy !== 'top_rated' && sortBy !== 'newest';
-  const orderedProducts = useStableShuffle(sortedFilteredProducts, shuffleActive, shuffleSeed, isManualShuffle);
+  const shuffleActive = (allowShuffle || isManualShuffle || hasClickedShuffle) && sortBy !== 'top_rated' && sortBy !== 'newest';
+  const orderedProducts = useStableShuffle(sortedFilteredProducts, shuffleActive, shuffleSeed, hasClickedShuffle);
 
   const displayedProducts = orderedProducts.slice(0, visibleCount);
 
@@ -411,21 +413,16 @@ function ShopContent() {
 
                 <button
                   onClick={() => {
+                    setHasClickedShuffle(true);
+                    setShuffleSeed(prev => prev + 1);
                     if (allowShuffle) {
-                      setShuffleSeed(prev => prev + 1);
                       toast.success('Products reshuffled!');
                     } else {
-                      setIsManualShuffle(prev => {
-                        const next = !prev;
-                        if (next) {
-                          setShuffleSeed(s => s + 1);
-                          toast.success('Shuffle enabled!');
-                        }
-                        return next;
-                      });
+                      setIsManualShuffle(true);
+                      toast.success('Shuffle enabled!');
                     }
                   }}
-                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${(allowShuffle || isManualShuffle) ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
+                  className={`h-[34px] md:h-[38px] px-3 md:px-4 text-[10px] md:text-sm border rounded-md flex items-center justify-center gap-1.5 md:gap-2 transition-colors whitespace-nowrap shrink-0 ${(allowShuffle || isManualShuffle || hasClickedShuffle) ? 'bg-secondary text-white border-secondary' : 'bg-transparent text-slate-800 dark:text-slate-200 border-border hover:bg-muted'}`}
                   title="Shuffle products"
                 >
                   <FaRandom className="w-3 h-3" />
