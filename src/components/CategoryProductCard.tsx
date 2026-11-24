@@ -334,7 +334,7 @@ export default function CategoryProductCard({
           <div className="flex flex-col justify-start items-start gap-1 mb-2">
             {product.group && (
               <span className="text-[0.65rem] text-muted-foreground dark:text-zinc-400 font-medium italic">
-                By {product.group.toUpperCase()}
+                {categoryName.toLowerCase().replace(/[^a-z0-9]/g, '') === 'ukused' ? product.group.toUpperCase() : `By ${product.group.toUpperCase()}`}
               </span>
             )}
           </div>

@@ -354,8 +354,8 @@ function UkUsedPageContent() {
                 if (selectedCategory !== 'All') urlObj.searchParams.set('category', selectedCategory);
                 if (selectedPriceFilter !== 'All') urlObj.searchParams.set('price', selectedPriceFilter);
                 const url = urlObj.toString();
-                const title = storeData ? `${storeData.name} | Nomo Storez` : 'UkUsed & Beauty | Nomo Storez';
-                const text = storeData ? (storeData.slogan || `Shop premium beauty from ${storeData.name}`) : 'Discover our range of premium skincare, makeup, and beauty products.';
+                const title = storeData ? `${storeData.name} | Nomo Storez` : 'UK Used | Nomo Storez';
+                const text = storeData ? (storeData.slogan || `Shop premium products from ${storeData.name}`) : 'Shop quality UK Used, Nigerian Neatly Used, Open Box phones, laptops, appliances and more at great prices on Nomo Storez.';
                 if (navigator.share) {
                   navigator.share({ title, text, url }).catch(() => { });
                 } else {

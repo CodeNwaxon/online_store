@@ -19,7 +19,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
         const store = snap.docs[0].data().specialStore;
         
         const storeName = store.name || storeSlug;
-        const storeSlogan = store.slogan || `Shop premium UkUsed and beauty products from ${storeName} on Nomo Storez.`;
+        const storeSlogan = store.slogan || `Shop UK Used, Nigerian Neatly Used, Open Box and more from ${storeName} on Nomo Storez.`;
         let bannerUrl = store.banner || '/images/placeholder.png';
 
         if (bannerUrl.includes('res.cloudinary.com') && bannerUrl.includes('/upload/')) {
@@ -52,8 +52,17 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   }
 
   return {
-    title: 'UkUsed & Beauty | Nomo Storez',
-    description: 'Discover our range of premium skincare, makeup, and beauty products on Nomo Storez.',
+    title: 'UK Used | Nomo Storez',
+    description: 'Shop quality UK Used, Nigerian Neatly Used, Open Box phones, laptops, appliances and more at great prices on Nomo Storez.',
+    openGraph: {
+      title: 'UK Used | Nomo Storez',
+      description: 'Shop quality UK Used, Nigerian Neatly Used, Open Box phones, laptops, appliances and more at great prices on Nomo Storez.',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'UK Used | Nomo Storez',
+      description: 'Shop quality UK Used, Nigerian Neatly Used, Open Box phones, laptops, appliances and more at great prices on Nomo Storez.',
+    },
   };
 }
 

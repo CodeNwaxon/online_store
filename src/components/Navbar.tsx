@@ -63,6 +63,8 @@ export default function Navbar() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [marketDropdownOpen, setMarketDropdownOpen] = useState(false);
+  const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
 
   useEffect(() => {
     const lastPage = localStorage.getItem('lastVisitedPage');
@@ -392,6 +394,8 @@ export default function Navbar() {
 
   // Close drawer on route change
   useEffect(() => { setIsMenuOpen(false); }, [pathname]);
+  // Close dropdowns on route change
+  useEffect(() => { setMarketDropdownOpen(false); setAboutDropdownOpen(false); }, [pathname]);
 
   // Auto-close menu when resizing to desktop
   useEffect(() => {
@@ -407,6 +411,24 @@ export default function Navbar() {
 
     return () => window.removeEventListener('resize', handleResize);
   }, [isMenuOpen]);
+
+  // Close click-toggled dropdowns when clicking outside them
+  useEffect(() => {
+    if (!marketDropdownOpen && !aboutDropdownOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-dropdown]')) {
+        setMarketDropdownOpen(false);
+        setAboutDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [marketDropdownOpen, aboutDropdownOpen]);
+
+  /** Returns true when the device is touch-only (no fine hover) — e.g. mobile in desktop mode */
+  const isTouchDevice = () =>
+    typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
   const handleSignIn = async () => {
     try {
@@ -487,17 +509,25 @@ export default function Navbar() {
                       Shop
                     </Link>
 
-                    <div key="market-dropdown" className="relative group py-2">
-                      <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname.startsWith('/foods') || pathname.startsWith('/shop/cosmetics') || pathname.startsWith('/shop/wears') || pathname.startsWith('/shop/furniture') || pathname.startsWith('/shop/toilet-kitchen') || pathname.startsWith('/shop/uk-used')) ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
-                        Market <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
+                    <div key="market-dropdown" className="relative group py-2" data-dropdown>
+                      <span
+                        className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname.startsWith('/foods') || pathname.startsWith('/shop/cosmetics') || pathname.startsWith('/shop/wears') || pathname.startsWith('/shop/furniture') || pathname.startsWith('/shop/toilet-kitchen') || pathname.startsWith('/shop/uk-used')) ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}
+                        onClick={() => {
+                          if (isTouchDevice()) {
+                            setMarketDropdownOpen(prev => !prev);
+                            setAboutDropdownOpen(false);
+                          }
+                        }}
+                      >
+                        Market <FaChevronDown size={10} className={`transition-transform ${marketDropdownOpen ? 'rotate-180' : 'group-hover:rotate-180'}`} />
                       </span>
-                      <div className="absolute top-full left-0 mt-0 w-48 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
-                        <Link href="/foods" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/foods' ? 'text-primary font-bold' : 'text-foreground'}`}>Food Market</Link>
-                        <Link href="/shop/cosmetics" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/cosmetics' ? 'text-primary font-bold' : 'text-foreground'}`}>Cosmetics</Link>
-                        <Link href="/shop/wears" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/wears' ? 'text-primary font-bold' : 'text-foreground'}`}>Wears</Link>
-                        <Link href="/shop/furniture" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/furniture' ? 'text-primary font-bold' : 'text-foreground'}`}>Furniture</Link>
-                        <Link href="/shop/toilet-kitchen" className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/toilet-kitchen' ? 'text-primary font-bold' : 'text-foreground'}`}>Toilet & Kitchen</Link>
-                        <Link href="/shop/uk-used" className={`px-4 py-3 text-sm hover:bg-muted font-medium ${pathname === '/shop/uk-used' ? 'text-primary font-bold' : 'text-foreground'}`}>UK Used</Link>
+                      <div className={`absolute top-full left-0 mt-0 w-48 bg-card border border-border rounded-md shadow-lg transition-all duration-200 flex flex-col overflow-hidden ${marketDropdownOpen ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
+                        <Link href="/foods" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/foods' ? 'text-primary font-bold' : 'text-foreground'}`}>Food Market</Link>
+                        <Link href="/shop/cosmetics" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/cosmetics' ? 'text-primary font-bold' : 'text-foreground'}`}>Cosmetics</Link>
+                        <Link href="/shop/wears" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/wears' ? 'text-primary font-bold' : 'text-foreground'}`}>Wears</Link>
+                        <Link href="/shop/furniture" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/furniture' ? 'text-primary font-bold' : 'text-foreground'}`}>Furniture</Link>
+                        <Link href="/shop/toilet-kitchen" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium border-b border-border ${pathname === '/shop/toilet-kitchen' ? 'text-primary font-bold' : 'text-foreground'}`}>Toilet & Kitchen</Link>
+                        <Link href="/shop/uk-used" onClick={() => setMarketDropdownOpen(false)} className={`px-4 py-3 text-sm hover:bg-muted font-medium ${pathname === '/shop/uk-used' ? 'text-primary font-bold' : 'text-foreground'}`}>UK Used</Link>
                       </div>
                     </div>
                   </div>
@@ -506,19 +536,27 @@ export default function Navbar() {
 
               if (l.label === 'About') {
                 return (
-                  <div key="about-dropdown" className="relative group py-2">
-                    <span className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}>
-                      About <FaChevronDown size={10} className="group-hover:rotate-180 transition-transform" />
+                  <div key="about-dropdown" className="relative group py-2" data-dropdown>
+                    <span
+                      className={`cursor-pointer flex items-center gap-1 text-[0.95rem] pb-[2px] transition-all duration-200 border-b-2 ${(pathname === '/about' || pathname === '/partnership') ? `font-bold ${isDarkNav ? 'text-white border-white' : 'text-primary border-primary'}` : `font-medium ${isDarkNav ? 'text-white/80 border-transparent hover:text-white' : 'text-foreground border-transparent'}`}`}
+                      onClick={() => {
+                        if (isTouchDevice()) {
+                          setAboutDropdownOpen(prev => !prev);
+                          setMarketDropdownOpen(false);
+                        }
+                      }}
+                    >
+                      About <FaChevronDown size={10} className={`transition-transform ${aboutDropdownOpen ? 'rotate-180' : 'group-hover:rotate-180'}`} />
                       {mounted && partnerNotifCount > 0 && (
                         <span className="absolute -top-1 -right-3 bg-[#4B0082] text-white rounded-full w-[14px] h-[14px] text-[8px] flex items-center justify-center font-bold shadow-sm">
                           {partnerNotifCount}
                         </span>
                       )}
                     </span>
-                    <div className="absolute top-full left-0 mt-0 w-40 bg-card border border-border rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 flex flex-col overflow-hidden">
-                      <Link href="/about" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
-                      {hasActiveBlogs && <Link href="/blog" className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border">Blog</Link>}
-                      <Link href="/partnership" onClick={handlePartnershipClick} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border flex items-center justify-between">
+                    <div className={`absolute top-full left-0 mt-0 w-40 bg-card border border-border rounded-md shadow-lg transition-all duration-200 flex flex-col overflow-hidden ${aboutDropdownOpen ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
+                      <Link href="/about" onClick={() => setAboutDropdownOpen(false)} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground">About Us</Link>
+                      {hasActiveBlogs && <Link href="/blog" onClick={() => setAboutDropdownOpen(false)} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border">Blog</Link>}
+                      <Link href="/partnership" onClick={() => { setAboutDropdownOpen(false); handlePartnershipClick(); }} className="px-4 py-3 text-sm hover:bg-muted font-medium text-foreground border-t border-border flex items-center justify-between">
                         Partnership
                         {mounted && partnerNotifCount > 0 && (
                           <span className="bg-[#4B0082] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">

@@ -264,7 +264,7 @@ function ShopContent() {
   });
 
   const shuffleActive = (allowShuffle || isManualShuffle) && sortBy !== 'top_rated' && sortBy !== 'newest';
-  const orderedProducts = useStableShuffle(sortedFilteredProducts, shuffleActive, shuffleSeed);
+  const orderedProducts = useStableShuffle(sortedFilteredProducts, shuffleActive, shuffleSeed, isManualShuffle);
 
   const displayedProducts = orderedProducts.slice(0, visibleCount);
 
