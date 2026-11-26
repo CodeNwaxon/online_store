@@ -31,4 +31,4 @@ Disallow: /checkout
 Disallow: /receipt/
 Disallow: /installments/
 
-Sitemap: https://nomostores.com/sitemap.xml
+Sitemap: https://www.nomostores.com/sitemap.xml

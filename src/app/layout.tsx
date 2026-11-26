@@ -7,7 +7,7 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  let siteName = '';
+  let siteName = 'NomoStores';
   let installmentBg = '';
   const backupImage = "https://res.cloudinary.com/dfwpxohxg/image/upload/v1794582043/lxluvvo7dbpc19fjedye.jpg";
 
@@ -21,27 +21,29 @@ export async function generateMetadata(): Promise<Metadata> {
 
     if (response.ok) {
       const data = await response.json();
-      siteName = data.fields?.siteName?.stringValue || '';
+      siteName = data.fields?.siteName?.stringValue?.trim() || 'NomoStores';
       installmentBg = data.fields?.installmentBg?.stringValue || '';
     }
   } catch (error) {
     // Silent fallback to avoid console noise during build
   }
 
+  const title = `${siteName} | Online Shopping in Nigeria`;
+  const description = `Shop electronics, furniture, home essentials, fashion and more at ${siteName}. Find quality products and flexible payment options with delivery across Nigeria.`;
   const metaImage = installmentBg && installmentBg.trim() !== '' ? installmentBg.trim() : backupImage;
 
   return {
-    metadataBase: new URL("https://nomostores.com"),
-    title: `${siteName} | Premium African Inspired Goods`,
-    description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
+    metadataBase: new URL("https://www.nomostores.com"),
+    title,
+    description,
     manifest: "/manifest.json",
     icons: {
       icon: "/favicon.png",
     },
     openGraph: {
-      title: `${siteName} | Premium African Inspired Goods`,
-      description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
-      url: "https://nomostores.com",
+      title,
+      description,
+      url: "https://www.nomostores.com",
       siteName: siteName,
       images: [
         {
@@ -56,8 +58,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${siteName} | Premium African Inspired Goods`,
-      description: `Shop the best electronics, furniture, and more with ${siteName}, our vibrant African-inspired online store.`,
+      title,
+      description,
       images: [metaImage],
     },
   };
@@ -81,15 +83,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        {/* AdSense Script — plain <script> avoids Next.js injecting data-nscript which AdSense rejects */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-          crossOrigin="anonymous"
-        />
-      </head>
       <body suppressHydrationWarning className="flex flex-col min-h-screen bg-background text-foreground antialiased font-sans">
         <ToasterProvider />
         <Suspense><VisitorTracker /></Suspense>
